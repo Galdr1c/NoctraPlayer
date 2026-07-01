@@ -38,16 +38,25 @@
                   DisplayMemberBinding="{Binding Value}"
                   IsVisible="{Binding ShowContentFilters}" />
       </Grid>
-      <Grid ColumnDefinitions="*,Auto,Auto"
+      <Grid ColumnDefinitions="*,Auto"
             ColumnSpacing="8"
             IsVisible="{Binding ShowGroupFilter}">
         <ComboBox Grid.Column="0"
+                  x:Name="GroupFilterComboBox"
                   Theme="{StaticResource ModernComboBox}"
                   ItemsSource="{Binding Groups}"
                   SelectedItem="{Binding SelectedGroup}"
                   PlaceholderText="{loc:Translate Common.All}"
                   MinHeight="48"
-                  CornerRadius="12" />
+                  CornerRadius="12">
+          <ComboBox.ItemTemplate>
+            <DataTemplate>
+              <TextBlock Text="{Binding}"
+                         VerticalAlignment="Center"
+                         Padding="12,8" />
+            </DataTemplate>
+          </ComboBox.ItemTemplate>
+        </ComboBox>
         <Button Grid.Column="1"
                 Content="{loc:Translate Common.All}"
                 MinWidth="64"
@@ -56,30 +65,7 @@
                 CornerRadius="12"
                 Background="{DynamicResource Surface0Brush}"
                 BorderBrush="{DynamicResource BorderBrush}"
-                Click="ClearGroupSelection_Click"
-                IsVisible="{Binding SelectedGroup, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
-        <Button Grid.Column="2"
-                MinWidth="48"
-                MinHeight="48"
-                Padding="12"
-                CornerRadius="12"
-                Background="{DynamicResource Surface0Brush}"
-                BorderBrush="{DynamicResource BorderBrush}"
-                Command="{Binding HideGroupCommand}"
-                CommandParameter="{Binding SelectedGroup}"
-                IsVisible="{Binding SelectedGroup, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"
-                ToolTip.Tip="{loc:Translate Live.HideCategory.Tooltip}">
-          <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-            <icons:MaterialIcon Kind="EyeOffOutline"
-                                Width="18"
-                                Height="18"
-                                Foreground="{DynamicResource TextMutedBrush}" />
-            <TextBlock Text="{loc:Translate Live.HideCategory.Tooltip}"
-                       Foreground="{DynamicResource TextPrimaryBrush}"
-                       FontSize="13"
-                       VerticalAlignment="Center" />
-          </StackPanel>
-        </Button>
+                Click="ClearGroupSelection_Click" />
       </Grid>
 
       <ItemsControl ItemsSource="{Binding SeriesViewItems}"

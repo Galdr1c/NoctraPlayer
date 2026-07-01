@@ -31,8 +31,6 @@
 
   <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource Accent500Color}" />
   <SolidColorBrush x:Key="AccentHoverBrush" Color="{StaticResource Accent600Color}" />
-  <!-- NavPill ve AccentBadge için: Accent500 @ %18 opaklık -->
-  <SolidColorBrush x:Key="AccentSubtleBrush" Color="#2E8B5CF6" />
   <SolidColorBrush x:Key="AccentLightBrush" Color="{StaticResource Accent300Color}" />
   <SolidColorBrush x:Key="GlowBrush" Color="{StaticResource GlowColor}" />
   <SolidColorBrush x:Key="NavActiveBackgroundBrush" Color="#268B5CF6" />
