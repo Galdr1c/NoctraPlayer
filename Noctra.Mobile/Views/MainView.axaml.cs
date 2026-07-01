@@ -810,6 +810,17 @@ public partial class MainView : UserControl
         {
             UpdatePlayerWatermarkInsets();
         }
+        else if (e.PropertyName == nameof(PlayerViewModel.IsVisible) ||
+                 e.PropertyName == nameof(PlayerViewModel.IsAudioSettingsOpen) ||
+                 e.PropertyName == nameof(PlayerViewModel.IsQualitySettingsOpen) ||
+                 e.PropertyName == nameof(PlayerViewModel.IsInfoPanelOpen) ||
+                 e.PropertyName == nameof(PlayerViewModel.IsEpisodesPanelOpen) ||
+                 e.PropertyName == nameof(PlayerViewModel.IsSleepTimerPanelOpen) ||
+                 e.PropertyName == nameof(PlayerViewModel.IsResumeDialogVisible) ||
+                 e.PropertyName == nameof(PlayerViewModel.IsNextEpisodePromptVisible))
+        {
+            UpdatePlayerWatermarkInsets();
+        }
         else if (e.PropertyName == nameof(PlayerViewModel.IsPlaying))
         {
             // Oynatma sürerken ekranı uyanık tut.
@@ -866,10 +877,21 @@ public partial class MainView : UserControl
 
     private void UpdatePlayerChromeState()
     {
-        _isPlayerFullScreen = PlayerHost.IsVisible && _playerViewModel?.IsFullScreen == true;
-        HeaderBar.IsVisible = !_isPlayerFullScreen;
-        SelectedMediaHost.IsVisible = !_isPlayerFullScreen && SelectedMediaHost.IsVisible;
-        UpdateNavigationMode(Bounds.Width);
+        var isPlayerVisible = PlayerHost.IsVisible;
+        _isPlayerFullScreen = isPlayerVisible && _playerViewModel?.IsFullScreen == true;
+
+        HeaderBar.IsVisible = !isPlayerVisible;
+        if (isPlayerVisible)
+        {
+            NavigationRail.IsVisible = false;
+            BottomNavigation.IsVisible = false;
+            MobilePlayerContent.QueueVideoSurfaceLayoutUpdate();
+        }
+        else
+        {
+            UpdateNavigationMode(Bounds.Width);
+        }
+
         UpdatePlayerWatermarkInsets();
     }
 

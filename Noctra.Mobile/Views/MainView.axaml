@@ -414,14 +414,6 @@
         </Border>
       </Border>
 
-      <Border x:Name="PlayerHost"
-              IsVisible="False">
-        <Border.Background>
-          <SolidColorBrush Color="{DynamicResource Bg0Color}" Opacity="0.8" />
-        </Border.Background>
-        <views:MobilePlayerView x:Name="MobilePlayerContent"
-                                VerticalAlignment="Bottom" />
-      </Border>
     </Grid>
 
     <Border x:Name="BottomNavigation"
@@ -490,6 +482,17 @@
         </Button>
 
       </Grid>
+    </Border>
+
+    <Border x:Name="PlayerHost"
+            Grid.RowSpan="3"
+            Grid.ColumnSpan="2"
+            ZIndex="48000"
+            Background="Black"
+            IsVisible="False">
+      <views:MobilePlayerView x:Name="MobilePlayerContent"
+                              HorizontalAlignment="Stretch"
+                              VerticalAlignment="Stretch" />
     </Border>
 
     <Border x:Name="BackExitToast"

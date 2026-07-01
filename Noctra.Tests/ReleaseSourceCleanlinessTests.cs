@@ -314,7 +314,9 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("ColumnDefinitions=\"*,*,*,*,*\"", mainViewSource);
         Assert.DoesNotContain("ColumnDefinitions=\"*,*,*,*,*,*,*\"", mainViewSource);
         Assert.Contains("TextTrimming=\"CharacterEllipsis\"", mainViewSource);
-        Assert.Contains("<Setter Property=\"MinHeight\" Value=\"56\" />", mainViewSource);
+        Assert.Contains("<Setter Property=\"MinHeight\" Value=\"52\" />", mainViewSource);
+        Assert.Contains("Classes=\"nav navBottom\"", mainViewSource);
+        Assert.Contains("Classes=\"NavPill\"", mainViewSource);
 
         Assert.DoesNotContain("ColumnDefinitions=\"*,*,*,*,*\"", playerViewSource);
         Assert.Contains("<WrapPanel", playerViewSource);
@@ -496,15 +498,14 @@ public sealed class ReleaseSourceCleanlinessTests
     public void MobileMediaCards_ExposeVisibleOverflowActions()
     {
         var repositoryRoot = FindRepositoryRoot();
-        var cardPaths = new[]
+        var posterCardPaths = new[]
         {
             Path.Combine(repositoryRoot, "Noctra.Mobile", "Controls", "MobileVodCard.axaml"),
             Path.Combine(repositoryRoot, "Noctra.Mobile", "Controls", "MobileSeriesCard.axaml"),
-            Path.Combine(repositoryRoot, "Noctra.Mobile", "Controls", "MobileContinueWatchingCard.axaml"),
-            Path.Combine(repositoryRoot, "Noctra.Mobile", "Controls", "MobileLiveTvCard.axaml")
+            Path.Combine(repositoryRoot, "Noctra.Mobile", "Controls", "MobileContinueWatchingCard.axaml")
         };
 
-        foreach (var cardPath in cardPaths)
+        foreach (var cardPath in posterCardPaths)
         {
             var source = File.ReadAllText(cardPath);
 
@@ -512,14 +513,21 @@ public sealed class ReleaseSourceCleanlinessTests
             Assert.Contains("Flyout=\"{StaticResource", source);
             Assert.Contains("Kind=\"DotsVertical\"", source);
             Assert.Contains("Context.Favorite.Toggle", source);
-        }
-
-        // Poster-style cards still expose the MyList bookmark action.
-        foreach (var cardPath in cardPaths.Where(p => !p.Contains("LiveTvCard")))
-        {
-            var source = File.ReadAllText(cardPath);
             Assert.Contains("Context.MyList.Toggle", source);
         }
+
+        var liveCardSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Controls",
+            "MobileLiveTvCard.axaml"));
+        Assert.Contains("LiveCardActionsFlyout", liveCardSource);
+        Assert.Contains("Button.ContextFlyout", liveCardSource);
+        Assert.Contains("Context.Favorite.Toggle", liveCardSource);
+        Assert.Contains("ToggleFavoriteCommand", liveCardSource);
+        Assert.Contains("ShowHistoryMenu", liveCardSource);
+        Assert.Contains("ShowMyListMenu", liveCardSource);
+        Assert.DoesNotContain("Kind=\"DotsVertical\"", liveCardSource);
     }
 
     [Fact]
@@ -1062,14 +1070,12 @@ public sealed class ReleaseSourceCleanlinessTests
             "Noctra.Mobile",
             "Views",
             "AvatarPickerView.axaml"));
-        var appSource = File.ReadAllText(Path.Combine(
-            repositoryRoot,
-            "Noctra.Mobile",
-            "App.axaml"));
 
-        Assert.Contains("ProfileColorConverter", avatarSource);
-        Assert.Contains("Background=\"{Binding Converter={StaticResource ProfileColorConverter}}\"", avatarSource);
-        Assert.Contains("ProfileColorConverter", appSource);
+        Assert.Contains("AvatarPathConverter", avatarSource);
+        Assert.Contains("Background=\"Transparent\"", avatarSource);
+        Assert.Contains("Stretch=\"Uniform\"", avatarSource);
+        Assert.Contains("ClipToBounds=\"False\"", avatarSource);
+        Assert.DoesNotContain("ProfileColorConverter", avatarSource);
         Assert.DoesNotContain("Background=\"{DynamicResource Surface1Brush}\"", avatarSource);
     }
 
@@ -1176,7 +1182,8 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("IsError", profileLoadingSource);
         Assert.Contains("AvatarPathConverter", profileLoadingSource);
         Assert.Contains("PremiumSpinner", profileLoadingSource);
-        Assert.Contains("Square150x150Logo.png", profileLoadingSource);
+        Assert.Contains("Source=\"{Binding Avatar, Converter={StaticResource AvatarPathConverter}}\"", profileLoadingSource);
+        Assert.DoesNotContain("Square150x150Logo.png", profileLoadingSource);
         Assert.Contains("StringNotEmptyToVisibilityConverter", profileLoadingSource);
         Assert.Contains("Background=\"{DynamicResource Bg1Brush}\"", profileLoadingSource);
         Assert.Contains("Style Selector=\"TextBlock[Tag=True]\"", profileLoadingSource);
@@ -1424,7 +1431,7 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("Shell.Nav.Downloads", mainViewSource);
         Assert.Contains("Settings.Title", mainViewSource);
         Assert.Contains("Mobile.Nav.More", mainViewSource);
-        Assert.Contains("Mobile.More.Shortcuts", mainViewSource);
+        Assert.DoesNotContain("Mobile.More.Shortcuts", mainViewSource);
         Assert.Contains("Settings.Profile.Management", mainViewSource);
         Assert.Contains("Settings.Profile.ManagementDetail", mainViewSource);
         Assert.DoesNotContain("Content=\"Home\"", mainViewSource);
@@ -1704,7 +1711,7 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("<item name=\"android:windowBackground\">@drawable/splash_screen</item>", stylesSource);
         Assert.Contains("Theme = \"@style/MyTheme.NoActionBar\"", activitySource);
         Assert.Contains("android:color=\"@color/splash_background\"", splashSource);
-        Assert.Contains("android:drawable=\"@mipmap/ic_launcher\"", splashSource);
+        Assert.Contains("android:drawable=\"@drawable/splash_logo\"", splashSource);
         Assert.Contains("android:width=\"220dp\"", splashSource);
         Assert.Contains("android:height=\"220dp\"", splashSource);
         Assert.Contains("<color name=\"splash_background\">#0B0616</color>", colorsSource);
@@ -2307,12 +2314,15 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("QualityResolutionText", playerViewSource);
         Assert.Contains("QualityFpsText", playerViewSource);
         Assert.Contains("QualityAudioText", playerViewSource);
-        Assert.Contains("StringFormatConverter", playerViewSource);
-        Assert.Contains("Player.Mobile.LockFormat", playerViewSource);
-        Assert.Contains("Player.Mobile.FullscreenFormat", playerViewSource);
-        Assert.Contains("Player.Overlay.PiP.Tooltip", playerViewSource);
+        Assert.Contains("VideoSurfaceSlot", playerViewSource);
+        Assert.Contains("IsMobileCompactControlsVisible", playerViewSource);
+        Assert.Contains("OpenQualitySettingsCommand", playerViewSource);
+        Assert.Contains("EnterPiPCommand", playerViewSource);
+        Assert.Contains("PictureInPictureBottomRight", playerViewSource);
         Assert.Contains("Player.Episodes.Season", playerViewSource);
         Assert.Contains("SeasonNumber", playerViewSource);
+        Assert.DoesNotContain("Player.Mobile.LockFormat", playerViewSource);
+        Assert.DoesNotContain("Player.Mobile.FullscreenFormat", playerViewSource);
         Assert.DoesNotContain("StringFormat='Lock: {0}'", playerViewSource);
         Assert.DoesNotContain("StringFormat='Fullscreen: {0}'", playerViewSource);
         Assert.DoesNotContain("Content=\"PiP\"", playerViewSource);
@@ -2930,7 +2940,8 @@ public sealed class ReleaseSourceCleanlinessTests
 
         Assert.DoesNotContain("Tag=\"Movies\" Click=\"OnDestinationClick\">\r\n          <StackPanel Spacing=\"2\" HorizontalAlignment=\"Center\">\r\n            <icons:MaterialIcon Kind=\"PlayBoxMultipleOutline\"", mainViewSource);
         Assert.DoesNotContain("Text=\"{loc:Translate Shell.Nav.Library}\" FontSize=\"11\"", mainViewSource);
-        Assert.Contains("Text=\"{loc:Translate Shell.Nav.Movies}\" FontSize=\"11\"", mainViewSource);
+        Assert.Contains("Text=\"{loc:Translate Shell.Nav.Movies}\"", mainViewSource);
+        Assert.Contains("Classes=\"NavLabel\"", mainViewSource);
 
         Assert.Contains("IsVisible=\"{Binding !IsLiveContent}\"", mobilePlayerSource);
         Assert.Contains("IsVisible=\"{Binding CanShowGoToLiveButton}\"", mobilePlayerSource);

@@ -153,16 +153,24 @@ public partial class MobilePlayerView : UserControl
     {
         const double normalRight = 24;
         const double normalBottom = 120;
+        const double controlsVisibleBottom = 180;
+        const double detailPanelBottom = 560;
         const double fullScreenBottom = 72;
         const double pictureInPictureRight = 14;
         const double pictureInPictureBottom = 18;
 
         var right = (isPictureInPicture ? pictureInPictureRight : normalRight) + safeArea.Right;
+        var normalPlayerBottom = _boundVm?.IsMobileDetailPanelOpen == true
+            ? detailPanelBottom
+            : _boundVm?.AreMobileControlsVisible == true
+                ? controlsVisibleBottom
+                : normalBottom;
+
         var bottom = (isPictureInPicture
             ? pictureInPictureBottom
             : isFullScreen
                 ? fullScreenBottom
-                : normalBottom) + safeArea.Bottom;
+                : normalPlayerBottom) + safeArea.Bottom;
 
         MobileWatermark.Margin = new Thickness(0, 0, right, bottom);
     }
@@ -186,6 +194,7 @@ public partial class MobilePlayerView : UserControl
             _boundVm.PropertyChanged += OnPlayerPropertyChanged;
             _boundVm.SkipOverlayRequested += OnSkipOverlayRequested;
             TryShowGestureHintsOnceAsync();
+            QueueVideoSurfaceLayoutUpdate();
         }
     }
 
@@ -211,13 +220,14 @@ public partial class MobilePlayerView : UserControl
             if (_boundVm?.IsEpgPanelOpen == true)
             {
                 InitializeEpgTimelineHeader();
-                UpdateEpgVideoLayout();
+                _lastSurfaceRect = default;
+                QueueVideoSurfaceLayoutUpdate();
             }
             else
             {
-                // EPG kapandı -> video tekrar tam ekran.
+                // EPG kapandı -> native surface normal player slotuna döner.
                 _lastSurfaceRect = default;
-                GetVideoSurfaceService()?.SetBounds(0, 0, 0, 0);
+                QueueVideoSurfaceLayoutUpdate();
             }
 
             return;
@@ -232,11 +242,44 @@ public partial class MobilePlayerView : UserControl
 
     private void OnLayoutUpdated(object? sender, EventArgs e)
     {
-        // EPG açıkken (rotasyon/boyut değişiminde) video slotunu native yüzeyle senkron tut.
+        // Native Android video surface lives outside Avalonia; keep it aligned
+        // with the active player slot on layout and rotation changes.
+        if (_boundVm is not null)
+        {
+            UpdateVideoSurfaceLayout();
+        }
+    }
+
+    public void QueueVideoSurfaceLayoutUpdate()
+    {
+        Dispatcher.UIThread.Post(UpdateVideoSurfaceLayout, DispatcherPriority.Loaded);
+        Dispatcher.UIThread.Post(UpdateVideoSurfaceLayout, DispatcherPriority.Background);
+    }
+
+    private void UpdateVideoSurfaceLayout()
+    {
+        if (_boundVm?.IsPiPMode == true)
+        {
+            return;
+        }
+
         if (_boundVm?.IsEpgPanelOpen == true)
         {
             UpdateEpgVideoLayout();
+            return;
         }
+
+        UpdateNormalVideoLayout();
+    }
+
+    private void UpdateNormalVideoLayout()
+    {
+        if (VideoSurfaceSlot is null)
+        {
+            return;
+        }
+
+        SyncNativeSurfaceTo(VideoSurfaceSlot);
     }
 
     /// <summary>
@@ -284,6 +327,40 @@ public partial class MobilePlayerView : UserControl
         var py = (int)Math.Round(topLeft.Value.Y * scaling);
         var pw = (int)Math.Round(VideoSlot.Bounds.Width * scaling);
         var ph = (int)Math.Round(VideoSlot.Bounds.Height * scaling);
+        if (pw <= 0 || ph <= 0)
+        {
+            return;
+        }
+
+        var rect = new Rect(px, py, pw, ph);
+        if (rect == _lastSurfaceRect)
+        {
+            return;
+        }
+
+        _lastSurfaceRect = rect;
+        GetVideoSurfaceService()?.SetBounds(px, py, pw, ph);
+    }
+
+    private void SyncNativeSurfaceTo(Control slot)
+    {
+        var topLevel = TopLevel.GetTopLevel(this);
+        if (topLevel is null)
+        {
+            return;
+        }
+
+        var topLeft = slot.TranslatePoint(new Point(0, 0), topLevel);
+        if (topLeft is null)
+        {
+            return;
+        }
+
+        var scaling = topLevel.RenderScaling;
+        var px = (int)Math.Round(topLeft.Value.X * scaling);
+        var py = (int)Math.Round(topLeft.Value.Y * scaling);
+        var pw = (int)Math.Round(slot.Bounds.Width * scaling);
+        var ph = (int)Math.Round(slot.Bounds.Height * scaling);
         if (pw <= 0 || ph <= 0)
         {
             return;

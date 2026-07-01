@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -38,6 +38,125 @@
       <ColumnDefinition Width="*" />
     </Grid.ColumnDefinitions>
 
+    <Border x:Name="VideoSurfaceSlot"
+            Grid.ColumnSpan="2"
+            Background="Transparent"
+            ClipToBounds="True"
+            IsHitTestVisible="False"
+            IsVisible="{Binding !IsEpgPanelOpen}" />
+
+    <Border Grid.ColumnSpan="2"
+            ZIndex="4"
+            Height="130"
+            VerticalAlignment="Top"
+            IsHitTestVisible="False"
+            IsVisible="{Binding AreMobileControlsVisible}">
+      <Border.Background>
+        <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+          <GradientStop Color="#CC000000" Offset="0" />
+          <GradientStop Color="#00000000" Offset="1" />
+        </LinearGradientBrush>
+      </Border.Background>
+    </Border>
+
+    <Border Grid.ColumnSpan="2"
+            ZIndex="4"
+            Height="260"
+            VerticalAlignment="Bottom"
+            IsHitTestVisible="False"
+            IsVisible="{Binding AreMobileControlsVisible}">
+      <Border.Background>
+        <LinearGradientBrush StartPoint="0%,100%" EndPoint="0%,0%">
+          <GradientStop Color="#D9000000" Offset="0" />
+          <GradientStop Color="#00000000" Offset="1" />
+        </LinearGradientBrush>
+      </Border.Background>
+    </Border>
+
+    <Grid Grid.ColumnSpan="2"
+          ZIndex="35"
+          ColumnDefinitions="*,Auto"
+          Margin="16,18,16,0"
+          VerticalAlignment="Top"
+          IsVisible="{Binding AreMobileControlsVisible}">
+      <StackPanel Spacing="3"
+                  VerticalAlignment="Center"
+                  Margin="0,0,12,0">
+        <TextBlock Text="{Binding CurrentChannel.Name}"
+                   Foreground="White"
+                   FontSize="20"
+                   FontWeight="Bold"
+                   LetterSpacing="0.2"
+                   TextWrapping="NoWrap"
+                   TextTrimming="CharacterEllipsis"
+                   MaxLines="1" />
+        <TextBlock Text="{Binding ConnectionStatus}"
+                   Foreground="#CCFFFFFF"
+                   FontSize="12"
+                   TextWrapping="NoWrap"
+                   TextTrimming="CharacterEllipsis"
+                   MaxLines="1" />
+      </StackPanel>
+      <Button Grid.Column="1"
+              Command="{Binding CloseCommand}"
+              Width="44"
+              Height="44"
+              Padding="0"
+              CornerRadius="22"
+              Background="#99000000"
+              BorderThickness="0"
+              VerticalAlignment="Top">
+        <icons:MaterialIcon Kind="Close" Width="24" Height="24" Foreground="White" />
+      </Button>
+    </Grid>
+
+    <StackPanel Grid.ColumnSpan="2"
+                ZIndex="34"
+                Orientation="Horizontal"
+                Spacing="18"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                IsVisible="{Binding IsMobileCompactControlsVisible}">
+      <Button Command="{Binding SkipBackwardCommand}"
+              CommandParameter="10"
+              Width="56"
+              Height="56"
+              Padding="0"
+              CornerRadius="28"
+              Background="#99000000"
+              BorderThickness="0"
+              IsVisible="{Binding !IsLiveContent}">
+        <icons:MaterialIcon Kind="Rewind10" Width="28" Height="28" Foreground="White" />
+      </Button>
+      <Button Command="{Binding PlayPauseCommand}"
+              Width="72"
+              Height="72"
+              Padding="0"
+              CornerRadius="36"
+              Background="{DynamicResource AccentBrush}"
+              BorderThickness="0">
+        <Grid Width="40" Height="40">
+          <icons:MaterialIcon Kind="Pause" Width="40" Height="40"
+                              Foreground="White"
+                              IsVisible="{Binding IsPlaying}" />
+          <icons:MaterialIcon Kind="Play" Width="40" Height="40"
+                              Foreground="White"
+                              IsVisible="{Binding IsPlaying, Converter={StaticResource InverseBoolConverter}}" />
+        </Grid>
+      </Button>
+      <Button Command="{Binding SkipForwardCommand}"
+              CommandParameter="10"
+              Width="56"
+              Height="56"
+              Padding="0"
+              CornerRadius="28"
+              Background="#99000000"
+              BorderThickness="0"
+              IsVisible="{Binding !IsLiveContent}">
+        <icons:MaterialIcon Kind="FastForward10" Width="28" Height="28" Foreground="White" />
+      </Button>
+    </StackPanel>
+
     <!-- Mobile subtitle overlay. Text/style bindings update instantly without restarting the native player. -->
     <Border Grid.ColumnSpan="2"
             ZIndex="9"
@@ -76,13 +195,13 @@
                  TextWrapping="Wrap"
                  MaxLines="3" />
     </Border>
-    <!-- Sol bölge: çift dokunma = 10sn geri, dikey kaydırma = parlaklık, yatay = sarma -->
+    <!-- Left zone: double tap seeks back, vertical drag adjusts brightness, horizontal drag seeks. -->
     <Border x:Name="LeftZone" Grid.Column="0" Background="Transparent"
             DoubleTapped="OnLeftDoubleTapped"
             PointerPressed="OnZonePointerPressed"
             PointerMoved="OnZonePointerMoved"
             PointerReleased="OnZonePointerReleased" />
-    <!-- Sağ bölge: çift dokunma = 10sn ileri, dikey kaydırma = ses, yatay = sarma -->
+    <!-- Right zone: double tap seeks forward, vertical drag adjusts volume, horizontal drag seeks. -->
     <Border x:Name="RightZone" Grid.Column="1" Background="Transparent"
             DoubleTapped="OnRightDoubleTapped"
             PointerPressed="OnZonePointerPressed"
@@ -271,8 +390,7 @@
                  MaxWidth="300" />
     </Border>
 
-    <!-- Persistent lock badge: kontroller kapalıyken bile kilidin aktif olduğunu gösterir.
-         Dokunulduğunda kilidi doğrudan kaldırır (ToggleControls kilitliyken açılmadığı için). -->
+    <!-- Persistent lock badge remains available while controls are hidden. -->
     <Button Grid.ColumnSpan="2"
             ZIndex="70"
             HorizontalAlignment="Center"
@@ -293,16 +411,23 @@
 
     <!-- Normal mode controls: desktop video overlay adapted to a mobile bottom sheet. -->
     <Border Grid.ColumnSpan="2"
+            ZIndex="30"
             Background="#E60A0A0A"
             BorderBrush="{DynamicResource BorderBrush}"
-            BorderThickness="1"
-            Padding="18"
-            CornerRadius="24"
+            BorderThickness="0"
+            Padding="14"
+            CornerRadius="18"
             VerticalAlignment="Bottom"
-            Margin="14"
+            Margin="10,0,10,10"
+            MaxHeight="520"
             IsVisible="{Binding AreMobileControlsVisible}">
-      <StackPanel Spacing="14">
-      <Grid ColumnDefinitions="*,Auto">
+      <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                    VerticalScrollBarVisibility="Auto">
+      <StackPanel Spacing="12">
+      <StackPanel Spacing="12"
+                  IsVisible="{Binding IsMobileCompactControlsVisible}">
+      <Grid ColumnDefinitions="*,Auto"
+            IsVisible="False">
         <StackPanel Spacing="4">
           <TextBlock Text="{Binding CurrentChannel.Name}"
                      Foreground="{DynamicResource TextPrimaryBrush}"
@@ -328,7 +453,7 @@
         </Button>
       </Grid>
 
-      <!-- LIVE Badge + Current Program (sadece canlı yayında) -->
+      <!-- Live badge and current program, visible only for live streams. -->
       <StackPanel Orientation="Horizontal"
                   Spacing="12"
                   IsVisible="{Binding IsLiveContent}">
@@ -371,31 +496,27 @@
             ColumnSpacing="8">
         <Button Command="{Binding ToggleLockCommand}"
                 MinHeight="44">
-          <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-            <icons:MaterialIcon Kind="LockOutline" Width="18" Height="18" />
-            <TextBlock Text="{Binding IsLocked, Converter={StaticResource StringFormatConverter}, ConverterParameter='Player.Mobile.LockFormat'}" />
-          </StackPanel>
+          <Grid Width="22" Height="22" HorizontalAlignment="Center">
+            <icons:MaterialIcon Kind="LockOutline" Width="22" Height="22"
+                                IsVisible="{Binding IsLocked, Converter={StaticResource InverseBoolConverter}}" />
+            <icons:MaterialIcon Kind="Lock" Width="22" Height="22"
+                                IsVisible="{Binding IsLocked}" />
+          </Grid>
         </Button>
         <Button Grid.Column="1"
                 Command="{Binding ToggleFullScreenCommand}"
                 MinHeight="44">
-          <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-            <Grid Width="18" Height="18">
-              <icons:MaterialIcon Kind="Fullscreen" Width="18" Height="18"
-                                  IsVisible="{Binding IsFullScreen, Converter={StaticResource InverseBoolConverter}}" />
-              <icons:MaterialIcon Kind="FullscreenExit" Width="18" Height="18"
-                                  IsVisible="{Binding IsFullScreen}" />
-            </Grid>
-            <TextBlock Text="{Binding IsFullScreen, Converter={StaticResource StringFormatConverter}, ConverterParameter='Player.Mobile.FullscreenFormat'}" />
-          </StackPanel>
+          <Grid Width="22" Height="22" HorizontalAlignment="Center">
+            <icons:MaterialIcon Kind="Fullscreen" Width="22" Height="22"
+                                IsVisible="{Binding IsFullScreen, Converter={StaticResource InverseBoolConverter}}" />
+            <icons:MaterialIcon Kind="FullscreenExit" Width="22" Height="22"
+                                IsVisible="{Binding IsFullScreen}" />
+          </Grid>
         </Button>
         <Button Grid.Column="2"
                 Command="{Binding EnterPiPCommand}"
                 MinHeight="44">
-          <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-            <icons:MaterialIcon Kind="PictureInPictureBottomRight" Width="18" Height="18" />
-            <TextBlock Text="{loc:Translate Player.Overlay.PiP.Tooltip}" />
-          </StackPanel>
+          <icons:MaterialIcon Kind="PictureInPictureBottomRight" Width="22" Height="22" />
         </Button>
       </Grid>
 
@@ -447,7 +568,8 @@
                 MinWidth="72"
                 CornerRadius="32"
                 Background="{DynamicResource AccentBrush}"
-                Foreground="{DynamicResource TextPrimaryBrush}">
+                Foreground="{DynamicResource TextPrimaryBrush}"
+                IsVisible="False">
           <Grid Width="36" Height="36">
             <icons:MaterialIcon Kind="Pause" Width="36" Height="36"
                                 IsVisible="{Binding IsPlaying}" />
@@ -459,7 +581,8 @@
                 Command="{Binding StopCommand}"
                 MinHeight="44"
                 Width="44"
-                CornerRadius="22">
+                CornerRadius="22"
+                IsVisible="False">
           <icons:MaterialIcon Kind="Stop" Width="24" Height="24" />
         </Button>
         <Slider Grid.Column="2"
@@ -488,7 +611,7 @@
         <Button Classes="compactPlayerAction"
                 Command="{Binding SkipBackwardCommand}"
                 CommandParameter="10"
-                IsVisible="{Binding !IsLiveContent}"
+                IsVisible="False"
                 MinHeight="44">
           <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
             <icons:MaterialIcon Kind="Rewind10" Width="18" Height="18" />
@@ -498,7 +621,7 @@
         <Button Classes="compactPlayerAction"
                 Command="{Binding SkipForwardCommand}"
                 CommandParameter="10"
-                IsVisible="{Binding !IsLiveContent}"
+                IsVisible="False"
                 MinHeight="44">
           <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
             <icons:MaterialIcon Kind="FastForward10" Width="18" Height="18" />
@@ -598,15 +721,67 @@
                  FontSize="12"
                  HorizontalAlignment="Right" />
 
+      <Grid ColumnDefinitions="*,*,*,*"
+            ColumnSpacing="8">
+        <Button Command="{Binding DownloadCurrentContentCommand}"
+                IsVisible="{Binding CanShowDownloadButton}"
+                IsEnabled="{Binding CanDownloadCurrentContent}"
+                MinHeight="44">
+          <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+            <icons:MaterialIcon Kind="Download" Width="18" Height="18" />
+            <TextBlock Text="{loc:Translate Player.Overlay.Download.Tooltip}" />
+          </StackPanel>
+        </Button>
+        <Button Grid.Column="1"
+                Command="{Binding OpenInfoPanelCommand}"
+                IsVisible="{Binding CanShowInfoButton}"
+                MinHeight="44">
+          <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+            <icons:MaterialIcon Kind="InformationBoxOutline" Width="18" Height="18" />
+            <TextBlock Text="{loc:Translate Player.Overlay.Info.Tooltip}" />
+          </StackPanel>
+        </Button>
+        <Button Grid.Column="2"
+                Command="{Binding OpenAudioSettingsCommand}"
+                MinHeight="44">
+          <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+            <icons:MaterialIcon Kind="Subtitles" Width="18" Height="18" />
+            <TextBlock Text="{loc:Translate Player.Settings.Audio}" />
+          </StackPanel>
+        </Button>
+        <Button Grid.Column="3"
+                Command="{Binding OpenQualitySettingsCommand}"
+                MinHeight="44">
+          <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+            <icons:MaterialIcon Kind="Tune" Width="18" Height="18" />
+            <TextBlock Text="{loc:Translate Player.Mobile.Quality}" />
+          </StackPanel>
+        </Button>
+      </Grid>
+
+      <TextBlock Text="{Binding DownloadStatusMessage}"
+                 Foreground="{DynamicResource TextMutedBrush}"
+                 FontSize="12"
+                 TextWrapping="Wrap" />
+      </StackPanel>
+
       <Border Background="{DynamicResource OverlayBackgroundBrush}"
               CornerRadius="14"
               Padding="12"
               IsVisible="{Binding IsSleepTimerPanelOpen}">
         <StackPanel Spacing="8">
-          <TextBlock Text="{Binding SleepTimerLabel}"
-                     Foreground="{DynamicResource TextPrimaryBrush}"
-                     FontSize="13"
-                     FontWeight="SemiBold" />
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Text="{Binding SleepTimerLabel}"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
+                       FontSize="14"
+                       FontWeight="SemiBold"
+                       VerticalAlignment="Center" />
+            <Button Grid.Column="1"
+                    Content="{loc:Translate Common.Close}"
+                    Command="{Binding ClosePanelsCommand}"
+                    MinHeight="44"
+                    Margin="10,0,0,0" />
+          </Grid>
           <Grid ColumnDefinitions="*,*"
                 RowDefinitions="Auto,Auto,Auto"
                 ColumnSpacing="8"
@@ -690,41 +865,6 @@
           </Grid>
         </StackPanel>
       </Border>
-
-      <Grid ColumnDefinitions="*,*,*"
-            ColumnSpacing="8">
-        <Button Command="{Binding DownloadCurrentContentCommand}"
-                IsVisible="{Binding CanShowDownloadButton}"
-                IsEnabled="{Binding CanDownloadCurrentContent}"
-                MinHeight="44">
-          <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-            <icons:MaterialIcon Kind="Download" Width="18" Height="18" />
-            <TextBlock Text="{loc:Translate Player.Overlay.Download.Tooltip}" />
-          </StackPanel>
-        </Button>
-        <Button Grid.Column="1"
-                Command="{Binding OpenInfoPanelCommand}"
-                IsVisible="{Binding CanShowInfoButton}"
-                MinHeight="44">
-          <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-            <icons:MaterialIcon Kind="InformationBoxOutline" Width="18" Height="18" />
-            <TextBlock Text="{loc:Translate Player.Overlay.Info.Tooltip}" />
-          </StackPanel>
-        </Button>
-        <Button Grid.Column="2"
-                Command="{Binding OpenAudioSettingsCommand}"
-                MinHeight="44">
-          <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-            <icons:MaterialIcon Kind="Subtitles" Width="18" Height="18" />
-            <TextBlock Text="{loc:Translate Player.Settings.Audio}" />
-          </StackPanel>
-        </Button>
-      </Grid>
-
-      <TextBlock Text="{Binding DownloadStatusMessage}"
-                 Foreground="{DynamicResource TextMutedBrush}"
-                 FontSize="12"
-                 TextWrapping="Wrap" />
 
       <Border Background="{DynamicResource OverlayBackgroundBrush}"
               CornerRadius="14"
@@ -1354,7 +1494,8 @@
 
       <Button Content="{loc:Translate Player.Mobile.Quality}"
               Command="{Binding OpenQualitySettingsCommand}"
-              MinHeight="44" />
+              MinHeight="44"
+              IsVisible="False" />
 
       <Border Background="{DynamicResource OverlayBackgroundBrush}"
               CornerRadius="14"
@@ -1479,99 +1620,7 @@
         </StackPanel>
       </Border>
 
-      <StackPanel Spacing="6">
-        <!-- Row 1: Resolution + FPS -->
-        <Grid ColumnDefinitions="*,*"
-              ColumnSpacing="8">
-          <Border Background="{DynamicResource OverlayBackgroundBrush}"
-                  CornerRadius="10"
-                  Padding="10,8">
-            <StackPanel Spacing="2">
-              <TextBlock Text="{loc:Translate Player.Quality.Resolution}"
-                         Foreground="{DynamicResource TextDisabledBrush}"
-                         FontSize="10"
-                         FontWeight="Bold" />
-              <TextBlock Text="{Binding QualityResolutionText}"
-                         Foreground="{DynamicResource TextPrimaryBrush}"
-                         FontSize="12"
-                         FontWeight="SemiBold" />
-            </StackPanel>
-          </Border>
-          <Border Grid.Column="1"
-                  Background="{DynamicResource OverlayBackgroundBrush}"
-                  CornerRadius="10"
-                  Padding="10,8">
-            <StackPanel Spacing="2">
-              <TextBlock Text="{loc:Translate Player.Quality.Fps}"
-                         Foreground="{DynamicResource TextDisabledBrush}"
-                         FontSize="10"
-                         FontWeight="Bold" />
-              <TextBlock Text="{Binding QualityFpsText}"
-                         Foreground="{DynamicResource TextPrimaryBrush}"
-                         FontSize="12"
-                         FontWeight="SemiBold" />
-            </StackPanel>
-          </Border>
-        </Grid>
-
-        <!-- Row 2: Codec + Bitrate -->
-        <Grid ColumnDefinitions="*,*"
-              ColumnSpacing="8">
-          <Border Background="{DynamicResource OverlayBackgroundBrush}"
-                  CornerRadius="10"
-                  Padding="10,8">
-            <StackPanel Spacing="2">
-              <TextBlock Text="{loc:Translate Player.Quality.Codec}"
-                         Foreground="{DynamicResource TextDisabledBrush}"
-                         FontSize="10"
-                         FontWeight="Bold" />
-              <TextBlock Text="{Binding QualityVideoCodecText}"
-                         Foreground="{DynamicResource TextPrimaryBrush}"
-                         FontSize="12"
-                         FontWeight="SemiBold"
-                         TextTrimming="CharacterEllipsis" />
-            </StackPanel>
-          </Border>
-          <Border Grid.Column="1"
-                  Background="{DynamicResource OverlayBackgroundBrush}"
-                  CornerRadius="10"
-                  Padding="10,8">
-            <StackPanel Spacing="2">
-              <TextBlock Text="{loc:Translate Player.Quality.Bitrate}"
-                         Foreground="{DynamicResource TextDisabledBrush}"
-                         FontSize="10"
-                         FontWeight="Bold" />
-              <TextBlock Text="{Binding QualityVideoBitrateText}"
-                         Foreground="{DynamicResource TextPrimaryBrush}"
-                         FontSize="12"
-                         FontWeight="SemiBold"
-                         TextTrimming="CharacterEllipsis" />
-            </StackPanel>
-          </Border>
-        </Grid>
-
-        <!-- Row 3: Audio (full width) -->
-        <Border Background="{DynamicResource OverlayBackgroundBrush}"
-                CornerRadius="10"
-                Padding="10,8">
-          <Grid ColumnDefinitions="Auto,*"
-                ColumnSpacing="8">
-            <TextBlock Text="{loc:Translate Player.Quality.Audio}"
-                       Foreground="{DynamicResource TextDisabledBrush}"
-                       FontSize="10"
-                       FontWeight="Bold"
-                       VerticalAlignment="Center" />
-            <TextBlock Grid.Column="1"
-                       Text="{Binding QualityAudioText}"
-                       Foreground="{DynamicResource TextPrimaryBrush}"
-                       FontSize="12"
-                       FontWeight="SemiBold"
-                       TextTrimming="CharacterEllipsis" />
-          </Grid>
-        </Border>
-      </StackPanel>
-
-      <!-- Next Episode Prompt → bölüm bitince öneri kartı -->
+      <!-- Next episode prompt shown near the end of an episode. -->
       <Border Background="{DynamicResource Surface0Brush}"
               CornerRadius="16"
               Padding="16"
@@ -1603,7 +1652,7 @@
         </StackPanel>
       </Border>
 
-      <!-- Resume Dialog (inline card — mobile pattern) -->
+      <!-- Resume dialog inline card for mobile. -->
       <Border Background="{DynamicResource Surface0Brush}"
               CornerRadius="16"
               Padding="20"
@@ -1694,18 +1743,19 @@
           </Border>
         </StackPanel>
       </Border>
-    </StackPanel>
+      </StackPanel>
+      </ScrollViewer>
   </Border>
 
-    <!-- EPG MODU: video üstte küçülür (şeffaf slot), EPG listesi altında açılır -->
+    <!-- EPG mode: video uses a smaller transparent slot above the timeline. -->
     <Grid x:Name="EpgModeRoot" Grid.ColumnSpan="2"
           RowDefinitions="Auto,*"
           IsVisible="{Binding IsEpgPanelOpen}">
-      <!-- Üst: küçük şeffaf video alanı (native video surface buraya küçültülür) -->
+      <!-- Top transparent video slot. The native surface is bound to this area. -->
       <Border x:Name="VideoSlot" Grid.Row="0"
               Background="Transparent"
               ClipToBounds="True">
-        <!-- Videonun alt kenarına ince yarı saydam kontrol şeridi -->
+        <!-- Thin translucent control strip on the bottom edge of the video. -->
         <Border VerticalAlignment="Bottom"
                 Background="#A6000000"
                 Padding="12,6">
@@ -1753,7 +1803,7 @@
         </Border>
       </Border>
 
-      <!-- EPG Timeline paneli (tüm kalan alanı kaplar) -->
+      <!-- EPG timeline fills the remaining area. -->
       <Grid Grid.Row="1" Background="#EE0D0D0D">
         <Grid RowDefinitions="Auto,*">
           <!-- EPG Header -->
@@ -1801,10 +1851,10 @@
             </Grid>
           </Border>
 
-          <!-- Timeline: frozen kanal kolonu + saat başlığı + senkron scroll -->
+          <!-- Timeline: frozen channel column plus synchronized program scroll. -->
           <Grid Grid.Row="1" ColumnDefinitions="112,*" ClipToBounds="True"
                 Background="{DynamicResource Bg0Brush}">
-            <!-- Sol: sabit kanal başlığı ve kanal listesi -->
+            <!-- Left: fixed channel header and channel list. -->
             <Grid RowDefinitions="36,*" Background="#0D0D0D" ZIndex="20" ClipToBounds="True">
               <Border Grid.Row="0" Background="#131313"
                       BorderBrush="#1AFFFFFF" BorderThickness="0,0,1,1">
@@ -1855,7 +1905,7 @@
               </ScrollViewer>
             </Grid>
 
-            <!-- Sağ: saat başlığı ve program timeline -->
+            <!-- Right: time header and program timeline. -->
             <Grid Grid.Column="1" RowDefinitions="36,*" ClipToBounds="True">
               <Border Grid.Row="0" Background="#131313"
                       BorderBrush="#1AFFFFFF" BorderThickness="0,0,0,1">

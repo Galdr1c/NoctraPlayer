@@ -66,6 +66,8 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     private string _sleepTimerCountdown = string.Empty;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsMobileDetailPanelOpen))]
+    [NotifyPropertyChangedFor(nameof(IsMobileCompactControlsVisible))]
     private bool _isSleepTimerPanelOpen;
 
     public bool IsSleepTimerActive => SleepTimerMode != SleepTimerOption.Off;
@@ -116,6 +118,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsPiPControlsVisible))]
     [NotifyPropertyChangedFor(nameof(AreMobileControlsVisible))]
+    [NotifyPropertyChangedFor(nameof(IsMobileCompactControlsVisible))]
     private bool _isVisible = true;
 
     [ObservableProperty]
@@ -146,6 +149,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsPiPControlsVisible))]
     [NotifyPropertyChangedFor(nameof(AreMobileControlsVisible))]
+    [NotifyPropertyChangedFor(nameof(IsMobileCompactControlsVisible))]
     private bool _isPiPMode;
 
     [ObservableProperty]
@@ -161,9 +165,22 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     /// </summary>
     public bool AreMobileControlsVisible => IsVisible && !IsEpgPanelOpen && !IsPiPMode;
 
+    public bool IsMobileDetailPanelOpen =>
+        IsAudioSettingsOpen ||
+        IsQualitySettingsOpen ||
+        IsInfoPanelOpen ||
+        IsEpisodesPanelOpen ||
+        IsSleepTimerPanelOpen ||
+        IsResumeDialogVisible ||
+        IsNextEpisodePromptVisible;
+
+    public bool IsMobileCompactControlsVisible =>
+        AreMobileControlsVisible && !IsMobileDetailPanelOpen;
+
     // ── EPG Timeline Panel ──────────────────────────────────────────────────
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(AreMobileControlsVisible))]
+    [NotifyPropertyChangedFor(nameof(IsMobileCompactControlsVisible))]
     private bool _isEpgPanelOpen;
     [ObservableProperty] private bool _isEpgLoading;
     [ObservableProperty] private int _epgFocusRowIndex = -1;
@@ -248,6 +265,8 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     private bool _isResizing;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsMobileDetailPanelOpen))]
+    [NotifyPropertyChangedFor(nameof(IsMobileCompactControlsVisible))]
     private bool _isAudioSettingsOpen;
 
     [ObservableProperty]
@@ -501,9 +520,13 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     public string SelectedSubtitleTrackName => SubtitleTracks.FirstOrDefault(t => t.Id == SelectedSubtitleTrack)?.Name ?? string.Empty;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsMobileDetailPanelOpen))]
+    [NotifyPropertyChangedFor(nameof(IsMobileCompactControlsVisible))]
     private bool _isQualitySettingsOpen;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsMobileDetailPanelOpen))]
+    [NotifyPropertyChangedFor(nameof(IsMobileCompactControlsVisible))]
     private bool _isEpisodesPanelOpen;
 
     [ObservableProperty]
@@ -536,6 +559,8 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         !string.IsNullOrWhiteSpace(StreamQuality.VideoCodecDisplay);
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsMobileDetailPanelOpen))]
+    [NotifyPropertyChangedFor(nameof(IsMobileCompactControlsVisible))]
     private bool _isInfoPanelOpen;
 
     [ObservableProperty]
@@ -560,6 +585,8 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     private string _currentEpisodeIdentity = string.Empty;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsMobileDetailPanelOpen))]
+    [NotifyPropertyChangedFor(nameof(IsMobileCompactControlsVisible))]
     private bool _isNextEpisodePromptVisible;
 
     [ObservableProperty]
@@ -1788,7 +1815,10 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     // ── Resume Dialog ───────────────────────────────────────────────────────
     private TaskCompletionSource<bool>? _resumeDialogTcs;
 
-    [ObservableProperty] private bool _isResumeDialogVisible;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsMobileDetailPanelOpen))]
+    [NotifyPropertyChangedFor(nameof(IsMobileCompactControlsVisible))]
+    private bool _isResumeDialogVisible;
     [ObservableProperty] private string _resumePositionText = string.Empty;
     [ObservableProperty] private bool _isPremiumResume;
 

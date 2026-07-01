@@ -388,6 +388,35 @@ namespace Noctra.Tests
         }
 
         [Fact]
+        public void MobileCompactControls_HideWhenAnyBottomSheetPanelIsOpen()
+        {
+            var ctx = new PlayerTestContext(isPremium: true);
+            ctx.VM.IsVisible = true;
+
+            Assert.True(ctx.VM.AreMobileControlsVisible);
+            Assert.False(ctx.VM.IsMobileDetailPanelOpen);
+            Assert.True(ctx.VM.IsMobileCompactControlsVisible);
+
+            ctx.VM.IsSleepTimerPanelOpen = true;
+            Assert.True(ctx.VM.IsMobileDetailPanelOpen);
+            Assert.False(ctx.VM.IsMobileCompactControlsVisible);
+
+            ctx.VM.IsSleepTimerPanelOpen = false;
+            ctx.VM.IsResumeDialogVisible = true;
+            Assert.True(ctx.VM.IsMobileDetailPanelOpen);
+            Assert.False(ctx.VM.IsMobileCompactControlsVisible);
+
+            ctx.VM.IsResumeDialogVisible = false;
+            ctx.VM.IsNextEpisodePromptVisible = true;
+            Assert.True(ctx.VM.IsMobileDetailPanelOpen);
+            Assert.False(ctx.VM.IsMobileCompactControlsVisible);
+
+            ctx.VM.IsNextEpisodePromptVisible = false;
+            Assert.False(ctx.VM.IsMobileDetailPanelOpen);
+            Assert.True(ctx.VM.IsMobileCompactControlsVisible);
+        }
+
+        [Fact]
         public void VolumeChanged_FromService_UpdatesVmVolume()
         {
             var ctx = new PlayerTestContext();
