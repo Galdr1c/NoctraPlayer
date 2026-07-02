@@ -368,7 +368,7 @@
   "Downloads.Storage.Noctra": "Noctra",
   "Downloads.Storage.Pending": "Elementos en Descarga",
   "Downloads.Storage.Free": "Espacio Libre",
-  "Downloads.Storage.Warning": "Atención: El uso de disco superó el 90%. Las nuevas descargas pueden fallar.",
+  "Downloads.Storage.Warning": "Almacenamiento del dispositivo bajo. Las nuevas descargas pueden fallar.",
   "Downloads.Action.DeleteAll": "Eliminar Todo",
   "Downloads.Action.OpenFolder": "Abrir Carpeta",
   "Downloads.Action.StopAll": "Detener Todo",
@@ -915,5 +915,6 @@
   "Mobile.Page.More.Description": "Perfiles, favoritos, ajustes y funciones Premium.",
   "Mobile.More.Shortcuts": "Acceso rápido",
   "Player.Overlay.Play": "Reproducir",
-  "Player.Overlay.Pause": "Pausar"
+  "Player.Overlay.Pause": "Pausar",
+  "Downloads.Storage.DetailFormat": "Noctra: {0} usado · Libre: {1}"
 }

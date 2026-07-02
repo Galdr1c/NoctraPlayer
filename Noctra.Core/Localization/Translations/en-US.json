@@ -368,7 +368,7 @@
   "Downloads.Storage.Noctra": "Noctra",
   "Downloads.Storage.Pending": "Downloading Items",
   "Downloads.Storage.Free": "Free Space",
-  "Downloads.Storage.Warning": "Attention: Disk usage exceeded 90%. New downloads may fail.",
+  "Downloads.Storage.Warning": "Device storage is low. New downloads may fail.",
   "Downloads.Action.DeleteAll": "Delete All",
   "Downloads.Action.OpenFolder": "Open Folder",
   "Downloads.Action.StopAll": "Stop All",
@@ -916,5 +916,6 @@
   "Mobile.Page.More.Description": "Profiles, favorites, settings and premium features.",
   "Mobile.More.Shortcuts": "Quick access",
   "Player.Overlay.Play": "Play",
-  "Player.Overlay.Pause": "Pause"
+  "Player.Overlay.Pause": "Pause",
+  "Downloads.Storage.DetailFormat": "Noctra: {0} used · Free: {1}"
 }

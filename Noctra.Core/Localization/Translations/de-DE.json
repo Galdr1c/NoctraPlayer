@@ -368,7 +368,7 @@
   "Downloads.Storage.Noctra": "Noctra",
   "Downloads.Storage.Pending": "Elemente im Download",
   "Downloads.Storage.Free": "Freier Speicher",
-  "Downloads.Storage.Warning": "Achtung: Die Festplattenbelegung hat 90 % überschritten. Neue Downloads könnten fehlschlagen.",
+  "Downloads.Storage.Warning": "Gerätespeicher ist knapp. Neue Downloads könnten fehlschlagen.",
   "Downloads.Action.DeleteAll": "Alle löschen",
   "Downloads.Action.OpenFolder": "Ordner öffnen",
   "Downloads.Action.StopAll": "Alle stoppen",
@@ -915,5 +915,6 @@
   "Mobile.Page.More.Description": "Profile, Favoriten, Einstellungen und Premium-Funktionen.",
   "Mobile.More.Shortcuts": "Schnellzugriff",
   "Player.Overlay.Play": "Wiedergabe",
-  "Player.Overlay.Pause": "Pause"
+  "Player.Overlay.Pause": "Pause",
+  "Downloads.Storage.DetailFormat": "Noctra: {0} belegt · Frei: {1}"
 }

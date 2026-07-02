@@ -124,7 +124,8 @@
                           BorderThickness="1"
                           BorderBrush="{DynamicResource ErrorBrush}"
                           CornerRadius="8"
-                          FontSize="12">
+                          FontSize="12"
+                          IsVisible="{Binding HasDownloadedItems}">
                     <StackPanel Orientation="Horizontal" Spacing="6">
                       <icons:MaterialIcon Kind="TrashCanOutline" Width="16" Height="16" />
                       <TextBlock Text="{loc:Translate Downloads.Action.DeleteAll}" />
@@ -137,7 +138,8 @@
                           Foreground="{DynamicResource TextPrimaryBrush}"
                           BorderThickness="0"
                           CornerRadius="8"
-                          FontSize="12">
+                          FontSize="12"
+                          IsVisible="{Binding HasDownloadedItems}">
                     <StackPanel Orientation="Horizontal" Spacing="6">
                       <icons:MaterialIcon Kind="FolderOpenOutline" Width="16" Height="16" />
                       <TextBlock Text="{loc:Translate Downloads.Action.OpenFolder}" />

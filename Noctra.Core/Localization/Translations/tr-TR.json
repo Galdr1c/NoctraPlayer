@@ -368,7 +368,7 @@
   "Downloads.Storage.Noctra": "Noctra",
   "Downloads.Storage.Pending": "İndirilmesi Devam Edenler",
   "Downloads.Storage.Free": "Boş Alan",
-  "Downloads.Storage.Warning": "Dikkat: Disk doluluğu %90'ı geçti. Yeni indirmeler başarısız olabilir.",
+  "Downloads.Storage.Warning": "Cihaz depolama alanı düşük. Yeni indirmeler başarısız olabilir.",
   "Downloads.Action.DeleteAll": "Tümünü Sil",
   "Downloads.Action.OpenFolder": "Klasörü Aç",
   "Downloads.Action.StopAll": "Tümünü Durdur",
@@ -915,5 +915,6 @@
   "Mobile.Page.More.Description": "Profiller, favoriler, ayarlar ve premium özellikler.",
   "Mobile.More.Shortcuts": "Hızlı erişim",
   "Player.Overlay.Play": "Oynat",
-  "Player.Overlay.Pause": "Duraklat"
+  "Player.Overlay.Pause": "Duraklat",
+  "Downloads.Storage.DetailFormat": "Noctra: {0} kullanıldı · Boş: {1}"
 }

@@ -4733,6 +4733,9 @@ public partial class MainViewModel : ObservableObject
     partial void OnSelectedDownloadSortOrderChanged(DownloadSortOrder value) => _ = RefreshDownloadedItemsFromDatabaseAsync();
 
     public bool ShowDownloadsLandingEmptyState => !IsDownloadCenterVisible && ShowDownloadsEmptyState;
+    public bool HasDownloadedItems => TotalDownloadedCount > 0 ||
+                                       DownloadedVodChannels.Count > 0 ||
+                                       DownloadedSeriesItems.Count > 0;
 
     [RelayCommand]
     private void Navigate(AppView view)
@@ -5408,8 +5411,10 @@ public partial class MainViewModel : ObservableObject
                 StoragePendingPercent = pendingPercent;
                 StorageFreePercent = Math.Max(0, 100.0 - (totalUsedPercent + pendingPercent));
                 
-                StorageUsageDetailText = $"{FormatDownloadBytes(usedSpace)} / {FormatDownloadBytes(totalSpace)}";
-                ShowStorageWarning = (totalUsedPercent + pendingPercent) > 90.0;
+                var detailFmt = _localizationService.GetString("Downloads.Storage.DetailFormat");
+                if (string.IsNullOrWhiteSpace(detailFmt)) detailFmt = "Noctra: {0} used · Free: {1}";
+                StorageUsageDetailText = string.Format(CultureInfo.CurrentCulture, detailFmt, FormatDownloadBytes(totalSizeBytes), FormatDownloadBytes(freeSpace));
+                ShowStorageWarning = (totalUsedPercent + pendingPercent) > 90.0 && totalSizeBytes > 0;
             }
         }
         catch (Exception ex)
@@ -5421,6 +5426,7 @@ public partial class MainViewModel : ObservableObject
         await RefreshDownloadsFromServiceAsync(0);
         ShowDownloadsEmptyState = DownloadedVodChannels.Count == 0 &&
                                  DownloadedSeriesItems.Count == 0;
+        OnPropertyChanged(nameof(HasDownloadedItems));
     }
 
     /// <summary>
@@ -5756,6 +5762,11 @@ public partial class MainViewModel : ObservableObject
 
         ShowDownloadsEmptyState = DownloadedVodChannels.Count == 0 &&
                                  DownloadedSeriesItems.Count == 0;
+    }
+
+    partial void OnTotalDownloadedCountChanged(int value)
+    {
+        OnPropertyChanged(nameof(HasDownloadedItems));
     }
 
     private void SetDownloadCenterSummaryEmpty()
@@ -6128,6 +6139,7 @@ public partial class MainViewModel : ObservableObject
     partial void OnShowDownloadsEmptyStateChanged(bool value)
     {
         OnPropertyChanged(nameof(ShowDownloadsLandingEmptyState));
+        OnPropertyChanged(nameof(HasDownloadedItems));
     }
 
     private readonly SemaphoreSlim _refreshSemaphore = new(1, 1);
