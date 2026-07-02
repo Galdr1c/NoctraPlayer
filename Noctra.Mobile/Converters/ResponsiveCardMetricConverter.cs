@@ -110,7 +110,8 @@ public sealed class ResponsiveCardMetricConverter : IValueConverter
             if (mode.StartsWith("profile", StringComparison.OrdinalIgnoreCase))
             {
                 // Profile cards keep the avatar-heavy shape used in the desktop profile window.
-                return new CardMetricProfile(132, 170, 150, 1.18, 16, 5);
+                // MinWidth 150 ensures the 150x150 avatar Grid never overflows the card.
+                return new CardMetricProfile(150, 200, 170, 1.18, 16, 5);
             }
 
             if (mode.StartsWith("moreShortcut", StringComparison.OrdinalIgnoreCase))
