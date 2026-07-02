@@ -127,21 +127,11 @@
       </StackPanel>
 
       <!-- Empty state -->
-      <StackPanel Spacing="14" Margin="0,100,0,0"
-                  HorizontalAlignment="Center"
-                  IsVisible="{Binding ShowHistoryEmptyState}">
-        <icons:MaterialIcon Kind="History" Width="64" Height="64"
-                            Foreground="{DynamicResource TextMutedBrush}"
-                            Opacity="0.5" HorizontalAlignment="Center" />
-        <TextBlock Text="{loc:Translate History.Empty.Title}"
-                   FontSize="20" FontWeight="Bold"
-                   Foreground="{DynamicResource TextPrimaryBrush}"
-                   TextAlignment="Center"
-                   Margin="0,2,0,0" />
-        <TextBlock Text="{loc:Translate History.Empty.Description}"
-                   FontSize="14" Foreground="{DynamicResource TextMutedBrush}"
-                   TextAlignment="Center" TextWrapping="Wrap" MaxWidth="280" />
-      </StackPanel>
+      <controls:MobileEmptyStateView
+                  IsVisible="{Binding ShowHistoryEmptyState}"
+                  IconKind="History"
+                  Title="{loc:Translate History.Empty.Title}"
+                  Description="{loc:Translate History.Empty.Description}" />
 
     </StackPanel>
   </ScrollViewer>

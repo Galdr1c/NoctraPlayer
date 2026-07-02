@@ -105,28 +105,11 @@
                    TextAlignment="Center" />
       </StackPanel>
 
-      <StackPanel Spacing="12"
-                  Margin="0,96,0,0"
-                  HorizontalAlignment="Center"
-                  IsVisible="{Binding ShowEmptyChannels}">
-        <!-- Add a series-related icon similar to desktop empty state -->
-        <icons:MaterialIcon Kind="Television"
-                            Width="64"
-                            Height="64"
-                            Foreground="{DynamicResource TextMutedBrush}"
-                            Opacity="0.5" />
-        <TextBlock Text="{loc:Translate Series.Empty.Title}"
-                   FontSize="20"
-                   FontWeight="SemiBold"
-                   LetterSpacing="1"
-                   Foreground="{DynamicResource TextPrimaryBrush}"
-                   TextAlignment="Center" />
-        <TextBlock Text="{loc:Translate Series.Empty.Description}"
-                   FontSize="14"
-                   Foreground="{DynamicResource TextMutedBrush}"
-                   TextAlignment="Center"
-                   TextWrapping="Wrap" />
-      </StackPanel>
+      <controls:MobileEmptyStateView
+                  IsVisible="{Binding ShowEmptyChannels}"
+                  IconKind="TelevisionPlay"
+                  Title="{loc:Translate Series.Empty.Title}"
+                  Description="{loc:Translate Series.Empty.Description}" />
     </StackPanel>
   </ScrollViewer>
 </UserControl>

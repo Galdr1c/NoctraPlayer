@@ -105,28 +105,11 @@
                    TextAlignment="Center" />
       </StackPanel>
 
-      <StackPanel Spacing="12"
-                  Margin="0,96,0,0"
-                  HorizontalAlignment="Center"
-                  IsVisible="{Binding ShowEmptyChannels}">
-        <!-- Add a film icon similar to desktop empty state -->
-        <icons:MaterialIcon Kind="Filmstrip"
-                            Width="64"
-                            Height="64"
-                            Foreground="{DynamicResource TextMutedBrush}"
-                            Opacity="0.5" />
-        <TextBlock Text="{loc:Translate Movies.Empty.Title}"
-                   FontSize="20"
-                   FontWeight="SemiBold"
-                   LetterSpacing="1"
-                   Foreground="{DynamicResource TextPrimaryBrush}"
-                   TextAlignment="Center" />
-        <TextBlock Text="{loc:Translate Movies.Empty.Description}"
-                   FontSize="14"
-                   Foreground="{DynamicResource TextMutedBrush}"
-                   TextAlignment="Center"
-                   TextWrapping="Wrap" />
-      </StackPanel>
+      <controls:MobileEmptyStateView
+                  IsVisible="{Binding ShowEmptyChannels}"
+                  IconKind="Filmstrip"
+                  Title="{loc:Translate Movies.Empty.Title}"
+                  Description="{loc:Translate Movies.Empty.Description}" />
     </StackPanel>
   </ScrollViewer>
 </UserControl>

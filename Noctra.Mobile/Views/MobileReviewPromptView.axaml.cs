@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Avalonia.Threading;
 using Noctra.Models;
 
 namespace Noctra.Mobile.Views;
@@ -32,8 +33,11 @@ public partial class MobileReviewPromptView : UserControl
         // If the caller cancels, resolve with Later so the service can snooze.
         cancellationToken.Register(() =>
         {
-            _tcs?.TrySetResult(ReviewPromptResult.Later);
-            IsVisible = false;
+            Dispatcher.UIThread.Post(() =>
+            {
+                _tcs?.TrySetResult(ReviewPromptResult.Later);
+                IsVisible = false;
+            });
         });
 
         return _tcs.Task;

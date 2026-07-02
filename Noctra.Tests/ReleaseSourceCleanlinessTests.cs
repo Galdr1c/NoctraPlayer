@@ -197,7 +197,8 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("Tag=\"Movies\"", viewSource);
         Assert.Contains("Tag=\"Series\"", viewSource);
         Assert.Contains("Tag=\"More\"", viewSource);
-        Assert.Contains("Button.nav.active", viewSource);
+        Assert.Contains("Button.navBottom.active", viewSource);
+        Assert.Contains("Button.navRail.active", viewSource);
         Assert.Contains("UpdateNavigationSelection(destination)", codeSource);
         Assert.Contains("button.Classes.Set(\"active\"", codeSource);
         Assert.Contains("TabletBreakpoint = 720", codeSource);
@@ -317,7 +318,7 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.DoesNotContain("ColumnDefinitions=\"*,*,*,*,*,*,*\"", mainViewSource);
         Assert.Contains("TextTrimming=\"CharacterEllipsis\"", mainViewSource);
         Assert.Contains("<Setter Property=\"MinHeight\" Value=\"52\" />", mainViewSource);
-        Assert.Contains("Classes=\"nav navBottom\"", mainViewSource);
+        Assert.Contains("Classes=\"navBottom\"", mainViewSource);
         Assert.Contains("Classes=\"NavIndicator\"", mainViewSource);
 
         Assert.DoesNotContain("ColumnDefinitions=\"*,*,*,*,*\"", playerContractSource);
@@ -2078,7 +2079,8 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("Settings.About.VersionFormat", settingsSource);
         Assert.Contains("Settings.About.PremiumVersionFormat", settingsSource);
         Assert.Contains("IsPremium", settingsSource);
-        Assert.Contains("ShowUpsellCommand", settingsSource);
+        Assert.Contains("ShowUpsell_Click", settingsSource);
+        Assert.Contains("MobileUpsellView", settingsSource);
         Assert.Contains("GlobalSettings.About.Upgrade", settingsSource);
         Assert.Contains("IsPromoCodeStatusSuccess", settingsSource);
         Assert.Contains("BooleanToSuccessWarningBrushConverter", settingsSource);

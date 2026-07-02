@@ -121,21 +121,11 @@
       </StackPanel>
 
       <!-- Empty state -->
-      <StackPanel Spacing="14" Margin="0,100,0,0"
-                  HorizontalAlignment="Center"
-                  IsVisible="{Binding ShowFavoritesEmptyState}">
-        <icons:MaterialIcon Kind="HeartOutline" Width="64" Height="64"
-                            Foreground="{DynamicResource TextMutedBrush}"
-                            Opacity="0.5" HorizontalAlignment="Center" />
-        <TextBlock Text="{loc:Translate Favorites.Empty.Title}"
-                   FontSize="20" FontWeight="Bold"
-                   Foreground="{DynamicResource TextPrimaryBrush}"
-                   TextAlignment="Center"
-                   Margin="0,2,0,0" />
-        <TextBlock Text="{loc:Translate Favorites.Empty.Description}"
-                   FontSize="14" Foreground="{DynamicResource TextMutedBrush}"
-                   TextAlignment="Center" TextWrapping="Wrap" MaxWidth="280" />
-      </StackPanel>
+      <controls:MobileEmptyStateView
+                  IsVisible="{Binding ShowFavoritesEmptyState}"
+                  IconKind="HeartOutline"
+                  Title="{loc:Translate Favorites.Empty.Title}"
+                  Description="{loc:Translate Favorites.Empty.Description}" />
 
     </StackPanel>
   </ScrollViewer>

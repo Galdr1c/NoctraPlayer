@@ -158,27 +158,11 @@
       </Border>
 
       <!-- Empty State (shown when no downloads) -->
-      <StackPanel Spacing="8"
-                  Margin="0,20,0,0"
-                  HorizontalAlignment="Center"
-                  IsVisible="{Binding ShowDownloadsEmptyState}">
-        <icons:MaterialIcon Kind="DownloadOffOutline"
-                            Width="64"
-                            Height="64"
-                            Foreground="{DynamicResource TextMutedBrush}"
-                            Opacity="0.5"
-                            HorizontalAlignment="Center" />
-        <TextBlock Text="{loc:Translate Downloads.Empty.Title}"
-                   Foreground="{DynamicResource TextPrimaryBrush}"
-                   FontSize="20"
-                   FontWeight="Bold"
-                   TextAlignment="Center"
-                   Margin="0,16,0,4" />
-        <TextBlock Text="{loc:Translate Downloads.Empty.Description}"
-                   Foreground="{DynamicResource TextMutedBrush}"
-                   FontSize="14"
-                   TextAlignment="Center" />
-      </StackPanel>
+      <controls:MobileEmptyStateView
+                  IsVisible="{Binding ShowDownloadsEmptyState}"
+                  IconKind="DownloadOffOutline"
+                  Title="{loc:Translate Downloads.Empty.Title}"
+                  Description="{loc:Translate Downloads.Empty.Description}" />
 
       <!-- Download content tabs (hidden when empty) -->
       <TabControl SelectedIndex="{Binding DownloadTabIndex, Mode=TwoWay}"

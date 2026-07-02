@@ -166,7 +166,14 @@ public partial class MainView : UserControl
 
     private async Task<ReviewPromptResult> ShowReviewPromptOverlayAsync(CancellationToken cancellationToken)
     {
-        return await ReviewPromptOverlay.WaitForResultAsync(cancellationToken);
+        if (Dispatcher.UIThread.CheckAccess())
+        {
+            return await ReviewPromptOverlay.WaitForResultAsync(cancellationToken);
+        }
+
+        var resultTask = await Dispatcher.UIThread.InvokeAsync(
+            () => ReviewPromptOverlay.WaitForResultAsync(cancellationToken));
+        return resultTask;
     }
 
     /// <summary>

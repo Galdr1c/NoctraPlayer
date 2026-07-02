@@ -1,0 +1,79 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             x:Class="Noctra.Mobile.Controls.MobileEmptyStateView">
+
+  <StackPanel Spacing="14"
+              HorizontalAlignment="Center"
+              VerticalAlignment="Center"
+              MaxWidth="320">
+
+    <!-- Icon circle with subtle background -->
+    <Border Width="80"
+            Height="80"
+            CornerRadius="40"
+            Background="{DynamicResource Surface1Brush}"
+            HorizontalAlignment="Center"
+            Margin="0,0,0,8">
+      <icons:MaterialIcon x:Name="EmptyIcon"
+                          Width="36"
+                          Height="36"
+                          Foreground="{DynamicResource TextMutedBrush}"
+                          Opacity="0.6"
+                          HorizontalAlignment="Center"
+                          VerticalAlignment="Center" />
+    </Border>
+
+    <!-- Title -->
+    <TextBlock x:Name="TitleBlock"
+               FontSize="20"
+               FontWeight="Bold"
+               Foreground="{DynamicResource TextPrimaryBrush}"
+               TextAlignment="Center"
+               TextWrapping="Wrap" />
+
+    <!-- Description -->
+    <TextBlock x:Name="DescriptionBlock"
+               FontSize="14"
+               LineHeight="20"
+               Foreground="{DynamicResource TextMutedBrush}"
+               TextAlignment="Center"
+               TextWrapping="Wrap"
+               MaxWidth="280" />
+
+    <!-- Primary Action Button -->
+    <Button x:Name="PrimaryActionButton"
+            Classes="SettingsPrimaryActionButton"
+            MinHeight="48"
+            HorizontalAlignment="Center"
+            MinWidth="180"
+            IsVisible="False">
+      <StackPanel Orientation="Horizontal"
+                  HorizontalAlignment="Center"
+                  Spacing="8">
+        <icons:MaterialIcon x:Name="PrimaryActionIcon"
+                            Width="18"
+                            Height="18"
+                            Foreground="White"
+                            IsVisible="False" />
+        <TextBlock x:Name="PrimaryActionTextBlock"
+                   Foreground="White"
+                   FontSize="14"
+                   FontWeight="SemiBold" />
+      </StackPanel>
+    </Button>
+
+    <!-- Secondary Action Button -->
+    <Button x:Name="SecondaryActionButton"
+            Background="Transparent"
+            BorderThickness="0"
+            HorizontalAlignment="Center"
+            IsVisible="False">
+      <TextBlock x:Name="SecondaryActionTextBlock"
+                 Foreground="{DynamicResource AccentBrush}"
+                 FontSize="13"
+                 FontWeight="SemiBold" />
+    </Button>
+
+  </StackPanel>
+</UserControl>
