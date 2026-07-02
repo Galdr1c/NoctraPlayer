@@ -620,10 +620,12 @@ public partial class MainView : UserControl
         switch (media)
         {
             case Channel channel:
+                SelectedMediaHost.IsVisible = false;
                 SelectedMediaTitle.Text = channel.Name;
                 SelectedMediaSubtitle.Text = LocalizationSource.Instance["Mobile.Status.Playback.Starting"];
                 await PlaySelectedChannelAsync(channel);
-                break;
+                SelectedMediaHost.IsVisible = false;
+                return;
             case Series series:
                 SelectedMediaHost.IsVisible = false;
                 return;

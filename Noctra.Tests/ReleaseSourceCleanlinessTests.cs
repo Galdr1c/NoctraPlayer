@@ -2206,6 +2206,74 @@ public sealed class ReleaseSourceCleanlinessTests
     }
 
     [Fact]
+    public void MobileChannelSelection_DoesNotLeaveSelectedMediaOverlayAbovePlayer()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var mainViewCode = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MainView.axaml.cs")).Replace("\r\n", "\n", StringComparison.Ordinal);
+
+        var channelCaseIndex = mainViewCode.IndexOf("case Channel channel:", StringComparison.Ordinal);
+        var firstHideIndex = mainViewCode.IndexOf(
+            "SelectedMediaHost.IsVisible = false;",
+            channelCaseIndex,
+            StringComparison.Ordinal);
+        var playIndex = mainViewCode.IndexOf(
+            "await PlaySelectedChannelAsync(channel);",
+            channelCaseIndex,
+            StringComparison.Ordinal);
+        var secondHideIndex = mainViewCode.IndexOf(
+            "SelectedMediaHost.IsVisible = false;",
+            playIndex,
+            StringComparison.Ordinal);
+        var returnIndex = mainViewCode.IndexOf(
+            "return;",
+            secondHideIndex,
+            StringComparison.Ordinal);
+        var seriesCaseIndex = mainViewCode.IndexOf("case Series series:", StringComparison.Ordinal);
+
+        Assert.True(channelCaseIndex >= 0, "Channel selection branch must exist.");
+        Assert.True(channelCaseIndex < firstHideIndex, "Channel selection must hide the selected-media overlay before starting playback.");
+        Assert.True(firstHideIndex < playIndex, "Playback should start only after the selected-media overlay is hidden.");
+        Assert.True(playIndex < secondHideIndex, "Channel selection must hide the selected-media overlay again after playback startup.");
+        Assert.True(secondHideIndex < returnIndex, "Channel selection must return after hiding the selected-media overlay.");
+        Assert.True(returnIndex < seriesCaseIndex, "Channel selection must not fall through to the generic selected-media overlay show path.");
+    }
+
+    [Fact]
+    public void MobileProject_UsesLocalLogoResourcesInsteadOfMissingDesktopLinks()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var mobileProjectSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Noctra.Mobile.csproj"));
+
+        Assert.True(File.Exists(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Assets",
+            "Square150x150Logo.png")));
+        Assert.True(File.Exists(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Assets",
+            "Square150x150Logo.Gray.png")));
+        Assert.True(Directory.Exists(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Assets",
+            "Avatars")));
+
+        Assert.Contains("<AvaloniaResource Include=\"Assets\\**\" />", mobileProjectSource);
+        Assert.DoesNotContain("..\\Noctra.Avalonia\\Assets\\Avatars", mobileProjectSource);
+        Assert.DoesNotContain("..\\Noctra.Avalonia\\Assets\\Square150x150Logo.png", mobileProjectSource);
+        Assert.DoesNotContain("..\\Noctra.Avalonia\\Assets\\Square150x150Logo.Gray.png", mobileProjectSource);
+    }
+
+    [Fact]
     public void MobilePersonalViewsNavigation_ReusesDesktopAppViews()
     {
         var repositoryRoot = FindRepositoryRoot();
