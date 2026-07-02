@@ -96,7 +96,7 @@
                      Foreground="{DynamicResource TextPrimaryBrush}" />
           <ItemsControl ItemsSource="{Binding SearchLiveChannels}">
             <ItemsControl.ItemsPanel>
-              <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+              <ItemsPanelTemplate><WrapPanel HorizontalAlignment="Center" /></ItemsPanelTemplate>
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="models:Channel">
@@ -119,7 +119,7 @@
                      Foreground="{DynamicResource TextPrimaryBrush}" />
           <ItemsControl ItemsSource="{Binding SearchSeriesChannels}">
             <ItemsControl.ItemsPanel>
-              <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+              <ItemsPanelTemplate><WrapPanel HorizontalAlignment="Center" /></ItemsPanelTemplate>
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="models:Series">
@@ -140,7 +140,7 @@
                      Foreground="{DynamicResource TextPrimaryBrush}" />
           <ItemsControl ItemsSource="{Binding SearchVodChannels}">
             <ItemsControl.ItemsPanel>
-              <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+              <ItemsPanelTemplate><WrapPanel HorizontalAlignment="Center" /></ItemsPanelTemplate>
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="models:Channel">
@@ -168,7 +168,7 @@
                        Foreground="{DynamicResource TextMutedBrush}" />
             <ItemsControl ItemsSource="{Binding SearchSimilarLiveChannels}">
               <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                <ItemsPanelTemplate><WrapPanel HorizontalAlignment="Center" /></ItemsPanelTemplate>
               </ItemsControl.ItemsPanel>
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="models:Channel">
@@ -186,7 +186,7 @@
                        Foreground="{DynamicResource TextMutedBrush}" />
             <ItemsControl ItemsSource="{Binding SearchSimilarSeriesChannels}">
               <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                <ItemsPanelTemplate><WrapPanel HorizontalAlignment="Center" /></ItemsPanelTemplate>
               </ItemsControl.ItemsPanel>
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="models:Series">
@@ -205,7 +205,7 @@
                        Foreground="{DynamicResource TextMutedBrush}" />
             <ItemsControl ItemsSource="{Binding SearchSimilarVodChannels}">
               <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                <ItemsPanelTemplate><WrapPanel HorizontalAlignment="Center" /></ItemsPanelTemplate>
               </ItemsControl.ItemsPanel>
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="models:Channel">
