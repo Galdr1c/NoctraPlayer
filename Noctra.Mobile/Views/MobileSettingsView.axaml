@@ -310,7 +310,7 @@
                      FontSize="12" />
           <ComboBox SelectedValue="{Binding AppLanguage, Mode=TwoWay}"
                     Theme="{StaticResource ModernComboBox}"
-                    SelectedValueBinding="{Binding Tag}"
+                    SelectedValueBinding="{Binding Tag, RelativeSource={RelativeSource Self}}"
                     MinHeight="44">
             <ComboBoxItem Content="{loc:Translate Language.English}" Tag="en" />
             <ComboBoxItem Content="{loc:Translate Language.Turkish}" Tag="tr" />
@@ -414,7 +414,7 @@
                      FontSize="12" />
           <ComboBox SelectedValue="{Binding SubtitleLanguage, Mode=TwoWay}"
                     Theme="{StaticResource ModernComboBox}"
-                    SelectedValueBinding="{Binding Tag}"
+                    SelectedValueBinding="{Binding Tag, RelativeSource={RelativeSource Self}}"
                     MinHeight="44">
             <ComboBoxItem Content="{loc:Translate Language.Turkish}" Tag="tr" />
             <ComboBoxItem Content="{loc:Translate Language.English}" Tag="en" />
@@ -432,7 +432,7 @@
                      FontSize="12" />
           <ComboBox SelectedValue="{Binding PreferredAudioLanguage, Mode=TwoWay}"
                     Theme="{StaticResource ModernComboBox}"
-                    SelectedValueBinding="{Binding Tag}"
+                    SelectedValueBinding="{Binding Tag, RelativeSource={RelativeSource Self}}"
                     MinHeight="44">
             <ComboBoxItem Content="{loc:Translate Language.Turkish}" Tag="tr" />
             <ComboBoxItem Content="{loc:Translate Language.English}" Tag="en" />

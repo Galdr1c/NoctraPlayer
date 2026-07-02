@@ -106,9 +106,10 @@
                       <TextBlock Text="{loc:Translate Downloads.Storage.Free}" Foreground="{DynamicResource TextMutedBrush}" FontSize="11" />
                     </StackPanel>
                   </WrapPanel>
-                  <TextBlock Text="{Binding StorageNoctraDetailText}"
+                  <!-- TODO: StorageNoctraDetailText property MainViewModel'de yok -->
+                  <!--<TextBlock Text="{Binding StorageNoctraDetailText}"
                              Foreground="{DynamicResource TextMutedBrush}"
-                             FontSize="11" />
+                             FontSize="11" />-->
                 </StackPanel>
                 <StackPanel Grid.Column="2"
                             Orientation="Vertical"
