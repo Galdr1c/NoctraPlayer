@@ -343,7 +343,8 @@ public partial class MainView : UserControl
     }
 
     private bool CanShowNavigationChrome()
-        => !_isPlayerFullScreen &&
+        => !PlayerHost.IsVisible &&
+           !_isPlayerFullScreen &&
            HeaderBar.IsVisible &&
            !ProfilesOverlay.IsVisible &&
            !LegalConsentOverlay.IsVisible;

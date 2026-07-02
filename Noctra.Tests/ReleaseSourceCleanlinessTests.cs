@@ -1057,7 +1057,18 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("vm:AvatarPickerViewModel", avatarSource);
         Assert.Contains("SelectAvatarCommand", avatarSource);
         Assert.Contains("AvatarPathConverter", avatarSource);
-        Assert.Contains("Noctra.Avalonia\\Assets\\Avatars", mobileProjectSource);
+        Assert.True(Directory.Exists(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Assets",
+            "Avatars")));
+        Assert.True(Directory.Exists(Path.Combine(
+            repositoryRoot,
+            "Noctra.Avalonia",
+            "Assets",
+            "Avatars")));
+        Assert.Contains("<AvaloniaResource Include=\"Assets\\**\" />", mobileProjectSource);
+        Assert.DoesNotContain("Noctra.Avalonia\\Assets\\Avatars", mobileProjectSource);
         Assert.Contains("AvatarPathConverter", mobileAppSource);
         Assert.Contains("AddSingleton<ProfilesViewModel>", registrationSource);
         Assert.Contains("AddTransient<AvatarPickerViewModel>", registrationSource);
@@ -2849,6 +2860,11 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("x:Name=\"HeaderBar\"", mainViewSource);
         Assert.Contains("PlayerViewModel_PropertyChanged", mainViewCode);
         Assert.Contains("UpdatePlayerChromeState", mainViewCode);
+        Assert.Contains("var isPlayerVisible = PlayerHost.IsVisible;", mainViewCode);
+        Assert.Contains("HeaderBar.IsVisible = !isPlayerVisible;", mainViewCode);
+        Assert.Contains("NavigationRail.IsVisible = false;", mainViewCode);
+        Assert.Contains("BottomNavigation.IsVisible = false;", mainViewCode);
+        Assert.Contains("!PlayerHost.IsVisible", mainViewCode);
         Assert.Contains("nameof(PlayerViewModel.IsFullScreen)", mainViewCode);
         Assert.Contains("PiPRequested", mainViewCode);
         Assert.Contains("MobilePlatformServiceResolver", mainViewCode);
