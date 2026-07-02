@@ -74,6 +74,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ITmdbSyncService, TmdbSyncService>();
         services.AddSingleton<IProfileService, ProfileService>();
         services.AddSingleton<IDatabaseSchemaFixupService, DatabaseSchemaFixupService>();
+        services.AddSingleton<ReviewPromptFallbackHandler>();
 
         return services;
     }

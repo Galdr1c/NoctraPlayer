@@ -8,6 +8,7 @@ using Android.Graphics.Drawables;
 using Android.Views;
 using Android.Widget;
 using Noctra.Core.Services;
+using Noctra.Models;
 using Noctra.Services;
 using Noctra.Services.Interfaces;
 using Debug = System.Diagnostics.Debug;
@@ -16,7 +17,8 @@ namespace Noctra.Android.Services;
 
 /// <summary>
 /// Android implementation of IReviewPromptService using Google Play In-App Review API.
-/// If the native flow is unavailable, it falls back to a branded in-app prompt.
+/// Falls back to an Avalonia in-app bottom sheet (via <see cref="ReviewPromptFallbackHandler"/>)
+/// and, as a last resort, a native Android dialog.
 /// </summary>
 public sealed class AndroidReviewPromptService : IReviewPromptService
 {
@@ -28,17 +30,20 @@ public sealed class AndroidReviewPromptService : IReviewPromptService
     private readonly ISettingsService _settingsService;
     private readonly AndroidActivityProvider _activityProvider;
     private readonly ILocalizationService _localizationService;
+    private readonly ReviewPromptFallbackHandler _fallbackHandler;
     private readonly SemaphoreSlim _gate = new(1, 1);
     private bool _scheduledThisProcess;
 
     public AndroidReviewPromptService(
         ISettingsService settingsService,
         AndroidActivityProvider activityProvider,
-        ILocalizationService localizationService)
+        ILocalizationService localizationService,
+        ReviewPromptFallbackHandler fallbackHandler)
     {
         _settingsService = settingsService;
         _activityProvider = activityProvider;
         _localizationService = localizationService;
+        _fallbackHandler = fallbackHandler;
     }
 
     public async Task TryShowMainWindowPromptAsync(CancellationToken cancellationToken = default)
@@ -110,7 +115,24 @@ public sealed class AndroidReviewPromptService : IReviewPromptService
             }
             else
             {
-                var fallbackResult = await ShowFallbackReviewPromptAsync(activity, cancellationToken);
+                // 1st fallback: Avalonia bottom sheet (registered by MainView).
+                // 2nd fallback: native Android dialog.
+                ReviewPromptFallbackResult fallbackResult;
+                if (_fallbackHandler.HasHandler)
+                {
+                    var sharedResult = await _fallbackHandler.ShowAsync(cancellationToken);
+                    fallbackResult = sharedResult switch
+                    {
+                        ReviewPromptResult.RateNow => ReviewPromptFallbackResult.RateNow,
+                        ReviewPromptResult.Never => ReviewPromptFallbackResult.Never,
+                        _ => ReviewPromptFallbackResult.Later
+                    };
+                }
+                else
+                {
+                    fallbackResult = await ShowFallbackReviewPromptAsync(activity, cancellationToken);
+                }
+
                 switch (fallbackResult)
                 {
                     case ReviewPromptFallbackResult.RateNow:

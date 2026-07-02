@@ -1,6 +1,7 @@
 using System;
 using System.ComponentModel;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
@@ -14,6 +15,7 @@ using Noctra.Mobile.Behaviors;
 using Noctra.Models;
 using Noctra.Mobile.Localization;
 using Noctra.Mobile.Services;
+using Noctra.Services;
 using Noctra.Services.Interfaces;
 using Noctra.ViewModels;
 using CoreMainViewModel = Noctra.ViewModels.MainViewModel;
@@ -32,6 +34,7 @@ public partial class MainView : UserControl
     private MobilePlatformServiceResolver? _platformServiceResolver;
     private IPlayerWindowService? _playerWindowService;
     private MobileBackNavigationService? _backNavigationService;
+    private ReviewPromptFallbackHandler? _fallbackHandler;
     private bool _isPlayerFullScreen;
     private string _currentDestination = "Home";
     private DateTime _lastBackExitPromptUtc = DateTime.MinValue;
@@ -128,6 +131,10 @@ public partial class MainView : UserControl
                 return;
             }
 
+            // Register the Avalonia fallback handler once so the Android service
+            // can delegate to our bottom sheet instead of a native dialog.
+            RegisterFallbackHandlerIfNeeded(app);
+
             var reviewService = app.EnsureServices()?.GetService<IReviewPromptService>();
             if (reviewService is not null)
             {
@@ -143,6 +150,23 @@ public partial class MainView : UserControl
         {
             // Non-critical: ignore review prompt errors silently.
         }
+    }
+
+    private void RegisterFallbackHandlerIfNeeded(App app)
+    {
+        if (_fallbackHandler is not null)
+            return;
+
+        _fallbackHandler = app.EnsureServices()?.GetService<ReviewPromptFallbackHandler>();
+        if (_fallbackHandler is not null)
+        {
+            _fallbackHandler.Register(ShowReviewPromptOverlayAsync);
+        }
+    }
+
+    private async Task<ReviewPromptResult> ShowReviewPromptOverlayAsync(CancellationToken cancellationToken)
+    {
+        return await ReviewPromptOverlay.WaitForResultAsync(cancellationToken);
     }
 
     /// <summary>
@@ -167,6 +191,11 @@ public partial class MainView : UserControl
         if (!HeaderBar.IsVisible)
             return false;
 
+        // A TextBox is focused — user is actively editing a form field
+        var focused = TopLevel.GetTopLevel(this)?.FocusManager?.GetFocusedElement();
+        if (focused is TextBox)
+            return false;
+
         return true;
     }
 
@@ -185,6 +214,8 @@ public partial class MainView : UserControl
 
         OverlayProfileList.ProfileLoaded -= OverlayProfileList_ProfileLoaded;
         _backExitToastTimer.Stop();
+
+        _fallbackHandler?.Unregister();
 
         base.OnDetachedFromVisualTree(e);
     }
@@ -220,6 +251,7 @@ public partial class MainView : UserControl
             _bottomNavBasePadding.Bottom + safe.Bottom);
 
         LegalConsentOverlay.Padding = new Thickness(safe.Left, safe.Top, safe.Right, safe.Bottom);
+        ReviewPromptOverlay.Padding = new Thickness(safe.Left, 0, safe.Right, safe.Bottom);
         ProfilesOverlay.Padding = new Thickness(safe.Left, safe.Top, safe.Right, safe.Bottom);
         _lastSafeArea = safe;
         UpdatePlayerWatermarkInsets();

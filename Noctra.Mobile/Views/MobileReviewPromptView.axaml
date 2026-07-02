@@ -1,0 +1,85 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:loc="using:Noctra.Mobile.Localization"
+             xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             x:Class="Noctra.Mobile.Views.MobileReviewPromptView"
+             x:CompileBindings="False">
+  <!-- Dimmed overlay backdrop — same as MobileUpsellView -->
+  <Grid Background="{DynamicResource OverlayDimBrush}">
+    <!-- Bottom sheet card -->
+    <Border Background="{DynamicResource BackgroundGradientBrush}"
+            BorderBrush="{DynamicResource BorderBrush}"
+            BorderThickness="1"
+            CornerRadius="26,26,0,0"
+            Padding="22,20,22,24"
+            VerticalAlignment="Bottom"
+            BoxShadow="0 -10 35 0 #80000000">
+      <StackPanel Spacing="18">
+
+        <!-- Header: star icon + title -->
+        <StackPanel Orientation="Horizontal"
+                    Spacing="12"
+                    HorizontalAlignment="Center">
+          <Border Background="{DynamicResource NavActiveBackgroundBrush}"
+                  CornerRadius="16"
+                  Padding="10">
+            <icons:MaterialIcon Kind="StarOutline"
+                                Width="24"
+                                Height="24"
+                                Foreground="{DynamicResource AccentLightBrush}" />
+          </Border>
+          <TextBlock Text="{loc:Translate ReviewPrompt.Title}"
+                     Foreground="{DynamicResource TextPrimaryBrush}"
+                     FontSize="20"
+                     FontWeight="Bold"
+                     VerticalAlignment="Center" />
+        </StackPanel>
+
+        <!-- Message body -->
+        <TextBlock Text="{loc:Translate ReviewPrompt.Message}"
+                   Foreground="{DynamicResource TextSecondaryBrush}"
+                   FontSize="14"
+                   LineHeight="21"
+                   TextWrapping="Wrap"
+                   TextAlignment="Center"
+                   Margin="4,0" />
+
+        <!-- Rate Now button (primary) -->
+        <Button Classes="SettingsPrimaryActionButton"
+                MinHeight="50"
+                Click="Rate_Click">
+          <StackPanel Orientation="Horizontal"
+                      HorizontalAlignment="Center"
+                      Spacing="8">
+            <icons:MaterialIcon Kind="Star"
+                                Width="18"
+                                Height="18"
+                                Foreground="White" />
+            <TextBlock Text="{loc:Translate ReviewPrompt.Action.Rate}"
+                       Foreground="White"
+                       FontSize="15"
+                       FontWeight="Bold" />
+          </StackPanel>
+        </Button>
+
+        <!-- Later button (secondary) -->
+        <Button Classes="Secondary"
+                MinHeight="46"
+                Click="Later_Click"
+                Content="{loc:Translate ReviewPrompt.Action.Later}" />
+
+        <!-- Never button (quiet text) -->
+        <Button Background="Transparent"
+                BorderThickness="0"
+                Click="Never_Click"
+                HorizontalAlignment="Center">
+          <TextBlock Text="{loc:Translate ReviewPrompt.Action.Never}"
+                     Foreground="{DynamicResource TextMutedBrush}"
+                     FontSize="13"
+                     FontWeight="SemiBold" />
+        </Button>
+
+      </StackPanel>
+    </Border>
+  </Grid>
+</UserControl>

@@ -649,6 +649,13 @@
                                   ZIndex="50000"
                                   IsVisible="False" />
 
+    <!-- Review Prompt Overlay (Avalonia bottom sheet) -->
+    <views:MobileReviewPromptView x:Name="ReviewPromptOverlay"
+                                  Grid.RowSpan="3"
+                                  Grid.ColumnSpan="2"
+                                  ZIndex="52000"
+                                  IsVisible="False" />
+
     <!-- Profiles Overlay -->
     <!--
       ═══════════════════════════════════════════════════════════════
