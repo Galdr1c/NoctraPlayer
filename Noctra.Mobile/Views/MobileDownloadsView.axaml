@@ -12,7 +12,7 @@
              xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="Noctra.Mobile.Views.MobileDownloadsView"
              x:DataType="vm:MainViewModel"
-             x:CompileBindings="False"
+             x:CompileBindings="True"
              mc:Ignorable="d"
              d:DesignWidth="390"
              d:DesignHeight="720">

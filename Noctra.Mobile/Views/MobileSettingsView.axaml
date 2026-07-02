@@ -8,7 +8,7 @@
              xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="Noctra.Mobile.Views.MobileSettingsView"
              x:DataType="vm:SettingsViewModel"
-             x:CompileBindings="False"
+             x:CompileBindings="True"
              mc:Ignorable="d"
              d:DesignWidth="390"
              d:DesignHeight="720">
