@@ -15,6 +15,21 @@
              mc:Ignorable="d"
              d:DesignWidth="390"
              d:DesignHeight="720">
+  <UserControl.Styles>
+    <!-- Touch feedback for action buttons (Play, Continue, Trailer, MyList, Favorite, Download) -->
+    <Style Selector="Button.detailAction">
+      <Setter Property="Opacity" Value="1" />
+      <Setter Property="Transitions">
+        <Transitions>
+          <DoubleTransition Property="Opacity" Duration="0:0:0.10" Easing="CubicEaseOut" />
+        </Transitions>
+      </Setter>
+    </Style>
+    <Style Selector="Button.detailAction:pressed">
+      <Setter Property="Opacity" Value="0.65" />
+    </Style>
+  </UserControl.Styles>
+
   <Border Background="{DynamicResource BackgroundGradientBrush}">
     <Grid>
       <!-- Backdrop Blur (Netflix Style) -->
@@ -148,7 +163,8 @@
         <StackPanel Orientation="Horizontal"
                     Spacing="10"
                     IsVisible="{Binding !IsDownloadedSeriesDetailMode}">
-          <Button Command="{Binding PlayEpisodeCommand}"
+          <Button Classes="detailAction"
+                  Command="{Binding PlayEpisodeCommand}"
                   CommandParameter="{Binding SelectedSeriesContinueEpisode}"
                   IsVisible="{Binding HasSelectedSeriesPlayableEpisode}"
                   MinHeight="44"
@@ -162,7 +178,8 @@
               <TextBlock Text="{loc:Translate Series.Play}" />
             </StackPanel>
           </Button>
-          <Button Command="{Binding PlayEpisodeCommand}"
+          <Button Classes="detailAction"
+                  Command="{Binding PlayEpisodeCommand}"
                   CommandParameter="{Binding SelectedSeriesContinueEpisode}"
                   IsVisible="{Binding HasSelectedSeriesPlayableEpisode}"
                   MinHeight="44"
@@ -176,7 +193,8 @@
               <TextBlock Text="{Binding SelectedSeriesContinueText}" />
             </StackPanel>
           </Button>
-          <Button Command="{Binding WatchTrailerCommand}"
+          <Button Classes="detailAction"
+                  Command="{Binding WatchTrailerCommand}"
                   IsVisible="{Binding SelectedSeriesTrailerUrl, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"
                   MinHeight="44"
                   Padding="16,0"
@@ -189,7 +207,8 @@
               <TextBlock Text="{loc:Translate Series.WatchTrailer}" />
             </StackPanel>
           </Button>
-          <Button Command="{Binding AddToMyListCommand}"
+          <Button Classes="detailAction"
+                  Command="{Binding AddToMyListCommand}"
                   CommandParameter="{Binding SelectedSeries}"
                   MinHeight="44"
                   Padding="16,0"
@@ -207,7 +226,8 @@
               <TextBlock Text="{loc:Translate Context.MyList.Toggle}" />
             </StackPanel>
           </Button>
-          <Button Command="{Binding ToggleFavoriteCommand}"
+          <Button Classes="detailAction"
+                  Command="{Binding ToggleFavoriteCommand}"
                   CommandParameter="{Binding SelectedSeries}"
                   MinHeight="44"
                   Padding="16,0"
@@ -227,7 +247,8 @@
           </Button>
         </StackPanel>
 
-        <Button Command="{Binding DownloadSelectedSeasonCommand}"
+        <Button Classes="detailAction"
+                Command="{Binding DownloadSelectedSeasonCommand}"
                 IsVisible="{Binding !IsDownloadedSeriesDetailMode}"
                 HorizontalAlignment="Left"
                 MinHeight="40"
@@ -332,18 +353,6 @@
                     <Grid>
                       <controls:RemoteImage Url="{Binding CoverUrl}"
                                             Stretch="UniformToFill" />
-
-                      <!-- Play Icon Overlay -->
-                      <Border Background="{DynamicResource OverlayHoverScrimBrush}"
-                              IsVisible="{Binding CoverUrl, Converter={StaticResource StringNotEmptyToVisibilityConverter}}">
-                        <icons:MaterialIcon Kind="Play"
-                                            Width="28"
-                                            Height="28"
-                                            Foreground="{DynamicResource PlayerOverlayTextBrush}"
-                                            Opacity="0.95"
-                                            HorizontalAlignment="Center"
-                                            VerticalAlignment="Center" />
-                      </Border>
 
                       <!-- Episode Number Badge (bottom-left) -->
                       <Border VerticalAlignment="Bottom"

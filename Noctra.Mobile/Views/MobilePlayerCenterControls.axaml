@@ -5,9 +5,43 @@
              x:Class="Noctra.Mobile.Views.MobilePlayerCenterControls"
              x:DataType="vm:PlayerViewModel"
              x:CompileBindings="False">
+  <UserControl.Styles>
+    <!-- Touch feedback for skip buttons -->
+    <Style Selector="Button.skipBtn">
+      <Setter Property="Opacity" Value="1" />
+      <Setter Property="RenderTransform" Value="scale(1)" />
+      <Setter Property="Transitions">
+        <Transitions>
+          <DoubleTransition Property="Opacity" Duration="0:0:0.10" Easing="CubicEaseOut" />
+          <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.10" Easing="CubicEaseOut" />
+        </Transitions>
+      </Setter>
+    </Style>
+    <Style Selector="Button.skipBtn:pressed">
+      <Setter Property="Opacity" Value="0.6" />
+      <Setter Property="RenderTransform" Value="scale(0.90)" />
+    </Style>
+    <!-- Touch feedback for play/pause button -->
+    <Style Selector="Button.playBtn">
+      <Setter Property="Opacity" Value="1" />
+      <Setter Property="RenderTransform" Value="scale(1)" />
+      <Setter Property="Transitions">
+        <Transitions>
+          <DoubleTransition Property="Opacity" Duration="0:0:0.10" Easing="CubicEaseOut" />
+          <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.10" Easing="CubicEaseOut" />
+        </Transitions>
+      </Setter>
+    </Style>
+    <Style Selector="Button.playBtn:pressed">
+      <Setter Property="Opacity" Value="0.75" />
+      <Setter Property="RenderTransform" Value="scale(0.93)" />
+    </Style>
+  </UserControl.Styles>
+
   <StackPanel Orientation="Horizontal"
               Spacing="18">
-    <Button Command="{Binding SkipBackwardCommand}"
+    <Button Classes="skipBtn"
+            Command="{Binding SkipBackwardCommand}"
             CommandParameter="10"
             Width="56"
             Height="56"
@@ -19,7 +53,8 @@
       <icons:MaterialIcon Kind="Rewind10" Width="28" Height="28" Foreground="{DynamicResource PlayerOverlayTextBrush}" />
     </Button>
 
-    <Button Command="{Binding PlayPauseCommand}"
+    <Button Classes="playBtn"
+            Command="{Binding PlayPauseCommand}"
             Width="72"
             Height="72"
             Padding="0"
@@ -36,7 +71,8 @@
       </Grid>
     </Button>
 
-    <Button Command="{Binding SkipForwardCommand}"
+    <Button Classes="skipBtn"
+            Command="{Binding SkipForwardCommand}"
             CommandParameter="10"
             Width="56"
             Height="56"

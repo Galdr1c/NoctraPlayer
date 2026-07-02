@@ -58,10 +58,6 @@
         </Transitions>
       </Setter>
     </Style>
-    <Style Selector="Border.AddProfileCard:pressed">
-      <Setter Property="RenderTransform" Value="scale(0.96)" />
-      <Setter Property="Opacity" Value="0.75" />
-    </Style>
 
     <!-- ── Üst çubuk: buton (pencil / Done) ── -->
     <Style Selector="Button.HeaderIconBtn">
