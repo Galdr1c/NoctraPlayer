@@ -43,9 +43,6 @@
         </Transitions>
       </Setter>
     </Style>
-    <Style Selector="Button.pin-key:pointerover /template/ Border#PinKeyBg">
-      <Setter Property="Background" Value="{DynamicResource InteractiveHoverBrush}" />
-    </Style>
     <Style Selector="Button.pin-key:pressed /template/ Border#PinKeyBg">
       <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
     </Style>

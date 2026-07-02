@@ -20,10 +20,6 @@
     <Setter Property="CornerRadius" Value="{DynamicResource RadiusLarge}" />
     <Setter Property="ClipToBounds" Value="True" />
   </Style>
-  <Style Selector="Border.PosterCard:pointerover">
-    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
-  </Style>
-
   <Style Selector="Border.EmptyState">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="Padding" Value="24" />
@@ -79,10 +75,6 @@
     <Setter Property="CornerRadius" Value="{DynamicResource RadiusPill}" />
     <Setter Property="MinHeight" Value="52" />
   </Style>
-  <Style Selector="Button.ShellNavItem:pointerover">
-    <Setter Property="Background" Value="{DynamicResource InteractiveHoverBrush}" />
-  </Style>
-
   <Style Selector="Border.NavPill">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="CornerRadius" Value="{DynamicResource RadiusPill}" />
@@ -151,8 +143,5 @@
   </Style>
   <Style Selector="TabItem.downloadTab:selected /template/ Border#SelectionIndicator">
     <Setter Property="Width" Value="32" />
-  </Style>
-  <Style Selector="TabItem.downloadTab:pointerover:not(:selected)">
-    <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
   </Style>
 </Styles>

@@ -163,10 +163,6 @@
       <Setter Property="HorizontalContentAlignment" Value="Stretch" />
       <Setter Property="VerticalContentAlignment" Value="Center" />
     </Style>
-    <Style Selector="Button.moreList:pointerover /template/ ContentPresenter">
-      <Setter Property="Background" Value="{DynamicResource Surface1Brush}" />
-      <Setter Property="Opacity" Value="0.85" />
-    </Style>
     <Style Selector="Button.moreList:pressed /template/ ContentPresenter">
       <Setter Property="Background" Value="{DynamicResource Surface1Brush}" />
       <Setter Property="Opacity" Value="0.65" />

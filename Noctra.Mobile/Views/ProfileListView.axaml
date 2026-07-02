@@ -25,23 +25,23 @@
       <Setter Property="Padding" Value="0" />
       <Setter Property="HorizontalContentAlignment" Value="Stretch" />
       <Setter Property="RenderTransform" Value="scale(1)" />
+      <Setter Property="Opacity" Value="1" />
       <Setter Property="Transitions">
         <Transitions>
-          <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.14" Easing="QuadraticEaseOut" />
+          <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.10" Easing="CubicEaseOut" />
+          <DoubleTransition Property="Opacity" Duration="0:0:0.10" Easing="CubicEaseOut" />
         </Transitions>
       </Setter>
     </Style>
     <Style Selector="Button.ProfileCardStyle:pressed">
-      <Setter Property="RenderTransform" Value="scale(1)" />
-    </Style>
-    <Style Selector="Button.ProfileCardStyle:pointerover /template/ ContentPresenter">
-      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="RenderTransform" Value="scale(0.96)" />
+      <Setter Property="Opacity" Value="0.75" />
     </Style>
     <Style Selector="Button.ProfileCardStyle:pressed /template/ ContentPresenter">
       <Setter Property="Background" Value="Transparent" />
     </Style>
-    <Style Selector="Button.ProfileCardStyle:pointerover">
-      <Setter Property="RenderTransform" Value="scale(1)" />
+    <Style Selector="Button.ProfileCardStyle /template/ ContentPresenter">
+      <Setter Property="Background" Value="Transparent" />
     </Style>
     <Style Selector="Button.ProfileCardStyle:focus /template/ ContentPresenter">
       <Setter Property="BoxShadow" Value="{DynamicResource FocusGlow}" />
@@ -50,14 +50,17 @@
     <!-- ── Add Profile kart alanı ── -->
     <Style Selector="Border.AddProfileCard">
       <Setter Property="RenderTransform" Value="scale(1)" />
+      <Setter Property="Opacity" Value="1" />
       <Setter Property="Transitions">
         <Transitions>
-          <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.14" Easing="QuadraticEaseOut" />
+          <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.10" Easing="CubicEaseOut" />
+          <DoubleTransition Property="Opacity" Duration="0:0:0.10" Easing="CubicEaseOut" />
         </Transitions>
       </Setter>
     </Style>
-    <Style Selector="Border.AddProfileCard:pointerover">
-      <Setter Property="RenderTransform" Value="scale(1)" />
+    <Style Selector="Border.AddProfileCard:pressed">
+      <Setter Property="RenderTransform" Value="scale(0.96)" />
+      <Setter Property="Opacity" Value="0.75" />
     </Style>
 
     <!-- ── Üst çubuk: buton (pencil / Done) ── -->

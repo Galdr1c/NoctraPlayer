@@ -49,23 +49,20 @@
   </UserControl.Resources>
 
   <UserControl.Styles>
+    <!-- Touch feedback: pressed state dims the card and scales it down slightly -->
     <Style Selector="Border.CardContainer">
       <Setter Property="RenderTransform" Value="scale(1)" />
+      <Setter Property="Opacity" Value="1" />
       <Setter Property="Transitions">
         <Transitions>
-          <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.16" Easing="CubicEaseOut" />
+          <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.10" Easing="CubicEaseOut" />
+          <DoubleTransition Property="Opacity" Duration="0:0:0.10" Easing="CubicEaseOut" />
         </Transitions>
       </Setter>
     </Style>
-    <Style Selector="Border.CardContainer:pointerover">
-      <Setter Property="ZIndex" Value="10" />
-      <Setter Property="RenderTransform" Value="scale(1.03)" />
-    </Style>
-    <Style Selector="Border.CardContainer:pointerover Border.HoverOverlay">
-      <Setter Property="Opacity" Value="1" />
-    </Style>
-    <Style Selector="Border.HoverOverlay">
-      <Setter Property="Opacity" Value="0" />
+    <Style Selector="Border.CardContainer:pressed">
+      <Setter Property="RenderTransform" Value="scale(0.96)" />
+      <Setter Property="Opacity" Value="0.75" />
     </Style>
   </UserControl.Styles>
 
@@ -94,8 +91,6 @@
                                         RenderOptions.BitmapInterpolationMode="MediumQuality" />
           </Grid>
         </Border>
-
-        <Border Classes="HoverOverlay" Background="{DynamicResource OverlayHoverScrimBrush}" IsHitTestVisible="False" />
 
         <Button HorizontalAlignment="Right"
                 VerticalAlignment="Top"

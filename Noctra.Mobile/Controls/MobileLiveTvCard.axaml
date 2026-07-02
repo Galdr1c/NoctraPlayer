@@ -49,21 +49,21 @@
   </UserControl.Resources>
 
   <UserControl.Styles>
-    <Style Selector="Button.CardContainer:pointerover Border.CardSurface">
+    <!-- Touch feedback: card surface dims on press -->
+    <Style Selector="Button.CardContainer:pressed Border.CardSurface">
       <Setter Property="Background" Value="{DynamicResource Surface1Brush}" />
+      <Setter Property="Opacity" Value="0.75" />
     </Style>
     <Style Selector="Button.FavoriteBtn">
       <Setter Property="Opacity" Value="0.72" />
       <Setter Property="Transitions">
         <Transitions>
-          <DoubleTransition Property="Opacity" Duration="0:0:0.16" />
-          <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.16" Easing="CubicEaseOut" />
+          <DoubleTransition Property="Opacity" Duration="0:0:0.10" />
         </Transitions>
       </Setter>
     </Style>
-    <Style Selector="Button.FavoriteBtn:pointerover">
-      <Setter Property="Opacity" Value="1" />
-      <Setter Property="RenderTransform" Value="scale(1.08)" />
+    <Style Selector="Button.FavoriteBtn:pressed">
+      <Setter Property="Opacity" Value="0.45" />
     </Style>
     <Style Selector="Button.FavoriteBtn.active">
       <Setter Property="Opacity" Value="1" />

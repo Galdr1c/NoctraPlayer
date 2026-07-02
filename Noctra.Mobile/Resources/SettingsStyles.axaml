@@ -26,8 +26,8 @@
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="{DynamicResource RadiusMedium}" />
   </Style>
-  <Style Selector="Button.SettingsActionButton:pointerover">
-    <Setter Property="Background" Value="{DynamicResource InteractiveHoverBrush}" />
+  <Style Selector="Button.SettingsActionButton:pressed">
+    <Setter Property="Background" Value="{DynamicResource InteractivePressedBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
   </Style>
 
@@ -39,8 +39,8 @@
     <Setter Property="BorderThickness" Value="0" />
     <Setter Property="CornerRadius" Value="{DynamicResource RadiusMedium}" />
   </Style>
-  <Style Selector="Button.SettingsPrimaryActionButton:pointerover">
-    <Setter Property="Background" Value="{DynamicResource AccentHoverBrush}" />
+  <Style Selector="Button.SettingsPrimaryActionButton:pressed">
+    <Setter Property="Opacity" Value="0.82" />
   </Style>
 
   <Style Selector="Button.SettingsDangerActionButton">
@@ -52,7 +52,7 @@
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="{DynamicResource RadiusMedium}" />
   </Style>
-  <Style Selector="Button.SettingsDangerActionButton:pointerover">
+  <Style Selector="Button.SettingsDangerActionButton:pressed">
     <Setter Property="Background" Value="{DynamicResource ErrorBrush}" />
     <Setter Property="Foreground" Value="White" />
   </Style>

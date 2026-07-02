@@ -24,19 +24,20 @@
   </UserControl.Resources>
 
   <UserControl.Styles>
-    <Style Selector="Button.CardContainer:pointerover">
-      <Setter Property="ZIndex" Value="10" />
-      <Setter Property="RenderTransform" Value="scale(1.02)" />
-    </Style>
-    <Style Selector="Button.CardContainer:pointerover Border.HoverOverlay">
-      <Setter Property="Opacity" Value="1" />
-    </Style>
-    <Style Selector="Border.HoverOverlay">
-      <Setter Property="Opacity" Value="0" />
-    </Style>
-    <Style Selector="Button.CardContainer:pointerover icons|MaterialIcon.PlayIcon">
-      <Setter Property="Opacity" Value="1" />
+    <!-- Touch feedback: pressed state dims the card and scales it down slightly -->
+    <Style Selector="Button.CardContainer">
       <Setter Property="RenderTransform" Value="scale(1)" />
+      <Setter Property="Opacity" Value="1" />
+      <Setter Property="Transitions">
+        <Transitions>
+          <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.10" Easing="CubicEaseOut" />
+          <DoubleTransition Property="Opacity" Duration="0:0:0.10" Easing="CubicEaseOut" />
+        </Transitions>
+      </Setter>
+    </Style>
+    <Style Selector="Button.CardContainer:pressed">
+      <Setter Property="RenderTransform" Value="scale(0.96)" />
+      <Setter Property="Opacity" Value="0.75" />
     </Style>
   </UserControl.Styles>
 
@@ -48,11 +49,6 @@
           Padding="0"
           HorizontalContentAlignment="Stretch"
           VerticalContentAlignment="Stretch">
-    <Button.Transitions>
-      <Transitions>
-        <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.16" Easing="CubicEaseOut" />
-      </Transitions>
-    </Button.Transitions>
     <Button.ContextFlyout>
       <StaticResource ResourceKey="CardActionsFlyout" />
     </Button.ContextFlyout>
@@ -79,16 +75,6 @@
                               Url="{Binding CoverUrl}"
                               Stretch="UniformToFill"
                               RenderOptions.BitmapInterpolationMode="MediumQuality" />
-
-        <Border Classes="HoverOverlay" Background="{DynamicResource OverlayDimBrush}" IsHitTestVisible="False">
-          <icons:MaterialIcon Kind="PlayCircle"
-                              Classes="PlayIcon"
-                              Width="40"
-                              Height="40"
-                              Foreground="{DynamicResource PlayerOverlayTextBrush}"
-                              Opacity="0"
-                              RenderTransform="scale(0.8)" />
-        </Border>
 
         <Button HorizontalAlignment="Right"
                 VerticalAlignment="Top"

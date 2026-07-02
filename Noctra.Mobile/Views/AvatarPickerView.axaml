@@ -19,17 +19,22 @@
       <Setter Property="Padding" Value="0" />
       <Setter Property="Margin" Value="8" />
       <Setter Property="RenderTransform" Value="scale(1)" />
+      <Setter Property="Opacity" Value="1" />
       <Setter Property="Transitions">
         <Transitions>
-          <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.16" Easing="CubicEaseOut" />
+          <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.10" Easing="CubicEaseOut" />
+          <DoubleTransition Property="Opacity" Duration="0:0:0.10" Easing="CubicEaseOut" />
         </Transitions>
       </Setter>
     </Style>
-    <Style Selector="Button.AvatarItemBtn:pointerover">
-      <Setter Property="RenderTransform" Value="scale(1.04)" />
+    <!-- Touch feedback: scale down + dim on press -->
+    <Style Selector="Button.AvatarItemBtn:pressed">
+      <Setter Property="RenderTransform" Value="scale(0.93)" />
+      <Setter Property="Opacity" Value="0.72" />
     </Style>
-    <Style Selector="Button.AvatarItemBtn:pointerover Border.AvatarBorder">
-      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+    <!-- Keep accent border on selected avatar -->
+    <Style Selector="Button.AvatarItemBtn Border.AvatarBorder">
+      <Setter Property="BorderBrush" Value="Transparent" />
     </Style>
   </UserControl.Styles>
 

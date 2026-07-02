@@ -304,10 +304,6 @@
         <ItemsControl ItemsSource="{Binding SelectedSeason.Episodes}"
                       behaviors:MobileSlideTransitionBehavior.TriggerValue="{Binding SelectedSeason}">
           <ItemsControl.Styles>
-            <Style Selector="Button:pointerover Border#EpBgLayer">
-              <Setter Property="Background" Value="{DynamicResource InteractiveHoverBrush}" />
-              <Setter Property="Opacity" Value="0.9" />
-            </Style>
             <Style Selector="Button:pressed Border#EpBgLayer">
               <Setter Property="Background" Value="{DynamicResource InteractivePressedBrush}" />
               <Setter Property="Opacity" Value="1.0" />
