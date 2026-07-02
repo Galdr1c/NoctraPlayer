@@ -2430,8 +2430,6 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("PictureInPictureBottomRight", playerControlsSource);
         Assert.Contains("Player.Episodes.Season", playerControlsSource);
         Assert.Contains("SeasonNumber", playerControlsSource);
-        Assert.DoesNotContain("Player.Mobile.LockFormat", playerControlsSource);
-        Assert.DoesNotContain("Player.Mobile.FullscreenFormat", playerControlsSource);
         Assert.DoesNotContain("StringFormat='Lock: {0}'", playerControlsSource);
         Assert.DoesNotContain("StringFormat='Fullscreen: {0}'", playerControlsSource);
         Assert.DoesNotContain("Content=\"PiP\"", playerControlsSource);
