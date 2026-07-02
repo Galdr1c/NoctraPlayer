@@ -677,6 +677,7 @@
   "Main.Status.ContentsReadyFormat": "{0:N0} içerik keyfinize hazır",
   "Main.Status.LoadingChannelsFailed": "Kanallar yüklenemedi",
   "Series.Detail.Cast": "Oyuncular: {0}",
+  "Profiles.ManageMode.Title": "Profilleri Yönet",
   "Profiles.ManageMode.Manage": "Yönet",
   "Common.Yes": "Evet",
   "Common.No": "Hayır",

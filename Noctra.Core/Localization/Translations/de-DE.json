@@ -677,6 +677,7 @@
   "Main.Status.ContentsReadyFormat": "{0:N0} Inhalte bereit für Ihren Genuss",
   "Main.Status.LoadingChannelsFailed": "Kanäle konnten nicht geladen werden",
   "Series.Detail.Cast": "Besetzung: {0}",
+  "Profiles.ManageMode.Title": "Profile verwalten",
   "Profiles.ManageMode.Manage": "Verwalten",
   "Common.Yes": "Ja",
   "Common.No": "Nein",
