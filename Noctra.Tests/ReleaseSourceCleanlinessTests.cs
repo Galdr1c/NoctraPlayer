@@ -2254,6 +2254,29 @@ public sealed class ReleaseSourceCleanlinessTests
     }
 
     [Fact]
+    public void MobileHeaderProfileAvatar_UsesCurrentProfileAvatarInsteadOfHardcodedInitial()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var mainViewSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MainView.axaml"));
+        var mainViewCode = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Views",
+            "MainView.axaml.cs"));
+
+        Assert.Contains("x:Name=\"HeaderProfileButton\"", mainViewSource);
+        Assert.Contains("CurrentProfile.Avatar", mainViewSource);
+        Assert.Contains("Converter={StaticResource AvatarPathConverter}", mainViewSource);
+        Assert.Contains("Click=\"OnProfilesClick\"", mainViewSource);
+        Assert.DoesNotContain("Text=\"N\"", mainViewSource);
+        Assert.Contains("HeaderProfileButton.DataContext = _coreMainViewModel", mainViewCode);
+    }
+
+    [Fact]
     public void MobileProject_UsesLocalLogoResourcesInsteadOfMissingDesktopLinks()
     {
         var repositoryRoot = FindRepositoryRoot();

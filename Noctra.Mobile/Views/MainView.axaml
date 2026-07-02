@@ -170,17 +170,26 @@
                      LetterSpacing="2"
                      VerticalAlignment="Center" />
         </StackPanel>
-        <Border Grid.Column="1"
+        <Button x:Name="HeaderProfileButton"
+                Grid.Column="1"
                 Width="40"
                 Height="40"
-                CornerRadius="20"
-                Background="{DynamicResource AccentBrush}">
-          <TextBlock Text="N"
-                     HorizontalAlignment="Center"
-                     VerticalAlignment="Center"
-                     FontWeight="Bold"
-                     Foreground="{DynamicResource TextPrimaryBrush}" />
-        </Border>
+                Padding="0"
+                Background="Transparent"
+                BorderThickness="0"
+                Click="OnProfilesClick"
+                x:DataType="coreVm:MainViewModel"
+                x:CompileBindings="False">
+          <Border Width="40"
+                  Height="40"
+                  CornerRadius="5"
+                  ClipToBounds="True"
+                  Background="{DynamicResource AccentBrush}">
+            <Image Source="{Binding CurrentProfile.Avatar,
+                                    Converter={StaticResource AvatarPathConverter}}"
+                   Stretch="UniformToFill" />
+          </Border>
+        </Button>
       </Grid>
     </Border>
 

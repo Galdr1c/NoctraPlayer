@@ -471,6 +471,8 @@ public partial class MainView : UserControl
 
         // Restore nav/header
         HeaderBar.IsVisible = true;
+        _coreMainViewModel ??= GetViewModelResolver()?.GetCoreMainViewModel();
+        HeaderProfileButton.DataContext = _coreMainViewModel;
 
         // Show appropriate navigation rails based on device size and player state
         UpdateNavigationMode(Bounds.Width);
@@ -562,12 +564,14 @@ public partial class MainView : UserControl
         if (destination == "More")
         {
             _coreMainViewModel ??= resolver.GetCoreMainViewModel();
+            HeaderProfileButton.DataContext = _coreMainViewModel;
             MoreProfileCard.DataContext = _coreMainViewModel;
         }
 
         if (destination is "Home" or "Live" or "Movies" or "Series" or "Search" or "Favorites" or "MyList" or "History" or "Downloads")
         {
             _coreMainViewModel ??= resolver.GetCoreMainViewModel();
+            HeaderProfileButton.DataContext = _coreMainViewModel;
             _coreMainViewModel.OnMediaSelected -= CoreMainViewModel_OnMediaSelected;
             _coreMainViewModel.OnMediaSelected += CoreMainViewModel_OnMediaSelected;
             CoreContentHost.DataContext = _coreMainViewModel;
