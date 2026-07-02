@@ -926,6 +926,43 @@
         </StackPanel>
       </Border>
 
+      <!-- Upgrade to Premium Banner (shown when not premium, placed after Account card) -->
+      <Border Background="{DynamicResource Surface0Brush}"
+              CornerRadius="16"
+              Padding="14"
+              IsVisible="{Binding !IsPremium}">
+        <Grid ColumnDefinitions="Auto,*,Auto"
+              ColumnSpacing="12">
+          <icons:MaterialIcon Kind="Crown"
+                              Width="32"
+                              Height="32"
+                              Foreground="{DynamicResource AccentBrush}"
+                              VerticalAlignment="Center" />
+          <StackPanel Grid.Column="1"
+                      VerticalAlignment="Center"
+                      Spacing="2">
+            <TextBlock Text="{loc:Translate GlobalSettings.About.Upgrade}"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
+                       FontWeight="SemiBold"
+                       FontSize="14" />
+            <TextBlock Text="{loc:Translate Upsell.Headline}"
+                       Foreground="{DynamicResource TextMutedBrush}"
+                       FontSize="12" />
+          </StackPanel>
+          <Button Grid.Column="2"
+                  Classes="SettingsPrimaryActionButton"
+                  Click="ShowUpsell_Click"
+                  MinHeight="40"
+                  Padding="14,0">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <TextBlock Text="{loc:Translate Upsell.Action.Buy}" FontWeight="SemiBold" FontSize="12" />
+              <icons:MaterialIcon Kind="ChevronRight" Width="16" Height="16" />
+            </StackPanel>
+          </Button>
+        </Grid>
+      </Border>
+
+      <!-- About Card (clean, no nested Update section) -->
       <Border Classes="SettingsSectionCard" Background="{DynamicResource Surface0Brush}"
               CornerRadius="16"
               Padding="14">
@@ -978,57 +1015,46 @@
                          FontSize="12" />
             </StackPanel>
           </Grid>
+        </StackPanel>
+      </Border>
 
-          <!-- ShowUpsellCommand remains on SettingsViewModel; mobile opens a branded bottom-sheet instead. -->
-          <Button Classes="SettingsPrimaryActionButton"
-                  Click="ShowUpsell_Click"
-                  IsVisible="{Binding !IsPremium}"
+      <!-- App Update Card -->
+      <Border Classes="SettingsSectionCard" Background="{DynamicResource Surface0Brush}"
+              CornerRadius="16"
+              Padding="14">
+        <StackPanel Spacing="10">
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <icons:MaterialIcon Kind="Update" Width="20" Height="20" Foreground="{DynamicResource AccentBrush}" />
+            <TextBlock Text="{loc:Translate GlobalSettings.Update.Title}"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
+                       FontWeight="SemiBold" />
+          </StackPanel>
+          <TextBlock Text="{Binding UpdateStatusText}"
+                     Foreground="{DynamicResource TextMutedBrush}"
+                     FontSize="12"
+                     TextWrapping="Wrap" />
+          <TextBlock Text="{loc:Translate GlobalSettings.Update.Checking}"
+                     Foreground="{DynamicResource AccentBrush}"
+                     FontSize="12"
+                     IsVisible="{Binding IsCheckingUpdates}" />
+          <Button Classes="SettingsActionButton"
+                  Command="{Binding CheckForUpdatesCommand}"
+                  IsVisible="{Binding IsIdle}"
                   MinHeight="44">
             <StackPanel Orientation="Horizontal" Spacing="8">
-              <icons:MaterialIcon Kind="Crown" Width="18" Height="18" />
-              <TextBlock Text="{loc:Translate GlobalSettings.About.Upgrade}" />
+              <icons:MaterialIcon Kind="Refresh" Width="18" Height="18" />
+              <TextBlock Text="{loc:Translate GlobalSettings.Update.Check}" />
             </StackPanel>
           </Button>
-
-          <Border Background="{DynamicResource Surface1Brush}"
-                  CornerRadius="12"
-                  Padding="12">
-            <StackPanel Spacing="10">
-              <StackPanel Orientation="Horizontal" Spacing="8">
-                <icons:MaterialIcon Kind="Update" Width="20" Height="20" Foreground="{DynamicResource AccentBrush}" />
-                <TextBlock Text="{loc:Translate GlobalSettings.Update.Title}"
-                           Foreground="{DynamicResource TextPrimaryBrush}"
-                           FontWeight="SemiBold" />
-              </StackPanel>
-              <TextBlock Text="{Binding UpdateStatusText}"
-                         Foreground="{DynamicResource TextMutedBrush}"
-                         FontSize="12"
-                         TextWrapping="Wrap" />
-              <TextBlock Text="{loc:Translate GlobalSettings.Update.Checking}"
-                         Foreground="{DynamicResource AccentBrush}"
-                         FontSize="12"
-                         IsVisible="{Binding IsCheckingUpdates}" />
-              <Button Classes="SettingsActionButton"
-                      Command="{Binding CheckForUpdatesCommand}"
-                      IsVisible="{Binding IsIdle}"
-                      MinHeight="44">
-                <StackPanel Orientation="Horizontal" Spacing="8">
-                  <icons:MaterialIcon Kind="Refresh" Width="18" Height="18" />
-                  <TextBlock Text="{loc:Translate GlobalSettings.Update.Check}" />
-                </StackPanel>
-              </Button>
-              <Button Classes="SettingsPrimaryActionButton"
-                      Command="{Binding StartUpdateCommand}"
-                      IsVisible="{Binding IsUpdateAvailable}"
-                      MinHeight="44">
-                <StackPanel Orientation="Horizontal" Spacing="8">
-                  <icons:MaterialIcon Kind="RocketLaunch" Width="18" Height="18" />
-                  <TextBlock Text="{loc:Translate GlobalSettings.Update.Now}" />
-                </StackPanel>
-              </Button>
+          <Button Classes="SettingsPrimaryActionButton"
+                  Command="{Binding StartUpdateCommand}"
+                  IsVisible="{Binding IsUpdateAvailable}"
+                  MinHeight="44">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <icons:MaterialIcon Kind="RocketLaunch" Width="18" Height="18" />
+              <TextBlock Text="{loc:Translate GlobalSettings.Update.Now}" />
             </StackPanel>
-          </Border>
-
+          </Button>
         </StackPanel>
       </Border>
 
@@ -1047,19 +1073,17 @@
                      Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="12"
                      TextWrapping="Wrap" />
-          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+          <StackPanel Spacing="8">
             <TextBox Text="{Binding PromoCodeInput, Mode=TwoWay}"
                      PlaceholderText="{loc:Translate GlobalSettings.Promo.Placeholder}"
                      MinHeight="44" />
             <Button Classes="SettingsPrimaryActionButton"
-                    Grid.Column="1"
                     Command="{Binding ApplyPromoCodeCommand}"
                     MinHeight="44"
-                    MinWidth="80"
                     Background="{DynamicResource AccentBrush}"
                     Foreground="White"
                     CornerRadius="10"
-                    Padding="16,10">
+                    HorizontalAlignment="Stretch">
               <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="6">
                 <icons:MaterialIcon Kind="AutoAwesome" Width="18" Height="18" Foreground="White"
                                     IsVisible="{Binding !IsApplyingPromoCode}" />
@@ -1068,7 +1092,7 @@
                 <TextBlock Text="{loc:Translate GlobalSettings.Promo.Apply}" Foreground="White" FontWeight="SemiBold" />
               </StackPanel>
             </Button>
-          </Grid>
+          </StackPanel>
           <StackPanel Spacing="4">
             <TextBlock Text="{Binding PromoCodeStatus}"
                        Foreground="{Binding IsPromoCodeStatusSuccess, Converter={StaticResource BooleanToSuccessWarningBrushConverter}}"
