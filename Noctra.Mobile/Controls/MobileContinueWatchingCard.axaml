@@ -25,7 +25,7 @@
 
   <UserControl.Styles>
     <!-- Touch feedback: pressed state dims the card and scales it down slightly -->
-    <Style Selector="Button.CardContainer">
+    <Style Selector="Border.CardContainer">
       <Setter Property="RenderTransform" Value="scale(1)" />
       <Setter Property="Opacity" Value="1" />
       <Setter Property="Transitions">
@@ -35,23 +35,19 @@
         </Transitions>
       </Setter>
     </Style>
-    <Style Selector="Button.CardContainer:pressed">
+    <Style Selector="Border.CardContainer:pressed">
       <Setter Property="RenderTransform" Value="scale(0.96)" />
       <Setter Property="Opacity" Value="0.75" />
     </Style>
   </UserControl.Styles>
 
-  <Button Classes="CardContainer"
-          Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}"
-          CommandParameter="{Binding}"
+  <!-- CardContainer_Tapped executes SelectMediaCommand from the parent MainViewModel. -->
+  <Border Classes="CardContainer"
           Background="Transparent"
-          BorderThickness="0"
-          Padding="0"
-          HorizontalContentAlignment="Stretch"
-          VerticalContentAlignment="Stretch">
-    <Button.ContextFlyout>
+          Tapped="CardContainer_Tapped">
+    <Border.ContextFlyout>
       <StaticResource ResourceKey="CardActionsFlyout" />
-    </Button.ContextFlyout>
+    </Border.ContextFlyout>
 
     <Border CornerRadius="{DynamicResource RadiusSmall}"
             ClipToBounds="True"
@@ -119,5 +115,5 @@
         </StackPanel>
       </Grid>
     </Border>
-  </Button>
+  </Border>
 </UserControl>

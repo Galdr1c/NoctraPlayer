@@ -50,7 +50,7 @@
 
   <UserControl.Styles>
     <!-- Touch feedback: card surface dims on press -->
-    <Style Selector="Button.CardContainer:pressed Border.CardSurface">
+    <Style Selector="Border.CardContainer:pressed Border.CardSurface">
       <Setter Property="Background" Value="{DynamicResource Surface1Brush}" />
       <Setter Property="Opacity" Value="0.75" />
     </Style>
@@ -70,17 +70,13 @@
     </Style>
   </UserControl.Styles>
 
-  <Button Classes="CardContainer"
-          Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}"
-          CommandParameter="{Binding}"
+  <!-- CardContainer_Tapped executes SelectMediaCommand from the parent MainViewModel. -->
+  <Border Classes="CardContainer"
           Background="Transparent"
-          BorderThickness="0"
-          Padding="0"
-          HorizontalContentAlignment="Stretch"
-          VerticalContentAlignment="Stretch">
-    <Button.ContextFlyout>
+          Tapped="CardContainer_Tapped">
+    <Border.ContextFlyout>
       <StaticResource ResourceKey="LiveCardActionsFlyout" />
-    </Button.ContextFlyout>
+    </Border.ContextFlyout>
 
     <Border Classes="CardSurface"
             Background="{DynamicResource Surface0Brush}"
@@ -173,5 +169,5 @@
                      IsVisible="{Binding CurrentProgramTitle, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
       </Grid>
     </Border>
-  </Button>
+  </Border>
 </UserControl>
