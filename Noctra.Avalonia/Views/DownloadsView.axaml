@@ -351,10 +351,7 @@
                       <StackPanel Grid.Column="2" VerticalAlignment="Center" Orientation="Horizontal" Spacing="16">
                          <TextBlock Text="{Binding LocalSizeText}" FontSize="12" Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center"/>
                          
-                         <!-- Resolution Badge -->
-                         <Border Background="{DynamicResource SurfaceLightBrush}" CornerRadius="4" Padding="6,2">
-                           <TextBlock Text="4K" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource SuccessBrush}"/>
-                         </Border>
+
 
                          <Button Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).DeleteDownloadedMediaCommand}" 
                                  CommandParameter="{Binding}"
