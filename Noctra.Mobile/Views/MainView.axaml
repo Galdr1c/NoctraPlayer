@@ -618,7 +618,7 @@
             Margin="20,0,20,96"
             Padding="18,12"
             CornerRadius="18"
-            Background="#E6000000"
+            Background="{DynamicResource PlayerOverlayStrongBrush}"
             IsHitTestVisible="False"
             IsVisible="False">
       <StackPanel Orientation="Horizontal" Spacing="10">
@@ -628,7 +628,7 @@
                             Foreground="{DynamicResource AccentBrush}"
                             VerticalAlignment="Center" />
         <TextBlock Text="{loc:Translate Shell.Mobile.BackToExit}"
-                   Foreground="White"
+                   Foreground="{DynamicResource PlayerOverlayTextBrush}"
                    FontSize="14"
                    FontWeight="SemiBold"
                    TextWrapping="Wrap"

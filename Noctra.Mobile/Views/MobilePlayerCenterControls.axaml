@@ -13,10 +13,10 @@
             Height="56"
             Padding="0"
             CornerRadius="28"
-            Background="#99000000"
+            Background="{DynamicResource PlayerOverlayButtonBrush}"
             BorderThickness="0"
             IsVisible="{Binding !IsLiveContent}">
-      <icons:MaterialIcon Kind="Rewind10" Width="28" Height="28" Foreground="White" />
+      <icons:MaterialIcon Kind="Rewind10" Width="28" Height="28" Foreground="{DynamicResource PlayerOverlayTextBrush}" />
     </Button>
 
     <Button Command="{Binding PlayPauseCommand}"
@@ -28,10 +28,10 @@
             BorderThickness="0">
       <Grid Width="40" Height="40">
         <icons:MaterialIcon Kind="Pause" Width="40" Height="40"
-                            Foreground="White"
+                            Foreground="{DynamicResource PlayerOverlayTextBrush}"
                             IsVisible="{Binding IsPlaying}" />
         <icons:MaterialIcon Kind="Play" Width="40" Height="40"
-                            Foreground="White"
+                            Foreground="{DynamicResource PlayerOverlayTextBrush}"
                             IsVisible="{Binding IsPlaying, Converter={StaticResource InverseBoolConverter}}" />
       </Grid>
     </Button>
@@ -42,10 +42,10 @@
             Height="56"
             Padding="0"
             CornerRadius="28"
-            Background="#99000000"
+            Background="{DynamicResource PlayerOverlayButtonBrush}"
             BorderThickness="0"
             IsVisible="{Binding !IsLiveContent}">
-      <icons:MaterialIcon Kind="FastForward10" Width="28" Height="28" Foreground="White" />
+      <icons:MaterialIcon Kind="FastForward10" Width="28" Height="28" Foreground="{DynamicResource PlayerOverlayTextBrush}" />
     </Button>
   </StackPanel>
 </UserControl>

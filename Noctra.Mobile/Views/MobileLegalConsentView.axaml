@@ -9,7 +9,7 @@
              mc:Ignorable="d"
              d:DesignWidth="390"
              d:DesignHeight="844">
-  <Grid Background="#E6000000">
+  <Grid Background="{DynamicResource OverlayModalDimBrush}">
     <Border Background="{DynamicResource BackgroundGradientBrush}"
             BorderBrush="{DynamicResource BorderBrush}"
             BorderThickness="1"
@@ -86,13 +86,13 @@
                   MinHeight="52"
                   CornerRadius="14"
                   Background="{DynamicResource AccentBrush}"
-                  Foreground="White"
+                  Foreground="{DynamicResource PlayerOverlayTextBrush}"
                   FontWeight="SemiBold"
                   FontSize="15"
                   Click="Continue_Click">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
-              <icons:MaterialIcon Kind="Check" Width="18" Height="18" Foreground="White"/>
-              <TextBlock Text="{loc:Translate LegalConsent.Action.Continue}" Foreground="White"/>
+              <icons:MaterialIcon Kind="Check" Width="18" Height="18" Foreground="{DynamicResource PlayerOverlayTextBrush}"/>
+              <TextBlock Text="{loc:Translate LegalConsent.Action.Continue}" Foreground="{DynamicResource PlayerOverlayTextBrush}"/>
             </StackPanel>
           </Button>
         </StackPanel>

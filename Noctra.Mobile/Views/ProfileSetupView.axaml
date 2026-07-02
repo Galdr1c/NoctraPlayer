@@ -405,7 +405,7 @@
                                  FontWeight="Medium"
                                  Foreground="{DynamicResource TextPrimaryBrush}" />
                       <!-- Premium rozeti -->
-                      <Border Background="#FFD700"
+                      <Border Background="{DynamicResource PremiumBadgeBrush}"
                               CornerRadius="4"
                               Padding="6,2"
                               VerticalAlignment="Center"
@@ -413,7 +413,7 @@
                         <TextBlock Text="PREMIUM"
                                    FontSize="10"
                                    FontWeight="Bold"
-                                   Foreground="#1A1A2E" />
+                                   Foreground="{DynamicResource PremiumBadgeTextBrush}" />
                       </Border>
                     </StackPanel>
                     <TextBlock Text="{loc:Translate Profiles.Add.PinLockDescription}"

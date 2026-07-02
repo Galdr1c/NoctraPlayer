@@ -13,10 +13,10 @@
             Height="44"
             Padding="0"
             CornerRadius="22"
-            Background="#99000000"
+            Background="{DynamicResource PlayerOverlayButtonBrush}"
             BorderThickness="0"
             VerticalAlignment="Top">
-      <icons:MaterialIcon Kind="KeyboardBackspace" Width="24" Height="24" Foreground="White" />
+      <icons:MaterialIcon Kind="KeyboardBackspace" Width="24" Height="24" Foreground="{DynamicResource PlayerOverlayTextBrush}" />
     </Button>
 
     <StackPanel Grid.Column="1"
@@ -24,7 +24,7 @@
                 VerticalAlignment="Center"
                 Margin="0,0,12,0">
       <TextBlock Text="{Binding CurrentChannel.Name}"
-                 Foreground="White"
+                 Foreground="{DynamicResource PlayerOverlayTextBrush}"
                  FontSize="20"
                  FontWeight="Bold"
                  LetterSpacing="0.2"
@@ -32,7 +32,7 @@
                  TextTrimming="CharacterEllipsis"
                  MaxLines="1" />
       <TextBlock Text="{Binding ConnectionStatus}"
-                 Foreground="#CCFFFFFF"
+                 Foreground="{DynamicResource PlayerOverlaySecondaryTextBrush}"
                  FontSize="12"
                  TextWrapping="NoWrap"
                  TextTrimming="CharacterEllipsis"
@@ -42,15 +42,15 @@
     <Border Grid.Column="2"
             CornerRadius="16"
             Padding="10,6"
-            Background="#99000000"
-            BorderBrush="#40FFFFFF"
+            Background="{DynamicResource PlayerOverlayButtonBrush}"
+            BorderBrush="{DynamicResource PlayerOverlayBorderBrush}"
             BorderThickness="1"
             VerticalAlignment="Top"
             IsVisible="{Binding HasTopQualityBadgesReady}">
       <StackPanel Orientation="Horizontal" Spacing="6">
-        <icons:MaterialIcon Kind="HighDefinition" Width="16" Height="16" Foreground="White" />
+        <icons:MaterialIcon Kind="HighDefinition" Width="16" Height="16" Foreground="{DynamicResource PlayerOverlayTextBrush}" />
         <TextBlock Text="{Binding QualityResolutionText}"
-                   Foreground="White"
+                   Foreground="{DynamicResource PlayerOverlayTextBrush}"
                    FontSize="12"
                    FontWeight="SemiBold"
                    VerticalAlignment="Center" />
@@ -63,10 +63,10 @@
             Height="44"
             Padding="0"
             CornerRadius="22"
-            Background="#99000000"
+            Background="{DynamicResource PlayerOverlayButtonBrush}"
             BorderThickness="0"
             VerticalAlignment="Top">
-      <icons:MaterialIcon Kind="Close" Width="24" Height="24" Foreground="White" />
+      <icons:MaterialIcon Kind="Close" Width="24" Height="24" Foreground="{DynamicResource PlayerOverlayTextBrush}" />
     </Button>
   </Grid>
 </UserControl>

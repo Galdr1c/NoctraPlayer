@@ -139,7 +139,7 @@
               <icons:MaterialIcon Kind="Heart"
                                   Width="20"
                                   Height="20"
-                                  Foreground="#E50914"
+                                  Foreground="{DynamicResource ErrorBrush}"
                                   IsVisible="{Binding IsFavorite}" />
               <icons:MaterialIcon Kind="HeartOutline"
                                   Width="20"

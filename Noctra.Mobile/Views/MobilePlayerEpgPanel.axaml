@@ -17,17 +17,17 @@
               ClipToBounds="True">
         <!-- Thin translucent control strip on the bottom edge of the video. -->
         <Border VerticalAlignment="Bottom"
-                Background="#A6000000"
+                Background="{DynamicResource PlayerOverlayStrongBrush}"
                 Padding="12,6">
           <Grid ColumnDefinitions="*,Auto">
             <StackPanel VerticalAlignment="Center" Spacing="1">
               <TextBlock Text="{Binding CurrentChannel.Name}"
                          FontSize="13" FontWeight="SemiBold"
-                         Foreground="White"
+                         Foreground="{DynamicResource PlayerOverlayTextBrush}"
                          TextTrimming="CharacterEllipsis" MaxLines="1" />
               <TextBlock Text="{Binding ConnectionStatus}"
                          FontSize="10"
-                         Foreground="#CCFFFFFF"
+                         Foreground="{DynamicResource PlayerOverlaySecondaryTextBrush}"
                          TextTrimming="CharacterEllipsis" MaxLines="1" />
             </StackPanel>
             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
@@ -36,9 +36,9 @@
                       Background="Transparent" BorderThickness="0" CornerRadius="22">
                 <Grid>
                   <icons:MaterialIcon Kind="Pause" Width="20" Height="20"
-                                      Foreground="White" IsVisible="{Binding IsPlaying}" />
+                                      Foreground="{DynamicResource PlayerOverlayTextBrush}" IsVisible="{Binding IsPlaying}" />
                   <icons:MaterialIcon Kind="Play" Width="20" Height="20"
-                                      Foreground="White" IsVisible="{Binding !IsPlaying}" />
+                                      Foreground="{DynamicResource PlayerOverlayTextBrush}" IsVisible="{Binding !IsPlaying}" />
                 </Grid>
               </Button>
               <Button Command="{Binding ToggleFullScreenCommand}"
@@ -46,17 +46,17 @@
                       Background="Transparent" BorderThickness="0" CornerRadius="22">
                 <Grid>
                   <icons:MaterialIcon Kind="Fullscreen" Width="20" Height="20"
-                                      Foreground="White"
+                                      Foreground="{DynamicResource PlayerOverlayTextBrush}"
                                       IsVisible="{Binding IsFullScreen, Converter={StaticResource InverseBoolConverter}}" />
                   <icons:MaterialIcon Kind="FullscreenExit" Width="20" Height="20"
-                                      Foreground="White"
+                                      Foreground="{DynamicResource PlayerOverlayTextBrush}"
                                       IsVisible="{Binding IsFullScreen}" />
                 </Grid>
               </Button>
               <Button Command="{Binding ToggleEpgPanelCommand}"
                       MinHeight="44" MinWidth="44"
                       Background="Transparent" BorderThickness="0" CornerRadius="22">
-                <icons:MaterialIcon Kind="Close" Width="18" Height="18" Foreground="White" />
+                <icons:MaterialIcon Kind="Close" Width="18" Height="18" Foreground="{DynamicResource PlayerOverlayTextBrush}" />
               </Button>
             </StackPanel>
           </Grid>
@@ -234,10 +234,10 @@
                                     <StackPanel Margin="7,0" VerticalAlignment="Center" Spacing="1"
                                                 IsVisible="{Binding HasReadableText}">
                                       <TextBlock Text="{Binding Program.Title}" FontSize="10" FontWeight="SemiBold"
-                                                 Foreground="White" TextTrimming="CharacterEllipsis"
+                                                 Foreground="{DynamicResource PlayerOverlayTextBrush}" TextTrimming="CharacterEllipsis"
                                                  MaxLines="1" />
                                       <TextBlock Text="{Binding Program.TimeRange}" FontSize="7"
-                                                 Foreground="#B3FFFFFF" TextTrimming="CharacterEllipsis"
+                                                 Foreground="{DynamicResource PlayerOverlaySecondaryTextBrush}" TextTrimming="CharacterEllipsis"
                                                  MaxLines="1" />
                                     </StackPanel>
                                   </Grid>

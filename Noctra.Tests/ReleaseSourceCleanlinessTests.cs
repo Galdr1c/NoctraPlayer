@@ -2448,7 +2448,7 @@ public sealed class ReleaseSourceCleanlinessTests
             "Views",
             "MobilePlayerView.axaml"));
 
-        Assert.Contains("<Grid Background=\"Black\"", playerViewSource);
+        Assert.Contains("<Grid Background=\"{DynamicResource PlayerSurfaceBrush}\"", playerViewSource);
         Assert.Contains("ClipToBounds=\"True\"", playerViewSource);
         Assert.Contains("x:Name=\"VideoSurfaceLayer\"", playerViewSource);
         Assert.Contains("x:Name=\"VideoSurfaceSlot\"", playerViewSource);
@@ -3251,6 +3251,64 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("Kind=\"VolumeHigh\"", mobilePlayerContractSource);
         Assert.Contains("FillModeToIconConverter", mobileAppSource);
         Assert.Contains("Converter={StaticResource FillModeToIconConverter}", mobilePlayerContractSource);
+    }
+
+    [Fact]
+    public void MobilePlayerOverlayColors_AreThemeResources()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var mobilePlayerContractSource = ReadMobilePlayerContractSource(repositoryRoot);
+        var darkThemeSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Resources",
+            "Themes",
+            "DarkTheme.axaml"));
+        var lightThemeSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Mobile",
+            "Resources",
+            "Themes",
+            "LightTheme.axaml"));
+        var requiredResources = new[]
+        {
+            "PlayerSurfaceBrush",
+            "PlayerTopGradientBrush",
+            "PlayerBottomGradientBrush",
+            "PlayerOverlayPanelBrush",
+            "PlayerOverlaySheetBrush",
+            "PlayerOverlayButtonBrush",
+            "PlayerOverlayStrongBrush",
+            "PlayerOverlayShieldBrush",
+            "PlayerOverlayTextBrush",
+            "PlayerOverlaySecondaryTextBrush",
+            "PlayerOverlayBorderBrush"
+        };
+        var forbiddenPlayerLiterals = new[]
+        {
+            "Background=\"Black\"",
+            "Foreground=\"White\"",
+            "Fill=\"White\"",
+            "#CC000000",
+            "#D9000000",
+            "#B3000000",
+            "#E6000000",
+            "#F20A0A0A",
+            "#99000000",
+            "#40FFFFFF"
+        };
+
+        foreach (var resource in requiredResources)
+        {
+            Assert.Contains($"x:Key=\"{resource}\"", darkThemeSource);
+            Assert.Contains($"x:Key=\"{resource}\"", lightThemeSource);
+            Assert.Contains(resource, mobilePlayerContractSource);
+        }
+
+        foreach (var literal in forbiddenPlayerLiterals)
+        {
+            Assert.DoesNotContain(literal, mobilePlayerContractSource);
+        }
     }
 
     [Fact]

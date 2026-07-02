@@ -80,12 +80,12 @@
                               Stretch="UniformToFill"
                               RenderOptions.BitmapInterpolationMode="MediumQuality" />
 
-        <Border Classes="HoverOverlay" Background="#80000000" IsHitTestVisible="False">
+        <Border Classes="HoverOverlay" Background="{DynamicResource OverlayDimBrush}" IsHitTestVisible="False">
           <icons:MaterialIcon Kind="PlayCircle"
                               Classes="PlayIcon"
                               Width="40"
                               Height="40"
-                              Foreground="White"
+                              Foreground="{DynamicResource PlayerOverlayTextBrush}"
                               Opacity="0"
                               RenderTransform="scale(0.8)" />
         </Border>
@@ -96,24 +96,19 @@
                 MinWidth="44"
                 MinHeight="44"
                 Padding="0"
-                Background="#99000000"
+                Background="{DynamicResource OverlayButtonScrimBrush}"
                 BorderThickness="0"
                 CornerRadius="22"
                 Flyout="{StaticResource CardActionsFlyout}">
-          <icons:MaterialIcon Kind="DotsVertical" Width="20" Height="20" Foreground="White" />
+          <icons:MaterialIcon Kind="DotsVertical" Width="20" Height="20" Foreground="{DynamicResource PlayerOverlayTextBrush}" />
         </Button>
 
         <StackPanel VerticalAlignment="Bottom" Spacing="0">
-          <Border Padding="10,20,10,10">
-            <Border.Background>
-              <LinearGradientBrush StartPoint="0%,100%" EndPoint="0%,0%">
-                <GradientStop Offset="0" Color="#CC000000" />
-                <GradientStop Offset="1" Color="#00000000" />
-              </LinearGradientBrush>
-            </Border.Background>
+          <Border Padding="10,20,10,10"
+                  Background="{DynamicResource PlayerBottomGradientBrush}">
             <StackPanel Spacing="1">
               <TextBlock Text="{Binding Name}"
-                         Foreground="White"
+                         Foreground="{DynamicResource PlayerOverlayTextBrush}"
                          FontSize="13"
                          FontWeight="Bold"
                          TextTrimming="CharacterEllipsis"
@@ -132,7 +127,7 @@
                        Maximum="100"
                        Value="{Binding WatchedPercentage}"
                        Foreground="{DynamicResource AccentBrush}"
-                       Background="#4D000000"
+                       Background="{DynamicResource OverlayHoverScrimBrush}"
                        BorderThickness="0"
                        IsVisible="{Binding ., Converter={StaticResource WatchedProgressVisibilityConverter}}" />
         </StackPanel>

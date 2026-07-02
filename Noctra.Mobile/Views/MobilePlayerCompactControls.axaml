@@ -18,7 +18,7 @@
     <Border x:Name="MobilePlayerCompactControlsHost"
             Grid.ColumnSpan="2"
             ZIndex="30"
-            Background="#E60A0A0A"
+            Background="{DynamicResource PlayerOverlayPanelBrush}"
             BorderBrush="{DynamicResource BorderBrush}"
             BorderThickness="0"
             Padding="14"
@@ -68,7 +68,7 @@
                 Padding="12,6"
                 VerticalAlignment="Center">
           <StackPanel Orientation="Horizontal" Spacing="8">
-            <Ellipse Width="8" Height="8" Fill="White" VerticalAlignment="Center">
+            <Ellipse Width="8" Height="8" Fill="{DynamicResource PlayerOverlayTextBrush}" VerticalAlignment="Center">
               <Ellipse.Styles>
                 <Style Selector="Ellipse">
                   <Style.Animations>
@@ -81,7 +81,7 @@
               </Ellipse.Styles>
             </Ellipse>
             <TextBlock Text="{loc:Translate Player.Overlay.Live}"
-                       FontSize="12" FontWeight="Black" Foreground="White"
+                       FontSize="12" FontWeight="Black" Foreground="{DynamicResource PlayerOverlayTextBrush}"
                        VerticalAlignment="Center" LetterSpacing="1" />
           </StackPanel>
         </Border>

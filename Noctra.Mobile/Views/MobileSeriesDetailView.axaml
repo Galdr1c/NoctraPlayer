@@ -217,7 +217,7 @@
                   CornerRadius="14">
             <StackPanel Orientation="Horizontal" Spacing="7">
               <Panel>
-                <icons:MaterialIcon Kind="Heart" Width="18" Height="18" Foreground="#E50914"
+                <icons:MaterialIcon Kind="Heart" Width="18" Height="18" Foreground="{DynamicResource ErrorBrush}"
                                     IsVisible="{Binding SelectedSeries.IsFavorite}" />
                 <icons:MaterialIcon Kind="HeartOutline" Width="18" Height="18"
                                     IsVisible="{Binding !SelectedSeries.IsFavorite}" />
@@ -338,12 +338,12 @@
                                             Stretch="UniformToFill" />
 
                       <!-- Play Icon Overlay -->
-                      <Border Background="#44000000"
+                      <Border Background="{DynamicResource OverlayHoverScrimBrush}"
                               IsVisible="{Binding CoverUrl, Converter={StaticResource StringNotEmptyToVisibilityConverter}}">
                         <icons:MaterialIcon Kind="Play"
                                             Width="28"
                                             Height="28"
-                                            Foreground="White"
+                                            Foreground="{DynamicResource PlayerOverlayTextBrush}"
                                             Opacity="0.95"
                                             HorizontalAlignment="Center"
                                             VerticalAlignment="Center" />
@@ -352,11 +352,11 @@
                       <!-- Episode Number Badge (bottom-left) -->
                       <Border VerticalAlignment="Bottom"
                               HorizontalAlignment="Left"
-                              Background="#AA000000"
+                              Background="{DynamicResource OverlayDimBrush}"
                               CornerRadius="0,8,0,0"
                               Padding="6,3,8,3">
                         <TextBlock Text="{Binding EpisodeNumber}"
-                                   Foreground="White"
+                                   Foreground="{DynamicResource PlayerOverlayTextBrush}"
                                    FontSize="11"
                                    FontWeight="Bold"
                                    LineHeight="13" />

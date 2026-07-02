@@ -10,7 +10,7 @@
              x:CompileBindings="False">    <Border x:Name="MobilePlayerSheetHost"
             Grid.ColumnSpan="2"
             ZIndex="50"
-            Background="#F20A0A0A"
+            Background="{DynamicResource PlayerOverlaySheetBrush}"
             BorderBrush="{DynamicResource BorderBrush}"
             BorderThickness="1"
             Padding="14"
@@ -462,7 +462,7 @@
                             <controls:RemoteImage Url="{Binding CoverUrl}"
                                                   Stretch="UniformToFill" />
 
-                            <Border Background="#99000000">
+                            <Border Background="{DynamicResource PlayerOverlayButtonBrush}">
                               <Border.IsVisible>
                                 <MultiBinding Converter="{StaticResource EqualityToBoolMultiConverter}">
                                   <Binding Path="." Converter="{StaticResource EpisodeIdentityConverter}" />
@@ -472,7 +472,7 @@
                               <icons:MaterialIcon Kind="PlayCircle"
                                                   Width="28"
                                                   Height="28"
-                                                  Foreground="White"
+                                                  Foreground="{DynamicResource PlayerOverlayTextBrush}"
                                                   HorizontalAlignment="Center"
                                                   VerticalAlignment="Center"
                                                   Opacity="0.95" />
@@ -484,7 +484,7 @@
                                     CornerRadius="0,8,0,0"
                                     Padding="6,3,8,3">
                               <TextBlock Text="{Binding EpisodeNumber}"
-                                         Foreground="White"
+                                         Foreground="{DynamicResource PlayerOverlayTextBrush}"
                                          FontSize="11"
                                          FontWeight="Bold" />
                             </Border>
@@ -942,16 +942,11 @@
             <Button Command="{Binding ResumeFromPositionCommand}"
                     IsVisible="{Binding IsPremiumResume}"
                     MinHeight="48" BorderThickness="0" CornerRadius="12"
+                    Background="{DynamicResource PrimaryGradientBrush}"
                     HorizontalAlignment="Stretch">
-              <Button.Background>
-                <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,0%">
-                  <GradientStop Color="#8B5CF6" Offset="0" />
-                  <GradientStop Color="#A855F7" Offset="1" />
-                </LinearGradientBrush>
-              </Button.Background>
               <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
-                <icons:MaterialIcon Kind="Play" Width="18" Height="18" Foreground="White" />
-                <TextBlock Text="{loc:Translate Player.Resume.Continue}" Foreground="White"
+                <icons:MaterialIcon Kind="Play" Width="18" Height="18" Foreground="{DynamicResource PlayerOverlayTextBrush}" />
+                <TextBlock Text="{loc:Translate Player.Resume.Continue}" Foreground="{DynamicResource PlayerOverlayTextBrush}"
                            FontSize="14" FontWeight="SemiBold" />
               </StackPanel>
             </Button>

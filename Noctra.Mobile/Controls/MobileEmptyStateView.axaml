@@ -54,10 +54,10 @@
         <icons:MaterialIcon x:Name="PrimaryActionIcon"
                             Width="18"
                             Height="18"
-                            Foreground="White"
+                            Foreground="{DynamicResource PlayerOverlayTextBrush}"
                             IsVisible="False" />
         <TextBlock x:Name="PrimaryActionTextBlock"
-                   Foreground="White"
+                   Foreground="{DynamicResource PlayerOverlayTextBrush}"
                    FontSize="14"
                    FontWeight="SemiBold" />
       </StackPanel>

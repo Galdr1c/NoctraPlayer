@@ -19,7 +19,7 @@
       <TextBlock Text="Noctra - Free"
                  FontWeight="Bold"
                  FontSize="32"
-                 Foreground="White"
+                 Foreground="{DynamicResource PlayerOverlayTextBrush}"
                  Opacity="0.27" />
     </Border>
   </Grid>

@@ -201,7 +201,7 @@
                               Margin="12"
                               VerticalAlignment="Top">
                         <StackPanel Margin="10,8">
-                          <Rectangle Fill="White"
+                          <Rectangle Fill="{DynamicResource ThemePreviewDarkLabelBrush}"
                                      Height="4"
                                      Width="38"
                                      HorizontalAlignment="Left"
@@ -226,7 +226,7 @@
                               VerticalAlignment="Top"
                               Margin="6">
                         <icons:MaterialIcon Kind="Check"
-                                            Foreground="White"
+                                            Foreground="{DynamicResource PlayerOverlayTextBrush}"
                                             Width="12"
                                             Height="12"
                                             HorizontalAlignment="Center"
@@ -286,7 +286,7 @@
                               Margin="6"
                               IsVisible="False">
                         <icons:MaterialIcon Kind="Check"
-                                            Foreground="White"
+                                            Foreground="{DynamicResource PlayerOverlayTextBrush}"
                                             Width="12"
                                             Height="12"
                                             HorizontalAlignment="Center"
@@ -1081,15 +1081,15 @@
                     Command="{Binding ApplyPromoCodeCommand}"
                     MinHeight="44"
                     Background="{DynamicResource AccentBrush}"
-                    Foreground="White"
+                    Foreground="{DynamicResource PlayerOverlayTextBrush}"
                     CornerRadius="10"
                     HorizontalAlignment="Stretch">
               <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="6">
-                <icons:MaterialIcon Kind="AutoAwesome" Width="18" Height="18" Foreground="White"
+                <icons:MaterialIcon Kind="AutoAwesome" Width="18" Height="18" Foreground="{DynamicResource PlayerOverlayTextBrush}"
                                     IsVisible="{Binding !IsApplyingPromoCode}" />
-                <icons:MaterialIcon Kind="Refresh" Width="18" Height="18" Foreground="White"
+                <icons:MaterialIcon Kind="Refresh" Width="18" Height="18" Foreground="{DynamicResource PlayerOverlayTextBrush}"
                                     IsVisible="{Binding IsApplyingPromoCode}" />
-                <TextBlock Text="{loc:Translate GlobalSettings.Promo.Apply}" Foreground="White" FontWeight="SemiBold" />
+                <TextBlock Text="{loc:Translate GlobalSettings.Promo.Apply}" Foreground="{DynamicResource PlayerOverlayTextBrush}" FontWeight="SemiBold" />
               </StackPanel>
             </Button>
           </StackPanel>
@@ -1146,8 +1146,8 @@
       </Border>
 
       <!-- Bug Report Section -->
-      <Border Background="#1AE50914"
-              BorderBrush="#E50914"
+      <Border Background="{DynamicResource DangerSubtleBrush}"
+              BorderBrush="{DynamicResource ErrorBrush}"
               BorderThickness="1"
               CornerRadius="16"
               Padding="14">
@@ -1165,8 +1165,8 @@
           <Button Classes="SettingsPrimaryActionButton"
                   Grid.Column="1"
                   Command="{Binding ReportBugCommand}"
-                  Background="#E50914"
-                  Foreground="White"
+                  Background="{DynamicResource ErrorBrush}"
+                  Foreground="{DynamicResource PlayerOverlayTextBrush}"
                   CornerRadius="10"
                   Padding="16,10"
                   MinHeight="44"

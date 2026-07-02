@@ -8,7 +8,7 @@
              mc:Ignorable="d"
              d:DesignWidth="390"
              d:DesignHeight="844">
-  <Grid Background="#F0000000">
+  <Grid Background="{DynamicResource OverlayModalDimBrush}">
     <Border Background="{DynamicResource BackgroundGradientBrush}"
             BorderBrush="{DynamicResource BorderBrush}"
             BorderThickness="1"
@@ -68,7 +68,7 @@
                 MinHeight="48"
                 CornerRadius="12"
                 Background="{DynamicResource AccentBrush}"
-                Foreground="White"
+                Foreground="{DynamicResource PlayerOverlayTextBrush}"
                 FontWeight="SemiBold"
                 HorizontalAlignment="Stretch"
                 Margin="0,16,0,0"

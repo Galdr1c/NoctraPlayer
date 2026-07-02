@@ -93,6 +93,32 @@
   <SolidColorBrush x:Key="PremiumBadgeTextBrush" Color="#000000" />
   <SolidColorBrush x:Key="OverlayDarkBrush" Color="#CC090B10" />
   <SolidColorBrush x:Key="OverlayDimBrush" Color="#AA000000" />
+  <SolidColorBrush x:Key="OverlayModalDimBrush" Color="#E6000000" />
+  <SolidColorBrush x:Key="OverlayScrimBrush" Color="#CC000000" />
+  <SolidColorBrush x:Key="OverlayHoverScrimBrush" Color="#4D000000" />
+  <SolidColorBrush x:Key="OverlayButtonScrimBrush" Color="#99000000" />
+  <SolidColorBrush x:Key="OverlayPanelBrush" Color="#E60A0A0A" />
+  <SolidColorBrush x:Key="DangerSubtleBrush" Color="#1AEF4444" />
+  <SolidColorBrush x:Key="DangerBrush" Color="{StaticResource ErrorColor}" />
+
+  <!-- Player overlays intentionally stay dark in every app theme for video readability. -->
+  <SolidColorBrush x:Key="PlayerSurfaceBrush" Color="#000000" />
+  <SolidColorBrush x:Key="PlayerOverlayPanelBrush" Color="#E60A0A0A" />
+  <SolidColorBrush x:Key="PlayerOverlaySheetBrush" Color="#F20A0A0A" />
+  <SolidColorBrush x:Key="PlayerOverlayButtonBrush" Color="#99000000" />
+  <SolidColorBrush x:Key="PlayerOverlayStrongBrush" Color="#E6000000" />
+  <SolidColorBrush x:Key="PlayerOverlayShieldBrush" Color="#B3000000" />
+  <SolidColorBrush x:Key="PlayerOverlayTextBrush" Color="#FFFFFFFF" />
+  <SolidColorBrush x:Key="PlayerOverlaySecondaryTextBrush" Color="#CCFFFFFF" />
+  <SolidColorBrush x:Key="PlayerOverlayBorderBrush" Color="#40FFFFFF" />
+  <LinearGradientBrush x:Key="PlayerTopGradientBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+    <GradientStop Color="#CC000000" Offset="0" />
+    <GradientStop Color="#00000000" Offset="1" />
+  </LinearGradientBrush>
+  <LinearGradientBrush x:Key="PlayerBottomGradientBrush" StartPoint="0%,100%" EndPoint="0%,0%">
+    <GradientStop Color="#D9000000" Offset="0" />
+    <GradientStop Color="#00000000" Offset="1" />
+  </LinearGradientBrush>
   <SolidColorBrush x:Key="ThemePreviewDarkBg" Color="#141414" />
   <SolidColorBrush x:Key="ThemePreviewDarkInnerBg" Color="#1A1A1A" />
   <SolidColorBrush x:Key="ThemePreviewDarkText" Color="#404040" />
@@ -105,6 +131,7 @@
   <BoxShadows x:Key="DefaultShadow">0 2 10 0 #15000000</BoxShadows>
   <BoxShadows x:Key="CardShadow">0 4 15 0 #1A000000</BoxShadows>
   <BoxShadows x:Key="FocusGlow">0 0 6 0 #208B5CF6</BoxShadows>
+  <BoxShadows x:Key="OverlaySheetShadow">0 -10 35 0 #80000000</BoxShadows>
 
   <x:Double x:Key="FontSizeH1">32</x:Double>
   <x:Double x:Key="FontSizeH2">24</x:Double>

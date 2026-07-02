@@ -13,7 +13,7 @@
             CornerRadius="26,26,0,0"
             Padding="22,20,22,24"
             VerticalAlignment="Bottom"
-            BoxShadow="0 -10 35 0 #80000000">
+            BoxShadow="{DynamicResource OverlaySheetShadow}">
       <StackPanel Spacing="18">
 
         <!-- Header: star icon + title -->
@@ -54,9 +54,9 @@
             <icons:MaterialIcon Kind="Star"
                                 Width="18"
                                 Height="18"
-                                Foreground="White" />
+                                Foreground="{DynamicResource PlayerOverlayTextBrush}" />
             <TextBlock Text="{loc:Translate ReviewPrompt.Action.Rate}"
-                       Foreground="White"
+                       Foreground="{DynamicResource PlayerOverlayTextBrush}"
                        FontSize="15"
                        FontWeight="Bold" />
           </StackPanel>

@@ -11,7 +11,7 @@
             CornerRadius="26,26,0,0"
             Padding="22,20,22,18"
             VerticalAlignment="Bottom"
-            BoxShadow="0 -10 35 0 #80000000">
+            BoxShadow="{DynamicResource OverlaySheetShadow}">
       <Grid RowDefinitions="Auto,*">
         <Button HorizontalAlignment="Right"
                 VerticalAlignment="Top"
@@ -83,7 +83,7 @@
                           Padding="8,4"
                           VerticalAlignment="Top">
                     <TextBlock Text="{loc:Translate Upsell.Premium.Recommended}"
-                               Foreground="White"
+                               Foreground="{DynamicResource PlayerOverlayTextBrush}"
                                FontSize="10"
                                FontWeight="Bold" />
                   </Border>
@@ -132,9 +132,9 @@
               <StackPanel Orientation="Horizontal"
                           HorizontalAlignment="Center"
                           Spacing="8">
-                <icons:MaterialIcon Kind="Crown" Width="18" Height="18" Foreground="White" />
+                <icons:MaterialIcon Kind="Crown" Width="18" Height="18" Foreground="{DynamicResource PlayerOverlayTextBrush}" />
                 <TextBlock Text="{loc:Translate Upsell.Action.Buy}"
-                           Foreground="White"
+                           Foreground="{DynamicResource PlayerOverlayTextBrush}"
                            FontSize="15"
                            FontWeight="Bold" />
               </StackPanel>
