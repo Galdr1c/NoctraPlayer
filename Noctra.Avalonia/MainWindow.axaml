@@ -125,13 +125,13 @@
   
       <!-- HEADER SEARCH STYLES -->
       <Style Selector="TextBox.headerSearch">
-        <Setter Property="Height" Value="36"/>
+        <Setter Property="Height" Value="40"/>
         <Setter Property="Width" Value="40"/>
         <Setter Property="MinWidth" Value="40"/>
         <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="BorderBrush" Value="{DynamicResource InputBorderBrush}"/>
-        <Setter Property="CornerRadius" Value="{DynamicResource RadiusSmall}"/>
+        <Setter Property="CornerRadius" Value="8"/>
         <Setter Property="Padding" Value="0"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
         <Setter Property="FontSize" Value="13"/>
@@ -172,12 +172,18 @@
   <Grid RowDefinitions="64,*,48" Focusable="True">
 
     <!-- ========== HEADER BAR ========== -->
+    
     <Border x:Name="HeaderBar" Grid.Row="0" Background="{DynamicResource HeaderGradientBrush}" 
             Padding="24,0" PointerPressed="HeaderBar_PointerPressed" Focusable="True">
       <Grid ColumnDefinitions="Auto,*,Auto">
         <!-- Spacer for Logo removal -->
         <Border Width="1" Height="64" Margin="8,0,0,0"/>
-
+        <TextBlock Text="NOCTRA"
+                     FontSize="18"
+                     FontWeight="Bold"
+                     Foreground="{DynamicResource AccentBrush}"
+                     LetterSpacing="3.5"
+                     VerticalAlignment="Center" />
         <!-- New Expanding Search -->
         <TextBox x:Name="HeaderSearchBox" Classes="headerSearch" 
                  Classes.notEmpty="{Binding SearchQuery, Converter={StaticResource StringNotEmptyToBoolConverter}}"
@@ -198,8 +204,9 @@
         <!-- Header Actions -->
         <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
           <!-- Settings Button -->
+          <Border Width="1" Background="{DynamicResource BorderBrush}" Margin="0,8" Opacity="0.5"/>
           <Button Classes="SettingsGearButton" Click="SettingsButton_Click" Cursor="Hand" ToolTip.Tip="{loc:Translate Shell.Settings.Tooltip}"
-                  Width="48" Height="48" Background="Transparent" BorderThickness="0" CornerRadius="24">
+                  Width="42" Height="42" Background="Transparent" BorderThickness="0" CornerRadius="12">
             <materialIcons:MaterialIcon x:Name="SettingsGearIcon" Kind="CogOutline" Width="22" Height="22" RenderTransformOrigin="50%,50%">
               <materialIcons:MaterialIcon.Transitions>
                 <Transitions>
@@ -208,7 +215,6 @@
               </materialIcons:MaterialIcon.Transitions>
             </materialIcons:MaterialIcon>
           </Button>
-          <Border Width="1" Background="{DynamicResource BorderBrush}" Margin="0,8" Opacity="0.5"/>
         </StackPanel>
       </Grid>
     </Border>
@@ -227,6 +233,7 @@
           <!-- Hamburger Button -->
           <Button x:Name="HamburgerBtn" Click="HamburgerBtn_Click"
                   Background="Transparent" BorderThickness="0"
+                  CornerRadius="8"
                   Width="44" Height="44" Padding="0"
                   HorizontalAlignment="Left" Margin="8,0,0,16"
                       Cursor="Hand" ToolTip.Tip="{loc:Translate Shell.Menu.Tooltip}">
@@ -487,14 +494,14 @@
                   </Grid.ColumnDefinitions>
                   <!-- Reduce width to 200 in Downloaded Mode using a Panel/Border trick -->
                   <Panel Grid.Column="0" HorizontalAlignment="Left" VerticalAlignment="Top">
-                     <Border Height="450" Width="300" CornerRadius="12" ClipToBounds="True" Background="{DynamicResource Surface0Brush}"
+                     <Border Height="450" Width="300" CornerRadius="8" ClipToBounds="True" Background="{DynamicResource Surface0Brush}"
                              IsVisible="{Binding !IsDownloadedSeriesDetailMode}">
                         <Border.BoxShadow>
                           <BoxShadows>0 15 50 5 #88000000</BoxShadows>
                         </Border.BoxShadow>
                         <controls:RemoteImage Stretch="UniformToFill" Url="{Binding SelectedSeriesPosterUrl}"/>
                      </Border>
-                     <Border Height="300" Width="200" CornerRadius="12" ClipToBounds="True" Background="{DynamicResource Surface0Brush}"
+                     <Border Height="300" Width="200" CornerRadius="8" ClipToBounds="True" Background="{DynamicResource Surface0Brush}"
                              IsVisible="{Binding IsDownloadedSeriesDetailMode}">
                         <Border.BoxShadow>
                           <BoxShadows>0 15 50 5 #88000000</BoxShadows>
@@ -627,7 +634,7 @@
                         </Button>
 
                         <Button Command="{Binding AddToMyListCommand}" CommandParameter="{Binding SelectedSeries}"
-                                Theme="{StaticResource ActionCircleButtonStyle}" Width="52" Height="52" Padding="0">
+                                Theme="{StaticResource ActionCircleButtonStyle}" Width="40" Height="40" Padding="0">
                             <Panel>
                                 <materialIcons:MaterialIcon Kind="Bookmark" Width="24" Height="24" Foreground="{DynamicResource AccentBrush}"
                                                             IsVisible="{Binding SelectedSeries.IsInMyList}"/>
@@ -637,7 +644,7 @@
                         </Button>
 
                         <Button Command="{Binding ToggleFavoriteCommand}" CommandParameter="{Binding SelectedSeries}"
-                                Theme="{StaticResource ActionCircleButtonStyle}" Width="52" Height="52" Padding="0">
+                                Theme="{StaticResource ActionCircleButtonStyle}" Width="40" Height="40" Padding="0">
                             <Panel>
                                 <materialIcons:MaterialIcon Kind="Heart" Width="22" Height="22" Foreground="#E50914"
                                                             IsVisible="{Binding SelectedSeries.IsFavorite}"/>
@@ -790,7 +797,7 @@
                       </ListBox>
 
                       <!-- Download Season Button -->
-                      <Button Grid.Column="1" VerticalAlignment="Center" Padding="12,8" CornerRadius="8"
+                      <Button Grid.Column="1" VerticalAlignment="Center" Padding="12,8" CornerRadius="6"
                               Background="{DynamicResource Surface1Brush}" BorderThickness="0" Margin="0,0,0,12"
                               Command="{Binding DownloadSelectedSeasonCommand}"
                               IsVisible="{Binding !IsDownloadedSeriesDetailMode}"
@@ -824,7 +831,7 @@
                                                      Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.5"/>
 
                                           <!-- Thumbnail -->
-                                          <Border Grid.Column="1" Height="80" CornerRadius="6" ClipToBounds="True" Margin="12,0" Background="{DynamicResource Surface1Brush}">
+                                          <Border Grid.Column="1" Height="80" CornerRadius="4" ClipToBounds="True" Margin="12,0" Background="{DynamicResource Surface1Brush}">
                                               <Grid>
                                                   <controls:RemoteImage Stretch="UniformToFill" Url="{Binding CoverUrl}"/>
                                                   <materialIcons:MaterialIcon Kind="Play" Width="24" Height="24" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.7"/>
@@ -1023,7 +1030,7 @@
                   <Grid x:Name="PlayerOverlayLayer" ZIndex="2600" x:DataType="vm:PlayerViewModel">
                     <views:VideoOverlayView x:Name="OverlayControl" ZIndex="2" IsVisible="{Binding IsResumeDialogVisible, Converter={StaticResource InverseBoolConverter}}"/>
                     <!-- Next Episode Prompt (binds to PlayerViewModel via OverlayControl's DataContext) -->
-                    <Border x:Name="NextEpisodePrompt" Background="{DynamicResource SurfaceBrush}" CornerRadius="12" Padding="16"
+                    <Border x:Name="NextEpisodePrompt" Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Padding="16"
                             HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,40,140" Width="260"
                             DataContext="{Binding #OverlayControl.DataContext}" x:DataType="vm:PlayerViewModel"
                             IsVisible="{Binding IsNextEpisodePromptVisible}" ZIndex="3000">
@@ -1050,12 +1057,12 @@
                           x:DataType="vm:PlayerViewModel"
                           Background="#B3000000"
                           ZIndex="6000"
-                          CornerRadius="12"
+                          CornerRadius="8"
                           HorizontalAlignment="Stretch"
                           VerticalAlignment="Stretch">
 
                     <Border Background="{DynamicResource SurfaceBrush}"
-                            CornerRadius="16"
+                            CornerRadius="8"
                             Padding="40,32"
                             Width="400"
                             HorizontalAlignment="Center"

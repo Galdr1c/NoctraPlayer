@@ -42,7 +42,7 @@
       </MenuFlyout>
     </Button.ContextFlyout>
 
-    <Border CornerRadius="{DynamicResource RadiusSmall}" ClipToBounds="True" Background="{DynamicResource Surface0Brush}">
+    <Border CornerRadius="8" ClipToBounds="True" Background="{DynamicResource Surface0Brush}">
       <Grid>
         <!-- Poster Area Placeholder -->
         <Border x:Name="PlaceholderBorder" Width="160" Height="240" Background="{DynamicResource SurfaceLightBrush}">

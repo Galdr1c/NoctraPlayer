@@ -24,7 +24,7 @@
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Template">
                 <ControlTemplate>
-                    <Border x:Name="CloseBg" Background="{TemplateBinding Background}" CornerRadius="24">
+                    <Border x:Name="CloseBg" Background="{TemplateBinding Background}" CornerRadius="12">
                         <materialIcons:MaterialIcon x:Name="CloseIcon" Kind="Close" Width="24" Height="24"
                                                     Foreground="{DynamicResource TextMutedBrush}"
                                                     HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -46,7 +46,7 @@
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Padding" Value="20,12"/>
             <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="CornerRadius" Value="4"/>
             <Setter Property="Template">
                 <ControlTemplate>
                     <Border x:Name="CacheBorder"
@@ -109,10 +109,10 @@
         </Style>
     </Window.Styles>
 
-    <Border Background="{DynamicResource BackgroundGradientBrush}" 
-            CornerRadius="{DynamicResource RadiusMedium}" 
+    <Border CornerRadius="8"
             ClipToBounds="True"
-            BorderBrush="{DynamicResource BorderBrush}" 
+            Background="{DynamicResource BackgroundGradientBrush}"
+            BorderBrush="{DynamicResource BorderBrush}"
             BorderThickness="1">
         <Grid>
             <Grid.RowDefinitions>
@@ -186,19 +186,19 @@
                                     <!-- Dark Theme Button -->
                                     <Border x:Name="DarkThemeButton"
                                             Width="130" Height="85"
-                                            CornerRadius="10"
-                                            BorderThickness="3"
+                                            CornerRadius="4"
+                                            BorderThickness="1"
                                             BorderBrush="{DynamicResource AccentBrush}"
                                             Cursor="Hand"
                                             PointerPressed="DarkTheme_PointerPressed"
                                             Margin="0,0,16,0">
                                         <Grid>
-                                            <Border Background="{DynamicResource ThemePreviewDarkBg}" CornerRadius="7">
+                                            <Border Background="{DynamicResource ThemePreviewDarkBg}" CornerRadius="4">
                                                 <Grid>
                                                     <!-- Mini UI Preview -->
                                                     <Border Background="{DynamicResource ThemePreviewDarkInnerBg}" 
                                                            Width="95" Height="50"
-                                                           CornerRadius="6"
+                                                           CornerRadius="4"
                                                            Margin="12">
                                                         <StackPanel Margin="8">
                                                             <Rectangle Fill="White" Height="4" Width="40" HorizontalAlignment="Left" Margin="0,0,0,4"/>
@@ -211,7 +211,7 @@
                                                     <Border x:Name="DarkCheckmark"
                                                            Width="24" Height="24"
                                                            Background="{DynamicResource AccentBrush}"
-                                                           CornerRadius="12"
+                                                           CornerRadius="4"
                                                            HorizontalAlignment="Right"
                                                            VerticalAlignment="Top"
                                                            Margin="8">
@@ -235,18 +235,18 @@
                                     <!-- Light Theme Button -->
                                     <Border x:Name="LightThemeButton"
                                             Width="130" Height="85"
-                                            CornerRadius="10"
-                                            BorderThickness="3"
+                                            CornerRadius="4"
+                                            BorderThickness="1"
                                             BorderBrush="Transparent"
                                             Cursor="Hand"
                                             PointerPressed="LightTheme_PointerPressed">
                                         <Grid>
-                                            <Border Background="{DynamicResource ThemePreviewLightBg}" CornerRadius="7">
+                                            <Border Background="{DynamicResource ThemePreviewLightBg}" CornerRadius="4">
                                                 <Grid>
                                                     <!-- Mini UI Preview -->
                                                     <Border Background="{DynamicResource ThemePreviewLightInnerBg}" 
                                                            Width="95" Height="50"
-                                                           CornerRadius="6"
+                                                           CornerRadius="4"
                                                            Margin="12">
                                                         <StackPanel Margin="8">
                                                             <Rectangle Fill="{DynamicResource ThemePreviewDarkBg}" Height="4" Width="40" HorizontalAlignment="Left" Margin="0,0,0,4"/>
@@ -259,7 +259,7 @@
                                                     <Border x:Name="LightCheckmark"
                                                            Width="24" Height="24"
                                                            Background="{DynamicResource AccentBrush}"
-                                                           CornerRadius="12"
+                                                           CornerRadius="4"
                                                            HorizontalAlignment="Right"
                                                            VerticalAlignment="Top"
                                                            Margin="8"
@@ -443,12 +443,12 @@
                     <Panel>
                         <!-- PREMIUM CARD -->
                         <Border Background="{DynamicResource PrimaryGradientBrush}" 
-                                CornerRadius="12" 
+                                CornerRadius="8" 
                                 Padding="1.5"
                                 IsVisible="{Binding IsPremium}"
                                 Margin="0,0,0,24">
                             <Border Background="{DynamicResource Bg1Brush}" 
-                                    CornerRadius="10.5" 
+                                    CornerRadius="8" 
                                     Padding="24"
                                     ClipToBounds="True">
                                 <Panel>
@@ -457,9 +457,9 @@
                                                               Width="140" Height="140" 
                                                               Foreground="#f5c842" 
                                                               Opacity="0.05"
-                                                              HorizontalAlignment="Right" 
+                                                              HorizontalAlignment="Center" 
                                                               VerticalAlignment="Top"
-                                                              Margin="0,-40,-40,0"/>
+                                                              Margin="260,-10,0,0"/>
 
                                     <StackPanel>
                                         <Grid>
@@ -485,7 +485,7 @@
                                                     
                                                     <!-- PREMIUM BADGE -->
                                                     <Border Padding="10,3" 
-                                                            CornerRadius="6"
+                                                            CornerRadius="3"
                                                             VerticalAlignment="Center">
                                                         <Border.Background>
                                                             <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
@@ -566,7 +566,7 @@
                                             Padding="16,8"
                                             Background="{DynamicResource PrimaryGradientBrush}"
                                             Foreground="White"
-                                            CornerRadius="20"
+                                            CornerRadius="8"
                                             VerticalAlignment="Center"
                                             Cursor="Hand">
                                         <StackPanel Orientation="Horizontal" Spacing="8">
@@ -588,7 +588,7 @@
 
                     
                             <!-- Global Promo Code Section -->
-                            <Border Padding="20,16" Margin="0,0,0,16" CornerRadius="12">
+                            <Border Padding="20,16" Margin="0,0,0,16" CornerRadius="8">
                                 <Border.Background>
                                     <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
                                         <GradientStop Color="#1A6D28D9" Offset="0.0"/>
@@ -596,7 +596,7 @@
                                     </LinearGradientBrush>
                                 </Border.Background>
                                 
-                                <Border BorderBrush="{DynamicResource Surface0Brush}" CornerRadius="12" Padding="20">
+                                <Border BorderBrush="{DynamicResource Surface0Brush}" CornerRadius="8" Padding="20">
                                     <Panel>
                                         <!-- Background Watermark Icon -->
                                         <materialIcons:MaterialIcon Kind="TicketPercentOutline" 
@@ -605,11 +605,11 @@
                                                                     Opacity="0.05"
                                                                     HorizontalAlignment="Right" 
                                                                     VerticalAlignment="Top"
-                                                                    Margin="0,-20,-20,0"/>
+                                                                    Margin="0,-30,-20,0"/>
                                                                     
                                         <StackPanel>
                                             <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,0,0,8">
-                                                <Border Background="{DynamicResource AccentBrush}" Opacity="0.9" Padding="6" CornerRadius="8">
+                                                <Border Background="{DynamicResource AccentBrush}" Opacity="0.9" Padding="6" CornerRadius="4">
                                                     <materialIcons:MaterialIcon Kind="GiftOutline" Width="20" Height="20" Foreground="White"/>
                                                 </Border>
                                                 <TextBlock Text="{loc:Translate GlobalSettings.Promo.Title}" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
@@ -621,7 +621,7 @@
                                                 <TextBox Text="{Binding PromoCodeInput, Mode=TwoWay}" 
                                                          PlaceholderText="{loc:Translate GlobalSettings.Promo.Placeholder}"
                                                          Padding="16,12"
-                                                         CornerRadius="10"
+                                                         CornerRadius="8"
                                                          BorderThickness="1"
                                                          BorderBrush="{DynamicResource BorderBrush}"
                                                          Background="{DynamicResource Surface1Brush}"
@@ -632,7 +632,7 @@
                                                         Command="{Binding ApplyPromoCodeCommand}"
                                                         Background="{DynamicResource AccentBrush}"
                                                         Foreground="White"
-                                                        CornerRadius="10"
+                                                        CornerRadius="8"
                                                         Padding="24,10"
                                                         Margin="12,0,0,0"
                                                         Cursor="Hand"
@@ -670,7 +670,7 @@
                             Margin="0,0,0,16">
                         <Grid ColumnDefinitions="Auto,*,Auto">
                             <!-- Status Icon -->
-                            <Border Grid.Column="0" Width="42" Height="42" CornerRadius="21" Background="{DynamicResource Surface1Brush}" Margin="0,0,16,0">
+                            <Border Grid.Column="0" Width="42" Height="42" CornerRadius="8" Background="{DynamicResource Surface1Brush}" Margin="0,0,16,0">
                                 <materialIcons:MaterialIcon Kind="Update" Width="22" Height="22" Foreground="{DynamicResource AccentBrush}"/>
                             </Border>
 
@@ -728,7 +728,7 @@
                                 <TextBlock Text="{loc:Translate GlobalSettings.Support.Question}" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
                                 <TextBlock Text="{loc:Translate GlobalSettings.Support.Description}" FontSize="12" Foreground="{DynamicResource TextMutedBrush}" Margin="0,2,0,0"/>
                             </StackPanel>
-                            <Button Grid.Column="1" Content="{loc:Translate GlobalSettings.Support.Report}" Command="{Binding ReportBugCommand}" Padding="16,8" Background="#E50914" Foreground="White" CornerRadius="4"/>
+                            <Button Grid.Column="1" Content="{loc:Translate GlobalSettings.Support.Report}" Command="{Binding ReportBugCommand}" Padding="16,8" Background="#E50914" Foreground="White" CornerRadius="8"/>
                         </Grid>
                     </Border>
 

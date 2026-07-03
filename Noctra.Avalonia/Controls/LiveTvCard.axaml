@@ -14,7 +14,7 @@
     <Style Selector="Button.CardContainer">
       <Setter Property="Background" Value="Transparent"/>
       <Setter Property="BorderThickness" Value="0"/>
-      <Setter Property="CornerRadius" Value="10"/>
+      <Setter Property="CornerRadius" Value="8"/>
       <Setter Property="Padding" Value="10,6"/>
     </Style>
     <Style Selector="Button.CardContainer:pointerover">
@@ -23,6 +23,7 @@
     
     <Style Selector="Button.FavoriteBtn">
       <Setter Property="Opacity" Value="0.4"/>
+      <Setter Property="CornerRadius" Value="8"/>
       <Setter Property="Transitions">
         <Transitions>
           <DoubleTransition Property="Opacity" Duration="0:0:0.2"/>
@@ -95,7 +96,7 @@
                    Margin="0,0,0,4"
                    Background="{DynamicResource SurfaceLightBrush}" 
                    Foreground="{DynamicResource AccentBrush}" 
-                   CornerRadius="1.5"
+                   CornerRadius="1"
                    IsVisible="{Binding CurrentProgramTitle, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
     </Grid>
   </Button>

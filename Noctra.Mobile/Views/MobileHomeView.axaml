@@ -52,7 +52,7 @@
 
       <!-- Empty State (shown when no Continue Watching) -->
       <StackPanel Spacing="12"
-                  Margin="0,100,0,0"
+                  Margin="0,150,0,0"
                   VerticalAlignment="Center"
                   HorizontalAlignment="Center"
                   IsVisible="{Binding ContinueWatching.Count, Converter={StaticResource CountToVisibility}, ConverterParameter=invert}">
@@ -60,6 +60,7 @@
                Width="80"
                Height="80"
                Opacity="0.6"
+               CornerRadius="8"
                Margin="0,0,0,10">
           <Image.Styles>
             <Style Selector="Image">

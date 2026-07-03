@@ -32,7 +32,7 @@
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Template">
                 <ControlTemplate>
-                    <Border x:Name="SettingsBg" Background="{TemplateBinding Background}" CornerRadius="24">
+                    <Border x:Name="SettingsBg" Background="{TemplateBinding Background}" CornerRadius="12">
                         <materialIcons:MaterialIcon x:Name="SettingsIcon"
                                                      Kind="CogOutline"
                                                      Foreground="{DynamicResource TextMutedBrush}"
@@ -66,7 +66,7 @@
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Template">
                 <ControlTemplate>
-                    <Border x:Name="CloseBg" Background="{TemplateBinding Background}" CornerRadius="24">
+                    <Border x:Name="CloseBg" Background="{TemplateBinding Background}" CornerRadius="12">
                         <materialIcons:MaterialIcon x:Name="CloseIcon" Kind="Close" Width="24" Height="24"
                                                      Foreground="{DynamicResource TextMutedBrush}"
                                                      HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -99,8 +99,8 @@
                             <Grid x:Name="AvatarRoot" Width="140" Height="140" HorizontalAlignment="Center" VerticalAlignment="Center" ClipToBounds="False">
                                 <!-- 1. Kid Frame (Background glow and frame) -->
                                 <Border x:Name="KidFrame" 
-                                        Width="134" Height="134"
-                                        CornerRadius="21" 
+                                        Width="131" Height="131"
+                                        CornerRadius="15" 
                                         BorderThickness="3.5"
                                         IsVisible="{Binding IsChild}"
                                         IsHitTestVisible="False"
@@ -116,12 +116,12 @@
 
                                 <!-- 2. Avatar Content (120x120) -->
                                 <Border Width="{StaticResource RatioSquareSize}" Height="{StaticResource RatioSquareSize}" 
-                                        CornerRadius="14" ClipToBounds="True"
+                                        CornerRadius="12" ClipToBounds="True"
                                         Background="{DynamicResource IconGradientBrush}"
                                         HorizontalAlignment="Center" VerticalAlignment="Center">
                                     <Grid>
                                         <!-- Actual Avatar -->
-                                        <Border CornerRadius="14" RenderOptions.BitmapInterpolationMode="HighQuality">
+                                        <Border CornerRadius="12" RenderOptions.BitmapInterpolationMode="HighQuality">
                                             <Border.Background>
                                                 <ImageBrush Source="{Binding Avatar, Converter={StaticResource AvatarPathConverter}}"
                                                             Stretch="UniformToFill"/>
@@ -129,13 +129,13 @@
                                         </Border>
 
                                         <!-- Manage Mode Overlay -->
-                                        <Border Background="#CC000000" Opacity="0.7" CornerRadius="14"
+                                        <Border Background="#000000" Opacity="0.7" CornerRadius="11"
                                                 IsVisible="{Binding DataContext.IsManageMode, RelativeSource={RelativeSource AncestorType=Window}}">
                                                 
                                             <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
                                                 <!-- Pencil Icon in Circle -->
                                                 <Border Width="48" Height="48"
-                                                        CornerRadius="24"
+                                                        CornerRadius="12"
                                                         Background="Transparent"
                                                         BorderBrush="White"
                                                         BorderThickness="2">
@@ -148,7 +148,7 @@
                                         </Border>
 
                                         <!-- Deletion Countdown Overlay -->
-                                        <Border CornerRadius="14" ClipToBounds="True"
+                                        <Border CornerRadius="8" ClipToBounds="True"
                                                 IsVisible="{Binding IsPendingDeletion}">
                                             <Border.Background>
                                                 <SolidColorBrush Color="#000000" Opacity="0.8"/>
@@ -176,7 +176,7 @@
 
                                 <!-- 3. Selection/Focus Frame (On Top) -->
                                 <Border x:Name="AvatarBorder" Width="{StaticResource RatioSquareSize}" Height="{StaticResource RatioSquareSize}"
-                                        CornerRadius="14"
+                                        CornerRadius="12"
                                         BorderThickness="3" BorderBrush="Transparent"
                                         Background="Transparent" IsHitTestVisible="False"
                                         HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -239,26 +239,23 @@
 
                             <!-- Dashed Border Rectangle -->
                             <Rectangle x:Name="AddBorder"
-                                       RadiusX="14" RadiusY="14"
+                                       RadiusX="12" RadiusY="12"
                                        Stroke="{DynamicResource BorderBrush}"
                                        StrokeThickness="2"
-                                       StrokeDashArray="4,2"
+                                       StrokeDashArray="3,2"
                                        Fill="Transparent"/>
 
                             <!-- Circle with Plus -->
-                            <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
-                                <Ellipse x:Name="PlusCircle" Width="60" Height="60"
-                                         Stroke="{DynamicResource TextMutedBrush}" StrokeThickness="2" Fill="Transparent"/>
-                                <materialIcons:MaterialIcon x:Name="PlusIcon" Kind="Plus" Width="32" Height="32"
-                                                            Foreground="{DynamicResource TextMutedBrush}"
-                                                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                            </Grid>
+                            <materialIcons:MaterialIcon x:Name="PlusIcon" Kind="Plus" Width="42" Height="42"
+                                                        Foreground="{DynamicResource TextMutedBrush}"
+                                                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Grid>
 
                         <!-- Label -->
                         <TextBlock x:Name="AddLabel" Grid.Row="1" Text="{loc:Translate Profiles.AddProfile}"
                                    Foreground="{DynamicResource TextMutedBrush}"
-                                   FontSize="15" FontWeight="Medium"
+                                   FontSize="15" FontWeight="Medium"    
+                                   MaxWidth="150"
                                    HorizontalAlignment="Center"/>
                     </Grid>
                 </ControlTemplate>
@@ -303,7 +300,7 @@
              <Setter Property="FontSize" Value="14"/>
              <Setter Property="FontWeight" Value="Medium"/>
              <Setter Property="Padding" Value="24,12"/>
-             <Setter Property="CornerRadius" Value="{DynamicResource RadiusMedium}"/>
+             <Setter Property="CornerRadius" Value="6"/>
              <Setter Property="Template">
                  <ControlTemplate>
                      <Border Background="{TemplateBinding Background}"
@@ -332,9 +329,11 @@
         </Style>
     </Window.Styles>
 
-    <Border CornerRadius="{DynamicResource RadiusMedium}" ClipToBounds="True"
+    <Border CornerRadius="8"
+            ClipToBounds="True"
             Background="{DynamicResource BackgroundGradientBrush}"
-            Tag="{Binding IsCompact}">
+            BorderBrush="{DynamicResource BorderBrush}"
+            BorderThickness="1">
 
         <Grid RowDefinitions="Auto,*">
             
@@ -342,11 +341,16 @@
             <Grid Grid.Row="0" Margin="32,24" ColumnDefinitions="*,Auto">
                 
                 <!-- Left: Logo -->
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <Image Source="avares://Noctra/Assets/StoreLogo.png" Height="24" Stretch="Uniform" VerticalAlignment="Center"/>
-                    <TextBlock Text="Noctra" FontSize="18" FontWeight="SemiBold"
-                               Foreground="{DynamicResource TextMutedBrush}"
-                               VerticalAlignment="Center" Margin="12,0,0,0"/>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="10" Margin="8,0">
+                    <Image Source="avares://Noctra/Assets/Square150x150Logo.png" 
+                           Height="32" Stretch="Uniform" 
+                           VerticalAlignment="Center"/>
+                    <TextBlock Text="NOCTRA"
+                     FontSize="18"
+                     FontWeight="Bold"
+                     Foreground="{DynamicResource AccentBrush}"
+                     LetterSpacing="3.5"
+                     VerticalAlignment="Center" />
                 </StackPanel>
 
                 <!-- Right: Settings & Close -->

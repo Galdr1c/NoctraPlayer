@@ -364,7 +364,7 @@
         <Setter Property="Width" Value="52"/>
         <Setter Property="Height" Value="52"/>
         <Setter Property="Cursor" Value="Hand"/>
-        <Setter Property="CornerRadius" Value="26"/>
+        <Setter Property="CornerRadius" Value="10"/>
         <Setter Property="Template">
             <ControlTemplate TargetType="Button">
                 <Border x:Name="PART_Border"
