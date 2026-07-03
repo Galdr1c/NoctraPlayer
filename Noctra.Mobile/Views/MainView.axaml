@@ -199,7 +199,7 @@
                      FontSize="12"
                      FontWeight="Bold"
                      Foreground="{DynamicResource AccentBrush}"
-                     LetterSpacing="2"
+                     LetterSpacing="3.5"
                      VerticalAlignment="Center" />
         </StackPanel>
         <Button x:Name="HeaderProfileButton"

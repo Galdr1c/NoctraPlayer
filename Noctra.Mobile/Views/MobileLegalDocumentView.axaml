@@ -12,7 +12,7 @@
     <Border Background="{DynamicResource BackgroundGradientBrush}"
             BorderBrush="{DynamicResource BorderBrush}"
             BorderThickness="1"
-            CornerRadius="24"
+            CornerRadius="8"
             Margin="24,44,24,44"
             ClipToBounds="True"
             MaxWidth="520">
@@ -51,7 +51,7 @@
                 Background="{DynamicResource Surface1Brush}"
                 BorderBrush="{DynamicResource BorderBrush}"
                 BorderThickness="1"
-                CornerRadius="12"
+                CornerRadius="8"
                 Padding="16">
           <ScrollViewer VerticalScrollBarVisibility="Auto"
                         HorizontalScrollBarVisibility="Disabled">
@@ -66,11 +66,13 @@
         <Button Grid.Row="2"
                 Content="{loc:Translate Dialog.Ok}"
                 MinHeight="48"
-                CornerRadius="12"
+                CornerRadius="8"
                 Background="{DynamicResource AccentBrush}"
                 Foreground="{DynamicResource PlayerOverlayTextBrush}"
                 FontWeight="SemiBold"
                 HorizontalAlignment="Stretch"
+                HorizontalContentAlignment="Center"
+                VerticalContentAlignment="Center"
                 Margin="0,16,0,0"
                 Click="Close_Click" />
       </Grid>

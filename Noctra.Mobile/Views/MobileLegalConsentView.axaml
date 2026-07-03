@@ -13,7 +13,7 @@
     <Border Background="{DynamicResource BackgroundGradientBrush}"
             BorderBrush="{DynamicResource BorderBrush}"
             BorderThickness="1"
-            CornerRadius="24"
+            CornerRadius="8"
             Margin="24,60,24,60"
             ClipToBounds="True"
             VerticalAlignment="Center"
@@ -71,22 +71,25 @@
           <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
             <Button Grid.Column="1"
                     Classes="Secondary"
-                    MinHeight="44"
+                    MinHeight="30"
                     Click="Privacy_Click"
                     Content="{loc:Translate LegalConsent.Action.Privacy}"/>
             <Button Grid.Column="2"
                     Classes="Secondary"
-                    MinHeight="44"
+                    MinHeight="30"
                     Click="Terms_Click"
                     Content="{loc:Translate LegalConsent.Action.Terms}"/>
           </Grid>
 
           <Button x:Name="ContinueButton"
                   IsEnabled="False"
-                  MinHeight="52"
-                  CornerRadius="14"
+                  MinHeight="48"
+                  CornerRadius="4"
                   Background="{DynamicResource AccentBrush}"
                   Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                  HorizontalAlignment="Stretch"
+                  HorizontalContentAlignment="Center"
+                  VerticalContentAlignment="Center"
                   FontWeight="SemiBold"
                   FontSize="15"
                   Click="Continue_Click">

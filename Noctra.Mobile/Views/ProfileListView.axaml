@@ -64,7 +64,7 @@
       <Setter Property="Background" Value="Transparent" />
       <Setter Property="BorderThickness" Value="0" />
       <Setter Property="Padding" Value="10" />
-      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="CornerRadius" Value="6" />
     </Style>
     <Style Selector="Button.HeaderIconBtn:pressed">
       <Setter Property="Background" Value="{DynamicResource Surface1Brush}" />
@@ -75,7 +75,7 @@
       <Setter Property="Background" Value="Transparent" />
       <Setter Property="BorderThickness" Value="0" />
       <Setter Property="Padding" Value="8,6" />
-      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="CornerRadius" Value="6" />
       <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
       <Setter Property="FontSize" Value="16" />
       <Setter Property="FontWeight" Value="Medium" />
@@ -110,14 +110,14 @@
         <!-- Sol: Uygulama logosu + adı -->
         <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center" Margin="8,0">
           <Image Source="avares://Noctra.Mobile/Assets/Square150x150Logo.png"
-                 Width="22" Height="22"
+                 Width="32" Height="32"
                  Stretch="Uniform"
                  VerticalAlignment="Center" />
           <TextBlock Text="NOCTRA"
                      FontSize="18"
                      FontWeight="Bold"
                      Foreground="{DynamicResource AccentBrush}"
-                     LetterSpacing="1.5"
+                     LetterSpacing="3.5"
                      VerticalAlignment="Center" />
         </StackPanel>
 
@@ -135,12 +135,25 @@
       </Grid>
 
       <!-- ── YÖNET MOD başlığı ── -->
+
       <Grid ColumnDefinitions="Auto,*,Auto"
             IsVisible="{Binding IsManageMode}"
             VerticalAlignment="Center">
 
         <!-- Sol: Boş denge alanı -->
-        <Border Width="48" />
+        <!-- Sol: Uygulama logosu + adı -->
+        <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center" Margin="8,0">
+          <Image Source="avares://Noctra.Mobile/Assets/Square150x150Logo.png"
+                 Width="32" Height="32"
+                 Stretch="Uniform"
+                 VerticalAlignment="Center" />
+          <TextBlock Text="NOCTRA"
+                     FontSize="18"
+                     FontWeight="Bold"
+                     Foreground="{DynamicResource AccentBrush}"
+                     LetterSpacing="3.5"
+                     VerticalAlignment="Center" />
+        </StackPanel>
 
         <!-- Orta: "Profilleri Yönet" -->
         <TextBlock Grid.Column="1"
@@ -170,7 +183,7 @@
 
         <!-- ── "Kimin izlediğini seç?" büyük başlık (sadece normal modda) ── -->
         <TextBlock Text="{loc:Translate Profiles.Title}"
-                   FontSize="28"
+                   FontSize="32"
                    FontWeight="Bold"
                    Foreground="{DynamicResource TextPrimaryBrush}"
                    HorizontalAlignment="Center"
@@ -220,7 +233,7 @@
                                       RelativeSource={RelativeSource AncestorType=ItemsControl},
                                       Converter={StaticResource ResponsiveCardMetricConverter},
                                       ConverterParameter=profileWidth}"
-                      Margin="8,6">
+                      Margin="8,8">
                 <StackPanel Spacing="10">
 
                   <!--
@@ -235,7 +248,7 @@
 
                     <!-- Çocuk profili çerçevesi (gradyan kenarlık) -->
                     <Border Width="148" Height="148"
-                            CornerRadius="18"
+                            CornerRadius="15"
                             BorderThickness="3"
                             IsVisible="{Binding IsChild}"
                             IsHitTestVisible="False"
@@ -251,7 +264,7 @@
 
                     <!-- Avatar resmi -->
                     <Border Width="140" Height="140"
-                            CornerRadius="16"
+                            CornerRadius="12"
                             ClipToBounds="True"
                             Background="{DynamicResource IconGradientBrush}"
                             HorizontalAlignment="Center"
@@ -266,11 +279,11 @@
                           ── YÖNET MODU kalem overlay'i ──────────────────
                           Tıklanabilir yönet overlay: yarı saydam siyah + kalem
                         -->
-                        <Border CornerRadius="16"
+                        <Border CornerRadius="11"
                                 Background="{DynamicResource OverlayScrimBrush}"
                                 IsVisible="{Binding #ProfileListRoot.DataContext.IsManageMode}">
                           <Border Width="46" Height="46"
-                                  CornerRadius="23"
+                                  CornerRadius="12"
                                   BorderBrush="White"
                                   BorderThickness="2"
                                   Background="Transparent"
@@ -285,7 +298,7 @@
                         </Border>
 
                         <!-- Silme geri sayım overlay'i -->
-                        <Border CornerRadius="16"
+                        <Border CornerRadius="8"
                                 Background="#E0000000"
                                 IsVisible="{Binding IsPendingDeletion}">
                           <StackPanel VerticalAlignment="Center"
@@ -347,10 +360,10 @@
 
                   <!-- Artı kutusu: noktalı kenarlıklı (StrokeDashArray="4,2") -->
                   <Grid Width="140" Height="140" HorizontalAlignment="Center">
-                    <Rectangle RadiusX="14" RadiusY="14"
+                    <Rectangle RadiusX="12" RadiusY="12"
                                Stroke="{DynamicResource BorderBrush}"
                                StrokeThickness="2"
-                               StrokeDashArray="4,2"
+                               StrokeDashArray="3,2"
                                Fill="Transparent" />
                     <icons:MaterialIcon Kind="Plus"
                                         Width="42" Height="42"

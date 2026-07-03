@@ -24,6 +24,18 @@
     </AndroidResource>
   </ItemGroup>
 
+  <ItemGroup Condition="'$(Configuration)' == 'Debug'">
+    <PackageReference Include="Avalonia.Markup.Xaml.Loader" Version="$(AvaloniaVersion)" PrivateAssets="All" Publish="True" />
+    <PackageReference Include="HotAvalonia" Version="3.*" PrivateAssets="All" Publish="True" />
+  </ItemGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
+    <HotAvalonia>true</HotAvalonia>
+    <HotAvaloniaMode>Balanced</HotAvaloniaMode>
+    <HotAvaloniaRemote>true</HotAvaloniaRemote>
+    <HotAvaloniaTimeout>30000</HotAvaloniaTimeout>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="Avalonia.Android" Version="$(AvaloniaVersion)" />
     <PackageReference Include="Xamarin.AndroidX.Core.SplashScreen" Version="1.0.1.15" />
