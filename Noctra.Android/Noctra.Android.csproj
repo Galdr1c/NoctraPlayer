@@ -30,6 +30,8 @@
     <PackageReference Include="Xamarin.Google.Android.Play.Review" Version="2.0.2.8" />
     <PackageReference Include="Xamarin.AndroidX.Media3.ExoPlayer" Version="1.4.1.1" />
     <PackageReference Include="Xamarin.AndroidX.Media3.ExoPlayer.Hls" Version="1.4.1.1" />
+    <PackageReference Include="Xamarin.AndroidX.Media3.ExoPlayer.Dash" Version="1.4.1.1" />
+    <PackageReference Include="Xamarin.AndroidX.Media3.ExoPlayer.SmoothStreaming" Version="1.4.1.1" />
     <PackageReference Include="Xamarin.AndroidX.Media3.ExoPlayer.Rtsp" Version="1.4.1.1" />
   </ItemGroup>
 

@@ -290,12 +290,24 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
 
                 var mediaItem = MediaItem.FromUri(uri);
 
-                // Create the appropriate MediaSource using DefaultMediaSourceFactory
+                // Create the appropriate MediaSource using DefaultMediaSourceFactory.
+                // Media3 optional modules (DASH/SmoothStreaming/HLS/RTSP) live in separate
+                // AndroidX packages. If an APK is built without one of those packages,
+                // DefaultMediaSourceFactory can throw a Java ClassNotFoundException on
+                // the UI thread. Convert that into a normal player error so it never
+                // bubbles out as a terminating Avalonia/Android crash report.
                 var mediaSourceFactory = new DefaultMediaSourceFactory(httpDataSourceFactory);
-                var mediaSource = mediaSourceFactory.CreateMediaSource(mediaItem);
-
-
-                _exoPlayer.SetMediaSource(mediaSource);
+                try
+                {
+                    var mediaSource = mediaSourceFactory.CreateMediaSource(mediaItem);
+                    _exoPlayer.SetMediaSource(mediaSource);
+                }
+                catch (Exception ex) when (IsMissingMedia3SourceModuleException(ex))
+                {
+                    throw new InvalidOperationException(
+                        _localizationService.GetString("Player.Error.UnsupportedStreamFormat"),
+                        ex);
+                }
                 ApplyDataUsageConstraints();
 
                 // Setup Video Surface
@@ -765,10 +777,26 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
     {
         if (!playbackSource.IsNetworkStream) return;
 
+        // Android connectivity APIs can report Offline/Unknown incorrectly on some
+        // vendor builds even when the stream is reachable. Treat this as a warning
+        // and let ExoPlayer attempt the request. If the network is truly unavailable,
+        // ExoPlayer will emit a normal playback error that the UI can display without
+        // terminating the app. Local files are bypassed above.
         if (string.Equals(_networkService.CurrentNetworkStatus, "Offline", StringComparison.OrdinalIgnoreCase))
         {
-            throw new InvalidOperationException(_localizationService.GetString("Player.Error.NetworkOffline"));
+            LogDebug("Network service reported Offline before playback; attempting stream anyway.");
+            ErrorOccurred?.Invoke(this, _localizationService.GetString("Player.Warning.NetworkOfflineTrying"));
         }
+    }
+
+    private static bool IsMissingMedia3SourceModuleException(Exception ex)
+    {
+        var message = ex.ToString();
+        return message.Contains("ClassNotFoundException", StringComparison.OrdinalIgnoreCase) &&
+               (message.Contains("DashMediaSource", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("SsMediaSource", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("HlsMediaSource", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("RtspMediaSource", StringComparison.OrdinalIgnoreCase));
     }
 
     private PlaybackSource BuildPlaybackSource(string url)

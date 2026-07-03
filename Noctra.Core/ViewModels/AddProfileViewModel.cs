@@ -1037,6 +1037,15 @@ public partial class AddProfileViewModel : ObservableObject
                     : (ConnectionHealth.Critical, stopwatch.ElapsedMilliseconds, _localizationService.GetString("AddProfile.Error.NewProviderValidationFailed"));
             }
 
+            if (IsM3U && IsLocalM3uFileSource)
+            {
+                var channels = await _m3uParser.ParseFromFileAsync(Url.Trim());
+                stopwatch.Stop();
+                return channels.Count > 0
+                    ? (ClassifyLatency(stopwatch.ElapsedMilliseconds), stopwatch.ElapsedMilliseconds, null)
+                    : (ConnectionHealth.Critical, stopwatch.ElapsedMilliseconds, _localizationService.GetString("Playlist.Error.EmptyNoDelete"));
+            }
+
             if (IsM3U && !string.IsNullOrWhiteSpace(Username) && !string.IsNullOrWhiteSpace(Password))
             {
                 var authenticated = await _xtreamCodesService.AuthenticateAsync(
@@ -1177,7 +1186,9 @@ public partial class AddProfileViewModel : ObservableObject
                 return PlaylistImportPreview.FromChannels(channels, "Xtream", health, latency, statusCode);
             }
 
-            channels = await _m3uParser.ParseFromUrlAsync(Url);
+            channels = IsLocalM3uFileSource
+                ? await _m3uParser.ParseFromFileAsync(Url.Trim())
+                : await _m3uParser.ParseFromUrlAsync(Url);
             return PlaylistImportPreview.FromChannels(channels, "M3U", health, latency, statusCode);
         }
         catch (Exception ex)
@@ -1204,11 +1215,16 @@ public partial class AddProfileViewModel : ObservableObject
         // If user did not type a name, generate one from URL host.
         if (string.IsNullOrWhiteSpace(ProfileName))
         {
-            if (Uri.TryCreate(Url, UriKind.Absolute, out var uri) && !string.IsNullOrWhiteSpace(uri.Host))
+            if (IsM3U && IsLocalM3uFileSource && !string.IsNullOrWhiteSpace(Url))
+            {
+                ProfileName = Path.GetFileNameWithoutExtension(Url.Trim());
+            }
+            else if (Uri.TryCreate(Url, UriKind.Absolute, out var uri) && !string.IsNullOrWhiteSpace(uri.Host))
             {
                 ProfileName = uri.Host;
             }
-            else
+
+            if (string.IsNullOrWhiteSpace(ProfileName))
             {
                 ProfileNameError = _localizationService.GetString("AddProfile.Error.ProfileNameRequired");
                 return;

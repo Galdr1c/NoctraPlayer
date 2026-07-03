@@ -661,25 +661,30 @@ public partial class MainView : UserControl
 
     private async void CoreMainViewModel_OnMediaSelected(object media)
     {
-        switch (media)
+        try
         {
-            case Channel channel:
-                SelectedMediaHost.IsVisible = false;
-                SelectedMediaTitle.Text = channel.Name;
-                SelectedMediaSubtitle.Text = LocalizationSource.Instance["Mobile.Status.Playback.Starting"];
-                await PlaySelectedChannelAsync(channel);
-                SelectedMediaHost.IsVisible = false;
-                return;
-            case Series series:
-                SelectedMediaHost.IsVisible = false;
-                return;
-            default:
-                SelectedMediaTitle.Text = media.GetType().Name;
-                SelectedMediaSubtitle.Text = LocalizationSource.Instance["Mobile.Status.Media.Ready"];
-                break;
+            switch (media)
+            {
+                case Channel channel:
+                    SelectedMediaHost.IsVisible = false;
+                    SelectedMediaTitle.Text = channel.Name;
+                    SelectedMediaSubtitle.Text = LocalizationSource.Instance["Mobile.Status.Playback.Starting"];
+                    await PlaySelectedChannelAsync(channel);
+                    return;
+                case Series:
+                    SelectedMediaHost.IsVisible = false;
+                    return;
+                default:
+                    SelectedMediaTitle.Text = media.GetType().Name;
+                    SelectedMediaSubtitle.Text = LocalizationSource.Instance["Mobile.Status.Media.Ready"];
+                    SelectedMediaHost.IsVisible = true;
+                    break;
+            }
         }
-
-        SelectedMediaHost.IsVisible = true;
+        catch (Exception ex)
+        {
+            ShowPlaybackStartupError(media, ex);
+        }
     }
 
     private async Task PlaySelectedChannelAsync(Channel channel)
@@ -756,8 +761,34 @@ public partial class MainView : UserControl
         }
         UpdatePlayerWatermarkInsets();
 
-        await _playerViewModel.PlayChannelAsync(channel);
-        UpdatePictureInPictureState();
+        try
+        {
+            await _playerViewModel.PlayChannelAsync(channel);
+            UpdatePictureInPictureState();
+        }
+        catch (Exception ex)
+        {
+            ShowPlaybackStartupError(channel, ex);
+        }
+    }
+
+    private void ShowPlaybackStartupError(object media, Exception ex)
+    {
+        var title = media is Channel channel
+            ? channel.Name
+            : media.GetType().Name;
+        var message = UserFriendlyErrorMessage.FromException(ex);
+
+        SelectedMediaTitle.Text = title;
+        SelectedMediaSubtitle.Text = message;
+        SelectedMediaHost.IsVisible = true;
+
+        if (_playerViewModel is not null)
+        {
+            _playerViewModel.ConnectionStatus = message;
+            _playerViewModel.IsBuffering = false;
+            _playerViewModel.BufferingProgress = 0;
+        }
     }
 
     /// <summary>

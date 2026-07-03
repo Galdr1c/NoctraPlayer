@@ -1096,7 +1096,7 @@ public partial class SettingsViewModel : ObservableObject
             _mainViewModel.GlobalLoadingMessage = _localizationService.GetString("Settings.Refresh.Channel.Started");
 
             SetProgressStatus("Channel", 0, _localizationService.GetString("Settings.Refresh.Channel.Started"));
-            await _mainViewModel.RefreshSelectedPlaylistAsync();
+            await _mainViewModel.RefreshSelectedPlaylistAsync(force: true);
             SyncChannelProgressFromMain(minimumPercent: 88, fallbackMessage: _localizationService.GetString("Settings.Refresh.Channel.UpdatingData"));
 
             SetProgressStatus("Channel", Math.Max(RefreshProgressPercent, 90), _localizationService.GetString("Settings.Refresh.Channel.UpdatingData"));

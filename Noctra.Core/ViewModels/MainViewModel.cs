@@ -3788,21 +3788,31 @@ public partial class MainViewModel : ObservableObject
         await RefreshSelectedPlaylistAsync();
     }
 
-    public async Task RefreshSelectedPlaylistAsync(bool isBackground = false)
+    public async Task RefreshSelectedPlaylistAsync(bool isBackground = false, bool force = false)
     {
         if (SelectedPlaylist == null)
         {
             if (CurrentProfile != null && !isBackground)
             {
-                // If profile has no playlist record, try to load/create it
+                // If profile has no playlist record, try to load/create it once.
                 await LoadProfileAsync(CurrentProfile);
             }
-            return;
+
+            if (SelectedPlaylist == null)
+            {
+                var noPlaylistMessage = _localizationService.GetString("Main.Status.NoPlaylistSelected");
+                if (!isBackground)
+                {
+                    StatusMessage = noPlaylistMessage;
+                    ChannelListLastError = noPlaylistMessage;
+                }
+                return;
+            }
         }
 
         var playlistId = SelectedPlaylist.Id;
 
-        if (!isBackground &&
+        if (!isBackground && !force &&
             _playlistNoChangeUntilUtc.TryGetValue(playlistId, out var noChangeUntil) &&
             noChangeUntil > DateTime.UtcNow)
         {
