@@ -26,12 +26,12 @@
     <Window.Styles>
         <!-- Close Button Style -->
         <Style Selector="Button.CloseButtonStyle">
-            <Setter Property="Width" Value="48"/>
-            <Setter Property="Height" Value="48"/>
+            <Setter Property="Width" Value="40"/>
+            <Setter Property="Height" Value="40"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Template">
                 <ControlTemplate>
-                    <Border x:Name="CloseBg" Background="{TemplateBinding Background}" CornerRadius="24">
+                    <Border x:Name="CloseBg" Background="{TemplateBinding Background}" CornerRadius="12">
                         <materialIcons:MaterialIcon x:Name="CloseIcon" Kind="Close" Width="24" Height="24"
                                                     Foreground="{DynamicResource TextMutedBrush}"
                                                     HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -58,7 +58,7 @@
                     <Grid>
                         <Border x:Name="HoverBackground" 
                                 Background="{TemplateBinding Background}" 
-                                CornerRadius="8" 
+                                CornerRadius="6" 
                                 Opacity="0"
                                 Margin="2,4"/>
                         
@@ -116,7 +116,7 @@
         <!-- Settings Card Style -->
         <Style Selector="Border.SettingsCard">
             <Setter Property="Background" Value="{DynamicResource Surface0Brush}"/>
-            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="CornerRadius" Value="8"/>
             <Setter Property="Padding" Value="24"/>
             <Setter Property="Margin" Value="0,0,0,16"/>
         </Style>
@@ -159,7 +159,7 @@
     </Window.Styles>
 
     <Border Background="{DynamicResource BackgroundGradientBrush}" 
-            CornerRadius="{DynamicResource RadiusLarge}" 
+            CornerRadius="8" 
             ClipToBounds="True"
             Margin="1"
             BorderBrush="{DynamicResource BorderBrush}" 
@@ -212,10 +212,10 @@
                                     </Grid.ColumnDefinitions>
                                     
                                     <!-- Avatar -->
-                                    <Border Width="80" Height="80" CornerRadius="40" Margin="0,0,24,0" 
+                                    <Border Width="80" Height="80" CornerRadius="8" Margin="0,0,24,0" 
                                             Background="{DynamicResource PrimaryGradientBrush}"
                                             ClipToBounds="True">
-                                        <Border CornerRadius="40" RenderOptions.BitmapInterpolationMode="HighQuality">
+                                        <Border CornerRadius="8" RenderOptions.BitmapInterpolationMode="HighQuality">
                                             <Border.Background>
                                                 <ImageBrush Source="{Binding CurrentProfileAvatar, Converter={StaticResource AvatarPathConverter}}" Stretch="UniformToFill"/>
                                             </Border.Background>
@@ -243,6 +243,7 @@
                                     <Button Content="{loc:Translate Settings.Profile.BackToProfiles}"
                                             Click="BackToProfiles_Click"
                                             HorizontalAlignment="Left"
+                                            CornerRadius="4"
                                             Padding="18,10"/>
                                 </StackPanel>
                             </Border>
@@ -311,7 +312,7 @@
                     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,12,32,0">
                         <StackPanel HorizontalAlignment="Stretch" Margin="0,0,0,100">
 
-                            <!-- AÄŸ AyarlarÄ± -->
+                            <!-- Ağ Ayarları -->
                             <Border Classes="SettingsCard">
                                 <StackPanel>
                                     <TextBlock Text="{loc:Translate Settings.Playback.Network}" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,20"/>
@@ -360,7 +361,7 @@
                                     <TextBlock Text="{loc:Translate Settings.Playback.BufferDescription}" FontSize="13" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,20"/>
 
                                     <StackPanel Orientation="Horizontal" Spacing="24">
-                                        <!-- KÃ¼Ã§Ã¼k (2sn) - PREMIUM -->
+                                        <!-- Küçük (2sn) - PREMIUM -->
                                         <Grid VerticalAlignment="Center">
                                             <RadioButton Content="{loc:Translate Settings.Playback.Buffer.Small}" GroupName="Buffer"
                                                          IsChecked="{Binding IsBufferSmall}"
@@ -380,7 +381,7 @@
                                                      IsChecked="{Binding IsBufferNormal}"
                                                      Theme="{StaticResource ModernRadioButton}"/>
 
-                                        <!-- BÃ¼yÃ¼k (10sn) - PREMIUM -->
+                                        <!-- Büyük (10sn) - PREMIUM -->
                                         <Grid VerticalAlignment="Center">
                                             <RadioButton Content="{loc:Translate Settings.Playback.Buffer.Large}" GroupName="Buffer"
                                                          IsChecked="{Binding IsBufferLarge}"
@@ -518,7 +519,7 @@
                                                    FontWeight="SemiBold"/>
                                     </Grid>
 
-                                    <!-- Hata gÃ¶stergesi (EPG ile aynÄ± tasarÄ±m) -->
+                                    <!-- Hata göstergesi (EPG ile aynı tasarım) -->
                                     <Border Background="{DynamicResource Surface1Brush}"
                                             BorderBrush="{DynamicResource ErrorBrush}"
                                             BorderThickness="1"
@@ -593,9 +594,9 @@
                                                 <TextBlock Text="{loc:Translate Settings.Channels.Hidden.Description}"
                                                            FontSize="13" Foreground="{DynamicResource TextMutedBrush}"/>
                                             </StackPanel>
-                                            <Border Grid.Column="1" Background="{DynamicResource Surface1Brush}" CornerRadius="12" Padding="12,4" VerticalAlignment="Center">
+                                            <Border Grid.Column="1" Background="{DynamicResource Surface1Brush}" CornerRadius="4" Padding="12,4" VerticalAlignment="Center">
                                                 <TextBlock Text="{Binding HiddenLiveGroups.Count, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Channels.Hidden.CountFormat'}" 
-                                                           Foreground="{DynamicResource TextMutedBrush}" FontWeight="Bold" FontSize="11" LetterSpacing="0.5"/>
+                                                           Foreground="{DynamicResource TextMutedBrush}" FontWeight="Bold" FontSize="11" LetterSpacing="3.5"/>
                                             </Border>
                                         </Grid>
                                     </Expander.Header>
@@ -611,10 +612,10 @@
                                                                         Theme="{StaticResource FilterButtonStyle}"
                                                                         Command="{Binding $parent[Window].DataContext.UnhideGroupCommand}"
                                                                         CommandParameter="{Binding}"
-                                                                        Padding="10,4" CornerRadius="4" Cursor="Hand">
-                                                                    <StackPanel Orientation="Horizontal" Spacing="4">
-                                                                        <materialIcons:MaterialIcon Kind="EyeOutline" Width="14" Height="14"/>
-                                                                        <TextBlock Text="{loc:Translate Settings.Channels.Hidden.Show}" FontSize="12" FontWeight="Medium"/>
+                                                                        Padding="20,4" CornerRadius="4" Cursor="Hand">
+                                                                    <StackPanel Orientation="Horizontal" Spacing="12">
+                                                                        <materialIcons:MaterialIcon Kind="EyeOutline" Width="16" Height="16"/>
+                                                                        <TextBlock Text="{loc:Translate Settings.Channels.Hidden.Show}" FontSize="14" FontWeight="Medium"/>
                                                                     </StackPanel>
                                                                 </Button>
                                                             </Grid>
@@ -640,9 +641,9 @@
                                                 <TextBlock Text="{loc:Translate Settings.Channels.Hidden.Description}"
                                                            FontSize="13" Foreground="{DynamicResource TextMutedBrush}"/>
                                             </StackPanel>
-                                            <Border Grid.Column="1" Background="{DynamicResource Surface1Brush}" CornerRadius="12" Padding="12,4" VerticalAlignment="Center">
+                                            <Border Grid.Column="1" Background="{DynamicResource Surface1Brush}" CornerRadius="4" Padding="12,4" VerticalAlignment="Center">
                                                 <TextBlock Text="{Binding HiddenMovieGroups.Count, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Channels.Hidden.CountFormat'}" 
-                                                           Foreground="{DynamicResource TextMutedBrush}" FontWeight="Bold" FontSize="11" LetterSpacing="0.5"/>
+                                                           Foreground="{DynamicResource TextMutedBrush}" FontWeight="Bold" FontSize="11" LetterSpacing="3.5"/>
                                             </Border>
                                         </Grid>
                                     </Expander.Header>
@@ -658,10 +659,10 @@
                                                                         Theme="{StaticResource FilterButtonStyle}"
                                                                         Command="{Binding $parent[Window].DataContext.UnhideGroupCommand}"
                                                                         CommandParameter="{Binding}"
-                                                                        Padding="10,4" CornerRadius="4" Cursor="Hand">
-                                                                    <StackPanel Orientation="Horizontal" Spacing="4">
-                                                                        <materialIcons:MaterialIcon Kind="EyeOutline" Width="14" Height="14"/>
-                                                                        <TextBlock Text="{loc:Translate Settings.Channels.Hidden.Show}" FontSize="12" FontWeight="Medium"/>
+                                                                        Padding="20,4" CornerRadius="4" Cursor="Hand">
+                                                                    <StackPanel Orientation="Horizontal" Spacing="12">
+                                                                        <materialIcons:MaterialIcon Kind="EyeOutline" Width="16" Height="16"/>
+                                                                        <TextBlock Text="{loc:Translate Settings.Channels.Hidden.Show}" FontSize="14" FontWeight="Medium"/>
                                                                     </StackPanel>
                                                                 </Button>
                                                             </Grid>
@@ -687,9 +688,9 @@
                                                 <TextBlock Text="{loc:Translate Settings.Channels.Hidden.Description}"
                                                            FontSize="13" Foreground="{DynamicResource TextMutedBrush}"/>
                                             </StackPanel>
-                                            <Border Grid.Column="1" Background="{DynamicResource Surface1Brush}" CornerRadius="12" Padding="12,4" VerticalAlignment="Center">
+                                            <Border Grid.Column="1" Background="{DynamicResource Surface1Brush}" CornerRadius="4" Padding="12,4" VerticalAlignment="Center">
                                                 <TextBlock Text="{Binding HiddenSeriesGroups.Count, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Channels.Hidden.CountFormat'}" 
-                                                           Foreground="{DynamicResource TextMutedBrush}" FontWeight="Bold" FontSize="11" LetterSpacing="0.5"/>
+                                                           Foreground="{DynamicResource TextMutedBrush}" FontWeight="Bold" FontSize="11" LetterSpacing="3.5"/>
                                             </Border>
                                         </Grid>
                                     </Expander.Header>
@@ -705,10 +706,10 @@
                                                                         Theme="{StaticResource FilterButtonStyle}"
                                                                         Command="{Binding $parent[Window].DataContext.UnhideGroupCommand}"
                                                                         CommandParameter="{Binding}"
-                                                                        Padding="10,4" CornerRadius="4" Cursor="Hand">
-                                                                    <StackPanel Orientation="Horizontal" Spacing="4">
-                                                                        <materialIcons:MaterialIcon Kind="EyeOutline" Width="14" Height="14"/>
-                                                                        <TextBlock Text="{loc:Translate Settings.Channels.Hidden.Show}" FontSize="12" FontWeight="Medium"/>
+                                                                        Padding="20,4" CornerRadius="4" Cursor="Hand">
+                                                                    <StackPanel Orientation="Horizontal" Spacing="12">
+                                                                        <materialIcons:MaterialIcon Kind="EyeOutline" Width="16" Height="16"/>
+                                                                        <TextBlock Text="{loc:Translate Settings.Channels.Hidden.Show}" FontSize="14" FontWeight="Medium"/>
                                                                     </StackPanel>
                                                                 </Button>
                                                             </Grid>
@@ -887,7 +888,7 @@
                                         </Button>
                                     </Grid>
 
-                                    <!-- Performans uyarÄ±sÄ± -->
+                                    <!-- Performans uyarısı -->
                                     <Border Background="#1AFFA500" 
                                             BorderBrush="#55FFA500" 
                                             BorderThickness="1" 
@@ -925,8 +926,8 @@
                                         </ItemsControl.ItemTemplate>
                                     </ItemsControl>
 
-                                    <!-- En altta tek bir yenile butonu (opsiyonel ama kullanÄ±cÄ± eski haliyle alÄ±ÅŸÄ±k olabilir) -->
-                                     <!-- TÃ¼m EPG KaynaklarÄ±nÄ± Yenile -->
+                                    <!-- En altta tek bir yenile butonu (opsiyonel ama kullanıcı eski haliyle alarak olabilir) -->
+                                     <!-- Tüm EPG Kaynaklarını Yenile -->
                                      <Button Command="{Binding RefreshEpgNowCommand}"
                                              IsEnabled="{Binding !_mainViewModel.IsGlobalLoading}"
                                              HorizontalAlignment="Left"
@@ -935,7 +936,7 @@
                                              Background="{DynamicResource Surface1Brush}"
                                              BorderBrush="{DynamicResource BorderBrush}"
                                              BorderThickness="1"
-                                             CornerRadius="8"
+                                             CornerRadius="6"
                                              Cursor="Hand">
                                          <StackPanel Orientation="Horizontal" Spacing="10">
                                              <materialIcons:MaterialIcon Kind="Refresh" Width="18" Height="18" Foreground="{DynamicResource AccentBrush}"/>
@@ -1021,11 +1022,12 @@
                                         <ComboBoxItem Content="{loc:Translate Settings.Privacy.Retention.30d}"/>
                                     </ComboBox>
 
-                                    <Separator Height="1" Background="{DynamicResource BorderBrush}" Margin="0,10,0,20"/>
+                                    <Separator Height="1" Background="{DynamicResource ErrorBrush}" Margin="0,10,0,20"/>
 
-                                    <TextBlock Text="{loc:Translate Settings.Privacy.DangerZone}" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource ErrorBrush}" Margin="0,0,0,12"/>
+                                    <TextBlock Text="{loc:Translate Settings.Privacy.DangerZone}" FontSize="16" FontWeight="SemiBold" LetterSpacing="3.5" Foreground="{DynamicResource ErrorBrush}" Margin="0,0,0,12"/>
                                     <Button Content="{loc:Translate Settings.Privacy.ClearAllNow}" 
                                             Command="{Binding ClearHistoryCommand}"
+                                            Foreground="{DynamicResource ErrorBrush}"
                                             Classes="ErrorButton"
                                             Padding="16,10"/>
                                 </StackPanel>
@@ -1063,19 +1065,19 @@
                                         <!-- Theme Options -->
                                         <StackPanel Grid.Column="1" Orientation="Horizontal">
                                             <!-- Dark Theme Button -->
-                                            <Border x:Name="DarkThemeButton" Width="130" Height="85" CornerRadius="10" BorderThickness="3" BorderBrush="Transparent" Cursor="Hand" PointerPressed="DarkTheme_PointerPressed" Margin="0,0,16,0">
+                                            <Border x:Name="DarkThemeButton" Width="130" Height="85" CornerRadius="4" BorderThickness="1" BorderBrush="Transparent" Cursor="Hand" PointerPressed="DarkTheme_PointerPressed" Margin="0,0,16,0">
                                                 <Grid>
-                                                    <Border Background="{DynamicResource ThemePreviewDarkBg}" CornerRadius="7">
+                                                    <Border Background="{DynamicResource ThemePreviewDarkBg}" CornerRadius="4">
                                                         <Grid>
-                                                            <Border Background="{DynamicResource ThemePreviewDarkInnerBg}" Width="95" Height="50" CornerRadius="6" Margin="12">
+                                                            <Border Background="{DynamicResource ThemePreviewDarkInnerBg}" Width="95" Height="50" CornerRadius="4" Margin="12">
                                                                 <StackPanel Margin="10,8">
                                                                     <Rectangle Fill="White" Height="4" Width="40" HorizontalAlignment="Left" Margin="0,0,0,6"/>
                                                                     <Rectangle Fill="{DynamicResource ThemePreviewDarkText}" Height="3" Width="55" HorizontalAlignment="Left" Margin="0,0,0,4"/>
                                                                     <Rectangle Fill="{DynamicResource ThemePreviewDarkText}" Height="3" Width="45" HorizontalAlignment="Left"/>
                                                                 </StackPanel>
                                                             </Border>
-                                                            <Border x:Name="DarkCheckmark" Width="22" Height="22" Background="{DynamicResource AccentBrush}" CornerRadius="11" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="6">
-                                                                <materialIcons:MaterialIcon Kind="Check" Foreground="White" Width="12" Height="12" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                            <Border x:Name="DarkCheckmark" Width="24" Height="24" Background="{DynamicResource AccentBrush}" CornerRadius="4" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="8">
+                                                                <materialIcons:MaterialIcon Kind="Check" Foreground="White" Width="14" Height="14" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                             </Border>
                                                         </Grid>
                                                     </Border>
@@ -1084,9 +1086,9 @@
                                             </Border>
 
                                             <!-- Light Theme Button -->
-                                            <Border x:Name="LightThemeButton" Width="130" Height="85" CornerRadius="10" BorderThickness="3" BorderBrush="Transparent" Cursor="Hand" PointerPressed="LightTheme_PointerPressed">
+                                            <Border x:Name="LightThemeButton" Width="130" Height="85" CornerRadius="4" BorderThickness="1" BorderBrush="Transparent" Cursor="Hand" PointerPressed="LightTheme_PointerPressed">
                                                 <Grid>
-                                                    <Border Background="{DynamicResource ThemePreviewLightBg}" CornerRadius="7">
+                                                    <Border Background="{DynamicResource ThemePreviewLightBg}" CornerRadius="4">
                                                         <Grid>
                                                             <Border Background="{DynamicResource ThemePreviewLightInnerBg}" Width="95" Height="50" CornerRadius="6" Margin="12">
                                                                 <StackPanel Margin="10,8">
@@ -1095,7 +1097,7 @@
                                                                     <Rectangle Fill="{DynamicResource ThemePreviewLightText}" Height="3" Width="45" HorizontalAlignment="Left"/>
                                                                 </StackPanel>
                                                             </Border>
-                                                            <Border x:Name="LightCheckmark" Width="22" Height="22" Background="{DynamicResource AccentBrush}" CornerRadius="11" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="6" IsVisible="False">
+                                                            <Border x:Name="LightCheckmark" Width="24" Height="24" Background="{DynamicResource AccentBrush}" CornerRadius="4" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="6" IsVisible="False">
                                                                 <materialIcons:MaterialIcon Kind="Check" Foreground="White" Width="12" Height="12" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                             </Border>
                                                         </Grid>
@@ -1139,22 +1141,23 @@
                             <Panel Margin="0,0,0,16">
                                 <!-- PREMIUM CARD -->
                                 <Border Background="{DynamicResource PrimaryGradientBrush}" 
-                                        CornerRadius="12" 
+                                        CornerRadius="8" 
                                         Padding="1.5"
-                                        IsVisible="{Binding IsPremium}">
+                                        IsVisible="{Binding IsPremium}"
+                                        Margin="0,0,0,24">
                                     <Border Background="{DynamicResource Bg1Brush}" 
-                                            CornerRadius="10.5" 
+                                            CornerRadius="8" 
                                             Padding="24"
                                             ClipToBounds="True">
                                         <Panel>
                                             <!-- Crown Icon (Top Right Background) -->
                                             <materialIcons:MaterialIcon Kind="Crown" 
-                                                                      Width="140" Height="140" 
-                                                                      Foreground="#f5c842" 
-                                                                      Opacity="0.05"
-                                                                      HorizontalAlignment="Right" 
-                                                                      VerticalAlignment="Top"
-                                                                      Margin="0,-40,-40,0"/>
+                                                                    Width="140" Height="140" 
+                                                                    Foreground="#f5c842" 
+                                                                    Opacity="0.05"
+                                                                    HorizontalAlignment="Center" 
+                                                                    VerticalAlignment="Top"
+                                                                    Margin="260,-10,0,0"/>
 
                                             <Grid ColumnDefinitions="Auto,*">
                                                 <!-- App Icon -->
@@ -1169,15 +1172,20 @@
                                                         <TextBlock Text="Noctra" FontSize="22" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"/>
                                                         
                                                         <!-- PREMIUM BADGE -->
-                                                        <Border Padding="10,3" CornerRadius="6" VerticalAlignment="Center">
+                                                        <Border Padding="10,3" 
+                                                                CornerRadius="3"
+                                                                VerticalAlignment="Center">
                                                             <Border.Background>
                                                                 <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
                                                                     <GradientStop Color="#f5c842" Offset="0"/>
                                                                     <GradientStop Color="#f0a832" Offset="1"/>
                                                                 </LinearGradientBrush>
                                                             </Border.Background>
-                                                            <TextBlock Text="PREMIUM" FontSize="11" FontWeight="ExtraBold" Foreground="Black"/>
-                                                        </Border>
+                                                            <TextBlock Text="PREMIUM" 
+                                                                    FontSize="11" 
+                                                                    FontWeight="ExtraBold" 
+                                                                    Foreground="Black"/>
+                                                    </Border>
                                                     </StackPanel>
                                                     <TextBlock Text="{Binding CurrentVersion, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.About.PremiumVersionFormat'}" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0"/>
                                                 </StackPanel>
@@ -1188,7 +1196,7 @@
 
                                 <!-- FREE CARD (Standard Refined) -->
                                 <Border Background="{DynamicResource Surface0Brush}" 
-                                        CornerRadius="12" 
+                                        CornerRadius="8" 
                                         Padding="24"
                                         IsVisible="{Binding !IsPremium}"
                                         Margin="0">
@@ -1213,7 +1221,7 @@
                                                     Padding="16,8"
                                                     Background="{DynamicResource PrimaryGradientBrush}"
                                                     Foreground="White"
-                                                    CornerRadius="20"
+                                                    CornerRadius="8"
                                                     VerticalAlignment="Center"
                                                     Cursor="Hand">
                                                 <StackPanel Orientation="Horizontal" Spacing="8">
@@ -1228,12 +1236,12 @@
 
                             <!-- UPDATE SECTION (Enhanced Modern Card) -->
                             <Border Background="{DynamicResource Surface0Brush}" 
-                                    CornerRadius="12" 
+                                    CornerRadius="8" 
                                     Padding="20,16" 
                                     Margin="0,0,0,16">
                                 <Grid ColumnDefinitions="Auto,*,Auto">
                                     <!-- Status Icon -->
-                                    <Border Grid.Column="0" Width="42" Height="42" CornerRadius="21" Background="{DynamicResource Surface1Brush}" Margin="0,0,16,0">
+                                    <Border Grid.Column="0" Width="42" Height="42" CornerRadius="8" Background="{DynamicResource Surface1Brush}" Margin="0,0,16,0">
                                         <materialIcons:MaterialIcon Kind="Update" Width="22" Height="22" Foreground="{DynamicResource AccentBrush}"/>
                                     </Border>
 
@@ -1289,7 +1297,7 @@
             </TabControl>
 
             <!-- FOOTER -->
-            <Border Grid.Row="2" Padding="32,16" Background="{DynamicResource SurfaceBrush}" CornerRadius="0,0,16,16" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0">
+            <Border Grid.Row="2" Padding="32,16" Background="{DynamicResource SurfaceBrush}" CornerRadius="0,0,8,8" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0">
                 <Grid ColumnDefinitions="Auto,*,Auto">
                     <!-- Left Actions -->
                     <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="12">
@@ -1298,7 +1306,7 @@
                         
                         <Button Command="{Binding ReportBugCommand}" 
                                 Background="Transparent" BorderBrush="#E50914" BorderThickness="1" 
-                                Padding="12,8" CornerRadius="6">
+                                Padding="12,8" CornerRadius="2">
                             <StackPanel Orientation="Horizontal" Spacing="8">
                                 <materialIcons:MaterialIcon Kind="BugOutline" Width="18" Height="18" Foreground="#E50914"/>
                                 <TextBlock Text="{loc:Translate Settings.Action.ReportBug}" Foreground="#E50914" VerticalAlignment="Center" FontSize="14"/>
@@ -1330,7 +1338,7 @@
             <!-- Global Loading Overlay -->
             <Grid Grid.RowSpan="3" Background="#AA000000" IsVisible="{Binding IsGlobalLoading}" ZIndex="10000">
                 <Border Background="{DynamicResource Bg1Brush}" 
-                        CornerRadius="16" 
+                        CornerRadius="8" 
                         Padding="32" 
                         HorizontalAlignment="Center" 
                         VerticalAlignment="Center"
