@@ -9,7 +9,7 @@
 
   <Grid IsVisible="{Binding IsVisible}">
     <Border Background="Transparent"
-            CornerRadius="12"
+            CornerRadius="8"
             Padding="6,6"
             HorizontalAlignment="Right"
             VerticalAlignment="Bottom"

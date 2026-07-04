@@ -19,7 +19,7 @@
 
     <Panel>
         <!-- Consistent Background Gradient -->
-        <Border CornerRadius="12" Background="{DynamicResource BackgroundGradientBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+        <Border CornerRadius="8" Background="{DynamicResource BackgroundGradientBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                 Margin="40" ClipToBounds="True">
             <Border.BoxShadow>
                 <BoxShadows>0 10 40 10 #80000000</BoxShadows>

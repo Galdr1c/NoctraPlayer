@@ -20,7 +20,7 @@
         <Style Selector="Button.ReviewPrimary">
             <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
             <Setter Property="Foreground" Value="White"/>
-            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="CornerRadius" Value="6"/>
             <Setter Property="Padding" Value="20,10"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="FontSize" Value="14"/>
@@ -36,7 +36,7 @@
             <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="CornerRadius" Value="6"/>
             <Setter Property="Padding" Value="18,10"/>
             <Setter Property="FontSize" Value="14"/>
             <Setter Property="Cursor" Value="Hand"/>
@@ -60,8 +60,8 @@
 
     <Border Background="{DynamicResource BackgroundGradientBrush}"
             BorderBrush="{DynamicResource BorderBrush}"
-            BorderThickness="1.5"
-            CornerRadius="16"
+            BorderThickness="1"
+            CornerRadius="8"
             ClipToBounds="True"
             BoxShadow="0 12 32 0 #90000000">
         <Grid Margin="24">

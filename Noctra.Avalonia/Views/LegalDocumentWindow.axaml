@@ -37,8 +37,8 @@
 
     <Border Background="{DynamicResource BackgroundGradientBrush}"
             BorderBrush="{DynamicResource BorderBrush}"
-            BorderThickness="1.5"
-            CornerRadius="16"
+            BorderThickness="1"
+            CornerRadius="8"
             ClipToBounds="True"
             BoxShadow="0 12 32 0 #90000000">
         <Grid Margin="24" RowDefinitions="Auto,*,Auto">
@@ -61,6 +61,7 @@
                         Height="34"
                         Padding="0"
                         Background="Transparent"
+                        CornerRadius="8"
                         BorderThickness="0"
                         Cursor="Hand"
                         Click="Close_Click">
@@ -92,6 +93,7 @@
                     Classes="LegalPrimary"
                     HorizontalAlignment="Right"
                     Margin="0,18,0,0"
+                    CornerRadius="6"
                     Click="Close_Click"/>
         </Grid>
     </Border>

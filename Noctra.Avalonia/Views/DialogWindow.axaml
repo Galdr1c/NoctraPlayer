@@ -22,7 +22,7 @@
         <Style Selector="Button.DialogPrimary">
             <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
             <Setter Property="Foreground" Value="White"/>
-            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="CornerRadius" Value="6"/>
             <Setter Property="Padding" Value="24,10"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="FontSize" Value="14"/>
@@ -48,8 +48,8 @@
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
-            <Setter Property="BorderThickness" Value="1.5"/>
-            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="6"/>
             <Setter Property="Padding" Value="24,10"/>
             <Setter Property="FontSize" Value="14"/>
             <Setter Property="FontWeight" Value="Medium"/>
@@ -70,8 +70,8 @@
     </Window.Styles>
 
     <Border Background="{DynamicResource BackgroundGradientBrush}"
-            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1.5"
-            CornerRadius="16" ClipToBounds="True"
+            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+            CornerRadius="8" ClipToBounds="True"
             BoxShadow="0 12 32 0 #90000000">
 
         <Grid Margin="24">
@@ -83,8 +83,8 @@
 
             <!-- Header Row -->
             <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,0,0,16">
-                <materialIcons:MaterialIcon x:Name="DialogIcon" 
-                                             Width="28" Height="28" 
+                <materialIcons:MaterialIcon x:Name="DialogIcon"  Kind="Lastpass"
+                                             Width="40" Height="40" 
                                              VerticalAlignment="Center"/>
                 <TextBlock Text="{Binding TitleText}" 
                            Foreground="{DynamicResource TextPrimaryBrush}" 
@@ -93,7 +93,7 @@
                            TextWrapping="Wrap"
                            MaxWidth="300"/>
             </StackPanel>
-
+            
             <!-- Content Area -->
             <TextBlock Grid.Row="1" Text="{Binding MessageText}" 
                        Foreground="{DynamicResource TextSecondaryBrush}"
@@ -102,6 +102,7 @@
                        TextWrapping="Wrap"
                        VerticalAlignment="Top"
                        Margin="0,0,0,20"/>
+                       
 
             <!-- Actions -->
             <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="12" Margin="0,8,0,0">

@@ -9,7 +9,7 @@
         x:Class="Noctra.Avalonia.Views.PinEntryWindow"
         x:CompileBindings="False"
         Title="{loc:Translate PinEntry.EnterPin}"
-        Width="320" Height="500"
+        Width="280" Height="500"
         WindowStartupLocation="CenterOwner"
         WindowDecorations="None"
         ShowInTaskbar="False"
@@ -23,7 +23,7 @@
         <Style Selector="Button.PinKey">
             <Setter Property="Width" Value="52"/>
             <Setter Property="Height" Value="52"/>
-            <Setter Property="CornerRadius" Value="26"/>
+            <Setter Property="CornerRadius" Value="6"/>
             <Setter Property="Background" Value="{DynamicResource Surface1Brush}"/>
             <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
             <Setter Property="FontSize" Value="20"/>
@@ -62,7 +62,7 @@
         <Style Selector="Button.PinForgotKey">
             <Setter Property="Width" Value="52"/>
             <Setter Property="Height" Value="52"/>
-            <Setter Property="CornerRadius" Value="26"/>
+            <Setter Property="CornerRadius" Value="6"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
             <Setter Property="FontSize" Value="8"/>
@@ -90,7 +90,7 @@
         </Style>
     </Window.Styles>
 
-    <Border CornerRadius="{DynamicResource RadiusMedium}"
+    <Border CornerRadius="8"
             Background="{DynamicResource BackgroundGradientBrush}"
             BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
             ClipToBounds="True">
@@ -103,11 +103,11 @@
             <StackPanel Grid.Row="0" Spacing="0" HorizontalAlignment="Center">
 
                 <!-- Avatar -->
-                <Border Width="56" Height="56" CornerRadius="12"
+                <Border Width="56" Height="56" CornerRadius="6"
                         ClipToBounds="True"
                         Background="{DynamicResource IconGradientBrush}"
                         HorizontalAlignment="Center" Margin="0,0,0,12">
-                    <Border CornerRadius="12" RenderOptions.BitmapInterpolationMode="HighQuality">
+                    <Border CornerRadius="6" RenderOptions.BitmapInterpolationMode="HighQuality">
                         <Border.Background>
                             <ImageBrush Source="{Binding ProfileAvatar, Converter={StaticResource AvatarPathConverter}}"
                                         Stretch="UniformToFill"/>
@@ -133,7 +133,7 @@
                 <!-- 4 Dot Indicator -->
                 <Border x:Name="PinDotsHost" HorizontalAlignment="Center">
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center"
-                                Spacing="12" Margin="0,0,0,4">
+                                Spacing="12" Margin="0,0,0,16">
                         <Ellipse x:Name="Dot1" Width="12" Height="12"
                                  Fill="{Binding PinLength, Converter={StaticResource PinDotConverter}, ConverterParameter=1}"/>
                         <Ellipse x:Name="Dot2" Width="12" Height="12"
@@ -149,7 +149,7 @@
                 <TextBlock Text="{Binding ErrorMessage}"
                            FontSize="12" HorizontalAlignment="Center"
                            Foreground="{DynamicResource ErrorBrush}"
-                           Height="18" Margin="0,4,0,4"
+                           Height="18" Margin="4"
                            IsVisible="{Binding ShowErrorMessage}"/>
 
                 <!-- Lockout Countdown -->
@@ -194,7 +194,7 @@
                     Background="Transparent"
                     FontSize="12"
                     Cursor="Hand"
-                    Margin="0,4,0,0"/>
+                    Margin="0,0,0,-20"/>
 
         </Grid>
     </Border>

@@ -377,7 +377,7 @@
           <StackPanel Orientation="Horizontal" Spacing="8">
             <TextBlock Text="{loc:Translate Downloads.Tabs.Center}" VerticalAlignment="Center"/>
             <Border IsVisible="{Binding ActiveDownloadCount, Converter={StaticResource CountToVisibilityConverter}}"
-                    Background="{DynamicResource AccentBrush}" CornerRadius="10" Padding="6,1" VerticalAlignment="Center">
+                    Background="{DynamicResource AccentBrush}" CornerRadius="8" Padding="6,1" VerticalAlignment="Center">
               <TextBlock Text="{Binding ActiveDownloadCount}" Foreground="White" FontSize="10" FontWeight="Bold"/>
             </Border>
           </StackPanel>
@@ -385,7 +385,7 @@
         <StackPanel>
         
         <!-- Summary Header (Optional, kept for speed/status info) -->
-        <Border Background="{DynamicResource Surface0Brush}" CornerRadius="12" Padding="16" Margin="0,0,0,24" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" ClipToBounds="True">
+        <Border Background="{DynamicResource Surface0Brush}" CornerRadius="8" Padding="16" Margin="0,0,0,24" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" ClipToBounds="True">
           <Grid ColumnDefinitions="Auto,Auto,*">
             <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,24,0">
               <materialIcons:MaterialIcon Kind="Speedometer" Foreground="{DynamicResource AccentBrush}"/>
@@ -400,7 +400,7 @@
           <Grid ColumnDefinitions="*,Auto">
             <StackPanel Orientation="Horizontal" Spacing="12">
               <TextBlock Text="{loc:Translate Downloads.Ongoing.Title}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"/>
-              <Border Background="{DynamicResource SurfaceLightBrush}" CornerRadius="10" Padding="8,1" VerticalAlignment="Center">
+              <Border Background="{DynamicResource SurfaceLightBrush}" CornerRadius="8" Padding="8,1" VerticalAlignment="Center">
                 <TextBlock Text="{Binding ActiveDownloadingItems.Count, Converter={StaticResource StringFormatConverter}, ConverterParameter='Downloads.Ongoing.Count.Format'}" Foreground="{DynamicResource TextMutedBrush}" FontSize="12"/>
               </Border>
             </StackPanel>
@@ -412,7 +412,7 @@
           <ItemsControl ItemsSource="{Binding ActiveDownloadingItems}">
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="models:DownloadItem">
-                <Border Background="{DynamicResource Surface0Brush}" CornerRadius="12" Padding="16" Margin="0,0,0,12" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" ClipToBounds="True">
+                <Border Background="{DynamicResource Surface0Brush}" CornerRadius="8" Padding="16" Margin="0,0,0,12" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" ClipToBounds="True">
                   <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto">
                     <!-- Poster -->
                     <Border Grid.RowSpan="2" Width="48" Height="64" CornerRadius="6" ClipToBounds="True" Background="{DynamicResource Surface1Brush}" Margin="0,0,16,0">

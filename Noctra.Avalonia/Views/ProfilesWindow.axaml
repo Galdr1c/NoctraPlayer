@@ -151,10 +151,10 @@
                                         <Border CornerRadius="8" ClipToBounds="True"
                                                 IsVisible="{Binding IsPendingDeletion}">
                                             <Border.Background>
-                                                <SolidColorBrush Color="#000000" Opacity="0.8"/>
+                                                <SolidColorBrush Color="#000000" Opacity="0.8" />
                                             </Border.Background>
                                             <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="6">
-                                                <materialIcons:MaterialIcon Kind="TimerSandFull" Width="28" Height="28"
+                                                <materialIcons:MaterialIcon Kind="TimerSand" Width="28" Height="28"
                                                                              Foreground="{Binding DeletionUrgency, Converter={StaticResource UrgencyToColorConverter}}"
                                                                              HorizontalAlignment="Center"/>
                                                 <TextBlock Text="{Binding TimeUntilDeletion, Converter={StaticResource TimeSpanToCountdownConverter}}"
@@ -165,11 +165,11 @@
                                         </Border>
 
                                         <!-- PIN Lock Icon (subtle indicator) -->
-                                        <materialIcons:MaterialIcon Kind="Lock" Width="14" Height="14"
+                                        <materialIcons:MaterialIcon Kind="Lock" Width="18" Height="18"
                                                                      Foreground="#99FFFFFF"
                                                                      HorizontalAlignment="Right"
-                                                                     VerticalAlignment="Top"
-                                                                     Margin="0,8,8,0"
+                                                                     VerticalAlignment="Bottom"
+                                                                     Margin="8,8"
                                                                      IsVisible="{Binding PinHash, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
                                     </Grid>
                                 </Border>
