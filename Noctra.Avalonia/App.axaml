@@ -41,7 +41,6 @@
     </Style>
     <Style Selector="ComboBox">
         <Setter Property="Cursor" Value="Hand"/>
-        <Setter Property="Theme" Value="{StaticResource ModernComboBox}"/>
     </Style>
     <Style Selector="ComboBox TextBlock">
         <Setter Property="TextTrimming" Value="CharacterEllipsis"/>

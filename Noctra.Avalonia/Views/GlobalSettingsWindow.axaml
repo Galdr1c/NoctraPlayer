@@ -305,7 +305,6 @@
                                 </StackPanel>
 
                                 <ComboBox Grid.Column="1"
-                                          Theme="{StaticResource ModernComboBox}"
                                           SelectedValue="{Binding Settings.Language, Mode=TwoWay}"
                                           SelectedValueBinding="{Binding Tag}"
                                           Width="180">

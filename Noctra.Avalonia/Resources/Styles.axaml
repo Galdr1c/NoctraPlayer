@@ -476,7 +476,7 @@
             <Setter Property="BorderThickness" Value="1.5"/>
         </Style>
         <Style Selector="^:pointerover /template/ Border#PART_BorderElement">
-            <Setter Property="BorderBrush" Value="{DynamicResource AccentLightBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource TextDisabledBrush}"/>
             <Setter Property="Background" Value="{DynamicResource Surface0Brush}"/>
             <Setter Property="BorderThickness" Value="1.5"/>
         </Style>
@@ -709,7 +709,7 @@
          COMBOBOX STYLE
          ========================================== -->
 
-    <ControlTheme x:Key="ModernComboBox" TargetType="ComboBox">
+    <ControlTheme x:Key="{x:Type ComboBox}" TargetType="ComboBox">
         <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
         <Setter Property="Background" Value="{DynamicResource Surface1Brush}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
@@ -719,7 +719,7 @@
         <Setter Property="MinHeight" Value="44"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
         <Setter Property="MaxDropDownHeight" Value="600"/>
-        <Setter Property="CornerRadius" Value="{DynamicResource RadiusSmall}"/>
+        <Setter Property="CornerRadius" Value="6,6,0,0"/>
         <Setter Property="Template">
             <ControlTemplate TargetType="ComboBox">
                 <Border x:Name="PART_Border"
@@ -752,10 +752,10 @@
                                Placement="BottomEdgeAlignedLeft"
                                MinWidth="{Binding Bounds.Width, RelativeSource={RelativeSource TemplatedParent}}">
                             <Border Background="{DynamicResource SurfaceBrush}"
-                                    BorderThickness="1"
+                                    BorderThickness="1.5,0,1.5,1.5"
                                     BorderBrush="{DynamicResource BorderBrush}"
-                                    CornerRadius="8"
-                                    Padding="4,6"
+                                    CornerRadius="0,0,6,6"
+                                    Padding="4"
                                     MaxHeight="{TemplateBinding MaxDropDownHeight}">
                                 <ScrollViewer>
                                     <ItemsPresenter ItemsPanel="{TemplateBinding ItemsPanel}"/>
@@ -767,13 +767,16 @@
             </ControlTemplate>
         </Setter>
 
+        <Style Selector="^:pointerover /template/ Border#PART_Border">
+            <Setter Property="BorderBrush" Value="{DynamicResource TextDisabledBrush}"/>
+        </Style>
         <Style Selector="^:hover /template/ Border#PART_Border">
             <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
             <Setter Property="Background" Value="{DynamicResource InteractiveHoverBrush}"/>
         </Style>
         <Style Selector="^:focus /template/ Border#PART_Border">
             <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-            <Setter Property="BorderThickness" Value="2"/>
+            <Setter Property="BorderThickness" Value="1.5"/>
         </Style>
     </ControlTheme>
 
