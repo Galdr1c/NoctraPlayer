@@ -25,7 +25,7 @@
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Padding" Value="8"/>
-            <Setter Property="CornerRadius" Value="100"/>
+            <Setter Property="CornerRadius" Value="8"/>
             <Setter Property="Opacity" Value="0.85"/>
             <Setter Property="Transitions">
                 <Transitions>
@@ -60,7 +60,7 @@
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="CornerRadius" Value="24"/>
+            <Setter Property="CornerRadius" Value="12"/>
             <Setter Property="Width" Value="36"/>
             <Setter Property="Height" Value="36"/>
         </Style>
@@ -154,13 +154,15 @@
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="BorderBrush" Value="Transparent"/>
             <Setter Property="Padding" Value="0"/>
+            <Setter Property="Width" Value="350"/>
+            <Setter Property="CornerRadius" Value="8"/>
             <Setter Property="HorizontalAlignment" Value="Stretch"/>
         </Style>
         <Style Selector="Expander /template/ ToggleButton#ExpanderHeader, Expander:down /template/ ToggleButton#ExpanderHeader, Expander:up /template/ ToggleButton#ExpanderHeader">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="BorderBrush" Value="Transparent"/>
-            <Setter Property="Padding" Value="0,12"/>
+            <Setter Property="Padding" Value="0,10"/>
             <Setter Property="HorizontalAlignment" Value="Stretch"/>
             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
         </Style>
@@ -241,7 +243,7 @@
             </Grid>
 
             <!-- 3. Bottom Control Bar -->
-            <Border VerticalAlignment="Bottom" Padding="32,80,32,32" CornerRadius="12">
+            <Border VerticalAlignment="Bottom" Padding="32,80,32,32" CornerRadius="8">
                 <Border.Background>
                     <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
                         <GradientStop Color="#00000000" Offset="0.0"/>
@@ -274,7 +276,7 @@
                     <!-- Live Stream EPG Info -->
                     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left" Margin="8,0,0,16"
                                 IsVisible="{Binding IsLiveContent}">
-                        <Border Background="{DynamicResource ErrorBrush}" CornerRadius="4" Padding="10,4" Margin="0,0,16,0" VerticalAlignment="Center">
+                        <Border Background="{DynamicResource ErrorBrush}" CornerRadius="2" Padding="10,4" Margin="0,0,16,0" VerticalAlignment="Center">
                             <StackPanel Orientation="Horizontal" Spacing="8">
                                 <Ellipse Width="8" Height="8" Fill="White" VerticalAlignment="Center">
                                     <Ellipse.Styles>
@@ -331,8 +333,8 @@
                             <StackPanel Orientation="Horizontal" Spacing="4" Margin="4,0,0,0">
                                 <Button Command="{Binding ToggleMuteCommand}" Classes="iconBtn" ToolTip.Tip="{loc:Translate Player.Overlay.Mute.Tooltip}">
                                     <Grid>
-                                        <materialIcons:MaterialIcon Kind="VolumeOff" Width="18" Height="18" Foreground="#E6FFFFFF" IsVisible="{Binding IsMuted}"/>
-                                        <materialIcons:MaterialIcon Kind="VolumeHigh" Width="18" Height="18" Foreground="#E6FFFFFF" IsVisible="{Binding IsMuted, Converter={StaticResource InverseBoolConverter}}"/>
+                                        <materialIcons:MaterialIcon Kind="VolumeOff" Width="22" Height="22" Foreground="#E6FFFFFF" IsVisible="{Binding IsMuted}"/>
+                                        <materialIcons:MaterialIcon Kind="VolumeHigh" Width="22" Height="22" Foreground="#E6FFFFFF" IsVisible="{Binding IsMuted, Converter={StaticResource InverseBoolConverter}}"/>
                                     </Grid>
                                 </Button>
                                 <Slider x:Name="VolumeSlider" Width="70" VerticalAlignment="Center"
@@ -729,7 +731,7 @@
                         </Grid>
                         <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto" Padding="32,0,32,40">
                             <StackPanel Spacing="8">
-                                <Border Background="{Binding SleepTimerMode, Converter={StaticResource SleepModeToBackgroundConverter}, ConverterParameter=Off}" CornerRadius="8">
+                                <Border Background="{Binding SleepTimerMode, Converter={StaticResource SleepModeToBackgroundConverter}, ConverterParameter=Off}" CornerRadius="4">
                                     <Button Command="{Binding SetSleepTimerCommand}" CommandParameter="{x:Static vm:PlayerViewModel+SleepTimerOption.Off}" Classes="listItemBtn">
                                         <Grid ColumnDefinitions="Auto,*">
                                             <materialIcons:MaterialIcon Kind="CloseCircleOutline" Width="20" Height="20" Foreground="{DynamicResource TextMutedBrush}"/>
@@ -739,7 +741,7 @@
                                 </Border>
 
                                 <Grid>
-                                    <Border Background="{Binding SleepTimerMode, Converter={StaticResource SleepModeToBackgroundConverter}, ConverterParameter=Minutes15}" CornerRadius="8">
+                                    <Border Background="{Binding SleepTimerMode, Converter={StaticResource SleepModeToBackgroundConverter}, ConverterParameter=Minutes15}" CornerRadius="4">
                                         <Button Command="{Binding SetSleepTimerCommand}" 
                                                 CommandParameter="{x:Static vm:PlayerViewModel+SleepTimerOption.Minutes15}" 
                                                 IsEnabled="{Binding IsPremium}"
@@ -760,7 +762,7 @@
                                 </Grid>
 
                                 <Grid>
-                                    <Border Background="{Binding SleepTimerMode, Converter={StaticResource SleepModeToBackgroundConverter}, ConverterParameter=Minutes30}" CornerRadius="8">
+                                    <Border Background="{Binding SleepTimerMode, Converter={StaticResource SleepModeToBackgroundConverter}, ConverterParameter=Minutes30}" CornerRadius="4">
                                         <Button Command="{Binding SetSleepTimerCommand}" 
                                                 CommandParameter="{x:Static vm:PlayerViewModel+SleepTimerOption.Minutes30}" 
                                                 IsEnabled="{Binding IsPremium}"
@@ -781,7 +783,7 @@
                                 </Grid>
 
                                 <Grid>
-                                    <Border Background="{Binding SleepTimerMode, Converter={StaticResource SleepModeToBackgroundConverter}, ConverterParameter=Minutes60}" CornerRadius="8">
+                                    <Border Background="{Binding SleepTimerMode, Converter={StaticResource SleepModeToBackgroundConverter}, ConverterParameter=Minutes60}" CornerRadius="4">
                                         <Button Command="{Binding SetSleepTimerCommand}" 
                                                 CommandParameter="{x:Static vm:PlayerViewModel+SleepTimerOption.Minutes60}" 
                                                 IsEnabled="{Binding IsPremium}"
@@ -802,7 +804,7 @@
                                 </Grid>
 
                                 <Grid>
-                                    <Border Background="{Binding SleepTimerMode, Converter={StaticResource SleepModeToBackgroundConverter}, ConverterParameter=EndOfEpisode}" CornerRadius="8">
+                                    <Border Background="{Binding SleepTimerMode, Converter={StaticResource SleepModeToBackgroundConverter}, ConverterParameter=EndOfEpisode}" CornerRadius="4">
                                         <Button Command="{Binding SetSleepTimerCommand}" 
                                                 CommandParameter="{x:Static vm:PlayerViewModel+SleepTimerOption.EndOfEpisode}" 
                                                 IsEnabled="{Binding IsPremium}"
@@ -824,7 +826,7 @@
                                                                 IsHitTestVisible="False"/>
                                 </Grid>
 
-                                <Button IsVisible="{Binding IsSleepTimerActive}" Command="{Binding CancelSleepTimerCommand}" Margin="0,16,0,0" HorizontalAlignment="Stretch" Padding="12" CornerRadius="8">
+                                <Button IsVisible="{Binding IsSleepTimerActive}" Command="{Binding CancelSleepTimerCommand}" Margin="0,16,0,0" HorizontalAlignment="Stretch" Padding="12" CornerRadius="4">
                                     <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
                                         <materialIcons:MaterialIcon Kind="TimerOff" Width="16" Height="16"/>
                                         <TextBlock Text="{loc:Translate Player.Sleep.Cancel}"/>
@@ -862,7 +864,7 @@
                                     </StackPanel>
                                     
                                     <!-- Live Only -->
-                                    <Border Background="{DynamicResource Surface1Brush}" CornerRadius="12" Padding="20" Margin="0,0,0,24" IsVisible="{Binding IsLiveInfoVisible}">
+                                    <Border Background="{DynamicResource Surface1Brush}" CornerRadius="8" Padding="20" Margin="0,0,0,24" IsVisible="{Binding IsLiveInfoVisible}">
                                         <StackPanel>
                                             <TextBlock Text="{loc:Translate Player.Info.NowPlaying}" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" LetterSpacing="1" Margin="0,0,0,12"/>
                                             <TextBlock Text="{Binding CurrentProgram.Title}" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" TextWrapping="Wrap" Margin="0,0,0,4"/>
@@ -872,12 +874,12 @@
                                     </Border>
 
                                     <!-- Episode Plot (Series) -->
-                                    <Border Background="{DynamicResource Surface1Brush}" CornerRadius="12" Padding="20" Margin="0,0,0,24" IsVisible="{Binding IsSeriesPlotVisible}">
+                                    <Border Background="{DynamicResource Surface1Brush}" CornerRadius="8" Padding="20" Margin="0,0,0,24" IsVisible="{Binding IsSeriesPlotVisible}">
                                         <TextBlock Text="{Binding CurrentEpisode.Plot}" Foreground="{DynamicResource TextPrimaryBrush}" Opacity="0.8" FontSize="14" TextWrapping="Wrap" LineHeight="22"/>
                                     </Border>
 
                                     <!-- VOD Plot (Movies/Single) -->
-                                    <Border Background="{DynamicResource Surface1Brush}" CornerRadius="12" Padding="20" Margin="0,0,0,24" IsVisible="{Binding IsVodPlotVisible}">
+                                    <Border Background="{DynamicResource Surface1Brush}" CornerRadius="8" Padding="20" Margin="0,0,0,24" IsVisible="{Binding IsVodPlotVisible}">
                                         <TextBlock Text="{Binding CurrentChannel.Plot}" Foreground="{DynamicResource TextPrimaryBrush}" Opacity="0.8" FontSize="14" TextWrapping="Wrap" LineHeight="22"/>
                                     </Border>
 
@@ -918,10 +920,10 @@
                         </Grid>
                         <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Visible">
                             <StackPanel Margin="32,0,32,40">
-                                <Border Background="{DynamicResource NavActiveBackgroundBrush}" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1" CornerRadius="8" Padding="12,10" Margin="0,0,0,24" IsVisible="{Binding !IsLiveContent}" Opacity="0.9">
+                                <Border Background="{DynamicResource NavActiveBackgroundBrush}" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1" CornerRadius="6" Padding="12,10" Margin="0,0,0,24" IsVisible="{Binding !IsLiveContent}" Opacity="0.9">
                                     <Grid ColumnDefinitions="24,*">
                                         <materialIcons:MaterialIcon Grid.Column="0" Kind="InformationOutline" Width="18" Height="18" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Top" Margin="0,1,0,0"/>
-                                        <TextBlock Grid.Column="1" Text="{loc:Translate Player.Settings.RestartNote}" FontSize="11" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" TextWrapping="Wrap" Margin="8,0,0,0" LineHeight="16"/>
+                                        <TextBlock Grid.Column="1" Text="{loc:Translate Player.Settings.RestartNote}" FontSize="11" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" TextWrapping="Wrap" Margin="8,2,0,0" LineHeight="16" />
                                     </Grid>
                                 </Border>
 
@@ -1010,30 +1012,30 @@
                             </Button>
                         </Grid>
 
-                        <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto" Padding="24,0,16,40">
+                        <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto" Margin="24,0,16,40">
                             <ItemsControl ItemsSource="{Binding EpisodeSeasons}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate x:DataType="models:Season">
                                         <Expander Margin="0,0,0,16" IsExpanded="{Binding IsExpanded, Mode=TwoWay}">
                                             <Expander.Header>
-                                                <Grid ColumnDefinitions="Auto,Auto,*" Margin="4,0,0,8">
+                                                <Grid ColumnDefinitions="Auto,Auto,*" Margin="8,0,0,8">
                                                     <TextBlock Text="{loc:Translate Player.Episodes.Season}" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
                                                     <TextBlock Grid.Column="1" Text="{Binding SeasonNumber}" Margin="4,0,0,0" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
-                                                    <Border Grid.Column="2" Background="{DynamicResource Surface1Brush}" CornerRadius="12" Padding="12,4" Margin="12,0,16,0" HorizontalAlignment="Right">
+                                                    <Border Grid.Column="2" Background="{DynamicResource Surface1Brush}" CornerRadius="4" Padding="12,4" Margin="12,0,16,0" HorizontalAlignment="Right">
                                                         <StackPanel Orientation="Horizontal" Spacing="4">
                                                             <TextBlock Text="{Binding Episodes.Count}" Foreground="{DynamicResource TextMutedBrush}" FontSize="11" FontWeight="Bold" LetterSpacing="0.5"/>
-                                                            <TextBlock Text="{loc:Translate Player.Episodes.CountLabel}" Foreground="{DynamicResource TextMutedBrush}" FontSize="11" FontWeight="Bold" LetterSpacing="0.5"/>
+                                                            <TextBlock Text="{loc:Translate Player.Episodes.CountLabel}" Foreground="{DynamicResource TextMutedBrush}" FontSize="11" FontWeight="Bold" LetterSpacing="1.5"/>
                                                         </StackPanel>
                                                     </Border>
                                                 </Grid>
                                             </Expander.Header>
                                             
-                                            <ItemsControl ItemsSource="{Binding Episodes}" Margin="0,4,0,0">
-                                                <ItemsControl.ItemTemplate>
+                                            <ItemsControl ItemsSource="{Binding Episodes}" Margin="0,4,0,4">
+                                                <ItemsControl.ItemTemplate >
                                                     <DataTemplate x:DataType="models:Episode">
-                                                        <Button Margin="0,0,16,12" Classes="episodeCardBtn" Command="{Binding #OverlayRoot.DataContext.PlayEpisodeFromOverlayCommand}" CommandParameter="{Binding}" PointerPressed="EpisodeCardBtn_PointerPressed">
+                                                        <Button Margin="8,6" Width="330" Classes="episodeCardBtn" Command="{Binding #OverlayRoot.DataContext.PlayEpisodeFromOverlayCommand}" CommandParameter="{Binding}" PointerPressed="EpisodeCardBtn_PointerPressed">
                                                             <Panel>
-                                                                <Border Name="CardBackground" Background="{DynamicResource Surface1Brush}" CornerRadius="10" ClipToBounds="True" BorderThickness="1.5">
+                                                                <Border Name="CardBackground" Background="{DynamicResource Surface1Brush}" CornerRadius="8" ClipToBounds="True" BorderThickness="1">
                                                                     <Border.BorderBrush>
                                                                         <MultiBinding Converter="{StaticResource EqualityToBrushMultiConverter}" ConverterParameter="AccentBrush">
                                                                             <Binding Path="." Converter="{StaticResource EpisodeIdentityConverter}"/>
@@ -1042,8 +1044,8 @@
                                                                     </Border.BorderBrush>
                                                                 </Border>
 
-                                                                <!-- Subtle Active Background Tint -->
-                                                                <Border CornerRadius="10" Background="{DynamicResource AccentBrush}" Opacity="0.08" IsHitTestVisible="False">
+                                                                <!-- Subtile Active Background Tint -->
+                                                                <Border CornerRadius="8" Background="{DynamicResource AccentBrush}" Opacity="0.08" IsHitTestVisible="False">
                                                                     <Border.IsVisible>
                                                                         <MultiBinding Converter="{StaticResource EqualityToBoolMultiConverter}">
                                                                             <Binding Path="." Converter="{StaticResource EpisodeIdentityConverter}"/>
@@ -1132,11 +1134,11 @@
                                     <Border Height="1" Width="40" HorizontalAlignment="Left" Background="{DynamicResource Surface1Brush}" Opacity="0.5"/>
                                 </StackPanel>
                                 
-                                <Border Background="{DynamicResource Surface1Brush}" CornerRadius="12" Padding="20" Margin="0,0,0,24" IsVisible="{Binding StreamQuality, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Invert}">
+                                <Border Background="{DynamicResource Surface1Brush}" CornerRadius="8" Padding="20" Margin="0,0,0,24" IsVisible="{Binding StreamQuality, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Invert}">
                                     <TextBlock Text="{Binding StreamInfo}" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Center"/>
                                 </Border>
 
-                                <Border Background="{DynamicResource Surface1Brush}" CornerRadius="12" Padding="20" Margin="0,0,0,24" IsVisible="{Binding StreamQuality, Converter={StaticResource NullToVisibilityConverter}}">
+                                <Border Background="{DynamicResource Surface1Brush}" CornerRadius="8" Padding="20" Margin="0,0,0,24" IsVisible="{Binding StreamQuality, Converter={StaticResource NullToVisibilityConverter}}">
                                     <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto">
                                         <TextBlock Grid.Row="0" Text="{loc:Translate Player.Quality.Resolution}" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="13" Margin="0,0,40,12"/>
                                         <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding QualityResolutionText}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="13" FontWeight="Bold" Margin="0,0,0,12"/>
@@ -1154,7 +1156,7 @@
                                     <Border Height="1" Width="30" HorizontalAlignment="Left" Background="{DynamicResource Surface1Brush}" Opacity="0.5"/>
                                 </StackPanel>
                                 
-                                <Border Background="{DynamicResource Surface1Brush}" CornerRadius="12" Padding="20" IsVisible="{Binding StreamQuality, Converter={StaticResource NullToVisibilityConverter}}">
+                                <Border Background="{DynamicResource Surface1Brush}" CornerRadius="8" Padding="20" IsVisible="{Binding StreamQuality, Converter={StaticResource NullToVisibilityConverter}}">
                                     <TextBlock Text="{Binding QualityAudioText}" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Center"/>
                                 </Border>
                                 

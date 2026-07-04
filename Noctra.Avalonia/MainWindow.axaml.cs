@@ -16,6 +16,7 @@ using Noctra.Avalonia.Services;
 using Noctra.Avalonia.Localization;
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Noctra.Avalonia;
 
@@ -311,7 +312,7 @@ public partial class MainWindow : Window
             double? finalStartPos = null;
 
             // --- RESUME DIALOG ---
-            var resumePosition = ResolveResumePosition(channel);
+            var resumePosition = await ResolveResumePositionAsync(channel, token);
             if (resumePosition > 120)
             {
                 bool shouldResume;
@@ -347,38 +348,108 @@ public partial class MainWindow : Window
         }
     }
 
-    private double ResolveResumePosition(Channel channel)
+    private async Task<double> ResolveResumePositionAsync(Channel channel, CancellationToken cancellationToken)
     {
-        // Episode oynatılıyorsa episode'un progress'i
-        var episode = _mainViewModel.CurrentEpisodePlaybackContext;
-        if (episode != null &&
-            episode.WatchedPosition.HasValue &&
-            episode.WatchedPosition.Value.TotalSeconds > 120 &&
-            !episode.IsCompleted)
+        if (channel.Type == ChannelType.Live || !_mainViewModel.CurrentProfileId.HasValue)
         {
-            return episode.WatchedPosition.Value.TotalSeconds;
+            return 0;
         }
 
-        // Eğer Dizi içeriği açılıyorsa fakat CurrentEpisodePlaybackContext boş/yeniyse,
-        // (örneğin Home sayfasındaki Continue Watching bölümünden BuildSeriesEpisodeChannel ile üretilmiş sanal kanal)
-        if (channel.Type == ChannelType.Series && 
-            channel.WatchedPosition.HasValue && 
-            channel.WatchedPosition.Value.TotalSeconds > 120 &&
-            !channel.IsCompleted)
+        var profileId = _mainViewModel.CurrentProfileId.Value;
+
+        // Only a real episode selection may use episode progress.
+        // A stale CurrentEpisodePlaybackContext from a previously opened series must never
+        // trigger a continue prompt for a different VOD/series item.
+        if (channel.Type == ChannelType.Series)
         {
-            return channel.WatchedPosition.Value.TotalSeconds;
+            var episode = _mainViewModel.CurrentEpisodePlaybackContext;
+            if (episode != null &&
+                !string.IsNullOrWhiteSpace(episode.StreamUrl) &&
+                string.Equals(episode.StreamUrl, channel.StreamUrl, StringComparison.OrdinalIgnoreCase))
+            {
+                var episodeHistory = episode.Id > 0
+                    ? await _watchHistoryService.GetLatestForMediaAsync(profileId, null, episode.Id, cancellationToken)
+                    : null;
+
+                var position = episodeHistory?.StoppedAt ?? episode.WatchedPosition ?? TimeSpan.Zero;
+                var completed = episodeHistory?.Completed ?? episode.IsCompleted;
+                var hasRealWatchSignal = episodeHistory != null || episode.LastWatched.HasValue;
+
+                if (ShouldOfferResume(position, episode.Duration, completed, hasRealWatchSignal))
+                {
+                    return position.TotalSeconds;
+                }
+            }
+
+            // Virtual series episode cards built for Continue Watching may carry their own
+            // progress. Require a real watch signal so playlist refresh/user-data merges cannot
+            // show continue prompts on content the user never opened.
+            if (IsSameStream(channel.StreamUrl, _mainViewModel.CurrentEpisodePlaybackContext?.StreamUrl))
+            {
+                var channelHistory = channel.Id > 0
+                    ? await _watchHistoryService.GetLatestForMediaAsync(profileId, channel.Id, null, cancellationToken)
+                    : null;
+
+                var position = channelHistory?.StoppedAt ?? channel.WatchedPosition ?? TimeSpan.Zero;
+                var completed = channelHistory?.Completed ?? channel.IsCompleted;
+                var hasRealWatchSignal = channelHistory != null || channel.LastWatched.HasValue;
+
+                if (ShouldOfferResume(position, channel.Duration, completed, hasRealWatchSignal))
+                {
+                    return position.TotalSeconds;
+                }
+            }
+
+            return 0;
         }
 
-        // VOD için channel'ın progress'i
-        if (channel.Type == ChannelType.VOD &&
-            channel.WatchedPosition.HasValue &&
-            channel.WatchedPosition.Value.TotalSeconds > 120 &&
-            !channel.IsCompleted)
+        if (channel.Type == ChannelType.VOD)
         {
-            return channel.WatchedPosition.Value.TotalSeconds;
+            var history = channel.Id > 0
+                ? await _watchHistoryService.GetLatestForMediaAsync(profileId, channel.Id, null, cancellationToken)
+                : null;
+
+            var position = history?.StoppedAt ?? channel.WatchedPosition ?? TimeSpan.Zero;
+            var completed = history?.Completed ?? channel.IsCompleted;
+            var hasRealWatchSignal = history != null || channel.LastWatched.HasValue;
+
+            if (ShouldOfferResume(position, channel.Duration, completed, hasRealWatchSignal))
+            {
+                return position.TotalSeconds;
+            }
         }
 
         return 0;
+    }
+
+    private static bool IsSameStream(string? left, string? right)
+        => !string.IsNullOrWhiteSpace(left) &&
+           !string.IsNullOrWhiteSpace(right) &&
+           string.Equals(left, right, StringComparison.OrdinalIgnoreCase);
+
+    private static bool ShouldOfferResume(TimeSpan position, TimeSpan? duration, bool completed, bool hasRealWatchSignal)
+    {
+        if (!hasRealWatchSignal || completed || position.TotalSeconds <= 120)
+        {
+            return false;
+        }
+
+        if (duration.HasValue && duration.Value.TotalSeconds > 0)
+        {
+            var durationSeconds = duration.Value.TotalSeconds;
+
+            if (position.TotalSeconds >= durationSeconds - 30)
+            {
+                return false;
+            }
+
+            if (position.TotalSeconds / durationSeconds >= 0.95)
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private void PlayerViewModel_NextEpisodeRequested(object? sender, Episode episode)

@@ -752,7 +752,7 @@
                             <Border Background="{DynamicResource SurfaceBrush}"
                                     BorderThickness="1"
                                     BorderBrush="{DynamicResource BorderBrush}"
-                                    CornerRadius="12"
+                                    CornerRadius="8"
                                     Padding="4,6"
                                     MaxHeight="{TemplateBinding MaxDropDownHeight}">
                                 <ScrollViewer>

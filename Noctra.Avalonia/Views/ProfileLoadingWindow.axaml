@@ -33,7 +33,7 @@
                     <controls:PremiumSpinner>
                         <!-- Pulsing App Logo in Center -->
                         <Image Source="avares://Noctra/Assets/Square71x71Logo.png"
-                               Width="50" Height="50"
+                               Width="40" Height="40"
                                VerticalAlignment="Center" HorizontalAlignment="Center"
                                RenderTransformOrigin="50%,50%">
                             <Image.RenderTransform>

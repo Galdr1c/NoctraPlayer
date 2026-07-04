@@ -8,7 +8,7 @@
     <Border Background="{DynamicResource BackgroundGradientBrush}"
             BorderBrush="{DynamicResource BorderBrush}"
             BorderThickness="1"
-            CornerRadius="26,26,0,0"
+            CornerRadius="8"
             Padding="22,20,22,18"
             VerticalAlignment="Bottom"
             BoxShadow="{DynamicResource OverlaySheetShadow}">
@@ -33,7 +33,7 @@
                         HorizontalAlignment="Center"
                         Margin="28,0">
               <Border Background="{DynamicResource NavActiveBackgroundBrush}"
-                      CornerRadius="18"
+                      CornerRadius="8"
                       Padding="12,6"
                       HorizontalAlignment="Center">
                 <StackPanel Orientation="Horizontal" Spacing="6">
@@ -64,7 +64,7 @@
             <Border Background="{DynamicResource PremiumCardBackgroundBrush}"
                     BorderBrush="{DynamicResource AccentBrush}"
                     BorderThickness="1.5"
-                    CornerRadius="20"
+                    CornerRadius="8"
                     Padding="18">
               <StackPanel Spacing="14">
                 <Grid ColumnDefinitions="*,Auto">

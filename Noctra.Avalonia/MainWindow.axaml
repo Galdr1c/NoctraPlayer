@@ -172,18 +172,11 @@
   <Grid RowDefinitions="64,*,48" Focusable="True">
 
     <!-- ========== HEADER BAR ========== -->
-    
     <Border x:Name="HeaderBar" Grid.Row="0" Background="{DynamicResource HeaderGradientBrush}" 
             Padding="24,0" PointerPressed="HeaderBar_PointerPressed" Focusable="True">
       <Grid ColumnDefinitions="Auto,*,Auto">
         <!-- Spacer for Logo removal -->
         <Border Width="1" Height="64" Margin="8,0,0,0"/>
-        <TextBlock Text="NOCTRA"
-                     FontSize="18"
-                     FontWeight="Bold"
-                     Foreground="{DynamicResource AccentBrush}"
-                     LetterSpacing="3.5"
-                     VerticalAlignment="Center" />
         <!-- New Expanding Search -->
         <TextBox x:Name="HeaderSearchBox" Classes="headerSearch" 
                  Classes.notEmpty="{Binding SearchQuery, Converter={StaticResource StringNotEmptyToBoolConverter}}"
@@ -1060,114 +1053,114 @@
                           CornerRadius="8"
                           HorizontalAlignment="Stretch"
                           VerticalAlignment="Stretch">
-
                     <Border Background="{DynamicResource SurfaceBrush}"
+                            BorderBrush="{DynamicResource BorderBrush}"
+                            BorderThickness="1"
                             CornerRadius="8"
                             Padding="40,32"
-                            Width="400"
+                            Width="440"
+                            MaxWidth="520"
                             HorizontalAlignment="Center"
                             VerticalAlignment="Center">
                       <Border.BoxShadow>
                         <BoxShadows>0 24 64 0 #88000000</BoxShadows>
                       </Border.BoxShadow>
 
-                      <StackPanel Spacing="24">
+                      <StackPanel Spacing="8">
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="16">
+                          <Border Grid.Column="0"
+                                  Width="58" Height="58"
+                                  CornerRadius="20"
+                                  Background="{DynamicResource SurfaceBrush}"
+                                  VerticalAlignment="Center">
+                            <materialIcons:MaterialIcon Kind="PlayCircleOutline"
+                                                        Width="31" Height="31"
+                                                        Foreground="{DynamicResource AccentBrush}"
+                                                        HorizontalAlignment="Center"
+                                                        VerticalAlignment="Center"/>
+                          </Border>
 
-                        <!-- İkon + Başlık -->
-                        <StackPanel Spacing="8" HorizontalAlignment="Center">
-                          <materialIcons:MaterialIcon Kind="PlayCircleOutline"
-                                                      Width="48" Height="48"
-                                                      Foreground="{DynamicResource AccentBrush}"
-                                                      HorizontalAlignment="Center"/>
-                          <TextBlock Text="{loc:Translate Player.Resume.Title}"
-                                     FontSize="19" FontWeight="Bold"
-                                     Foreground="{DynamicResource TextPrimaryBrush}"
-                                     HorizontalAlignment="Center"/>
-                        </StackPanel>
+                          <StackPanel Grid.Column="1" Spacing="5" VerticalAlignment="Center">
+                            <TextBlock Text="{loc:Translate Player.Resume.Title}"
+                                       FontSize="22"
+                                       FontWeight="Bold"
+                                       Foreground="{DynamicResource TextPrimaryBrush}"
+                                       TextWrapping="Wrap"/>
+                          </StackPanel>
+                        </Grid>
 
-                        <!-- Progress bilgisi -->
                         <Border Background="{DynamicResource Surface1Brush}"
-                                CornerRadius="8" Padding="16,10">
-                          <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
-                            <materialIcons:MaterialIcon Kind="ClockOutline" Width="16" Height="16"
+                                BorderBrush="{DynamicResource BorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="8"
+                                Padding="16,13">
+                          <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                            <materialIcons:MaterialIcon Grid.Column="0"
+                                                        Kind="ClockOutline"
+                                                        Width="20" Height="20"
                                                         Foreground="{DynamicResource TextMutedBrush}"
                                                         VerticalAlignment="Center"/>
-                            <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-                              <TextBlock Text="{loc:Translate Player.Resume.LastPosition}" 
-                                         Foreground="{DynamicResource TextMutedBrush}" 
-                                         FontSize="14"/>
-                              <TextBlock Text="{Binding ResumePositionText}"
-                                         Foreground="{DynamicResource TextPrimaryBrush}"
-                                         FontSize="14"
-                                         FontWeight="SemiBold"/>
-                            </StackPanel>
-                          </StackPanel>
+                            <TextBlock Grid.Column="1"
+                                       Text="{loc:Translate Player.Resume.LastPosition}"
+                                       Foreground="{DynamicResource TextMutedBrush}" 
+                                       FontSize="14"
+                                       VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="2"
+                                       Text="{Binding ResumePositionText}"
+                                       Foreground="{DynamicResource TextPrimaryBrush}"
+                                       FontSize="16"
+                                       FontWeight="SemiBold"
+                                       VerticalAlignment="Center"/>
+                          </Grid>
                         </Border>
 
-                        <!-- Butonlar -->
                         <StackPanel Spacing="12">
+                          <Button Command="{Binding ResumeFromPositionCommand}"
+                                  IsVisible="{Binding IsPremiumResume}"
+                                  HorizontalAlignment="Stretch"
+                                  Padding="0,15"
+                                  BorderThickness="0"
+                                  CornerRadius="8"
+                                  Cursor="Hand">
+                            <Button.Background>
+                              <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,0%">
+                                <GradientStop Color="#8B5CF6" Offset="0"/>
+                                <GradientStop Color="#A855F7" Offset="1"/>
+                              </LinearGradientBrush>
+                            </Button.Background>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="10">
+                              <materialIcons:MaterialIcon Kind="Play" Width="20" Height="20" Foreground="White"/>
+                              <TextBlock Text="{loc:Translate Player.Resume.Continue}"
+                                         Foreground="White"
+                                         FontSize="15"
+                                         FontWeight="SemiBold"
+                                         VerticalAlignment="Center"/>
+                            </StackPanel>
+                          </Button>
 
-                          <!-- ── PREMIUM: Kaldığım Yerden ── -->
-                          <Panel>
-                            <!-- Premium kullanıcı: normal buton -->
-                            <Button Command="{Binding ResumeFromPositionCommand}"
-                                    IsVisible="{Binding IsPremiumResume}"
-                                    HorizontalAlignment="Stretch"
-                                    Padding="0,15"
-                                    BorderThickness="0" CornerRadius="8" Cursor="Hand">
-                              <Button.Background>
-                                <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,0%">
-                                  <GradientStop Color="#8B5CF6" Offset="0"/>
-                                  <GradientStop Color="#A855F7" Offset="1"/>
-                                </LinearGradientBrush>
-                              </Button.Background>
-                              <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="10">
-                                <materialIcons:MaterialIcon Kind="Play" Width="18" Height="18" Foreground="White"/>
-                                <TextBlock Text="{loc:Translate Player.Resume.Continue}"
-                                           Foreground="White" FontSize="15" FontWeight="SemiBold"
-                                           VerticalAlignment="Center"/>
-                              </StackPanel>
-                            </Button>
+                          <Button Command="{Binding OpenPremiumUpsellCommand}"
+                                  IsVisible="{Binding !IsPremiumResume}"
+                                  HorizontalAlignment="Stretch"
+                                  Padding="0,15"
+                                  BorderThickness="0"
+                                  CornerRadius="8"
+                                  Cursor="Hand">
+                            <Button.Background>
+                              <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,0%">
+                                <GradientStop Color="#8B5CF6" Offset="0"/>
+                                <GradientStop Color="#A855F7" Offset="1"/>
+                              </LinearGradientBrush>
+                            </Button.Background>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="10">
+                              <materialIcons:MaterialIcon Kind="Crown" Width="19" Height="19" Foreground="White"/>
+                              <TextBlock Text="{loc:Translate Player.Resume.Continue}"
+                                         Foreground="White"
+                                         FontSize="15"
+                                         FontWeight="SemiBold"
+                                         VerticalAlignment="Center"/>
+                            </StackPanel>
+                          </Button>
 
-                            <!-- Ücretsiz kullanıcı: kilitli görünüm (Etkileşimsiz) -->
-                            <Button IsVisible="{Binding !IsPremiumResume}"
-                                    IsEnabled="False"
-                                    HorizontalAlignment="Stretch"
-                                    Padding="0,15"
-                                    BorderThickness="1" CornerRadius="8"
-                                    Background="{DynamicResource Surface1Brush}">
-                              <Button.BorderBrush>
-                                <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,0%">
-                                  <GradientStop Color="#508B5CF6" Offset="0"/>
-                                  <GradientStop Color="#50A855F7" Offset="1"/>
-                                </LinearGradientBrush>
-                              </Button.BorderBrush>
-                              <Grid ColumnDefinitions="*,Auto">
-
-                                <!-- Sol: içerik -->
-                                <StackPanel Grid.Column="0" Orientation="Horizontal"
-                                            HorizontalAlignment="Center" Spacing="10">
-                                  <materialIcons:MaterialIcon Kind="Play" Width="18" Height="18"
-                                                              Foreground="{DynamicResource TextMutedBrush}"
-                                                              VerticalAlignment="Center"/>
-                                  <TextBlock Text="{loc:Translate Player.Resume.Continue}"
-                                             Foreground="{DynamicResource TextMutedBrush}"
-                                             FontSize="15" FontWeight="SemiBold"
-                                             VerticalAlignment="Center"/>
-                                </StackPanel>
-
-                                <!-- Sağ: Standart Kilit İkonu -->
-                                <materialIcons:MaterialIcon Grid.Column="1" Kind="Lock" 
-                                                            Width="18" Height="18"
-                                                            Foreground="{DynamicResource TextMutedBrush}"
-                                                            VerticalAlignment="Center"
-                                                            Margin="0,0,16,0"/>
-
-                              </Grid>
-                            </Button>
-                          </Panel>
-
-                          <!-- Baştan Başla (her zaman aktif) -->
                           <Button Command="{Binding StartFromBeginningCommand}"
                                   HorizontalAlignment="Stretch"
                                   Padding="0,15"
@@ -1176,13 +1169,13 @@
                                   FontSize="15"
                                   BorderThickness="1"
                                   BorderBrush="{DynamicResource BorderBrush}"
-                                  CornerRadius="8" Cursor="Hand">
+                                  CornerRadius="8"
+                                  Cursor="Hand">
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="10">
-                              <materialIcons:MaterialIcon Kind="SkipBackward" Width="18" Height="18"/>
+                              <materialIcons:MaterialIcon Kind="Replay" Width="19" Height="19"/>
                               <TextBlock Text="{loc:Translate Player.Resume.StartOver}" VerticalAlignment="Center"/>
                             </StackPanel>
                           </Button>
-
                         </StackPanel>
 
                         <!-- Ücretsiz kullanıcıya küçük bilgi notu (Etkileşimsiz) -->
@@ -1200,7 +1193,6 @@
                               </StackPanel>
                             </StackPanel>
                         </Border>
-
                       </StackPanel>
                     </Border>
                   </Border>

@@ -272,12 +272,8 @@
         <Style Selector="Button.AddProfileButtonStyle:pointerover /template/ Rectangle#AddBorder">
             <Setter Property="Stroke" Value="{DynamicResource TextPrimaryBrush}"/>
         </Style>
-        <Style Selector="Button.AddProfileButtonStyle:pointerover /template/ Ellipse#PlusCircle">
-            <Setter Property="Stroke" Value="{DynamicResource TextPrimaryBrush}"/>
-            <Setter Property="Fill" Value="{DynamicResource AccentBrush}"/>
-        </Style>
         <Style Selector="Button.AddProfileButtonStyle:pointerover /template/ materialIcons|MaterialIcon#PlusIcon">
-            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
         </Style>
         <Style Selector="Button.AddProfileButtonStyle:pointerover /template/ TextBlock#AddLabel">
             <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
