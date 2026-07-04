@@ -173,7 +173,7 @@
         <Setter Property="FontSize" Value="15"/>
         <Setter Property="FontWeight" Value="Normal"/>
         <Setter Property="Cursor" Value="Hand"/>
-        <Setter Property="CornerRadius" Value="{DynamicResource RadiusSmall}"/>
+        <Setter Property="CornerRadius" Value="6"/>
         <Setter Property="Template">
             <ControlTemplate TargetType="Button">
                 <Border x:Name="PART_Border"
@@ -190,7 +190,7 @@
         </Setter>
 
         <Style Selector="^:pointerover /template/ Border#PART_Border">
-            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource TextDisabledBrush}"/>
             <Setter Property="Background" Value="{DynamicResource InteractiveHoverBrush}"/>
         </Style>
         <Style Selector="^:pressed /template/ Border#PART_Border">

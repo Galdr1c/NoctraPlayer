@@ -129,7 +129,7 @@
         <Setter Property="Width" Value="40"/>
         <Setter Property="MinWidth" Value="40"/>
         <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}"/>
-        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="BorderThickness" Value="1.5"/>
         <Setter Property="BorderBrush" Value="{DynamicResource InputBorderBrush}"/>
         <Setter Property="CornerRadius" Value="8"/>
         <Setter Property="Padding" Value="0"/>
@@ -147,7 +147,7 @@
 
       <Style Selector="TextBox.headerSearch:pointerover">
         <Setter Property="Background" Value="{DynamicResource InteractiveHoverBrush}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource TextDisabledBrush}"/>
       </Style>
 
       <Style Selector="TextBox.headerSearch:focus, TextBox.headerSearch.notEmpty, TextBox.headerSearch.isSearchView">

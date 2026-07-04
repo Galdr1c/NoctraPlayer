@@ -187,7 +187,7 @@
                                     <Border x:Name="DarkThemeButton"
                                             Width="130" Height="85"
                                             CornerRadius="4"
-                                            BorderThickness="1"
+                                            BorderThickness="1.5"
                                             BorderBrush="{DynamicResource AccentBrush}"
                                             Cursor="Hand"
                                             PointerPressed="DarkTheme_PointerPressed"
@@ -236,7 +236,7 @@
                                     <Border x:Name="LightThemeButton"
                                             Width="130" Height="85"
                                             CornerRadius="4"
-                                            BorderThickness="1"
+                                            BorderThickness="1.5"
                                             BorderBrush="Transparent"
                                             Cursor="Hand"
                                             PointerPressed="LightTheme_PointerPressed">

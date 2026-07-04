@@ -1068,7 +1068,7 @@
                                         <!-- Theme Options -->
                                         <StackPanel Grid.Column="1" Orientation="Horizontal">
                                             <!-- Dark Theme Button -->
-                                            <Border x:Name="DarkThemeButton" Width="130" Height="85" CornerRadius="4" BorderThickness="1" BorderBrush="Transparent" Cursor="Hand" PointerPressed="DarkTheme_PointerPressed" Margin="0,0,16,0">
+                                            <Border x:Name="DarkThemeButton" Width="130" Height="85" CornerRadius="4" BorderThickness="1.5" BorderBrush="Transparent" Cursor="Hand" PointerPressed="DarkTheme_PointerPressed" Margin="0,0,16,0">
                                                 <Grid>
                                                     <Border Background="{DynamicResource ThemePreviewDarkBg}" CornerRadius="4">
                                                         <Grid>
@@ -1089,7 +1089,7 @@
                                             </Border>
 
                                             <!-- Light Theme Button -->
-                                            <Border x:Name="LightThemeButton" Width="130" Height="85" CornerRadius="4" BorderThickness="1" BorderBrush="Transparent" Cursor="Hand" PointerPressed="LightTheme_PointerPressed">
+                                            <Border x:Name="LightThemeButton" Width="130" Height="85" CornerRadius="4" BorderThickness="1.5" BorderBrush="Transparent" Cursor="Hand" PointerPressed="LightTheme_PointerPressed">
                                                 <Grid>
                                                     <Border Background="{DynamicResource ThemePreviewLightBg}" CornerRadius="4">
                                                         <Grid>
