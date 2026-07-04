@@ -627,7 +627,8 @@
                                                          Background="{DynamicResource Surface1Brush}"
                                                          VerticalContentAlignment="Center"
                                                          FontSize="15"
-                                                         LetterSpacing="1"/>
+                                                         LetterSpacing="1"
+                                                         Theme="{StaticResource ModernTextBox}"/>
                                                 <Button Grid.Column="1"
                                                         Command="{Binding ApplyPromoCodeCommand}"
                                                         Background="{DynamicResource AccentBrush}"
