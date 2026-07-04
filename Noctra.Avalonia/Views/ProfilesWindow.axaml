@@ -166,7 +166,7 @@
 
                                         <!-- PIN Lock Icon (subtle indicator) -->
                                         <materialIcons:MaterialIcon Kind="Lock" Width="18" Height="18"
-                                                                     Foreground="#99FFFFFF"
+                                                                     Foreground="{DynamicResource TextPrimaryBrush}"
                                                                      HorizontalAlignment="Right"
                                                                      VerticalAlignment="Bottom"
                                                                      Margin="8,8"

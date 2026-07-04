@@ -1028,6 +1028,8 @@
                                     <Button Content="{loc:Translate Settings.Privacy.ClearAllNow}" 
                                             Command="{Binding ClearHistoryCommand}"
                                             Foreground="{DynamicResource ErrorBrush}"
+                                            BorderBrush="{DynamicResource ErrorBrush}"
+                                            BorderThickness="1"
                                             Classes="ErrorButton"
                                             Padding="16,10"/>
                                 </StackPanel>
