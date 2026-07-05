@@ -9,18 +9,16 @@
              x:DataType="vm:PinEntryViewModel"
              x:CompileBindings="False"
              mc:Ignorable="d"
-             d:DesignWidth="390"
-             d:DesignHeight="560"
              Focusable="True">
   <UserControl.Styles>
     <Style Selector="Button.pin-key">
       <Setter Property="Width" Value="72" />
       <Setter Property="Height" Value="72" />
-      <Setter Property="CornerRadius" Value="36" />
+      <Setter Property="CornerRadius" Value="6" />
       <Setter Property="Background" Value="{DynamicResource Surface1Brush}" />
       <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
       <Setter Property="FontSize" Value="24" />
-      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="FontWeight" Value="Medium" />
       <Setter Property="Margin" Value="5" />
       <Setter Property="HorizontalContentAlignment" Value="Center" />
       <Setter Property="VerticalContentAlignment" Value="Center" />
@@ -49,18 +47,20 @@
     <Style Selector="Button.pin-forgot">
       <Setter Property="Width" Value="72" />
       <Setter Property="Height" Value="72" />
-      <Setter Property="CornerRadius" Value="36" />
+      <Setter Property="CornerRadius" Value="6" />
       <Setter Property="Background" Value="Transparent" />
       <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
-      <Setter Property="FontSize" Value="9" />
+      <Setter Property="FontWeight" Value="Medium" />
       <Setter Property="Margin" Value="5" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
     </Style>
   </UserControl.Styles>
 
   <Border Background="{DynamicResource BackgroundGradientBrush}"
           BorderBrush="{DynamicResource BorderBrush}"
           BorderThickness="1"
-          CornerRadius="24"
+          CornerRadius="8"
           Padding="32"
           MaxWidth="420"
           HorizontalAlignment="Center"
@@ -72,7 +72,7 @@
                 HorizontalAlignment="Center">
       <Border Width="96"
               Height="96"
-              CornerRadius="20"
+              CornerRadius="8"
               ClipToBounds="True"
               Background="{DynamicResource IconGradientBrush}">
         <Image Source="{Binding ProfileAvatar, Converter={StaticResource AvatarPathConverter}}"
@@ -80,12 +80,12 @@
       </Border>
 
       <TextBlock Text="{Binding ProfileName}"
-                 FontSize="26"
+                 FontSize="18"
                  FontWeight="Bold"
                  Foreground="{DynamicResource TextPrimaryBrush}"
                  HorizontalAlignment="Center" />
       <TextBlock Text="{Binding Purpose}"
-                 FontSize="14"
+                 FontSize="12"
                  Foreground="{DynamicResource TextMutedBrush}"
                  TextAlignment="Center"
                  TextWrapping="Wrap" />
@@ -115,6 +115,7 @@
                  MinHeight="18"
                  TextAlignment="Center"
                  TextWrapping="Wrap"
+                 Margin="4"
                  IsVisible="{Binding ShowErrorMessage}" />
 
       <StackPanel Orientation="Horizontal"
@@ -159,7 +160,8 @@
               Command="{Binding CancelCommand}"
               Background="Transparent"
               Foreground="{DynamicResource TextMutedBrush}"
-              BorderThickness="0" />
+              BorderThickness="0" 
+              HorizontalAlignment="Center"/>
     </StackPanel>
   </Border>
 </UserControl>

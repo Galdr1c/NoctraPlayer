@@ -195,8 +195,12 @@
             IsVisible="False">
       <Grid ColumnDefinitions="*,Auto">
         <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+          <Image Source="avares://Noctra.Mobile/Assets/Square150x150Logo.png"
+                 Width="25" Height="25"
+                 Stretch="Uniform"
+                 VerticalAlignment="Center" />
           <TextBlock Text="NOCTRA"
-                     FontSize="12"
+                     FontSize="14"
                      FontWeight="Bold"
                      Foreground="{DynamicResource AccentBrush}"
                      LetterSpacing="3.5"

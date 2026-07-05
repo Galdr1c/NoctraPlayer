@@ -162,6 +162,7 @@
                    FontWeight="SemiBold"
                    Foreground="{DynamicResource TextPrimaryBrush}"
                    HorizontalAlignment="Center"
+                   Margin="-100,0,0,0"
                    VerticalAlignment="Center" />
 
         <!-- Sağ: Bitti -->
@@ -248,8 +249,8 @@
 
                     <!-- Çocuk profili çerçevesi (gradyan kenarlık) -->
                     <Border Width="148" Height="148"
-                            CornerRadius="15"
-                            BorderThickness="3"
+                            CornerRadius="14"
+                            BorderThickness="3.5"
                             IsVisible="{Binding IsChild}"
                             IsHitTestVisible="False"
                             BoxShadow="0 0 16 0 #708B5CF6">
@@ -280,9 +281,9 @@
                           Tıklanabilir yönet overlay: yarı saydam siyah + kalem
                         -->
                         <Border CornerRadius="11"
-                                Background="{DynamicResource OverlayScrimBrush}"
+                                Background="#000000" Opacity="0.7" 
                                 IsVisible="{Binding #ProfileListRoot.DataContext.IsManageMode}">
-                          <Border Width="46" Height="46"
+                          <Border Width="48" Height="48"
                                   CornerRadius="12"
                                   BorderBrush="White"
                                   BorderThickness="2"
@@ -291,7 +292,7 @@
                                   VerticalAlignment="Center">
                             <icons:MaterialIcon Kind="PencilOutline"
                                                 Width="20" Height="20"
-                                                Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                                                Foreground="White"
                                                 HorizontalAlignment="Center"
                                                 VerticalAlignment="Center" />
                           </Border>
@@ -299,13 +300,16 @@
 
                         <!-- Silme geri sayım overlay'i -->
                         <Border CornerRadius="8"
-                                Background="#E0000000"
+                                ClipToBounds="True"
                                 IsVisible="{Binding IsPendingDeletion}">
+                          <Border.Background>
+                              <SolidColorBrush Color="#000000" Opacity="0.5" />
+                          </Border.Background>      
                           <StackPanel VerticalAlignment="Center"
                                       HorizontalAlignment="Center"
-                                      Spacing="5">
-                            <icons:MaterialIcon Kind="TimerSandFull"
-                                                Width="26" Height="26"
+                                      Spacing="6">
+                            <icons:MaterialIcon Kind="TimerSand"
+                                                Width="28" Height="28"
                                                 Foreground="{Binding DeletionUrgency, Converter={StaticResource UrgencyToColorConverter}}"
                                                 HorizontalAlignment="Center" />
                             <TextBlock Text="{Binding TimeUntilDeletion, Converter={StaticResource TimeSpanToCountdownConverter}}"
@@ -318,11 +322,11 @@
 
                         <!-- PIN kilit simgesi (sağ üst köşe) -->
                         <icons:MaterialIcon Kind="Lock"
-                                            Width="14" Height="14"
-                                            Foreground="#AAFFFFFF"
+                                            Width="24" Height="24"
+                                            Foreground="{DynamicResource TextPrimaryBrush}"
                                             HorizontalAlignment="Right"
-                                            VerticalAlignment="Top"
-                                            Margin="0,8,8,0"
+                                            VerticalAlignment="Bottom"
+                                            Margin="8"
                                             IsVisible="{Binding PinHash, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
                       </Grid>
                     </Border>
@@ -330,8 +334,8 @@
 
                   <!-- Profil adı etiketi -->
                   <TextBlock Text="{Binding Name}"
-                             Foreground="{DynamicResource TextPrimaryBrush}"
-                             FontSize="14"
+                             Foreground="{DynamicResource TextMutedBrush}"
+                             FontSize="15"
                              FontWeight="Medium"
                              TextAlignment="Center"
                              TextTrimming="CharacterEllipsis"
@@ -358,7 +362,7 @@
                       IsVisible="{Binding !#ProfileListRoot.DataContext.IsManageMode}">
                 <StackPanel Spacing="10">
 
-                  <!-- Artı kutusu: noktalı kenarlıklı (StrokeDashArray="4,2") -->
+                  <!-- Artı kutusu: noktalı kenarlıklı (StrokeDashArray="3,2") -->
                   <Grid Width="140" Height="140" HorizontalAlignment="Center">
                     <Rectangle RadiusX="12" RadiusY="12"
                                Stroke="{DynamicResource BorderBrush}"

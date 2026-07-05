@@ -9,9 +9,7 @@
              x:Name="AvatarPickerRoot"
              x:DataType="vm:AvatarPickerViewModel"
              x:CompileBindings="False"
-             mc:Ignorable="d"
-             d:DesignWidth="390"
-             d:DesignHeight="560">
+             mc:Ignorable="d">
   <UserControl.Styles>
     <Style Selector="Button.AvatarItemBtn">
       <Setter Property="Background" Value="Transparent" />
@@ -32,15 +30,11 @@
       <Setter Property="RenderTransform" Value="scale(0.93)" />
       <Setter Property="Opacity" Value="0.72" />
     </Style>
-    <!-- Keep accent border on selected avatar -->
-    <Style Selector="Button.AvatarItemBtn Border.AvatarBorder">
-      <Setter Property="BorderBrush" Value="Transparent" />
-    </Style>
   </UserControl.Styles>
 
   <Grid RowDefinitions="Auto,*" RowSpacing="20"
         Background="Transparent"
-        Margin="24,20,24,24">
+        Margin="24">
       <!-- Header: matches desktop avatar picker typography, adapted for mobile -->
       <StackPanel Spacing="6">
         <TextBlock Text="{loc:Translate AvatarPicker.SelectProfilePicture}"
@@ -71,11 +65,9 @@
                       CommandParameter="{Binding}"
                       Width="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=profileWidth}"
                       Height="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=profileWidth}">
-                <Border Classes="AvatarBorder"
-                        BorderBrush="Transparent"
+                <Border BorderBrush="Transparent"
                         BorderThickness="2"
-                        CornerRadius="10"
-                        Background="Transparent"
+                        Background="{Binding Converter={StaticResource ProfileColorConverter}}"
                         ClipToBounds="False">
                   <Image Source="{Binding Converter={StaticResource AvatarPathConverter}}"
                          Stretch="Uniform"

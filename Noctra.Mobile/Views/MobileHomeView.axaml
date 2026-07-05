@@ -60,7 +60,6 @@
                Width="80"
                Height="80"
                Opacity="0.6"
-               CornerRadius="8"
                Margin="0,0,0,10">
           <Image.Styles>
             <Style Selector="Image">

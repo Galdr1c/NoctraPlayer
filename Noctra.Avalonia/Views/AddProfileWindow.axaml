@@ -243,7 +243,7 @@
                                                            Foreground="{DynamicResource TextPrimaryBrush}"
                                                            VerticalAlignment="Center"/>
                                                 <!-- Premium Badge (visible for free users) -->
-                                                <Border Background="#FFD700" CornerRadius="4" Padding="6,2"
+                                                <Border Background="{DynamicResource PremiumBadgeBrush}" CornerRadius="4" Padding="6,2"
                                                         VerticalAlignment="Center"
                                                         IsVisible="{Binding !IsPinAvailable}">
                                                     <TextBlock Text="PREMIUM" FontSize="10" FontWeight="Bold"

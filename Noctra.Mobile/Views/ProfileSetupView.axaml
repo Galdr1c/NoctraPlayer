@@ -76,6 +76,9 @@
       <Setter Property="BorderThickness" Value="0" />
       <Setter Property="Padding" Value="0" />
     </Style>
+    <Style Selector="Button.AvatarBtn:pressed">
+        <Setter Property="CornerRadius" Value="12" />
+    </Style>
 
     <!-- Kalem simgesi stili -->
     <Style Selector="Border.EditIcon">
@@ -88,6 +91,17 @@
       <Setter Property="FontWeight" Value="SemiBold" />
       <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
       <Setter Property="Margin" Value="4,0,0,6" />
+    </Style>
+
+    <Style Selector="Button.DeleteBtn">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource ErrorBrush}"/>
+      <Setter Property="CornerRadius" Value="6"/>
+      <Setter Property="Padding" Value="12,8"/>
+    </Style>
+    <Style Selector="Button.DeleteBtn:pressed">
+        <Setter Property="Background" Value="#33FF3333"/>
     </Style>
 
   </UserControl.Styles>
@@ -529,22 +543,19 @@
         <Button Command="{Binding DeleteProfileCommand}"
                 CommandParameter="{Binding EditingProfile}"
                 IsVisible="{Binding EditingProfile, Converter={x:Static ObjectConverters.IsNotNull}}"
-                MinHeight="50"
-                CornerRadius="8"
-                Background="Transparent"
                 HorizontalAlignment="Stretch"
                 HorizontalContentAlignment="Center"
-                Margin="0,12,0,0">
+                Classes="DeleteBtn">
           <StackPanel Orientation="Horizontal"
                       HorizontalAlignment="Center"
                       Spacing="10">
             <icons:MaterialIcon Kind="TrashCanOutline"
-                                Width="18" Height="18"
+                                Width="24" Height="24"
                                 Foreground="{DynamicResource ErrorBrush}"
                                 VerticalAlignment="Center" />
             <TextBlock Text="{loc:Translate Profiles.Add.DeleteProfile}"
                        Foreground="{DynamicResource ErrorBrush}"
-                       FontSize="15"
+                       FontSize="16"
                        FontWeight="Medium"
                        VerticalAlignment="Center" />
           </StackPanel>
