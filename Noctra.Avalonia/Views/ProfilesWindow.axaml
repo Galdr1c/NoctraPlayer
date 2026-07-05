@@ -211,11 +211,6 @@
             <Setter Property="RenderTransform" Value="scale(0.9)"/>
         </Style>
         
-        <Style Selector="Button.ProfileCardStyle:focus /template/ Border#AvatarBorder">
-            <Setter Property="BorderBrush" Value="{DynamicResource AccentLightBrush}"/>
-            <!-- BoxShadow for Glow Effect -->
-            <Setter Property="BoxShadow" Value="{DynamicResource FocusGlow}"/> 
-        </Style>
         <Style Selector="Button.ProfileCardStyle:focus /template/ TextBlock#ProfileName">
             <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
         </Style>

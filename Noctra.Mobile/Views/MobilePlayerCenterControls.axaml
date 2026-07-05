@@ -52,6 +52,17 @@
             IsVisible="{Binding !IsLiveContent}">
       <icons:MaterialIcon Kind="Rewind10" Width="28" Height="28" Foreground="{DynamicResource PlayerOverlayTextBrush}" />
     </Button>
+    <Button Classes="skipBtn"
+            Command="{Binding PlayPreviousLiveChannelCommand}"
+            Width="56"
+            Height="56"
+            Padding="0"
+            CornerRadius="28"
+            Background="{DynamicResource PlayerOverlayButtonBrush}"
+            BorderThickness="0"
+            IsVisible="{Binding IsLiveContent}">
+      <icons:MaterialIcon Kind="SkipPrevious" Width="24" Height="24" Foreground="{DynamicResource PlayerOverlayTextBrush}" />
+    </Button>
 
     <Button Classes="playBtn"
             Command="{Binding PlayPauseCommand}"
@@ -82,6 +93,17 @@
             BorderThickness="0"
             IsVisible="{Binding !IsLiveContent}">
       <icons:MaterialIcon Kind="FastForward10" Width="28" Height="28" Foreground="{DynamicResource PlayerOverlayTextBrush}" />
+    </Button>
+    <Button Classes="skipBtn"
+            Command="{Binding PlayNextLiveChannelCommand}"
+            Width="56"
+            Height="56"
+            Padding="0"
+            CornerRadius="28"
+            Background="{DynamicResource PlayerOverlayButtonBrush}"
+            BorderThickness="0"
+            IsVisible="{Binding IsLiveContent}">
+      <icons:MaterialIcon Kind="SkipNext" Width="24" Height="24" Foreground="{DynamicResource PlayerOverlayTextBrush}" />
     </Button>
   </StackPanel>
 </UserControl>
