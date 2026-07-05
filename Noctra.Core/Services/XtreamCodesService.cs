@@ -700,7 +700,7 @@ public class XtreamCodesService : IXtreamCodesService
     {
         return await NetworkRetry.ExecuteAsync(async () =>
         {
-            using var response = await _httpClient.GetAsync(url, cancellationToken);
+            using var response = await _httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
             response.EnsureSuccessStatusCode();
             return await response.Content.ReadAsStringAsync(cancellationToken);
         }, cancellationToken: cancellationToken);

@@ -660,6 +660,34 @@ public partial class MainViewModel : ObservableObject
         });
     }
 
+    private void BeginInvokeIfProfileScopeActiveAsync(ProfileLoadScope scope, Func<Task> action)
+    {
+        _dispatcherService.BeginInvoke(async () =>
+        {
+            if (!IsProfileLoadScopeActive(scope))
+            {
+                return;
+            }
+
+            try
+            {
+                await action();
+            }
+            catch (OperationCanceledException) when (scope.Token.IsCancellationRequested || !IsProfileLoadScopeActive(scope))
+            {
+                // Profile load was superseded or cancelled; ignore stale UI continuation.
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Profile-scoped UI async action failed for profile {ProfileId}.", scope.ProfileId);
+                if (IsProfileLoadScopeActive(scope))
+                {
+                    StatusMessage = UserFriendlyErrorMessage.FromException(ex);
+                    IsChannelLoading = false;
+                }
+            }
+        });
+    }
     private void ThrowIfProfileLoadCancelled(ProfileLoadScope scope)
     {
         scope.Token.ThrowIfCancellationRequested();
@@ -770,7 +798,7 @@ public partial class MainViewModel : ObservableObject
                                                             {
                                                                 await _playlistService.AddFromFileAsync(profile.Name, m3uSource, profile.Id);
                                                             }
-                                                            BeginInvokeIfProfileScopeActive(profileScope, async () =>
+                                                            BeginInvokeIfProfileScopeActiveAsync(profileScope, async () =>
                                                             {
                                                                 await LoadPlaylistsAsync();
                                                                 // Aggregation may have completed before SelectedPlaylist was set (race condition).
@@ -884,7 +912,7 @@ public partial class MainViewModel : ObservableObject
                                                                         _logger?.LogError(ex, "[Xtream] AggregateContent failed for playlist {PlaylistId}", playlist.Id);
                                                                     }
 
-                                                                    BeginInvokeIfProfileScopeActive(profileScope, async () =>
+                                                                    BeginInvokeIfProfileScopeActiveAsync(profileScope, async () =>
                                                                     {
                                                                         StatusMessage = _localizationService.GetString("Main.Status.XtreamLoaded");
                                                                         
@@ -906,7 +934,7 @@ public partial class MainViewModel : ObservableObject
                                                         catch (Exception ex)
                                                         {
                                                             _logger?.LogDebug($"[Xtream] Error: {ex}");
-                                                            BeginInvokeIfProfileScopeActive(profileScope, async () =>
+                                                            BeginInvokeIfProfileScopeActiveAsync(profileScope, async () =>
                                                             {
                                                                 StatusMessage = UserFriendlyErrorMessage.WithPrefix(_localizationService.GetString("Main.Error.XtreamServer"), ex);
                                                                 await _playlistService.DeleteAllDummiesAsync(playlist.Id);
@@ -1020,7 +1048,7 @@ public partial class MainViewModel : ObservableObject
                                 }
 
                                 // Tüm içerik yüklendi
-                                BeginInvokeIfProfileScopeActive(profileScope, async () =>
+                                BeginInvokeIfProfileScopeActiveAsync(profileScope, async () =>
                                 {
                                     StatusMessage = _localizationService.GetString("Main.Status.AllContentReady");
 
@@ -1041,7 +1069,7 @@ public partial class MainViewModel : ObservableObject
                             }
                             catch (Exception ex)
                             {
-                                BeginInvokeIfProfileScopeActive(profileScope, async () =>
+                                BeginInvokeIfProfileScopeActiveAsync(profileScope, async () =>
                                 {
                                     StatusMessage = UserFriendlyErrorMessage.WithPrefix(
                                         _localizationService.GetString("Main.Error.ContentLoad"), ex);

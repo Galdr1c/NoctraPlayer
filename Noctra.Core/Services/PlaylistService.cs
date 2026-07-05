@@ -2048,12 +2048,12 @@ WHERE PlaylistId = {playlistId}
             command.CommandText = 
                 @"INSERT INTO Channels (
                     Name, StreamUrl, LogoUrl, GroupTitle, TvgId, TvgName, Type, PlaylistId, 
-                    IsFavorite, IsInMyList, IsCompleted, WatchedPosition, Duration, Country,
+                    IsFavorite, IsInMyList, IsCompleted, WatchedPosition, Duration, LastWatched, Country,
                     Rating, Plot, ReleaseYear, ContentRating, BackdropUrl, Cast, Director, Language, TmdbId
                   ) 
                   VALUES (
                     $name, $streamUrl, $logoUrl, $groupTitle, $tvgId, $tvgName, $type, $playlistId, 
-                    $isFavorite, $isInMyList, $isCompleted, $watchedPosition, $duration, $country,
+                    $isFavorite, $isInMyList, $isCompleted, $watchedPosition, $duration, $lastWatched, $country,
                     $rating, $plot, $releaseYear, $contentRating, $backdropUrl, $cast, $director, $language, $tmdbId
                   );";
 
@@ -2070,6 +2070,7 @@ WHERE PlaylistId = {playlistId}
             var pIsCompleted = command.CreateParameter(); pIsCompleted.ParameterName = "$isCompleted"; command.Parameters.Add(pIsCompleted);
             var pWatchedPosition = command.CreateParameter(); pWatchedPosition.ParameterName = "$watchedPosition"; command.Parameters.Add(pWatchedPosition);
             var pDuration = command.CreateParameter(); pDuration.ParameterName = "$duration"; command.Parameters.Add(pDuration);
+            var pLastWatched = command.CreateParameter(); pLastWatched.ParameterName = "$lastWatched"; command.Parameters.Add(pLastWatched);
             var pCountry = command.CreateParameter(); pCountry.ParameterName = "$country"; command.Parameters.Add(pCountry);
             var pRating = command.CreateParameter(); pRating.ParameterName = "$rating"; command.Parameters.Add(pRating);
             var pPlot = command.CreateParameter(); pPlot.ParameterName = "$plot"; command.Parameters.Add(pPlot);
@@ -2096,6 +2097,7 @@ WHERE PlaylistId = {playlistId}
                 pIsCompleted.Value = channel.IsCompleted ? 1 : 0;
                 pWatchedPosition.Value = channel.WatchedPosition?.ToString() ?? (object)DBNull.Value;
                 pDuration.Value = channel.Duration?.ToString() ?? (object)DBNull.Value;
+                pLastWatched.Value = channel.LastWatched?.ToString("O") ?? (object)DBNull.Value;
                 pCountry.Value = channel.Country ?? (object)DBNull.Value;
                 pRating.Value = channel.Rating ?? (object)DBNull.Value;
                 pPlot.Value = channel.Plot ?? (object)DBNull.Value;
@@ -2111,8 +2113,9 @@ WHERE PlaylistId = {playlistId}
             }
             await transaction.CommitAsync();
         }
-        catch
+        catch (Exception ex)
         {
+            System.Diagnostics.Debug.WriteLine($"[PlaylistService] FastSqliteBulkInsertAsync failed for {channels.Count} channel(s): {ex}");
             await transaction.RollbackAsync();
             throw;
         }

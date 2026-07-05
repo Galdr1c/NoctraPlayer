@@ -1,4 +1,5 @@
 using System;
+using System.Net;
 using System.Net.Http;
 using Android.Content;
 using Microsoft.Extensions.DependencyInjection;
@@ -25,10 +26,7 @@ public static class AndroidServiceCollectionExtensions
 
         var applicationContext = context.ApplicationContext ?? context;
         services.AddSingleton(applicationContext);
-        services.AddSingleton(_ => new HttpClient
-        {
-            Timeout = TimeSpan.FromSeconds(30)
-        });
+        services.AddSingleton(_ => CreateOptimizedHttpClient());
         services.AddSingleton<IAppPathService, AndroidAppPathService>();
         services.AddSingleton<IDispatcherService, AndroidDispatcherService>();
         services.AddSingleton<INetworkService, AndroidNetworkService>();
@@ -77,6 +75,26 @@ public static class AndroidServiceCollectionExtensions
         services.AddSingleton<IReviewPromptService, AndroidReviewPromptService>();
 
         return services;
+    }
+
+    private static HttpClient CreateOptimizedHttpClient()
+    {
+        var handler = new HttpClientHandler
+        {
+            AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
+        };
+
+        var client = new HttpClient(handler)
+        {
+            // Large M3U/Xtream/Stalker responses can legitimately take longer than 30s on Android tablets.
+            // Desktop already uses a 3-minute shared timeout, so keep mobile aligned with desktop.
+            Timeout = TimeSpan.FromMinutes(3)
+        };
+
+        client.DefaultRequestHeaders.UserAgent.ParseAdd(
+            "Mozilla/5.0 (Linux; Android 12) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Mobile Safari/537.36 Noctra/Android");
+        client.DefaultRequestHeaders.Accept.ParseAdd("*/*");
+        return client;
     }
 
     public static IServiceProvider CreateNoctraAndroidServiceProvider(this Context context)

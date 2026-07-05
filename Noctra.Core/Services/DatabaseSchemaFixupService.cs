@@ -40,6 +40,13 @@ public sealed class DatabaseSchemaFixupService : IDatabaseSchemaFixupService
         await AddColumnIfMissingAsync(context, "Channels", "IsFavorite", "INTEGER NOT NULL DEFAULT 0", cancellationToken).ConfigureAwait(false);
         await AddColumnIfMissingAsync(context, "Channels", "WatchedPosition", "TEXT", cancellationToken).ConfigureAwait(false);
         await AddColumnIfMissingAsync(context, "Channels", "Country", "TEXT", cancellationToken).ConfigureAwait(false);
+        await AddColumnIfMissingAsync(context, "Channels", "Language", "TEXT", cancellationToken).ConfigureAwait(false);
+        await AddColumnIfMissingAsync(context, "Channels", "LastWatched", "TEXT", cancellationToken).ConfigureAwait(false);
+        await AddColumnIfMissingAsync(context, "Channels", "Plot", "TEXT", cancellationToken).ConfigureAwait(false);
+        await AddColumnIfMissingAsync(context, "Channels", "BackdropUrl", "TEXT", cancellationToken).ConfigureAwait(false);
+        await AddColumnIfMissingAsync(context, "Channels", "Cast", "TEXT", cancellationToken).ConfigureAwait(false);
+        await AddColumnIfMissingAsync(context, "Channels", "Director", "TEXT", cancellationToken).ConfigureAwait(false);
+        await AddColumnIfMissingAsync(context, "Channels", "Duration", "TEXT", cancellationToken).ConfigureAwait(false);
 
         await TryExecuteAsync(context, "CREATE INDEX IF NOT EXISTS IX_Channels_Playlist_Type_Group_Id ON Channels(PlaylistId, Type, GroupTitle, Id DESC);", cancellationToken).ConfigureAwait(false);
         await TryExecuteAsync(context, "CREATE INDEX IF NOT EXISTS IX_Channels_Playlist_Type_Id ON Channels(PlaylistId, Type, Id DESC);", cancellationToken).ConfigureAwait(false);

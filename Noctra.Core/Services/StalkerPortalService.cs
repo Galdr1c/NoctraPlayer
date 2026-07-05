@@ -1228,7 +1228,7 @@ public class StalkerPortalService : IStalkerPortalService
             try
             {
                 using var request = BuildGetRequest(endpoint, queryString, macAddress, token);
-                response = await _httpClient.SendAsync(request, ct);
+                response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
 
                 if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests && retryCount < maxRetries)
                 {

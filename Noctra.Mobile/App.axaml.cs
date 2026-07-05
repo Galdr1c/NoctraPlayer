@@ -88,9 +88,9 @@ public partial class App : Application
                     schemaFixups.ApplyAsync(db, DatabaseSchemaFixupProfile.Mobile).GetAwaiter().GetResult();
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-    // Language / Culture
+                System.Diagnostics.Debug.WriteLine($"[Mobile.App] Database initialization/schema fixup failed: {ex}");
             }
         }
 
