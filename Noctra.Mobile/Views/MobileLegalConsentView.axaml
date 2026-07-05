@@ -47,7 +47,7 @@
           <Border Background="{DynamicResource Surface1Brush}"
                   BorderBrush="{DynamicResource BorderBrush}"
                   BorderThickness="1"
-                  CornerRadius="14"
+                  CornerRadius="8"
                   Padding="18">
             <StackPanel Spacing="10">
               <CheckBox x:Name="TermsAcceptedCheckBox"

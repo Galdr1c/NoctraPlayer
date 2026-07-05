@@ -105,6 +105,28 @@ public partial class MainView : UserControl
 
     private async Task RunStartupFlowAsync()
     {
+        var resolver = GetViewModelResolver();
+        var coreVm = resolver?.GetCoreMainViewModel();
+        if (coreVm?.CurrentProfile is not null)
+        {
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                ProfilesOverlay.IsVisible = false;
+                ProfilesOverlay.DataContext = null;
+                HeaderBar.IsVisible = true;
+                HeaderProfileButton.DataContext = coreVm;
+                UpdateNavigationMode(Bounds.Width);
+
+                string dest = "Home";
+                if (DataContext is MobileMainViewModel viewModel)
+                {
+                    dest = viewModel.SelectedDestination;
+                }
+                NavigateToDestination(dest);
+            });
+            return;
+        }
+
         try
         {
             await ShowLegalConsentIfNeededAsync();

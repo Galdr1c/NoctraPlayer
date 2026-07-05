@@ -8,7 +8,6 @@
              x:Class="Noctra.Mobile.Controls.MobileLiveTvCard"
              x:Name="LiveTvCardControl"
              x:DataType="models:Channel"
-             MinHeight="96"
              HorizontalAlignment="Stretch"
              ClipToBounds="False">
   <UserControl.Resources>
@@ -51,11 +50,13 @@
   <UserControl.Styles>
     <!-- Touch feedback: card surface dims on press -->
     <Style Selector="Border.CardContainer:pressed Border.CardSurface">
-      <Setter Property="Background" Value="{DynamicResource Surface1Brush}" />
-      <Setter Property="Opacity" Value="0.75" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="Padding" Value="10,6" />
     </Style>
     <Style Selector="Button.FavoriteBtn">
-      <Setter Property="Opacity" Value="0.72" />
+      <Setter Property="Opacity" Value="0.4" />
+      <Setter Property="CornerRadius" Value="8"/>
       <Setter Property="Transitions">
         <Transitions>
           <DoubleTransition Property="Opacity" Duration="0:0:0.10" />
@@ -63,7 +64,8 @@
       </Setter>
     </Style>
     <Style Selector="Button.FavoriteBtn:pressed">
-      <Setter Property="Opacity" Value="0.45" />
+      <Setter Property="Opacity" Value="1" />
+      <Setter Property="RenderTransform" Value="scale(1.1)"/>
     </Style>
     <Style Selector="Button.FavoriteBtn.active">
       <Setter Property="Opacity" Value="1" />
@@ -80,7 +82,7 @@
 
     <Border Classes="CardSurface"
             Background="{DynamicResource Surface0Brush}"
-            CornerRadius="16"
+            CornerRadius="8"
             Padding="14"
             Margin="0,0,0,16">
       <Grid RowDefinitions="Auto,Auto,Auto"
@@ -90,43 +92,46 @@
               ColumnSpacing="10">
           <Border Width="44"
                   Height="44"
-                  CornerRadius="12"
+                  CornerRadius="8"
                   ClipToBounds="True"
-                  Background="{DynamicResource Surface1Brush}"
+                  Background="{DynamicResource Surface0Brush}"
                   IsHitTestVisible="False">
             <Grid>
-              <icons:MaterialIcon Kind="Television"
-                                  Foreground="{DynamicResource AccentBrush}"
-                                  Width="20"
-                                  Height="20" />
+              <!-- Placeholder 
+              <Border Background="{DynamicResource SurfaceLightBrush}">
+                <Border.IsVisible>
+                  <Binding Path="#ChannelLogo.IsImageLoaded" Converter="{StaticResource InverseBoolConverter}"/>
+                </Border.IsVisible>
+              </Border>
+              -->
               <controls:RemoteImage Url="{Binding CoverUrl}"
+                                    Width="36" Height="36"
                                     Stretch="Uniform"
                                     RenderOptions.BitmapInterpolationMode="MediumQuality" />
             </Grid>
           </Border>
-
+          <!-- Content -->
           <StackPanel Grid.Column="1"
                       Spacing="3"
-                      VerticalAlignment="Center"
-                      IsHitTestVisible="False">
+                      VerticalAlignment="Center">
             <TextBlock Text="{Binding Name}"
                        Foreground="{DynamicResource TextPrimaryBrush}"
+                       FontSize="14"
                        FontWeight="SemiBold"
                        TextTrimming="CharacterEllipsis" />
             <TextBlock Text="{Binding GroupTitle}"
                        Foreground="{DynamicResource TextMutedBrush}"
-                       FontSize="12"
-                       TextTrimming="CharacterEllipsis" />
+                       FontSize="11"
+                       TextTrimming="CharacterEllipsis" Opacity="0.8" />
           </StackPanel>
-
+          
+          <!-- Favorite -->
           <Button Grid.Column="2"
                   Classes="FavoriteBtn"
                   Classes.active="{Binding IsFavorite}"
                   Background="Transparent"
                   BorderThickness="0"
-                  Padding="14"
-                  MinHeight="48"
-                  MinWidth="48"
+                  Padding="6"
                   VerticalAlignment="Center"
                   Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).ToggleFavoriteCommand}"
                   CommandParameter="{Binding}"
@@ -135,7 +140,7 @@
               <icons:MaterialIcon Kind="Heart"
                                   Width="20"
                                   Height="20"
-                                  Foreground="{DynamicResource ErrorBrush}"
+                                  Foreground="#E50914"
                                   IsVisible="{Binding IsFavorite}" />
               <icons:MaterialIcon Kind="HeartOutline"
                                   Width="20"
@@ -146,6 +151,8 @@
           </Button>
 
         </Grid>
+
+        <!-- EPG Title Section -->
 
         <TextBlock Grid.Row="1"
                    Text="{Binding CurrentProgramTitle}"
@@ -162,10 +169,10 @@
                      Minimum="0"
                      Maximum="100"
                      Height="5"
-                     Background="{DynamicResource Surface1Brush}"
+                     Background="{DynamicResource SurfaceLightBrush}"
                      Foreground="{DynamicResource AccentBrush}"
                      BorderThickness="0"
-                     CornerRadius="2.5"
+                     CornerRadius="1.5"
                      IsVisible="{Binding CurrentProgramTitle, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
       </Grid>
     </Border>

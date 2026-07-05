@@ -8,7 +8,6 @@
              x:Class="Noctra.Mobile.Controls.MobileSeriesCard"
              x:Name="SeriesCardControl"
              x:DataType="models:Series"
-             MinHeight="220"
              ClipToBounds="False"
              HorizontalAlignment="Stretch">
   <UserControl.Resources>
@@ -74,38 +73,23 @@
       <StaticResource ResourceKey="CardActionsFlyout" />
     </Border.ContextFlyout>
 
-    <Border CornerRadius="{DynamicResource RadiusSmall}"
+    <Border CornerRadius="8"
             ClipToBounds="True"
             Background="{DynamicResource Surface0Brush}"
             BoxShadow="{DynamicResource CardShadow}">
       <Grid>
-        <Border Background="{DynamicResource SurfaceLightBrush}">
-          <Grid>
-            <icons:MaterialIcon Kind="TelevisionPlay"
-                                Foreground="{DynamicResource TextMutedBrush}"
-                                Width="48"
-                                Height="48"
-                                Opacity="0.32" />
-            <controls:RemoteImage Url="{Binding CoverUrl}"
+        <!-- Poster Area Placeholder 
+            <Border x:Name="PlaceholderBorder" Width="160" Height="240" Background="{DynamicResource SurfaceLightBrush}">
+              <Border.IsVisible>
+                <Binding Path="#PosterImage.IsImageLoaded" Converter="{StaticResource InverseBoolConverter}"/>
+              </Border.IsVisible>
+            </Border>
+            -->
+        <controls:RemoteImage Url="{Binding CoverUrl}"
                                         Stretch="UniformToFill"
                                         RenderOptions.BitmapInterpolationMode="MediumQuality" />
-          </Grid>
-        </Border>
 
-        <Button HorizontalAlignment="Right"
-                VerticalAlignment="Top"
-                Margin="6"
-                MinWidth="44"
-                MinHeight="44"
-                Padding="0"
-                Background="{DynamicResource OverlayButtonScrimBrush}"
-                BorderThickness="0"
-                CornerRadius="22"
-                Flyout="{StaticResource CardActionsFlyout}">
-          <icons:MaterialIcon Kind="DotsVertical" Width="20" Height="20" Foreground="{DynamicResource PlayerOverlayTextBrush}" />
-        </Button>
-
-        <Border VerticalAlignment="Bottom" Background="{DynamicResource OverlayScrimBrush}" Padding="10,8">
+        <Border VerticalAlignment="Bottom" Background="{DynamicResource OverlayScrimBrush}" Padding="8">
           <StackPanel Spacing="2">
             <TextBlock Text="{Binding Name}"
                        Foreground="{DynamicResource PlayerOverlayTextBrush}"

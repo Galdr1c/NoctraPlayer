@@ -10,8 +10,7 @@
              x:Class="Noctra.Mobile.Views.MobileMyListView"
              x:DataType="vm:MainViewModel"
              x:CompileBindings="False"
-             mc:Ignorable="d"
-             d:DesignWidth="390" d:DesignHeight="720">
+             mc:Ignorable="d">
 
   <ScrollViewer x:Name="MyListScrollViewer"
                 ScrollChanged="MyListScrollViewer_ScrollChanged">

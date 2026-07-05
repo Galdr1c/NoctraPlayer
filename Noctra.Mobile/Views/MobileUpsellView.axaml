@@ -36,15 +36,15 @@
                       CornerRadius="8"
                       Padding="12,6"
                       HorizontalAlignment="Center">
-                <StackPanel Orientation="Horizontal" Spacing="6">
+                <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,0,4">
                   <icons:MaterialIcon Kind="Crown"
-                                      Width="16"
-                                      Height="16"
-                                      Foreground="{DynamicResource AccentLightBrush}" />
+                                      Width="17"
+                                      Height="17"
+                                      Foreground="{DynamicResource AccentBrush}" />
                   <TextBlock Text="{loc:Translate Upsell.Badge}"
-                             Foreground="{DynamicResource AccentLightBrush}"
-                             FontSize="12"
-                             FontWeight="Bold" />
+                             Foreground="{DynamicResource AccentBrush}"
+                             FontSize="13"
+                             FontWeight="Bold"/>
                 </StackPanel>
               </Border>
 
@@ -56,14 +56,14 @@
                          TextWrapping="Wrap" />
               <TextBlock Text="{loc:Translate Upsell.Subheadline}"
                          Foreground="{DynamicResource TextMutedBrush}"
-                         FontSize="14"
+                         FontSize="13"
                          TextAlignment="Center"
-                         TextWrapping="Wrap" />
+                         TextWrapping="Wrap"  Margin="0,4,0,0"/>
             </StackPanel>
 
-            <Border Background="{DynamicResource PremiumCardBackgroundBrush}"
-                    BorderBrush="{DynamicResource AccentBrush}"
-                    BorderThickness="1.5"
+            <Border Background="{DynamicResource Surface0Brush}"
+                    BorderBrush="{DynamicResource BorderBrush}"
+                    BorderThickness="1"
                     CornerRadius="8"
                     Padding="18">
               <StackPanel Spacing="14">
@@ -71,16 +71,16 @@
                   <StackPanel>
                     <TextBlock Text="{loc:Translate Upsell.Premium.Title}"
                                Foreground="{DynamicResource PremiumCardForegroundBrush}"
-                               FontSize="22"
+                               FontSize="20"
                                FontWeight="Bold" />
                     <TextBlock Text="{loc:Translate Upsell.Premium.Subtitle}"
                                Foreground="{DynamicResource TextMutedBrush}"
-                               FontSize="13" />
+                               FontSize="12" Margin="0,1,0,12"/>
                   </StackPanel>
                   <Border Grid.Column="1"
                           Background="{DynamicResource AccentBrush}"
                           CornerRadius="8"
-                          Padding="8,4"
+                          Padding="10"
                           VerticalAlignment="Top">
                     <TextBlock Text="{loc:Translate Upsell.Premium.Recommended}"
                                Foreground="{DynamicResource PlayerOverlayTextBrush}"

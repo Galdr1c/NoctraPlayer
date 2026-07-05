@@ -162,7 +162,7 @@
       <!-- Title Section -->
       <StackPanel Spacing="4" Margin="0,0,0,24">
         <TextBlock Text="{loc:Translate Downloads.Title}" FontSize="28" FontWeight="ExtraBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
-        <TextBlock Text="{Binding TotalDownloadsInfoText}" FontSize="13" Foreground="{DynamicResource TextMutedBrush}"/>
+        <TextBlock Text="{Binding TotalDownloadsInfoText}" FontSize="13" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding HasDownloadedItems}"/>
       </StackPanel>
 
       <!-- Tabs & Content -->

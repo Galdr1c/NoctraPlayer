@@ -11,9 +11,7 @@
              x:Class="Noctra.Mobile.Views.MobileLiveView"
              x:DataType="vm:MainViewModel"
              x:CompileBindings="True"
-             mc:Ignorable="d"
-             d:DesignWidth="390"
-             d:DesignHeight="720">
+             mc:Ignorable="d">
   <UserControl.Resources>
     <converters:StringNotEmptyToVisibilityConverter x:Key="StringNotEmptyToVisibilityConverter" />
   </UserControl.Resources>

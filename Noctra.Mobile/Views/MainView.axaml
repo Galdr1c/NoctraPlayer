@@ -49,7 +49,7 @@
       <Setter Property="Background" Value="Transparent" />
       <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
       <Setter Property="BorderThickness" Value="0" />
-      <Setter Property="CornerRadius" Value="12" />
+      <Setter Property="CornerRadius" Value="8" />
       <Setter Property="Padding" Value="8,8" />
       <Setter Property="MinHeight" Value="52" />
       <Setter Property="HorizontalContentAlignment" Value="Stretch" />
@@ -157,7 +157,7 @@
       <Setter Property="Background" Value="Transparent" />
       <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
       <Setter Property="BorderThickness" Value="0" />
-      <Setter Property="CornerRadius" Value="12" />
+      <Setter Property="CornerRadius" Value="8" />
       <Setter Property="Padding" Value="14,12" />
       <Setter Property="MinHeight" Value="54" />
       <Setter Property="HorizontalContentAlignment" Value="Stretch" />
@@ -180,7 +180,7 @@
 
     <Style Selector="Border.card">
       <Setter Property="Background" Value="{DynamicResource Surface0Brush}" />
-      <Setter Property="CornerRadius" Value="18" />
+      <Setter Property="CornerRadius" Value="8" />
       <Setter Property="Padding" Value="18" />
     </Style>
 
@@ -378,7 +378,7 @@
 
                 <!-- Gerçek profil avatarı -->
                 <Border Width="52" Height="52"
-                        CornerRadius="16"
+                        CornerRadius="8"
                         ClipToBounds="True"
                         Background="{DynamicResource AccentHoverBrush}"
                         VerticalAlignment="Center">
@@ -505,7 +505,7 @@
         <Border.Background>
           <SolidColorBrush Color="{DynamicResource Surface0Color}" Opacity="0.94" />
         </Border.Background>
-        <Border CornerRadius="16"
+        <Border CornerRadius="8"
                 Padding="14"
                 Margin="20"
                 VerticalAlignment="Bottom"
@@ -617,7 +617,7 @@
             VerticalAlignment="Bottom"
             Margin="20,0,20,96"
             Padding="18,12"
-            CornerRadius="18"
+            CornerRadius="8"
             Background="{DynamicResource PlayerOverlayStrongBrush}"
             IsHitTestVisible="False"
             IsVisible="False">

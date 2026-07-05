@@ -33,11 +33,12 @@
     <HotAvalonia>true</HotAvalonia>
     <HotAvaloniaAutoEnable>true</HotAvaloniaAutoEnable>
     <HotAvaloniaRemote>true</HotAvaloniaRemote>
-    <HotAvaloniaMode>Minimal</HotAvaloniaMode>
+    <HotAvaloniaMode>Balanced</HotAvaloniaMode>
     <HotAvaloniaTimeout>5000</HotAvaloniaTimeout>
     <HotAvaloniaInitialPatching>disable</HotAvaloniaInitialPatching>
     <HarfsAddress>127.0.0.1</HarfsAddress>
     <HarfsPort>20158</HarfsPort>
+    <HarfsSecret>NoctraSecret123!</HarfsSecret>
     <HarfsExitOnDisconnect>false</HarfsExitOnDisconnect>
   </PropertyGroup>
 

@@ -4,13 +4,26 @@
              xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="Noctra.Mobile.Views.MobileReviewPromptView"
              x:CompileBindings="False">
+
+  <UserControl.Styles>
+      <Style Selector="Button.ReviewSecondary">
+          <Setter Property="Background" Value="#FF0000}"/>
+          <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+          <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+          <Setter Property="BorderThickness" Value="1"/>
+          <Setter Property="CornerRadius" Value="6"/>
+          <Setter Property="Padding" Value="18,10"/>
+          <Setter Property="FontSize" Value="14"/>
+      </Style>
+  </UserControl.Styles>    
+
   <!-- Dimmed overlay backdrop — same as MobileUpsellView -->
   <Grid Background="{DynamicResource OverlayDimBrush}">
     <!-- Bottom sheet card -->
     <Border Background="{DynamicResource BackgroundGradientBrush}"
             BorderBrush="{DynamicResource BorderBrush}"
-            BorderThickness="1"
-            CornerRadius="26,26,0,0"
+            BorderThickness="0,1.5,0,0"
+            CornerRadius="0"
             Padding="22,20,22,24"
             VerticalAlignment="Bottom"
             BoxShadow="{DynamicResource OverlaySheetShadow}">
@@ -21,7 +34,7 @@
                     Spacing="12"
                     HorizontalAlignment="Center">
           <Border Background="{DynamicResource NavActiveBackgroundBrush}"
-                  CornerRadius="16"
+                  CornerRadius="6"
                   Padding="10">
             <icons:MaterialIcon Kind="StarOutline"
                                 Width="24"
@@ -36,7 +49,7 @@
         </StackPanel>
 
         <!-- Message body -->
-        <TextBlock Text="{loc:Translate ReviewPrompt.Message}"
+        <TextBlock Text="{loc:Translate ReviewPrompt.Message.Android}"
                    Foreground="{DynamicResource TextSecondaryBrush}"
                    FontSize="14"
                    LineHeight="21"
@@ -63,7 +76,7 @@
         </Button>
 
         <!-- Later button (secondary) -->
-        <Button Classes="Secondary"
+        <Button Classes="ReviewSecondary"
                 MinHeight="46"
                 Click="Later_Click"
                 Content="{loc:Translate ReviewPrompt.Action.Later}" />

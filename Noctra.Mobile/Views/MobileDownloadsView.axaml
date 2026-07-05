@@ -13,9 +13,7 @@
              x:Class="Noctra.Mobile.Views.MobileDownloadsView"
              x:DataType="vm:MainViewModel"
              x:CompileBindings="True"
-             mc:Ignorable="d"
-             d:DesignWidth="390"
-             d:DesignHeight="720">
+             mc:Ignorable="d">
   <UserControl.Resources>
     <converters:CountToVisibilityConverter x:Key="CountToVisibility" />
   </UserControl.Resources>
@@ -31,43 +29,48 @@
                    Foreground="{DynamicResource TextPrimaryBrush}" />
         <TextBlock Text="{Binding TotalDownloadsInfoText}"
                    Foreground="{DynamicResource TextMutedBrush}"
-                   FontSize="12"
+                   FontSize="13"
                    TextWrapping="Wrap"
                    IsVisible="{Binding HasDownloadedItems}" />
       </StackPanel>
 
       <!-- Storage Card (always visible, buttons hidden when empty) -->
       <Border Background="{DynamicResource Surface0Brush}"
-              CornerRadius="16"
-              Padding="16"
+              CornerRadius="8"
+              Padding="20"
+              Margin="0,0,0,24"
+              BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+              ClipToBounds="True"
               IsVisible="{Binding StorageUsageDetailText, Converter={x:Static avaloniaConverters:StringConverters.IsNotNullOrEmpty}}">
-        <Grid ColumnDefinitions="Auto,*,Auto">
-          <Border Width="36"
-                  Height="36"
-                  CornerRadius="18"
-                  Background="{DynamicResource Surface1Brush}">
+        <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="Auto,*,Auto">
+          <!-- Icon -->
+          <Border Width="44"
+                  Height="44"
+                  CornerRadius="8"
+                  Background="{DynamicResource SurfaceLightBrush}">
             <icons:MaterialIcon Kind="Harddisk"
                                 Foreground="{DynamicResource AccentBrush}"
-                                Width="20"
-                                Height="20" />
+                                Width="32"
+                                Height="32" />
           </Border>
           <StackPanel Grid.Column="1"
-                      Margin="12,0"
+                      Margin="16,0,0,0"
                       VerticalAlignment="Center"
-                      Spacing="10">
+                      Spacing="12">
             <Grid ColumnDefinitions="*,Auto">
               <TextBlock Text="{loc:Translate Downloads.Storage.Title}"
                          Foreground="{DynamicResource TextPrimaryBrush}"
                          FontWeight="SemiBold"
-                         FontSize="13" />
+                         FontSize="14" />
               <TextBlock Grid.Column="1"
                          Text="{Binding StorageUsageDetailText}"
                          Foreground="{DynamicResource TextMutedBrush}"
-                         FontSize="11" />
+                         FontSize="12" />
             </Grid>
+            <!-- Progress Bar -->
             <Border Height="8"
                     Background="{DynamicResource Bg1Brush}"
-                    CornerRadius="4"
+                    CornerRadius="2"
                     ClipToBounds="True">
               <Grid>
                 <Grid.ColumnDefinitions>
@@ -116,7 +119,7 @@
                     CornerRadius="8"
                     FontSize="12"
                     IsVisible="{Binding HasDownloadedItems}">
-              <StackPanel Orientation="Horizontal" Spacing="6">
+              <StackPanel Orientation="Horizontal" Spacing="8">
                 <icons:MaterialIcon Kind="TrashCanOutline" Width="16" Height="16" />
                 <TextBlock Text="{loc:Translate Downloads.Action.DeleteAll}" />
               </StackPanel>
@@ -141,13 +144,13 @@
 
       <!-- Storage Warning -->
       <Border Background="#33FF4444"
-              CornerRadius="10"
-              Padding="10,7"
+              CornerRadius="6"
+              Padding="10,6"
               IsVisible="{Binding ShowStorageWarning}">
         <StackPanel Orientation="Horizontal" Spacing="8">
           <icons:MaterialIcon Kind="AlertCircleOutline"
-                              Width="16"
-                              Height="16"
+                              Width="14"
+                              Height="14"
                               Foreground="{DynamicResource ErrorBrush}" />
           <TextBlock Text="{loc:Translate Downloads.Storage.Warning}"
                      Foreground="{DynamicResource ErrorBrush}"
@@ -195,7 +198,7 @@
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="models:Series">
                     <Border Background="{DynamicResource Surface0Brush}"
-                            CornerRadius="16"
+                            CornerRadius="8"
                             Padding="14"
                       Margin="0,0,0,16">
                       <Grid ColumnDefinitions="Auto,*,Auto,Auto"
@@ -351,14 +354,14 @@
 
           </StackPanel>
         </TabItem>
-
+        <!-- TABS CONTENT: DOWNLOAD CENTER -->
         <TabItem Classes="downloadTab">
           <TabItem.Header>
             <StackPanel Orientation="Horizontal"
-                        Spacing="6">
+                        Spacing="8">
               <TextBlock Text="{loc:Translate Downloads.Tabs.Center}" />
               <Border Background="{DynamicResource AccentHoverBrush}"
-                      CornerRadius="10"
+                      CornerRadius="8"
                       Padding="6,1"
                       IsVisible="{Binding ActiveDownloadCount, Converter={StaticResource CountToVisibility}}">
                 <TextBlock Text="{Binding ActiveDownloadCount}"
@@ -372,8 +375,8 @@
           <StackPanel Spacing="14"
                       Margin="0,14,0,0">
             <Border Background="{DynamicResource Surface0Brush}"
-                    CornerRadius="16"
-                    Padding="14">
+                    CornerRadius="8"
+                    Padding="16">
               <Grid ColumnDefinitions="Auto,*,Auto"
                     RowDefinitions="Auto,Auto"
                     ColumnSpacing="10"
@@ -404,10 +407,10 @@
             <!-- Ongoing Section -->
             <Grid ColumnDefinitions="*,Auto"
                   ColumnSpacing="10">
-              <StackPanel Orientation="Horizontal" Spacing="10">
+              <StackPanel Orientation="Horizontal" Spacing="12">
                 <TextBlock Text="{loc:Translate Downloads.Ongoing.Title}"
                            Foreground="{DynamicResource TextPrimaryBrush}"
-                           FontSize="18"
+                           FontSize="20"
                            FontWeight="Bold" />
                 <Border Classes="Badge"
                         VerticalAlignment="Center"
@@ -420,11 +423,11 @@
               <Button Grid.Column="1"
                       Command="{Binding StopAllDownloadsCommand}"
                       MinHeight="44"
-                      Padding="12,0"
+                      Padding="12,6"
                       Background="{DynamicResource Surface1Brush}"
                       Foreground="{DynamicResource TextPrimaryBrush}"
                       BorderThickness="0"
-                      CornerRadius="8"
+                      CornerRadius="6"
                       FontSize="12">
                 <StackPanel Orientation="Horizontal" Spacing="6">
                   <icons:MaterialIcon Kind="Close" Width="16" Height="16" />
@@ -437,9 +440,9 @@
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="models:DownloadItem">
                   <Border Background="{DynamicResource Surface0Brush}"
-                          CornerRadius="16"
-                          Padding="14"
-                          Margin="0,0,0,16">
+                          CornerRadius="8"
+                          Padding="16"
+                          Margin="0,0,0,12">
                     <StackPanel Spacing="8">
                       <Grid ColumnDefinitions="Auto,*,Auto"
                             ColumnSpacing="10">
@@ -539,7 +542,7 @@
                   IsVisible="{Binding QueuedDownloadItems.Count, Converter={StaticResource CountToVisibility}}">
               <TextBlock Text="{loc:Translate Downloads.Queue.Title}"
                          Foreground="{DynamicResource TextPrimaryBrush}"
-                         FontSize="18"
+                         FontSize="20"
                          FontWeight="SemiBold" />
               <Button Grid.Column="1"
                       Command="{Binding ClearQueueCommand}"
@@ -548,7 +551,7 @@
                       Background="{DynamicResource Surface1Brush}"
                       Foreground="{DynamicResource TextPrimaryBrush}"
                       BorderThickness="0"
-                      CornerRadius="8"
+                      CornerRadius="6"
                       FontSize="12">
                 <StackPanel Orientation="Horizontal" Spacing="6">
                   <icons:MaterialIcon Kind="Close" Width="16" Height="16" />
@@ -561,7 +564,7 @@
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="models:DownloadItem">
                   <Border Background="{DynamicResource Surface0Brush}"
-                          CornerRadius="14"
+                          CornerRadius="8"
                           Padding="12"
                           Margin="0,0,0,8"
                           Opacity="0.8">

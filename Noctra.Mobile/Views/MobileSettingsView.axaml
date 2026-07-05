@@ -9,9 +9,7 @@
              x:Class="Noctra.Mobile.Views.MobileSettingsView"
              x:DataType="vm:SettingsViewModel"
              x:CompileBindings="True"
-             mc:Ignorable="d"
-             d:DesignWidth="390"
-             d:DesignHeight="720">
+             mc:Ignorable="d">
   <Grid Background="{DynamicResource Bg0Brush}">
     <ScrollViewer>
       <StackPanel Margin="24,18,24,28" Spacing="20">
@@ -27,13 +25,13 @@
       </StackPanel>
 
       <Border Classes="NoctraCard" Background="{DynamicResource Surface0Brush}"
-              CornerRadius="20"
+              CornerRadius="8"
               Padding="16">
         <Grid ColumnDefinitions="Auto,*"
               ColumnSpacing="16">
           <Border Width="64"
                   Height="64"
-                  CornerRadius="18"
+                  CornerRadius="8"
                   ClipToBounds="True"
                   Background="{DynamicResource AccentHoverBrush}">
             <Image Source="{Binding CurrentProfileAvatar, Converter={StaticResource AvatarPathConverter}}"
@@ -59,7 +57,7 @@
       </Border>
 
       <Border Classes="SettingsSectionCard" Background="{DynamicResource Surface0Brush}"
-              CornerRadius="18"
+              CornerRadius="8"
               Padding="16">
         <StackPanel Spacing="12">
           <StackPanel Orientation="Horizontal" Spacing="8">
@@ -78,7 +76,7 @@
                   MinHeight="46"
                   Background="{DynamicResource Surface1Brush}"
                   BorderThickness="0"
-                  CornerRadius="14"
+                  CornerRadius="8"
                   Padding="14,0"
                   HorizontalContentAlignment="Stretch">
             <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
@@ -104,7 +102,7 @@
       </Border>
 
       <Border Classes="SettingsSectionCard" Background="{DynamicResource Surface0Brush}"
-              CornerRadius="16"
+              CornerRadius="8"
               Padding="14">
         <StackPanel Spacing="10">
           <StackPanel Orientation="Horizontal" Spacing="8">
@@ -161,7 +159,7 @@
       </Border>
 
       <Border Classes="SettingsSectionCard" Background="{DynamicResource Surface0Brush}"
-              CornerRadius="16"
+              CornerRadius="8"
               Padding="14">
         <StackPanel Spacing="12">
           <StackPanel Orientation="Horizontal" Spacing="8">
@@ -187,17 +185,17 @@
                   ColumnSpacing="12">
               <Border x:Name="DarkThemeButton"
                       Height="92"
-                      CornerRadius="12"
+                      CornerRadius="8"
                       BorderThickness="3"
                       BorderBrush="Transparent"
                       PointerPressed="DarkTheme_PointerPressed">
                 <Grid>
                   <Border Background="{DynamicResource ThemePreviewDarkBg}"
-                          CornerRadius="9">
+                          CornerRadius="6">
                     <Grid>
                       <Border Background="{DynamicResource ThemePreviewDarkInnerBg}"
                               Height="54"
-                              CornerRadius="7"
+                              CornerRadius="6"
                               Margin="12"
                               VerticalAlignment="Top">
                         <StackPanel Margin="10,8">
@@ -221,7 +219,7 @@
                               Width="22"
                               Height="22"
                               Background="{DynamicResource AccentBrush}"
-                              CornerRadius="11"
+                              CornerRadius="8"
                               HorizontalAlignment="Right"
                               VerticalAlignment="Top"
                               Margin="6">
@@ -246,7 +244,7 @@
               <Border x:Name="LightThemeButton"
                       Grid.Column="1"
                       Height="92"
-                      CornerRadius="12"
+                      CornerRadius="8"
                       BorderThickness="3"
                       BorderBrush="Transparent"
                       PointerPressed="LightTheme_PointerPressed">
@@ -280,7 +278,7 @@
                               Width="22"
                               Height="22"
                               Background="{DynamicResource AccentBrush}"
-                              CornerRadius="11"
+                              CornerRadius="8"
                               HorizontalAlignment="Right"
                               VerticalAlignment="Top"
                               Margin="6"
@@ -322,7 +320,7 @@
       </Border>
 
       <Border Classes="SettingsSectionCard" Background="{DynamicResource Surface0Brush}"
-              CornerRadius="16"
+              CornerRadius="8"
               Padding="14">
         <StackPanel Spacing="12">
           <StackPanel Orientation="Horizontal" Spacing="8">
@@ -392,7 +390,7 @@
       </Border>
 
       <Border Classes="SettingsSectionCard" Background="{DynamicResource Surface0Brush}"
-              CornerRadius="16"
+              CornerRadius="8"
               Padding="14">
         <StackPanel Spacing="12">
           <StackPanel Orientation="Horizontal" Spacing="8">
@@ -449,7 +447,7 @@
       </Border>
 
       <Border Classes="SettingsSectionCard" Background="{DynamicResource Surface0Brush}"
-              CornerRadius="16"
+              CornerRadius="8"
               Padding="14">
         <StackPanel Spacing="12">
           <StackPanel Orientation="Horizontal" Spacing="8">
@@ -498,7 +496,7 @@
       </Border>
 
       <Border Classes="SettingsSectionCard" Background="{DynamicResource Surface0Brush}"
-              CornerRadius="16"
+              CornerRadius="8"
               Padding="14">
         <StackPanel Spacing="12">
           <StackPanel Orientation="Horizontal" Spacing="8">
@@ -572,7 +570,7 @@
             <ItemsControl.ItemTemplate>
               <DataTemplate>
                 <Border Background="{DynamicResource Surface1Brush}"
-                        CornerRadius="10"
+                        CornerRadius="8"
                         Padding="10"
                         Margin="0,0,0,6">
                   <Grid ColumnDefinitions="*,Auto"
@@ -614,7 +612,7 @@
             <ItemsControl.ItemTemplate>
               <DataTemplate>
                 <Border Background="{DynamicResource Surface1Brush}"
-                        CornerRadius="10"
+                        CornerRadius="8"
                         Padding="10"
                         Margin="0,0,0,6">
                   <Grid ColumnDefinitions="*,Auto"
@@ -656,7 +654,7 @@
             <ItemsControl.ItemTemplate>
               <DataTemplate>
                 <Border Background="{DynamicResource Surface1Brush}"
-                        CornerRadius="10"
+                        CornerRadius="8"
                         Padding="10"
                         Margin="0,0,0,6">
                   <Grid ColumnDefinitions="*,Auto"
@@ -687,7 +685,7 @@
       </Border>
 
       <Border Classes="SettingsSectionCard" Background="{DynamicResource Surface0Brush}"
-              CornerRadius="16"
+              CornerRadius="8"
               Padding="14">
         <StackPanel Spacing="12">
           <StackPanel Orientation="Horizontal" Spacing="8">
@@ -803,7 +801,7 @@
           </ComboBox>
 
           <Border Background="{DynamicResource Surface1Brush}"
-                  CornerRadius="12"
+                  CornerRadius="8"
                   Padding="12">
             <StackPanel Spacing="10">
               <Grid ColumnDefinitions="*,Auto"
@@ -868,7 +866,7 @@
       </Border>
 
       <Border Classes="SettingsSectionCard" Background="{DynamicResource Surface0Brush}"
-              CornerRadius="16"
+              CornerRadius="8"
               Padding="14">
         <StackPanel Spacing="10">
           <StackPanel Orientation="Horizontal" Spacing="8">
@@ -901,7 +899,7 @@
                     Background="{DynamicResource Surface1Brush}"
                     BorderThickness="1"
                     BorderBrush="{DynamicResource BorderBrush}"
-                    CornerRadius="10">
+                    CornerRadius="8">
               <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="6">
                 <icons:MaterialIcon Kind="ShieldCheckOutline" Width="16" Height="16"
                                     Foreground="{DynamicResource AccentBrush}" />
@@ -915,7 +913,7 @@
                     Background="{DynamicResource Surface1Brush}"
                     BorderThickness="1"
                     BorderBrush="{DynamicResource BorderBrush}"
-                    CornerRadius="10">
+                    CornerRadius="8">
               <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="6">
                 <icons:MaterialIcon Kind="FileDocumentOutline" Width="16" Height="16"
                                     Foreground="{DynamicResource AccentBrush}" />
@@ -928,7 +926,7 @@
 
       <!-- Upgrade to Premium Banner (shown when not premium, placed after Account card) -->
       <Border Background="{DynamicResource Surface0Brush}"
-              CornerRadius="16"
+              CornerRadius="8"
               Padding="14"
               IsVisible="{Binding !IsPremium}">
         <Grid ColumnDefinitions="Auto,*,Auto"
@@ -964,7 +962,7 @@
 
       <!-- About Card (clean, no nested Update section) -->
       <Border Classes="SettingsSectionCard" Background="{DynamicResource Surface0Brush}"
-              CornerRadius="16"
+              CornerRadius="8"
               Padding="14">
         <StackPanel Spacing="12">
           <StackPanel Orientation="Horizontal" Spacing="8">
@@ -1020,7 +1018,7 @@
 
       <!-- App Update Card -->
       <Border Classes="SettingsSectionCard" Background="{DynamicResource Surface0Brush}"
-              CornerRadius="16"
+              CornerRadius="8"
               Padding="14">
         <StackPanel Spacing="10">
           <StackPanel Orientation="Horizontal" Spacing="8">
@@ -1060,7 +1058,7 @@
 
       <!-- Promo Code Section -->
       <Border Classes="SettingsSectionCard" Background="{DynamicResource Surface0Brush}"
-              CornerRadius="16"
+              CornerRadius="8"
               Padding="14">
         <StackPanel Spacing="12">
           <StackPanel Orientation="Horizontal" Spacing="8">
@@ -1082,7 +1080,7 @@
                     MinHeight="44"
                     Background="{DynamicResource AccentBrush}"
                     Foreground="{DynamicResource PlayerOverlayTextBrush}"
-                    CornerRadius="10"
+                    CornerRadius="8"
                     HorizontalAlignment="Stretch">
               <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="6">
                 <icons:MaterialIcon Kind="AutoAwesome" Width="18" Height="18" Foreground="{DynamicResource PlayerOverlayTextBrush}"
@@ -1112,7 +1110,7 @@
 
       <!-- Cache Section -->
       <Border Classes="SettingsSectionCard" Background="{DynamicResource Surface0Brush}"
-              CornerRadius="16"
+              CornerRadius="8"
               Padding="14">
         <StackPanel Spacing="10">
           <StackPanel Orientation="Horizontal" Spacing="8">
@@ -1149,7 +1147,7 @@
       <Border Background="{DynamicResource DangerSubtleBrush}"
               BorderBrush="{DynamicResource ErrorBrush}"
               BorderThickness="1"
-              CornerRadius="16"
+              CornerRadius="8"
               Padding="14">
         <Grid ColumnDefinitions="*,Auto"
               ColumnSpacing="12">
@@ -1167,7 +1165,7 @@
                   Command="{Binding ReportBugCommand}"
                   Background="{DynamicResource ErrorBrush}"
                   Foreground="{DynamicResource PlayerOverlayTextBrush}"
-                  CornerRadius="10"
+                  CornerRadius="8"
                   Padding="16,10"
                   MinHeight="44"
                   VerticalAlignment="Center">
@@ -1198,7 +1196,7 @@
     <Grid Background="{DynamicResource OverlayDimBrush}"
           IsVisible="{Binding IsGlobalLoading}">
       <Border Classes="SettingsSectionCard" Background="{DynamicResource Surface0Brush}"
-              CornerRadius="18"
+              CornerRadius="8"
               Padding="24"
               Width="300"
               HorizontalAlignment="Center"
