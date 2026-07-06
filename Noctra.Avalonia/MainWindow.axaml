@@ -26,6 +26,30 @@
         <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
         <Setter Property="RenderTransform" Value="rotate(120deg)"/>
       </Style>
+
+      <Style Selector="Button.iconBtn">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="8"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Opacity" Value="0.85"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.2"/>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.1"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Button.iconBtn:pointerover">
+            <Setter Property="Background" Value="#26FFFFFF"/>
+            <Setter Property="Opacity" Value="1"/>
+        </Style>
+        <Style Selector="Button.iconBtn:pressed">
+            <Setter Property="Opacity" Value="0.6"/>
+            <Setter Property="RenderTransform" Value="scale(0.95)"/>
+        </Style>
+
       <Style Selector="Button.pipButton">
         <Setter Property="CornerRadius" Value="10"/>
         <Setter Property="BorderThickness" Value="0"/>
@@ -510,7 +534,7 @@
                     <StackPanel Grid.Row="0" VerticalAlignment="Top">
                       <!-- Back button -->
                       <Button Command="{Binding CloseSeriesDetailCommand}" HorizontalAlignment="Left" Margin="0,0,0,16" 
-                              Theme="{StaticResource ActionCircleButtonStyle}" Width="48" Height="48" Padding="0">
+                              Classes="iconBtn" Width="48" Height="48" Padding="0">
                         <materialIcons:MaterialIcon Kind="ArrowLeft" Width="24" Height="24" Foreground="{DynamicResource TextPrimaryBrush}"/>
                       </Button>
 
@@ -627,7 +651,7 @@
                         </Button>
 
                         <Button Command="{Binding AddToMyListCommand}" CommandParameter="{Binding SelectedSeries}"
-                                Theme="{StaticResource ActionCircleButtonStyle}" Width="40" Height="40" Padding="0">
+                                Classes="iconBtn" Width="40" Height="40" Padding="0">
                             <Panel>
                                 <materialIcons:MaterialIcon Kind="Bookmark" Width="24" Height="24" Foreground="{DynamicResource AccentBrush}"
                                                             IsVisible="{Binding SelectedSeries.IsInMyList}"/>
@@ -637,7 +661,7 @@
                         </Button>
 
                         <Button Command="{Binding ToggleFavoriteCommand}" CommandParameter="{Binding SelectedSeries}"
-                                Theme="{StaticResource ActionCircleButtonStyle}" Width="40" Height="40" Padding="0">
+                                Classes="iconBtn" Width="40" Height="40" Padding="0">
                             <Panel>
                                 <materialIcons:MaterialIcon Kind="Heart" Width="22" Height="22" Foreground="#E50914"
                                                             IsVisible="{Binding SelectedSeries.IsFavorite}"/>

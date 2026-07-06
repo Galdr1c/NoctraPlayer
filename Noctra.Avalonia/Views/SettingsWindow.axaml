@@ -1160,7 +1160,7 @@
                                                                     Opacity="0.05"
                                                                     HorizontalAlignment="Center" 
                                                                     VerticalAlignment="Top"
-                                                                    Margin="260,-10,0,0"/>
+                                                                    Margin="320,0,0,55"/>
 
                                             <Grid ColumnDefinitions="Auto,*">
                                                 <!-- App Icon -->
@@ -1193,6 +1193,17 @@
                                                     <TextBlock Text="{Binding CurrentVersion, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.About.PremiumVersionFormat'}" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0"/>
                                                 </StackPanel>
                                             </Grid>
+                                            <!-- PREM SEPARATOR -->
+                                        <Border Height="1.5" Margin="0,24,0,20">
+                                            <Border.Background>
+                                                <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,0%">
+                                                    <GradientStop Color="Transparent" Offset="0"/>
+                                                    <GradientStop Color="{DynamicResource AccentColor}" Offset="0.4"/>
+                                                    <GradientStop Color="#f5c842" Offset="0.7"/>
+                                                    <GradientStop Color="Transparent" Offset="1"/>
+                                                </LinearGradientBrush>
+                                            </Border.Background>
+                                        </Border>
                                         </Panel>
                                     </Border>
                                 </Border>

@@ -12,10 +12,26 @@
              x:DataType="vm:MainViewModel"
              x:CompileBindings="False"
              IsVisible="{Binding IsSeriesDetailVisible}"
-             mc:Ignorable="d"
-             d:DesignWidth="390"
-             d:DesignHeight="720">
+             mc:Ignorable="d">
   <UserControl.Styles>
+    <Style Selector="Button.iconBtn">
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="8"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="Opacity" Value="0.85"/>
+        <Setter Property="Transitions">
+            <Transitions>
+                <DoubleTransition Property="Opacity" Duration="0:0:0.2"/>
+                <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.1"/>
+            </Transitions>
+        </Setter>
+    </Style>
+    <Style Selector="Button.iconBtn:pressed">
+        <Setter Property="Opacity" Value="0.6"/>
+        <Setter Property="RenderTransform" Value="scale(0.95)"/>
+    </Style>
     <!-- Touch feedback for action buttons (Play, Continue, Trailer, MyList, Favorite, Download) -->
     <Style Selector="Button.detailAction">
       <Setter Property="Opacity" Value="1" />
@@ -33,7 +49,7 @@
   <Border Background="{DynamicResource BackgroundGradientBrush}">
     <Grid>
       <!-- Backdrop Blur (Netflix Style) -->
-      <Grid IsHitTestVisible="False" Opacity="0.25" IsVisible="{Binding !IsDownloadedSeriesDetailMode}">
+      <Grid IsHitTestVisible="False" Opacity="0.3" IsVisible="{Binding !IsDownloadedSeriesDetailMode}">
         <controls:RemoteImage Stretch="UniformToFill" Url="{Binding SelectedSeriesPosterUrl}">
           <controls:RemoteImage.Effect>
             <BlurEffect Radius="60"/>
@@ -58,10 +74,7 @@
                   Width="48"
                   Height="48"
                   Padding="0"
-                  Background="{DynamicResource Surface0Brush}"
-                  Foreground="{DynamicResource TextPrimaryBrush}"
-                  BorderThickness="0"
-                  CornerRadius="24">
+                  Classes="iconBtn">
             <icons:MaterialIcon Kind="ArrowLeft" Width="24" Height="24" />
           </Button>
           <StackPanel Grid.Column="1"

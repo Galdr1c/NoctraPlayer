@@ -329,64 +329,6 @@
         </Style>
     </ControlTheme>
 
-    <!-- Overlay Circle Button (Ellipse with fill hover) -->
-    <ControlTheme x:Key="CircleButtonStyle" TargetType="Button">
-        <Setter Property="Background" Value="#33FFFFFF"/>
-        <Setter Property="Foreground" Value="White"/>
-        <Setter Property="BorderThickness" Value="0"/>
-        <Setter Property="Width" Value="40"/>
-        <Setter Property="Height" Value="40"/>
-        <Setter Property="Cursor" Value="Hand"/>
-        <Setter Property="Template">
-            <ControlTemplate TargetType="Button">
-                <Grid>
-                    <Ellipse x:Name="bg" Fill="{TemplateBinding Background}"/>
-                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
-                                      Content="{TemplateBinding Content}"
-                                      ContentTemplate="{TemplateBinding ContentTemplate}"/>
-                </Grid>
-            </ControlTemplate>
-        </Setter>
-
-        <Style Selector="^:pointerover /template/ Ellipse#bg">
-            <Setter Property="Fill" Value="#55FFFFFF"/>
-        </Style>
-        <Style Selector="^:pressed /template/ Ellipse#bg">
-            <Setter Property="Fill" Value="#22FFFFFF"/>
-        </Style>
-    </ControlTheme>
-
-    <!-- Detail Action Circle Button (Better for dark/light) -->
-    <ControlTheme x:Key="ActionCircleButtonStyle" TargetType="Button">
-        <Setter Property="Background" Value="{DynamicResource Surface1Brush}"/>
-        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
-        <Setter Property="BorderThickness" Value="0"/>
-        <Setter Property="Width" Value="52"/>
-        <Setter Property="Height" Value="52"/>
-        <Setter Property="Cursor" Value="Hand"/>
-        <Setter Property="CornerRadius" Value="10"/>
-        <Setter Property="Template">
-            <ControlTemplate TargetType="Button">
-                <Border x:Name="PART_Border"
-                        Background="{TemplateBinding Background}"
-                        CornerRadius="{TemplateBinding CornerRadius}"
-                        BorderBrush="{TemplateBinding BorderBrush}"
-                        BorderThickness="{TemplateBinding BorderThickness}">
-                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
-                                      Content="{TemplateBinding Content}"
-                                      ContentTemplate="{TemplateBinding ContentTemplate}"/>
-                </Border>
-            </ControlTemplate>
-        </Setter>
-
-        <Style Selector="^:pointerover /template/ Border#PART_Border">
-            <Setter Property="Background" Value="{DynamicResource InteractiveHoverBrush}"/>
-        </Style>
-        <Style Selector="^:pressed /template/ Border#PART_Border">
-            <Setter Property="Background" Value="{DynamicResource InteractivePressedBrush}"/>
-        </Style>
-    </ControlTheme>
-
     <!-- Overlay Text Button (Premium Look) -->
     <ControlTheme x:Key="PremiumTextButtonStyle" TargetType="Button">
         <Setter Property="Background" Value="Transparent"/>
