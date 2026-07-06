@@ -36,14 +36,40 @@ public partial class AddProfileViewModel : ObservableObject
     private bool _isLocalM3uFileSource;
 
     public bool IsLocalM3uFileSource => _isLocalM3uFileSource;
+    public bool IsRemoteProviderSource => !IsLocalM3uFileSource;
+    public bool CanSwitchProviderType => IsRemoteProviderSource && !IsSaving && !IsAnalyzingConnection;
+    public bool CanEditProviderUrl => IsRemoteProviderSource && !IsSaving && !IsAnalyzingConnection;
+    public bool ShowConnectionAnalysis => IsRemoteProviderSource;
+    public bool ShowLocalM3uFileActions => IsLocalM3uFileSource;
+
+    private void SetLocalM3uFileSourceState(bool value)
+    {
+        if (_isLocalM3uFileSource == value)
+        {
+            NotifySourceModePropertiesChanged();
+            return;
+        }
+
+        _isLocalM3uFileSource = value;
+        OnPropertyChanged(nameof(IsLocalM3uFileSource));
+        NotifySourceModePropertiesChanged();
+    }
+
+    private void NotifySourceModePropertiesChanged()
+    {
+        OnPropertyChanged(nameof(IsRemoteProviderSource));
+        OnPropertyChanged(nameof(CanSwitchProviderType));
+        OnPropertyChanged(nameof(CanEditProviderUrl));
+        OnPropertyChanged(nameof(ShowConnectionAnalysis));
+        OnPropertyChanged(nameof(ShowLocalM3uFileActions));
+    }
 
     partial void OnUrlChanged(string value)
     {
         PlaylistPreviewSummary = string.Empty;
 
         if (_isUpdatingUrl || string.IsNullOrEmpty(value)) return;
-        _isLocalM3uFileSource = false;
-        OnPropertyChanged(nameof(IsLocalM3uFileSource));
+        SetLocalM3uFileSourceState(false);
         
         try
         {
@@ -103,12 +129,11 @@ public partial class AddProfileViewModel : ObservableObject
         Url = filePath;
         Username = string.Empty;
         Password = string.Empty;
-        _isLocalM3uFileSource = true;
         _isUpdatingUrl = false;
 
         PlaylistPreviewSummary = string.Empty;
         ClearAnalysisResults();
-        OnPropertyChanged(nameof(IsLocalM3uFileSource));
+        SetLocalM3uFileSourceState(true);
         ValidateRealtimeInputs();
     }
 
@@ -125,6 +150,51 @@ public partial class AddProfileViewModel : ObservableObject
         {
             SetM3uFileSource(filePath);
         }
+    }
+
+    [RelayCommand]
+    private async Task ValidateLocalM3uFileAsync()
+    {
+        if (!IsLocalM3uFileSource || string.IsNullOrWhiteSpace(Url))
+        {
+            StatusMessage = _localizationService.GetString("Profiles.Account.FileNotSelected");
+            HasError = true;
+            return;
+        }
+
+        await AnalyzeLocalM3uFileAsync(Url.Trim());
+    }
+
+    [RelayCommand]
+    private async Task ChangeLocalM3uSourceTypeAsync()
+    {
+        if (!IsLocalM3uFileSource)
+        {
+            return;
+        }
+
+        var confirmed = await _dialogService.ShowConfirmationAsync(
+            _localizationService.GetString("Profiles.Account.ChangeSourceType.Title"),
+            _localizationService.GetString("Profiles.Account.ChangeSourceType.Message"));
+
+        if (!confirmed)
+        {
+            return;
+        }
+
+        _isUpdatingUrl = true;
+        Url = string.Empty;
+        Username = string.Empty;
+        Password = string.Empty;
+        IsM3U = true;
+        IsXtream = false;
+        IsStalker = false;
+        _isUpdatingUrl = false;
+
+        PlaylistPreviewSummary = string.Empty;
+        ClearAnalysisResults();
+        SetLocalM3uFileSourceState(false);
+        ValidateRealtimeInputs();
     }
 
     private void ParseCredentialsFromUrl(string url)
@@ -265,7 +335,7 @@ public partial class AddProfileViewModel : ObservableObject
         ValidateRealtimeInputs();
     }
     
-        [ObservableProperty]
+    [ObservableProperty]
     private bool _isXtream = true;
 
     partial void OnIsXtreamChanged(bool value)
@@ -274,6 +344,16 @@ public partial class AddProfileViewModel : ObservableObject
         ClearAnalysisResults();
 
         if (_isUpdatingUrl) return;
+        if (value && IsLocalM3uFileSource)
+        {
+            _isUpdatingUrl = true;
+            IsXtream = false;
+            IsM3U = true;
+            IsStalker = false;
+            _isUpdatingUrl = false;
+            NotifySourceModePropertiesChanged();
+            return;
+        }
 
         if (value)
         {
@@ -316,6 +396,16 @@ public partial class AddProfileViewModel : ObservableObject
         ClearAnalysisResults();
 
         if (_isUpdatingUrl) return;
+        if (!value && IsLocalM3uFileSource)
+        {
+            _isUpdatingUrl = true;
+            IsM3U = true;
+            IsXtream = false;
+            IsStalker = false;
+            _isUpdatingUrl = false;
+            NotifySourceModePropertiesChanged();
+            return;
+        }
 
         if (value)
         {
@@ -373,6 +463,16 @@ public partial class AddProfileViewModel : ObservableObject
         ClearAnalysisResults();
 
         if (_isUpdatingUrl) return;
+        if (value && IsLocalM3uFileSource)
+        {
+            _isUpdatingUrl = true;
+            IsStalker = false;
+            IsM3U = true;
+            IsXtream = false;
+            _isUpdatingUrl = false;
+            NotifySourceModePropertiesChanged();
+            return;
+        }
 
         if (value)
         {
@@ -590,6 +690,10 @@ public partial class AddProfileViewModel : ObservableObject
     [ObservableProperty]
     private bool _isAnalyzingConnection;
 
+    partial void OnIsSavingChanged(bool value) => NotifySourceModePropertiesChanged();
+
+    partial void OnIsAnalyzingConnectionChanged(bool value) => NotifySourceModePropertiesChanged();
+
     [ObservableProperty]
     private string _playlistPreviewSummary = string.Empty;
 
@@ -665,10 +769,8 @@ public partial class AddProfileViewModel : ObservableObject
             IsXtream = profile.ProviderAccount.Type == ProfileType.XtreamCodes;
             IsM3U = profile.ProviderAccount.Type == ProfileType.M3U;
             IsStalker = profile.ProviderAccount.Type == ProfileType.StalkerPortal;
-            _isLocalM3uFileSource = IsM3U && !IsHttpSource(Url);
-
             _isUpdatingUrl = false;
-            OnPropertyChanged(nameof(IsLocalM3uFileSource));
+            SetLocalM3uFileSourceState(IsM3U && !IsHttpSource(Url));
 
             // Eğer M3U linkiyse ve credentials varsa, parse et
             if (IsM3U && Url.Contains("get.php"))
@@ -937,7 +1039,7 @@ public partial class AddProfileViewModel : ObservableObject
     {
         IsAnalyzingConnection = true;
         HasError = false;
-        StatusMessage = _localizationService.GetString("AddProfile.Status.Analyzing");
+        StatusMessage = _localizationService.GetString("Profiles.Account.FileValidation");
         PlaylistPreviewSummary = string.Empty;
         ConnectionHealth = ConnectionHealth.Unknown;
         DetailedStatus = string.Empty;

@@ -279,9 +279,12 @@
           <Border Classes="Section">
             <StackPanel>
 
-              <!-- Sağlayıcı tipi seçici -->
+              <!-- Sağlayıcı tipi seçici: local M3U dosya modunda gizlenir;
+                   kaynak tipi değiştirmek ayrı, onaylı bir aksiyondur. -->
               <Grid ColumnDefinitions="*,*,*"
-                    Margin="28,14,28,14">
+                    Margin="28,14,28,14"
+                    IsVisible="{Binding IsRemoteProviderSource}"
+                    IsEnabled="{Binding CanSwitchProviderType}">
                 <RadioButton Grid.Column="0"
                              Content="Xtream"
                              GroupName="ProviderType"
@@ -298,8 +301,89 @@
 
               <Border Classes="Divider" />
 
+              <!-- Local M3U dosya kartı: URL textbox yerine read-only dosya durumu. -->
+              <Border Margin="16,14"
+                      Padding="14"
+                      CornerRadius="14"
+                      Background="{DynamicResource Surface1Brush}"
+                      BorderBrush="{DynamicResource BorderBrush}"
+                      BorderThickness="1"
+                      IsVisible="{Binding ShowLocalM3uFileActions}">
+                <StackPanel Spacing="12">
+                  <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                    <Border Width="42"
+                            Height="42"
+                            CornerRadius="21"
+                            Background="{DynamicResource AccentLightBrush}">
+                      <icons:MaterialIcon Kind="FileDocumentOutline"
+                                          Width="22"
+                                          Height="22"
+                                          Foreground="{DynamicResource AccentBrush}"
+                                          HorizontalAlignment="Center"
+                                          VerticalAlignment="Center" />
+                    </Border>
+                    <StackPanel Grid.Column="1" Spacing="3">
+                      <TextBlock Text="{loc:Translate Profiles.Account.LocalM3uFile}"
+                                 FontSize="14"
+                                 FontWeight="SemiBold"
+                                 Foreground="{DynamicResource TextPrimaryBrush}" />
+                      <TextBlock Text="{loc:Translate Profiles.Account.LocalM3uDescription}"
+                                 FontSize="12"
+                                 Foreground="{DynamicResource TextMutedBrush}"
+                                 TextWrapping="Wrap" />
+                    </StackPanel>
+                  </Grid>
+
+                  <Border Padding="12,10"
+                          CornerRadius="10"
+                          Background="{DynamicResource Surface0Brush}">
+                    <StackPanel Spacing="4">
+                      <TextBlock Text="{loc:Translate Profiles.Account.SelectedFile}"
+                                 FontSize="11"
+                                 Foreground="{DynamicResource TextMutedBrush}" />
+                      <TextBlock Text="{Binding Url}"
+                                 FontSize="13"
+                                 Foreground="{DynamicResource TextPrimaryBrush}"
+                                 TextWrapping="Wrap"
+                                 MaxLines="3" />
+                    </StackPanel>
+                  </Border>
+
+                  <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                    <Button Grid.Column="0"
+                            Command="{Binding PickM3uFileCommand}"
+                            Content="{loc:Translate Profiles.Account.ChangeM3uFile}"
+                            MinHeight="42"
+                            CornerRadius="8"
+                            Background="{DynamicResource AccentLightBrush}"
+                            Foreground="{DynamicResource TextPrimaryBrush}"
+                            HorizontalContentAlignment="Center" />
+                    <Button Grid.Column="1"
+                            Command="{Binding ValidateLocalM3uFileCommand}"
+                            Content="{loc:Translate Profiles.Account.ValidateM3uFile}"
+                            IsEnabled="{Binding !IsAnalyzingConnection}"
+                            MinHeight="42"
+                            CornerRadius="8"
+                            Background="Transparent"
+                            Foreground="{DynamicResource AccentBrush}"
+                            HorizontalContentAlignment="Center" />
+                  </Grid>
+
+                  <Button Command="{Binding ChangeLocalM3uSourceTypeCommand}"
+                          Content="{loc:Translate Profiles.Account.ChangeSourceType}"
+                          IsEnabled="{Binding !IsAnalyzingConnection}"
+                          MinHeight="42"
+                          CornerRadius="8"
+                          Background="Transparent"
+                          Foreground="{DynamicResource TextMutedBrush}"
+                          HorizontalContentAlignment="Center" />
+                </StackPanel>
+              </Border>
+
               <!-- URL / M3U link alanı -->
-              <StackPanel Margin="16,14" Spacing="8">
+              <StackPanel Margin="16,14"
+                          Spacing="8"
+                          IsVisible="{Binding IsRemoteProviderSource}">
                 <Panel>
                   <TextBlock Classes="FieldLabel"
                              Text="{loc:Translate Profiles.Account.M3uLink}"
@@ -309,6 +393,7 @@
                              IsVisible="{Binding !IsM3U}" />
                 </Panel>
                 <TextBox Text="{Binding Url}"
+                         IsEnabled="{Binding CanEditProviderUrl}"
                          PlaceholderText="{loc:Translate Profiles.Account.ServerUrlPlaceholder}" />
 
                 <!-- M3U dosya seçici butonu -->
@@ -361,10 +446,11 @@
                          Margin="16,0,16,12"
                          IsVisible="{Binding UrlError, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
 
-              <!-- Bağlantı test butonu -->
-              <Border Classes="Divider" />
+              <!-- Bağlantı test butonu: sadece uzak sağlayıcılar için. Local M3U dosyada dosya doğrulama kart içinde yapılır. -->
+              <Border Classes="Divider" IsVisible="{Binding ShowConnectionAnalysis}" />
               <Button Command="{Binding AnalyzeConnectionCommand}"
                       Content="{loc:Translate Profiles.Account.Analyze}"
+                      IsVisible="{Binding ShowConnectionAnalysis}"
                       IsEnabled="{Binding !IsAnalyzingConnection}"
                       MinHeight="44"
                       MaxWidth="200"
