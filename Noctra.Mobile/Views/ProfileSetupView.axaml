@@ -306,8 +306,6 @@
                       Padding="14"
                       CornerRadius="14"
                       Background="{DynamicResource Surface1Brush}"
-                      BorderBrush="{DynamicResource BorderBrush}"
-                      BorderThickness="1"
                       IsVisible="{Binding ShowLocalM3uFileActions}">
                 <StackPanel Spacing="12">
                   <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
@@ -368,6 +366,26 @@
                             Foreground="{DynamicResource AccentBrush}"
                             HorizontalContentAlignment="Center" />
                   </Grid>
+
+                  <!-- Local M3U Doğrulama Sonucu -->
+                  <Border Background="{DynamicResource Surface0Brush}"
+                          CornerRadius="8"
+                          Padding="12,10"
+                          IsVisible="{Binding ConnectionHealth,
+                                              Converter={StaticResource ConnectionHealthToVisibilityConverter}}">
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                      <icons:MaterialIcon Kind="{Binding ConnectionHealth, Converter={StaticResource ConnectionHealthToIconConverter}}"
+                                          Width="18" Height="18"
+                                          Foreground="{Binding ConnectionHealth, Converter={StaticResource ConnectionHealthToBrushConverter}}"
+                                          VerticalAlignment="Center" />
+                      <TextBlock Text="{Binding DetailedStatus}"
+                                 Foreground="{Binding ConnectionHealth, Converter={StaticResource ConnectionHealthToBrushConverter}}"
+                                 FontSize="13"
+                                 FontWeight="SemiBold"
+                                 TextWrapping="Wrap"
+                                 VerticalAlignment="Center" />
+                    </StackPanel>
+                  </Border>
 
                   <Button Command="{Binding ChangeLocalM3uSourceTypeCommand}"
                           Content="{loc:Translate Profiles.Account.ChangeSourceType}"

@@ -349,48 +349,10 @@
 
                             <!-- Connection Details Section -->
                             <StackPanel>
-                                <!-- URL Field -->
-                                <Panel Margin="4,0,0,8">
-                                    <TextBlock Foreground="{DynamicResource TextMutedBrush}" FontSize="14" FontWeight="SemiBold"
-                                               Text="{loc:Translate Profiles.Account.M3uLink}" IsVisible="{Binding IsM3U}"/>
-                                    <TextBlock Foreground="{DynamicResource TextMutedBrush}" FontSize="14" FontWeight="SemiBold"
-                                               Text="{loc:Translate Profiles.Account.ServerUrl}" IsVisible="{Binding !IsM3U}"/>
-                                </Panel>
-                                
-                                <TextBox Text="{Binding Url}" 
-                                         Height="52" Margin="0,0,0,20"
-                                         PlaceholderText="{loc:Translate Profiles.Account.ServerUrlPlaceholder}"
-                                         Theme="{StaticResource ModernTextBox}"/>
-                                
-                                <!-- Credentials Grid -->
-                                <Grid Margin="0,0,0,20" IsVisible="{Binding !IsM3U}">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
-
-                                    <StackPanel Margin="0,0,10,0">
-                                        <Panel Margin="4,0,0,8">
-                                            <TextBlock Foreground="{DynamicResource TextMutedBrush}" FontSize="14" FontWeight="SemiBold"
-                                                       Text="{loc:Translate Profiles.Account.MacAddress}" IsVisible="{Binding IsStalker}"/>
-                                            <TextBlock Foreground="{DynamicResource TextMutedBrush}" FontSize="14" FontWeight="SemiBold"
-                                                       Text="{loc:Translate Profiles.Account.Username}" IsVisible="{Binding !IsStalker}"/>
-                                        </Panel>
-                                        <TextBox Text="{Binding Username}" Height="52"
-                                                 PlaceholderText="{loc:Translate Profiles.Account.UsernamePlaceholder}"
-                                                 Theme="{StaticResource ModernTextBox}"/>
-                                    </StackPanel>
-
-                                    <StackPanel Grid.Column="1" Margin="10,0,0,0" IsVisible="{Binding !IsStalker}">
-                                        <TextBlock Text="{loc:Translate Profiles.Account.Password}" Foreground="{DynamicResource TextMutedBrush}" FontSize="14" Margin="4,0,0,8" FontWeight="SemiBold"/>
-                                        <TextBox Text="{Binding Password}" Height="52"
-                                                 PlaceholderText="{loc:Translate Profiles.Account.PasswordPlaceholder}"
-                                                 Theme="{StaticResource ModernTextBox}"/>
-                                    </StackPanel>
-                                </Grid>
-
-                                <!-- Format Type Toggle -->
-                                <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                <!-- Format Type Toggle (Only for Remote Source) -->
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,20"
+                                            IsVisible="{Binding IsRemoteProviderSource}"
+                                            IsEnabled="{Binding CanSwitchProviderType}">
                                     <RadioButton GroupName="ProfileType" Content="Xtream Codes"
                                                  IsChecked="{Binding IsXtream}"
                                                  Margin="0,0,12,0" Padding="12,10"/>
@@ -401,9 +363,122 @@
                                                  IsChecked="{Binding IsStalker}"
                                                  Padding="12,10"/>
                                 </StackPanel>
-                                
 
-                                <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
+                                <!-- Local M3U File Actions & Status -->
+                                <Border Background="{DynamicResource Surface1Brush}" 
+                                        CornerRadius="8"
+                                        Padding="16"
+                                        Margin="0,0,0,20"
+                                        IsVisible="{Binding ShowLocalM3uFileActions}">
+                                    <StackPanel Spacing="12">
+                                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                                            <Border Width="40" Height="40" CornerRadius="20" Background="{DynamicResource Surface2Brush}">
+                                                <materialIcons:MaterialIcon Kind="FileDocumentOutline" Width="20" Height="20" Foreground="{DynamicResource AccentBrush}"/>
+                                            </Border>
+                                            <StackPanel Grid.Column="1" Spacing="2">
+                                                <TextBlock Text="{loc:Translate Profiles.Account.LocalM3uFile}" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                                <TextBlock Text="{loc:Translate Profiles.Account.LocalM3uDescription}" FontSize="12" Foreground="{DynamicResource TextMutedBrush}" TextWrapping="Wrap"/>
+                                            </StackPanel>
+                                        </Grid>
+
+                                        <Border Padding="12,10" CornerRadius="6" Background="{DynamicResource Surface2Brush}">
+                                            <StackPanel Spacing="4">
+                                                <TextBlock Text="{loc:Translate Profiles.Account.SelectedFile}" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
+                                                <TextBlock Text="{Binding Url}" FontSize="13" Foreground="{DynamicResource TextPrimaryBrush}" TextWrapping="Wrap" MaxLines="3"/>
+                                            </StackPanel>
+                                        </Border>
+
+                                        <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                                            <Button Grid.Column="0" Command="{Binding PickM3uFileCommand}" Content="{loc:Translate Profiles.Account.ChangeM3uFile}" Height="40" CornerRadius="6" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"/>
+                                            <Button Grid.Column="1" Command="{Binding ValidateLocalM3uFileCommand}" Content="{loc:Translate Profiles.Account.ValidateM3uFile}" IsEnabled="{Binding !IsAnalyzingConnection}" Height="40" CornerRadius="6" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"/>
+                                        </Grid>
+
+                                        <!-- Health Status Indicator for Local M3U -->
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="4,4,4,4"
+                                                    IsVisible="{Binding ConnectionHealth, Converter={StaticResource ConnectionHealthToVisibilityConverter}}">
+                                            <!-- Icon -->
+                                            <materialIcons:MaterialIcon Kind="{Binding ConnectionHealth, Converter={StaticResource ConnectionHealthToIconConverter}}" 
+                                                                        Width="20" Height="20"
+                                                                        Foreground="{Binding ConnectionHealth, Converter={StaticResource ConnectionHealthToBrushConverter}}"
+                                                                        Margin="0,0,8,0"/>
+                                            <!-- Status Text -->
+                                            <TextBlock Text="{Binding DetailedStatus}"
+                                                       Foreground="{Binding ConnectionHealth, Converter={StaticResource ConnectionHealthToBrushConverter}}"
+                                                       FontWeight="SemiBold"
+                                                       FontSize="13"
+                                                       VerticalAlignment="Center"/>
+                                        </StackPanel>
+
+                                        <Button Command="{Binding ChangeLocalM3uSourceTypeCommand}" Content="{loc:Translate Profiles.Account.ChangeSourceType}" IsEnabled="{Binding !IsAnalyzingConnection}" Height="40" CornerRadius="6" Background="Transparent" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Remote M3U/Xtream/Stalker URL Field -->
+                                <StackPanel IsVisible="{Binding IsRemoteProviderSource}" Spacing="8" Margin="0,0,0,20">
+                                    <Panel Margin="4,0,0,0">
+                                        <TextBlock Foreground="{DynamicResource TextMutedBrush}" FontSize="14" FontWeight="SemiBold"
+                                                   Text="{loc:Translate Profiles.Account.M3uLink}" IsVisible="{Binding IsM3U}"/>
+                                        <TextBlock Foreground="{DynamicResource TextMutedBrush}" FontSize="14" FontWeight="SemiBold"
+                                                   Text="{loc:Translate Profiles.Account.ServerUrl}" IsVisible="{Binding !IsM3U}"/>
+                                    </Panel>
+                                    
+                                    <TextBox Text="{Binding Url}" 
+                                             Height="52"
+                                             IsEnabled="{Binding CanEditProviderUrl}"
+                                             PlaceholderText="{loc:Translate Profiles.Account.ServerUrlPlaceholder}"
+                                             Theme="{StaticResource ModernTextBox}"/>
+
+                                    <!-- M3U Local File Select button when in Remote M3U mode -->
+                                    <Button Command="{Binding PickM3uFileCommand}"
+                                            Content="{loc:Translate Profiles.Account.SelectM3uFile}"
+                                            IsVisible="{Binding IsM3U}"
+                                            Height="44"
+                                            CornerRadius="6"
+                                            HorizontalAlignment="Stretch"
+                                            HorizontalContentAlignment="Center"
+                                            VerticalContentAlignment="Center"
+                                            Margin="0,8,0,0"/>
+                                </StackPanel>
+
+                                <!-- Remote Credentials Grid -->
+                                <Panel IsVisible="{Binding IsRemoteProviderSource}">
+                                    <Grid Margin="0,0,0,20" IsVisible="{Binding !IsM3U}">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <StackPanel Margin="0,0,10,0">
+                                            <Panel Margin="4,0,0,8">
+                                                <TextBlock Foreground="{DynamicResource TextMutedBrush}" FontSize="14" FontWeight="SemiBold"
+                                                           Text="{loc:Translate Profiles.Account.MacAddress}" IsVisible="{Binding IsStalker}"/>
+                                                <TextBlock Foreground="{DynamicResource TextMutedBrush}" FontSize="14" FontWeight="SemiBold"
+                                                           Text="{loc:Translate Profiles.Account.Username}" IsVisible="{Binding !IsStalker}"/>
+                                            </Panel>
+                                            <TextBox Text="{Binding Username}" Height="52"
+                                                     PlaceholderText="{loc:Translate Profiles.Account.UsernamePlaceholder}"
+                                                     Theme="{StaticResource ModernTextBox}"/>
+                                        </StackPanel>
+
+                                        <StackPanel Grid.Column="1" Margin="10,0,0,0" IsVisible="{Binding !IsStalker}">
+                                            <TextBlock Text="{loc:Translate Profiles.Account.Password}" Foreground="{DynamicResource TextMutedBrush}" FontSize="14" Margin="4,0,0,8" FontWeight="SemiBold"/>
+                                            <TextBox Text="{Binding Password}" Height="52"
+                                                     PlaceholderText="{loc:Translate Profiles.Account.PasswordPlaceholder}"
+                                                     Theme="{StaticResource ModernTextBox}"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Panel>
+
+                                <!-- Error Message for URL/File -->
+                                <TextBlock Text="{Binding UrlError}"
+                                           Foreground="{DynamicResource ErrorBrush}"
+                                           FontSize="13"
+                                           TextWrapping="Wrap"
+                                           Margin="4,0,0,12"
+                                           IsVisible="{Binding UrlError, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
+
+                                <!-- Remote Connection Analysis Actions -->
+                                <StackPanel Orientation="Horizontal" Margin="0,16,0,0" IsVisible="{Binding ShowConnectionAnalysis}">
                                     <Button Command="{Binding AnalyzeConnectionCommand}"
                                             Height="42"
                                             Padding="16,8"
@@ -431,9 +506,6 @@
                                         </StackPanel>
                                     </StackPanel>
                                 </StackPanel>
-                                
-                                <!-- Removed detailed summary text as per user request -->
-                                <!-- <TextBlock Text="{Binding PlaylistPreviewSummary}" ... /> -->
                             </StackPanel>
                         </StackPanel>
                     </Grid>

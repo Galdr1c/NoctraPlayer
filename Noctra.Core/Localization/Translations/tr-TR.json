@@ -324,6 +324,7 @@
   "Profiles.Account.ChangeSourceType.Message": "Seçili yerel M3U dosyası temizlenecek ve sağlayıcı alanları sıfırlanacak. Devam edilsin mi?",
   "Profiles.Account.FileValidation": "Yerel M3U dosyası doğrulanıyor…",
   "Profiles.Account.FileNotSelected": "Seçili yerel M3U dosyası yok.",
+  "Profiles.Account.LocalM3uValidationResult": "{0} Kanal",
   "Profiles.Account.HealthTooltip": "Yeşil: Mükemmel (<300ms) | Sarı: Orta (300ms-1s) | Kırmızı: Kötü (>1s)",
   "Profiles.Add.DeleteProfile": "Profili Sil",
   "Profiles.Add.Cancel": "İptal",

@@ -1057,7 +1057,7 @@ public partial class AddProfileViewModel : ObservableObject
             }
 
             ConnectionHealth = ConnectionHealth.Good;
-            DetailedStatus = $"{channels.Count} M3U";
+            DetailedStatus = string.Format(_localizationService.GetString("Profiles.Account.LocalM3uValidationResult"), channels.Count);
             StatusMessage = _localizationService.GetString("AddProfile.Analysis.Completed");
         }
         catch (Exception ex)

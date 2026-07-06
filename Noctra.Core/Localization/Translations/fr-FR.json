@@ -324,6 +324,7 @@
   "Profiles.Account.ChangeSourceType.Message": "Le fichier M3U local sélectionné sera effacé et les champs du fournisseur seront réinitialisés. Continuer ?",
   "Profiles.Account.FileValidation": "Validation du fichier M3U local…",
   "Profiles.Account.FileNotSelected": "Aucun fichier M3U local n'est sélectionné.",
+  "Profiles.Account.LocalM3uValidationResult": "{0} Canaux",
   "Profiles.Account.HealthTooltip": "Vert : Excellent (<300ms) | Jaune : Moyen (300ms-1s) | Rouge : Faible (>1s)",
   "Profiles.Add.DeleteProfile": "Supprimer le profil",
   "Profiles.Add.Cancel": "Annuler",

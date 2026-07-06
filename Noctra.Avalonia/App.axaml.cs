@@ -345,6 +345,7 @@ public partial class App : Application
 
         services.AddSingleton<IDispatcherService, AvaloniaDispatcherService>();
         services.AddSingleton<IDialogService, AvaloniaDialogService>();
+        services.AddSingleton<IPlaylistFilePickerService, AvaloniaFilePickerService>();
         services.AddSingleton<IReviewPromptService, ReviewPromptService>();
         services.AddSingleton<IThemeService, AvaloniaThemeService>();
         services.AddSingleton<IVideoPlayerService, VideoPlayerService>(sp => 
