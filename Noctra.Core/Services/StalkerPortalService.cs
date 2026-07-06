@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Web;
+using Microsoft.Extensions.Logging;
 using Noctra.Models;
 using Noctra.Services.Interfaces;
 
@@ -21,6 +22,7 @@ public class StalkerPortalService : IStalkerPortalService
 {
     private readonly HttpClient _httpClient;
     private readonly ILocalizationService _localizationService;
+    private readonly ILogger<StalkerPortalService>? _logger;
 
     private static readonly ConcurrentDictionary<string, CachedTokenState>    TokenCache  = new(StringComparer.Ordinal);
     private static readonly ConcurrentDictionary<string, SemaphoreSlim>       TokenLocks  = new(StringComparer.Ordinal);
@@ -41,10 +43,14 @@ public class StalkerPortalService : IStalkerPortalService
         "/portal.php",
     ];
 
-    public StalkerPortalService(HttpClient httpClient, ILocalizationService localizationService)
+    public StalkerPortalService(
+        HttpClient httpClient,
+        ILocalizationService localizationService,
+        ILogger<StalkerPortalService>? logger = null)
     {
         _httpClient = httpClient;
         _localizationService = localizationService;
+        _logger = logger;
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -1232,6 +1238,7 @@ public class StalkerPortalService : IStalkerPortalService
 
                 if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests && retryCount < maxRetries)
                 {
+                    response.Dispose();
                     retryCount++;
                     Log($"[StalkerService] 429 Too Many Requests. Retrying in {delayMs}ms... (Attempt {retryCount}/{maxRetries})");
                     await Task.Delay(delayMs, ct);
@@ -1255,30 +1262,128 @@ public class StalkerPortalService : IStalkerPortalService
                 throw;
             }
 
-            var body = await response.Content.ReadAsStringAsync(ct);
-        if (string.IsNullOrWhiteSpace(body))
-            return JsonDocument.Parse("[]").RootElement;
+            await using var responseStream = await response.Content.ReadAsStreamAsync(ct);
+            var peek = await PeekJsonResponseAsync(responseStream, ct);
 
-        // --- YENİ: HTML/Hata Sayfası Kontrolü ---
-        var trimmedBody = body.TrimStart();
-        if (trimmedBody.StartsWith("<") || trimmedBody.Contains("<html", StringComparison.OrdinalIgnoreCase))
+            try
+            {
+                if (peek.IsEmpty)
+                {
+                    using var emptyDoc = JsonDocument.Parse("[]");
+                    return emptyDoc.RootElement.Clone();
+                }
+
+                if (peek.IsHtml)
+                {
+                    Log($"[StalkerService] HTML response instead of JSON (Snippet: {peek.Snippet})");
+                    throw new InvalidOperationException(_localizationService.GetString("AddProfile.Error.ServerError"));
+                }
+
+                using var doc = await JsonDocument.ParseAsync(peek.Stream, cancellationToken: ct);
+                return (doc.RootElement.TryGetProperty("js", out var js) ? js : doc.RootElement).Clone();
+            }
+            catch (JsonException ex)
+            {
+                Log($"[StalkerService] JSON parse error: {ex.Message}. URL: {endpoint}?{queryString}");
+                _logger?.LogError(ex, "Stalker JSON parse failed for {Endpoint}?{Query}", endpoint, queryString);
+                throw;
+            }
+            finally
+            {
+                await peek.Stream.DisposeAsync();
+                response.Dispose();
+            }
+        }
+    }
+
+    /// <summary>
+    /// Response body'nin ilk bölümünü okuyup HTML/boş response kontrolü yapar, sonra
+    /// prefix + kalan body'yi JsonDocument.ParseAsync'e verilecek tek stream olarak döner.
+    /// Böylece büyük Stalker kategori cevaplarında tüm body string'e çevrilmez.
+    /// </summary>
+    private static async Task<JsonResponsePeekResult> PeekJsonResponseAsync(Stream inner, CancellationToken ct)
+    {
+        const int PeekSize = 256;
+        var prefix = new byte[PeekSize];
+        var read = 0;
+
+        while (read < PeekSize)
         {
-            var snippet = trimmedBody.Length > 100 ? trimmedBody.Substring(0, 100) : trimmedBody;
-            Log($"[StalkerService] HTML response instead of JSON (Snippet: {snippet})");
-            throw new InvalidOperationException(_localizationService.GetString("AddProfile.Error.ServerError"));
+            var n = await inner.ReadAsync(prefix.AsMemory(read, PeekSize - read), ct);
+            if (n <= 0) break;
+            read += n;
         }
 
-        try
+        var isEmpty = read == 0;
+        var snippet = read > 0
+            ? System.Text.Encoding.UTF8.GetString(prefix, 0, Math.Min(read, 100))
+            : string.Empty;
+        var trimmed = snippet.TrimStart('﻿', ' ', '\t', '\r', '\n');
+        var isHtml = trimmed.StartsWith("<", StringComparison.Ordinal) ||
+                     trimmed.Contains("<html", StringComparison.OrdinalIgnoreCase);
+
+        var prefixStream = new MemoryStream(prefix, 0, read, writable: false);
+        var rewound = new ConcatStream(prefixStream, inner);
+        return new JsonResponsePeekResult(isEmpty, isHtml, snippet, rewound);
+    }
+
+    private sealed record JsonResponsePeekResult(bool IsEmpty, bool IsHtml, string Snippet, Stream Stream);
+
+    private sealed class ConcatStream : Stream
+    {
+        private readonly Stream _first;
+        private readonly Stream _second;
+        private bool _firstExhausted;
+
+        public ConcatStream(Stream first, Stream second)
         {
-            using var doc = JsonDocument.Parse(body);
-            return (doc.RootElement.TryGetProperty("js", out var js) ? js : doc.RootElement).Clone();
+            _first = first;
+            _second = second;
         }
-        catch (JsonException ex)
+
+        public override bool CanRead => true;
+        public override bool CanSeek => false;
+        public override bool CanWrite => false;
+        public override long Length => throw new NotSupportedException();
+        public override long Position { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
+
+        public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
         {
-            Log($"[StalkerService] JSON parse error: {ex.Message}. URL: {endpoint}?{queryString}");
-            throw;
+            if (!_firstExhausted)
+            {
+                var n = await _first.ReadAsync(buffer, cancellationToken);
+                if (n > 0) return n;
+                _firstExhausted = true;
+            }
+
+            return await _second.ReadAsync(buffer, cancellationToken);
         }
+
+        public override int Read(byte[] buffer, int offset, int count)
+        {
+            if (!_firstExhausted)
+            {
+                var n = _first.Read(buffer, offset, count);
+                if (n > 0) return n;
+                _firstExhausted = true;
+            }
+
+            return _second.Read(buffer, offset, count);
         }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                _first.Dispose();
+            }
+            base.Dispose(disposing);
+        }
+
+        public override void Flush() { }
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+        public override void SetLength(long value) => throw new NotSupportedException();
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
     }
 
     private static HttpRequestMessage BuildGetRequest(

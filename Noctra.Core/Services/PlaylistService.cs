@@ -3,6 +3,7 @@ using Noctra.Data;
 using Noctra.Models;
 using Noctra.Services.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Http.Headers;
@@ -16,6 +17,8 @@ namespace Noctra.Services;
 /// </summary>
 public partial class PlaylistService : IPlaylistService
 {
+    private const int BulkInsertLogInterval = 1000;
+
     private static readonly ConcurrentDictionary<string, SemaphoreSlim> AddPlaylistLocks = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<int, Dictionary<string, ChannelBackupData>> _refreshBackups = new();
     private readonly ConcurrentDictionary<int, byte> _linearStreamRepairCompleted = new();
@@ -33,6 +36,7 @@ public partial class PlaylistService : IPlaylistService
     private readonly HttpClient _httpClient;
     private readonly ISettingsService _settingsService;
     private readonly ILocalizationService _localizationService;
+    private readonly ILogger<PlaylistService>? _logger;
 
     public PlaylistService(
         IDbContextFactory<AppDbContext> contextFactory, 
@@ -43,7 +47,8 @@ public partial class PlaylistService : IPlaylistService
         EpgSourceResolver epgSourceResolver,
         IEpgService epgService,
         HttpClient httpClient,
-        ISettingsService settingsService, ILocalizationService localizationService)
+        ISettingsService settingsService, ILocalizationService localizationService,
+        ILogger<PlaylistService>? logger = null)
     {
         _contextFactory = contextFactory;
         _parser = parser;
@@ -55,6 +60,7 @@ public partial class PlaylistService : IPlaylistService
         _httpClient = httpClient;
         _settingsService = settingsService;
         _localizationService = localizationService;
+        _logger = logger;
     }
 
     public async Task<Playlist> AddFromUrlAsync(string name, string url, int? profileId = null)
@@ -2034,13 +2040,19 @@ WHERE PlaylistId = {playlistId}
     private async Task FastSqliteBulkInsertAsync(AppDbContext context, IReadOnlyCollection<Channel> channels)
     {
         if (channels.Count == 0) return;
-        
+
         var connection = context.Database.GetDbConnection();
         var wasClosed = connection.State == System.Data.ConnectionState.Closed;
-        
+
         if (wasClosed) await connection.OpenAsync();
 
+        // Tek transaction'ı koruyoruz: commit'i 1000'lik parçalara bölmek mobilde
+        // kısmi import bırakabilir. Büyük listelerde asıl kazanç raw ADO.NET + prepared
+        // command'dan geliyor; burada sadece ilerleme/hata loglarını güçlendiriyoruz.
         using var transaction = await connection.BeginTransactionAsync();
+        var inserted = 0;
+        var total = channels.Count;
+
         try
         {
             using var command = connection.CreateCommand();
@@ -2110,13 +2122,25 @@ WHERE PlaylistId = {playlistId}
                 pTmdbId.Value = channel.TmdbId ?? (object)DBNull.Value;
 
                 await command.ExecuteNonQueryAsync();
+                inserted++;
+
+                if (inserted % BulkInsertLogInterval == 0)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[PlaylistService] FastSqliteBulkInsertAsync progress: {inserted}/{total} channel(s).");
+                }
             }
+
             await transaction.CommitAsync();
+            System.Diagnostics.Debug.WriteLine($"[PlaylistService] FastSqliteBulkInsertAsync completed: {inserted}/{total} channel(s).");
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[PlaylistService] FastSqliteBulkInsertAsync failed for {channels.Count} channel(s): {ex}");
-            await transaction.RollbackAsync();
+            var msg = $"[PlaylistService] FastSqliteBulkInsertAsync failed at channel {inserted}/{total}: {ex}";
+            System.Diagnostics.Debug.WriteLine(msg);
+            _logger?.LogError(ex, "FastSqliteBulkInsertAsync failed at channel {Inserted}/{Total}", inserted, total);
+            try { Console.Error.WriteLine(msg); } catch { /* logging never throws */ }
+
+            try { await transaction.RollbackAsync(); } catch { /* rollback failure should not hide original error */ }
             throw;
         }
         finally

@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Microsoft.Extensions.Logging;
 using Noctra.Models;
 using Noctra.Services.Interfaces;
 using Noctra.Core.Services;
@@ -20,16 +21,21 @@ public class XtreamCodesService : IXtreamCodesService
 
     private readonly HttpClient _httpClient;
     private readonly ILocalizationService _localizationService;
+    private readonly ILogger<XtreamCodesService>? _logger;
     private static readonly ConcurrentDictionary<string, CachedAuthState> AuthCache = new(StringComparer.Ordinal);
     private static readonly TimeSpan SuccessAuthTtl = TimeSpan.FromMinutes(10);
     private static readonly TimeSpan FailedAuthTtl = TimeSpan.FromSeconds(30);
     private static DateTimeOffset _lastCleanup = DateTimeOffset.UtcNow;
     private static readonly object CleanupLock = new();
 
-    public XtreamCodesService(HttpClient httpClient, ILocalizationService localizationService)
+    public XtreamCodesService(
+        HttpClient httpClient,
+        ILocalizationService localizationService,
+        ILogger<XtreamCodesService>? logger = null)
     {
         _httpClient = httpClient;
         _localizationService = localizationService;
+        _logger = logger;
     }
 
     public async Task<bool> AuthenticateAsync(string baseUrl, string username, string password, CancellationToken cancellationToken = default)
@@ -190,8 +196,7 @@ public class XtreamCodesService : IXtreamCodesService
 
         try
         {
-            var json = await GetStringAsync(url, cancellationToken);
-            using var doc = JsonDocument.Parse(json);
+            using var doc = await GetJsonDocumentAsync(url, cancellationToken);
             var root = doc.RootElement;
 
             var detail = new XtreamSeriesDetail();
@@ -590,9 +595,7 @@ public class XtreamCodesService : IXtreamCodesService
         CancellationToken cancellationToken)
     {
         var url = BuildApiUrl(baseUrl, username, password, "get_series_info", ("series_id", series.SeriesId.ToString()));
-        var json = await GetStringAsync(url, cancellationToken);
-
-        using var doc = JsonDocument.Parse(json);
+        using var doc = await GetJsonDocumentAsync(url, cancellationToken);
         if (!doc.RootElement.TryGetProperty("episodes", out var episodesElement))
         {
             return new List<Channel>();
@@ -692,8 +695,21 @@ public class XtreamCodesService : IXtreamCodesService
 
     private async Task<T?> GetJsonAsync<T>(string url, CancellationToken cancellationToken)
     {
-        var text = await GetStringAsync(url, cancellationToken);
-        return JsonSerializer.Deserialize<T>(text, JsonOptions);
+        try
+        {
+            return await NetworkRetry.ExecuteAsync(async () =>
+            {
+                using var response = await _httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+                response.EnsureSuccessStatusCode();
+                await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+                return await JsonSerializer.DeserializeAsync<T>(stream, JsonOptions, cancellationToken);
+            }, cancellationToken: cancellationToken);
+        }
+        catch (Exception ex) when (ex is JsonException or HttpRequestException or TaskCanceledException)
+        {
+            _logger?.LogError(ex, "Xtream JSON request failed while streaming response as {PayloadType}.", typeof(T).Name);
+            throw;
+        }
     }
 
     private async Task<string> GetStringAsync(string url, CancellationToken cancellationToken)
@@ -704,6 +720,25 @@ public class XtreamCodesService : IXtreamCodesService
             response.EnsureSuccessStatusCode();
             return await response.Content.ReadAsStringAsync(cancellationToken);
         }, cancellationToken: cancellationToken);
+    }
+
+    private async Task<JsonDocument> GetJsonDocumentAsync(string url, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await NetworkRetry.ExecuteAsync(async () =>
+            {
+                using var response = await _httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+                response.EnsureSuccessStatusCode();
+                await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+                return await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+            }, cancellationToken: cancellationToken);
+        }
+        catch (Exception ex) when (ex is JsonException or HttpRequestException or TaskCanceledException)
+        {
+            _logger?.LogError(ex, "Xtream JSON document request failed while streaming response.");
+            throw;
+        }
     }
 
     private static string BuildApiUrl(

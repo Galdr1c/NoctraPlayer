@@ -12,6 +12,14 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddNoctraCoreServices(this IServiceCollection services)
     {
+        // ILogger<T> bağımlılıkları Android/desktop release build'lerde de çözülebilsin.
+        // Ekstra Console/Debug logging paketi çekmeden Warning+ seviyesini stderr'e yazar;
+        // Android'de bu çıktı adb logcat tarafında mono/MonoStdio tag'iyle görünür.
+        services.AddLogging(builder =>
+        {
+            builder.AddProvider(new ConsoleErrorLoggerProvider());
+        });
+
         services.AddDbContextFactory<AppDbContext>((serviceProvider, options) =>
         {
             var appPaths = serviceProvider.GetRequiredService<IAppPathService>();
@@ -32,11 +40,13 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IXtreamCodesService>(serviceProvider =>
             new XtreamCodesService(
                 serviceProvider.GetRequiredService<HttpClient>(),
-                serviceProvider.GetRequiredService<ILocalizationService>()));
+                serviceProvider.GetRequiredService<ILocalizationService>(),
+                serviceProvider.GetService<ILogger<XtreamCodesService>>()));
         services.AddTransient<IStalkerPortalService>(serviceProvider =>
             new StalkerPortalService(
                 serviceProvider.GetRequiredService<HttpClient>(),
-                serviceProvider.GetRequiredService<ILocalizationService>()));
+                serviceProvider.GetRequiredService<ILocalizationService>(),
+                serviceProvider.GetService<ILogger<StalkerPortalService>>()));
         services.AddTransient<ICacheService>(serviceProvider =>
             new CacheService(serviceProvider.GetRequiredService<IAppPathService>()));
 
@@ -51,7 +61,8 @@ public static class ServiceCollectionExtensions
                 serviceProvider.GetRequiredService<IEpgService>(),
                 serviceProvider.GetRequiredService<HttpClient>(),
                 serviceProvider.GetRequiredService<ISettingsService>(),
-                serviceProvider.GetRequiredService<ILocalizationService>()));
+                serviceProvider.GetRequiredService<ILocalizationService>(),
+                serviceProvider.GetService<ILogger<PlaylistService>>()));
         services.AddSingleton<IPlaylistOrganizerService, PlaylistOrganizerService>();
         services.AddSingleton<IMediaService, MediaService>();
         services.AddSingleton<IChannelService, ChannelService>();
@@ -77,5 +88,65 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ReviewPromptFallbackHandler>();
 
         return services;
+    }
+}
+
+/// <summary>
+/// Minimal ILoggerProvider: Warning/Error/Critical loglarını Console.Error'a yazar.
+/// Android'de Console.Error adb logcat'te mono/MonoStdio tag'iyle görülebilir;
+/// desktop'ta stderr'e düşer. Logging asla exception fırlatmamalıdır.
+/// </summary>
+internal sealed class ConsoleErrorLoggerProvider : ILoggerProvider
+{
+    public ILogger CreateLogger(string categoryName) => new ConsoleErrorLogger(categoryName);
+
+    public void Dispose() { }
+
+    private sealed class ConsoleErrorLogger : ILogger
+    {
+        private readonly string _categoryName;
+
+        public ConsoleErrorLogger(string categoryName)
+        {
+            _categoryName = categoryName;
+        }
+
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+
+        public bool IsEnabled(LogLevel logLevel) => logLevel >= LogLevel.Warning;
+
+        public void Log<TState>(
+            LogLevel logLevel,
+            EventId eventId,
+            TState state,
+            Exception? exception,
+            Func<TState, Exception?, string> formatter)
+        {
+            if (!IsEnabled(logLevel)) return;
+
+            try
+            {
+                var level = logLevel switch
+                {
+                    LogLevel.Warning => "WARN",
+                    LogLevel.Error => "ERROR",
+                    LogLevel.Critical => "FATAL",
+                    _ => logLevel.ToString().ToUpperInvariant()
+                };
+
+                var message = formatter(state, exception);
+                var line = $"[Noctra:{level}] [{_categoryName}] {message}";
+                if (exception is not null)
+                {
+                    line += Environment.NewLine + exception;
+                }
+
+                Console.Error.WriteLine(line);
+            }
+            catch
+            {
+                // Logging never throws.
+            }
+        }
     }
 }
