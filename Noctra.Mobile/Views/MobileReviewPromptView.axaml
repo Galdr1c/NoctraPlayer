@@ -7,7 +7,7 @@
 
   <UserControl.Styles>
       <Style Selector="Button.ReviewSecondary">
-          <Setter Property="Background" Value="#FF0000}"/>
+          <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
           <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
           <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
           <Setter Property="BorderThickness" Value="1"/>

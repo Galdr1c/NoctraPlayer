@@ -35,7 +35,7 @@
     <HotAvaloniaRemote>true</HotAvaloniaRemote>
     <HotAvaloniaMode>Balanced</HotAvaloniaMode>
     <HotAvaloniaTimeout>5000</HotAvaloniaTimeout>
-    <HotAvaloniaInitialPatching>disable</HotAvaloniaInitialPatching>
+    <HotAvaloniaInitialPatching>enable</HotAvaloniaInitialPatching>
     <HarfsAddress>127.0.0.1</HarfsAddress>
     <HarfsPort>20158</HarfsPort>
     <HarfsSecret>NoctraSecret123!</HarfsSecret>

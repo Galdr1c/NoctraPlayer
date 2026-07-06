@@ -9,6 +9,7 @@ using Avalonia.Controls.Platform;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using HotAvalonia;
 
 using Microsoft.Extensions.DependencyInjection;
 using Noctra.Mobile.Behaviors;
@@ -47,6 +48,19 @@ public partial class MainView : UserControl
 
     // Holds the currently active profiles view model when showing the profiles overlay.
     private ProfilesViewModel? _activeProfilesViewModel;
+
+    /// <summary>
+    /// Hot Avalonia XAML reload sonrası UI state'i yeniden uygular.
+    /// XAML yeniden yüklendiğinde tüm panellerin IsVisible'ı false olur
+    /// ama startup flow tekrar çalışmaz → siyah ekran.
+    /// Bu metod HotAvalonia tarafından reload sonrası otomatik çağrılır.
+    /// </summary>
+    [AvaloniaHotReload]
+    private void OnHotReload()
+    {
+        _startupFlowStarted = false;
+        StartStartupFlow();
+    }
 
     public MainView()
     {
