@@ -307,7 +307,7 @@
                      Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="12" />
           <ComboBox SelectedValue="{Binding AppLanguage, Mode=TwoWay}"
-                    Theme="{StaticResource ModernComboBox}"
+                   
                     SelectedValueBinding="{Binding Tag, RelativeSource={RelativeSource Self}}"
                     MinHeight="44">
             <ComboBoxItem Content="{loc:Translate Language.English}" Tag="en" />
@@ -347,7 +347,7 @@
                      Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="12" />
           <ComboBox SelectedIndex="{Binding SelectedDataUsage}"
-                    Theme="{StaticResource ModernComboBox}"
+                   
                     MinHeight="44">
             <ComboBoxItem Content="{loc:Translate Settings.Playback.Quality.Low}" />
             <ComboBoxItem Content="{loc:Translate Settings.Playback.Quality.Medium}" />
@@ -411,7 +411,7 @@
                      Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="12" />
           <ComboBox SelectedValue="{Binding SubtitleLanguage, Mode=TwoWay}"
-                    Theme="{StaticResource ModernComboBox}"
+                   
                     SelectedValueBinding="{Binding Tag, RelativeSource={RelativeSource Self}}"
                     MinHeight="44">
             <ComboBoxItem Content="{loc:Translate Language.Turkish}" Tag="tr" />
@@ -429,7 +429,7 @@
                      Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="12" />
           <ComboBox SelectedValue="{Binding PreferredAudioLanguage, Mode=TwoWay}"
-                    Theme="{StaticResource ModernComboBox}"
+                   
                     SelectedValueBinding="{Binding Tag, RelativeSource={RelativeSource Self}}"
                     MinHeight="44">
             <ComboBoxItem Content="{loc:Translate Language.Turkish}" Tag="tr" />
@@ -468,7 +468,7 @@
                      Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="12" />
           <ComboBox SelectedIndex="{Binding SelectedDownloadQuality}"
-                    Theme="{StaticResource ModernComboBox}"
+                   
                     MinHeight="44">
             <ComboBoxItem Content="{loc:Translate Settings.Download.Quality.Standard}" />
             <ComboBoxItem Content="{loc:Translate Settings.Download.Quality.High}" />
@@ -533,7 +533,7 @@
                      Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="12" />
           <ComboBox SelectedIndex="{Binding ChannelListRefreshFrequencyIndex, Mode=TwoWay}"
-                    Theme="{StaticResource ModernComboBox}"
+                   
                     MinHeight="44">
             <ComboBoxItem Content="{loc:Translate Settings.Channels.Frequency.Off}" />
             <ComboBoxItem IsEnabled="{Binding IsPremium}">
@@ -745,7 +745,7 @@
                      Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="12" />
           <ComboBox SelectedIndex="{Binding EpgRefreshFrequencyIndex, Mode=TwoWay}"
-                    Theme="{StaticResource ModernComboBox}"
+                   
                     MinHeight="44">
             <ComboBoxItem Content="{loc:Translate Settings.Channels.Frequency.Off}" />
             <ComboBoxItem IsEnabled="{Binding IsPremium}">
@@ -771,7 +771,7 @@
                      Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="12" />
           <ComboBox SelectedIndex="{Binding EpgTimeOffsetIndex, Mode=TwoWay}"
-                    Theme="{StaticResource ModernComboBox}"
+                   
                     MinHeight="44">
             <ComboBoxItem Content="{Binding Source=-12, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Negative'}" />
             <ComboBoxItem Content="{Binding Source=-11, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Negative'}" />
@@ -879,7 +879,7 @@
                      Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="12" />
           <ComboBox SelectedIndex="{Binding WatchHistoryRetentionIndex}"
-                    Theme="{StaticResource ModernComboBox}"
+                   
                     MinHeight="44">
             <ComboBoxItem Content="{loc:Translate Settings.Privacy.Retention.Forever}" />
             <ComboBoxItem Content="{loc:Translate Settings.Privacy.Retention.3d}" />

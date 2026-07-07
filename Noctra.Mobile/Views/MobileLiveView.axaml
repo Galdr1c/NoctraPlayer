@@ -28,7 +28,7 @@
                    LetterSpacing="1"
                    Foreground="{DynamicResource TextPrimaryBrush}" />
         <ComboBox Grid.Column="1"
-                  Theme="{StaticResource ModernComboBox}"
+                 
                   Width="150"
                   MinHeight="48"
                   CornerRadius="12"
@@ -43,7 +43,7 @@
             IsVisible="{Binding ShowGroupFilter}">
         <ComboBox Grid.Column="0"
                   x:Name="GroupFilterComboBox"
-                  Theme="{StaticResource ModernComboBox}"
+                 
                   ItemsSource="{Binding Groups}"
                   SelectedItem="{Binding SelectedGroup}"
                   PlaceholderText="{loc:Translate Common.All}"

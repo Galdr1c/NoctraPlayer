@@ -179,7 +179,7 @@
 
             <!-- Sort -->
             <ComboBox SelectedIndex="{Binding SelectedDownloadSortOrder}"
-                      Theme="{StaticResource ModernComboBox}"
+                     
                       MinHeight="44"
                       PlaceholderText="{loc:Translate Downloads.Sort.Recent}">
               <ComboBoxItem Content="{loc:Translate Downloads.Sort.Recent}" />
