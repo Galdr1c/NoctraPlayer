@@ -15,7 +15,6 @@
              mc:Ignorable="d">
   <UserControl.Styles>
     <Style Selector="Button.iconBtn">
-        <Setter Property="Cursor" Value="Hand"/>
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="Padding" Value="8"/>
@@ -100,17 +99,38 @@
                          FontSize="15"
                          FontWeight="SemiBold"
                          IsVisible="{Binding SelectedSeriesYears, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
+              <TextBlock Text=" • " Foreground="{DynamicResource TextMutedBrush}" FontSize="15" VerticalAlignment="Center" Margin="8,0">
+                <TextBlock.IsVisible>
+                  <MultiBinding Converter="{x:Static BoolConverters.And}">
+                    <Binding Path="SelectedSeriesYears" Converter="{StaticResource StringNotEmptyToBoolConverter}"/>
+                    <MultiBinding Converter="{x:Static BoolConverters.Or}">
+                      <Binding Path="SelectedSeriesGenres" Converter="{StaticResource StringNotEmptyToBoolConverter}"/>
+                      <Binding Path="SelectedSeriesAgeRating" Converter="{StaticResource StringNotEmptyToBoolConverter}"/>
+                    </MultiBinding>
+                  </MultiBinding>
+                </TextBlock.IsVisible>
+              </TextBlock>
               <TextBlock Text="{Binding SelectedSeriesGenres}"
                          Foreground="{DynamicResource TextMutedBrush}"
                          FontSize="15"
+                         Margin="8,0"
                          FontWeight="Medium"
                          TextTrimming="CharacterEllipsis"
                          MaxWidth="120"
                          IsVisible="{Binding SelectedSeriesGenres, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
+              <TextBlock Text=" • " Foreground="{DynamicResource TextMutedBrush}" FontSize="15" VerticalAlignment="Center" Margin="8,0">
+                <TextBlock.IsVisible>
+                  <MultiBinding Converter="{x:Static BoolConverters.And}">
+                    <Binding Path="SelectedSeriesGenres" Converter="{StaticResource StringNotEmptyToBoolConverter}"/>
+                    <Binding Path="SelectedSeriesAgeRating" Converter="{StaticResource StringNotEmptyToBoolConverter}"/>
+                  </MultiBinding>
+                </TextBlock.IsVisible>
+              </TextBlock>
               <Border BorderBrush="{DynamicResource TextMutedBrush}"
                       BorderThickness="1"
                       CornerRadius="4"
                       Padding="4,0"
+                      Margin="4,0,0,0"
                       IsVisible="{Binding SelectedSeriesAgeRating, Converter={StaticResource StringNotEmptyToVisibilityConverter}}">
                 <TextBlock Text="{Binding SelectedSeriesAgeRating}"
                            Foreground="{DynamicResource TextMutedBrush}"
@@ -135,18 +155,19 @@
           <StackPanel Grid.Column="1"
                       Spacing="8"
                       VerticalAlignment="Top">
-            <Border Height="24"
+            <Border Height="20"
+                    Margin="12,4,0,4"
                     HorizontalAlignment="Left"
                     IsVisible="{Binding SelectedSeriesNetworkLogoUrl, Converter={StaticResource StringNotEmptyToVisibilityConverter}}">
               <controls:RemoteImage Url="{Binding SelectedSeriesNetworkLogoUrl}"
                                     Stretch="Uniform"
-                                    Height="24"
-                                    MaxWidth="92" />
+                                    Height="20"
+                                    MaxWidth="80" />
             </Border>
             <TextBlock Text="{Binding SelectedSeriesOverview}"
                        Foreground="{DynamicResource TextPrimaryBrush}"
-                       Opacity="0.56"
-                       FontSize="15"
+                       Opacity="0.4"
+                       FontSize="16"
                        LineHeight="22"
                        TextWrapping="Wrap"
                        MaxLines="7"
@@ -156,6 +177,7 @@
                        FontSize="14"
                        TextWrapping="Wrap"
                        MaxLines="3"
+                       Margin="0,16,0,0"
                        IsVisible="{Binding SelectedSeriesCast, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
           </StackPanel>
         </Grid>
@@ -180,82 +202,71 @@
                   Command="{Binding PlayEpisodeCommand}"
                   CommandParameter="{Binding SelectedSeriesContinueEpisode}"
                   IsVisible="{Binding HasSelectedSeriesPlayableEpisode}"
-                  MinHeight="44"
-                  Padding="22,0"
+                  Padding="16,8"
                   Background="{DynamicResource AccentBrush}"
                   Foreground="{DynamicResource TextPrimaryBrush}"
-                  BorderThickness="0"
-                  CornerRadius="14">
+                  CornerRadius="8">
             <StackPanel Orientation="Horizontal" Spacing="7">
-              <icons:MaterialIcon Kind="Play" Width="18" Height="18" />
-              <TextBlock Text="{loc:Translate Series.Play}" />
+              <icons:MaterialIcon Kind="Play" Width="18" Height="18"  Foreground="{DynamicResource TextPrimaryBrush}"/>
+              <TextBlock Text="{loc:Translate Series.Play}"  FontSize="14" FontWeight="Bold" VerticalAlignment="Center"/>
             </StackPanel>
           </Button>
           <Button Classes="detailAction"
                   Command="{Binding PlayEpisodeCommand}"
                   CommandParameter="{Binding SelectedSeriesContinueEpisode}"
                   IsVisible="{Binding HasSelectedSeriesPlayableEpisode}"
-                  MinHeight="44"
-                  Padding="16,0"
-                  Background="{DynamicResource Surface0Brush}"
+                  Padding="14,8"
+                  Background="{DynamicResource AccentSubtleBrush}"
                   Foreground="{DynamicResource AccentBrush}"
-                  BorderThickness="0"
-                  CornerRadius="14">
+                  Focusable="False"
+                  CornerRadius="8">
             <StackPanel Orientation="Horizontal" Spacing="7">
-              <icons:MaterialIcon Kind="PlayCircleOutline" Width="18" Height="18" />
-              <TextBlock Text="{Binding SelectedSeriesContinueText}" />
+              <icons:MaterialIcon Kind="History" Width="16" Height="16"  Foreground="{DynamicResource AccentBrush}"/>
+              <TextBlock Text="{Binding SelectedSeriesContinueText}" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"/>
             </StackPanel>
           </Button>
           <Button Classes="detailAction"
                   Command="{Binding WatchTrailerCommand}"
                   IsVisible="{Binding SelectedSeriesTrailerUrl, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"
                   MinHeight="44"
-                  Padding="16,0"
+                  Padding="14,8"
                   Background="{DynamicResource Surface0Brush}"
                   Foreground="{DynamicResource TextPrimaryBrush}"
-                  BorderThickness="0"
-                  CornerRadius="14">
+                  BorderBrush="{DynamicResource AccentBrush}"
+                  Focusable="False"
+                  BorderThickness="1"
+                  CornerRadius="8">
             <StackPanel Orientation="Horizontal" Spacing="7">
-              <icons:MaterialIcon Kind="Youtube" Width="18" Height="18" />
-              <TextBlock Text="{loc:Translate Series.WatchTrailer}" />
+              <icons:MaterialIcon Kind="Youtube" Width="18" Height="18" Foreground="{DynamicResource AccentBrush}"/>
+              <TextBlock Text="{loc:Translate Series.WatchTrailer}" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"/>
             </StackPanel>
           </Button>
-          <Button Classes="detailAction"
+          <Button Classes="iconBtn"
                   Command="{Binding AddToMyListCommand}"
-                  CommandParameter="{Binding SelectedSeries}"
-                  MinHeight="44"
-                  Padding="16,0"
-                  Background="{DynamicResource Surface0Brush}"
-                  Foreground="{DynamicResource TextPrimaryBrush}"
-                  BorderThickness="0"
-                  CornerRadius="14">
+                  Width="40" Height="40"
+                  Padding="0"
+                  CommandParameter="{Binding SelectedSeries}">
             <StackPanel Orientation="Horizontal" Spacing="7">
               <Panel>
-                <icons:MaterialIcon Kind="Bookmark" Width="18" Height="18" Foreground="{DynamicResource AccentBrush}"
+                <icons:MaterialIcon Kind="Bookmark" Width="24" Height="24" Foreground="{DynamicResource AccentBrush}"
                                     IsVisible="{Binding SelectedSeries.IsInMyList}" />
-                <icons:MaterialIcon Kind="BookmarkOutline" Width="18" Height="18"
+                <icons:MaterialIcon Kind="BookmarkOutline" Width="24" Height="24" Foreground="{DynamicResource TextPrimaryBrush}"
                                     IsVisible="{Binding !SelectedSeries.IsInMyList}" />
               </Panel>
-              <TextBlock Text="{loc:Translate Context.MyList.Toggle}" />
             </StackPanel>
           </Button>
-          <Button Classes="detailAction"
+          <Button Classes="iconBtn"
                   Command="{Binding ToggleFavoriteCommand}"
                   CommandParameter="{Binding SelectedSeries}"
-                  MinHeight="44"
-                  Padding="16,0"
-                  Background="{DynamicResource Surface0Brush}"
-                  Foreground="{DynamicResource TextPrimaryBrush}"
-                  BorderThickness="0"
-                  CornerRadius="14">
+                  Width="40" Height="40"
+                  Padding="0">
             <StackPanel Orientation="Horizontal" Spacing="7">
               <Panel>
-                <icons:MaterialIcon Kind="Heart" Width="18" Height="18" Foreground="{DynamicResource ErrorBrush}"
+                <icons:MaterialIcon Kind="Heart" Width="22" Height="22" Foreground="{DynamicResource ErrorBrush}"
                                     IsVisible="{Binding SelectedSeries.IsFavorite}" />
-                <icons:MaterialIcon Kind="HeartOutline" Width="18" Height="18"
+                <icons:MaterialIcon Kind="HeartOutline" Width="22" Height="22" Foreground="{DynamicResource TextPrimaryBrush}"
                                     IsVisible="{Binding !SelectedSeries.IsFavorite}" />
               </Panel>
-              <TextBlock Text="{loc:Translate Context.Favorite.Toggle}" />
             </StackPanel>
           </Button>
         </StackPanel>
@@ -269,7 +280,7 @@
                 Background="{DynamicResource Surface0Brush}"
                 Foreground="{DynamicResource AccentBrush}"
                 BorderThickness="0"
-                CornerRadius="12">
+                CornerRadius="8">
           <StackPanel Orientation="Horizontal" Spacing="7">
             <icons:MaterialIcon Kind="DownloadOutline" Width="18" Height="18" />
             <TextBlock Text="{loc:Translate Series.Detail.DownloadSeason}" />

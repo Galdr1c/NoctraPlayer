@@ -172,7 +172,7 @@ public sealed class ReleaseSourceCleanlinessTests
                 "SQLitePCLRaw.bundle_e_sqlite3");
 
         Assert.NotNull(sqliteBundleReference);
-        Assert.Equal("2.1.11", sqliteBundleReference.Attribute("Version")?.Value);
+        Assert.Equal("3.0.3", sqliteBundleReference.Attribute("Version")?.Value);
     }
 
     [Fact]

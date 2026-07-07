@@ -625,7 +625,7 @@
                                     IsVisible="{Binding HasSelectedSeriesPlayableEpisode}">
                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                     <materialIcons:MaterialIcon Kind="Play" Width="18" Height="18" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                    <TextBlock Text="{loc:Translate Series.Play}" FontSize="14" FontWeight="Bold" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{loc:Translate Series.Play}"/>
                                 </StackPanel>
                             </Button>
                         </Border>

@@ -9,7 +9,9 @@ using Avalonia.Controls.Platform;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+#if DEBUG
 using HotAvalonia;
+#endif
 
 using Microsoft.Extensions.DependencyInjection;
 using Noctra.Mobile.Behaviors;
@@ -51,15 +53,21 @@ public partial class MainView : UserControl
 
     /// <summary>
     /// Hot Avalonia XAML reload sonrası UI state'i yeniden uygular.
-    /// XAML yeniden yüklendiğinde tüm panellerin IsVisible'ı false olur
-    /// ama startup flow tekrar çalışmaz → siyah ekran.
-    /// Bu metod HotAvalonia tarafından reload sonrası otomatik çağrılır.
+    /// XAML yeniden yüklendiğinde tüm panellerin IsVisible'ı false olur.
+    /// Startup flow'u tekrar başlatmak yerine sadece mevcut durumu yeniden uygular.
     /// </summary>
+#if DEBUG
     [AvaloniaHotReload]
+#endif
     private void OnHotReload()
     {
-        _startupFlowStarted = false;
-        StartStartupFlow();
+        // Event aboneliklerini yeniden kur (XAML reload sırasında kaybolabilir)
+        OverlayProfileList.ProfileLoaded -= OverlayProfileList_ProfileLoaded;
+        OverlayProfileList.ProfileLoaded += OverlayProfileList_ProfileLoaded;
+
+        UpdateNavigationMode(Bounds.Width);
+        UpdateContentVisibility(_currentDestination);
+        UpdatePlayerChromeState();
     }
 
     public MainView()
@@ -706,8 +714,10 @@ public partial class MainView : UserControl
                     SelectedMediaTitle.Text = channel.Name;
                     SelectedMediaSubtitle.Text = LocalizationSource.Instance["Mobile.Status.Playback.Starting"];
                     await PlaySelectedChannelAsync(channel);
+                    SelectedMediaHost.IsVisible = false;
                     return;
-                case Series:
+                case Series series:
+                    _ = series;
                     SelectedMediaHost.IsVisible = false;
                     return;
                 default:

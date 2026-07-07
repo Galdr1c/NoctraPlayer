@@ -148,7 +148,7 @@ public class PlayerPlaybackController
 
     public async Task PlayChannelAsync(Channel channel, double? startPosition = null, int? existingRequestVersion = null)
     {
-        _vm.LogDebug($"PlayChannelAsync: Id={channel.Id}, Name={channel.Name}, Type={channel.Type}, StreamUrl={channel.StreamUrl}, StartPos={startPosition}");
+        _vm.LogDebug($"PlayChannelAsync: Id={channel.Id}, Name={channel.Name}, Type={channel.Type}, HasStreamUrl={!string.IsNullOrWhiteSpace(channel.StreamUrl)}, StartPos={startPosition}");
 
         if (channel.StreamUrl != null && channel.StreamUrl.StartsWith("stalker-series://"))
         {
