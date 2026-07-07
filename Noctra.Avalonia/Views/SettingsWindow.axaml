@@ -365,34 +365,31 @@
                                         <Grid VerticalAlignment="Center">
                                             <RadioButton Content="{loc:Translate Settings.Playback.Buffer.Small}" GroupName="Buffer"
                                                          IsChecked="{Binding IsBufferSmall}"
-                                                         IsEnabled="{Binding IsPremium}"
-                                                         Theme="{StaticResource ModernRadioButton}"/>
+                                                         IsEnabled="{Binding IsPremium}"/>
                                             <!-- Lock icon positioned over the circle -->
-                                            <materialIcons:MaterialIcon Kind="Lock" Width="20" Height="20" 
+                                            <materialIcons:MaterialIcon Kind="Lock" Width="18" Height="18" 
                                                                         Foreground="{DynamicResource TextMutedBrush}" 
                                                                         IsVisible="{Binding !IsPremium}" 
                                                                         HorizontalAlignment="Left" VerticalAlignment="Center"
-                                                                        Margin="0,0,0,0"
+                                                                        Margin="3,0,0,0"
                                                                         IsHitTestVisible="False"/>
                                         </Grid>
                                         
                                         <!-- Normal (5sn) - FREE -->
                                         <RadioButton Content="{loc:Translate Settings.Playback.Buffer.Normal}" GroupName="Buffer"
-                                                     IsChecked="{Binding IsBufferNormal}"
-                                                     Theme="{StaticResource ModernRadioButton}"/>
+                                                     IsChecked="{Binding IsBufferNormal}"/>
 
                                         <!-- Büyük (10sn) - PREMIUM -->
                                         <Grid VerticalAlignment="Center">
                                             <RadioButton Content="{loc:Translate Settings.Playback.Buffer.Large}" GroupName="Buffer"
                                                          IsChecked="{Binding IsBufferLarge}"
-                                                         IsEnabled="{Binding IsPremium}"
-                                                         Theme="{StaticResource ModernRadioButton}"/>
+                                                         IsEnabled="{Binding IsPremium}"/>
                                             <!-- Lock icon positioned over the circle -->
-                                            <materialIcons:MaterialIcon Kind="Lock" Width="20" Height="20" 
+                                            <materialIcons:MaterialIcon Kind="Lock" Width="18" Height="18" 
                                                                         Foreground="{DynamicResource TextMutedBrush}" 
                                                                         IsVisible="{Binding !IsPremium}" 
                                                                         HorizontalAlignment="Left" VerticalAlignment="Center"
-                                                                        Margin="0,0,0,0"
+                                                                        Margin="3,0,0,0"
                                                                         IsHitTestVisible="False"/>
                                         </Grid>
                                     </StackPanel>

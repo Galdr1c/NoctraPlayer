@@ -20,9 +20,15 @@ namespace Noctra.Tests
         public AppDbContext CreateDbContext() => new AppDbContext(_options);
     }
 
+    [CollectionDefinition(nameof(PlaylistServiceIntegrationTests), DisableParallelization = true)]
+    public sealed class PlaylistServiceIntegrationTestsCollection
+    {
+    }
+
+    [Collection(nameof(PlaylistServiceIntegrationTests))]
     public class PlaylistServiceIntegrationTests : IDisposable
     {
-        private readonly SqliteConnection _connection;
+        private readonly string _databasePath;
         private readonly DbContextOptions<AppDbContext> _options;
         private readonly Mock<IM3UParser> _parserMock;
         private readonly Mock<IMediaService> _mediaServiceMock;
@@ -37,12 +43,13 @@ namespace Noctra.Tests
 
         public PlaylistServiceIntegrationTests()
         {
-            // Setup In-Memory SQLite
-            _connection = new SqliteConnection("Data Source=PlaylistServiceTests;Mode=Memory;Cache=Shared");
-            _connection.Open();
+            // Setup isolated SQLite database per test instance.
+            _databasePath = System.IO.Path.Combine(
+                System.IO.Path.GetTempPath(),
+                $"NoctraPlaylistServiceTests-{Guid.NewGuid():N}.db");
 
             _options = new DbContextOptionsBuilder<AppDbContext>()
-                .UseSqlite(_connection)
+                .UseSqlite($"Data Source={_databasePath}")
                 .Options;
 
             using (var context = new AppDbContext(_options))
@@ -79,8 +86,8 @@ namespace Noctra.Tests
 
         public void Dispose()
         {
-            _connection.Close();
             _httpClient.Dispose();
+            try { System.IO.File.Delete(_databasePath); } catch { /* test cleanup best effort */ }
         }
 
         [Fact]
@@ -172,6 +179,50 @@ namespace Noctra.Tests
             // Assert
             using var context = new AppDbContext(_options);
             Assert.Equal(1, await context.Channels.CountAsync());
+        }
+
+        [Fact]
+        public async Task RefreshAsync_WhenReplacementInsertFails_PreservesExistingChannels()
+        {
+            var service = CreateService();
+            var initialChannels = new List<Channel>
+            {
+                new Channel { Name = "Existing 1", StreamUrl = "url1", Type = ChannelType.Live },
+                new Channel { Name = "Existing 2", StreamUrl = "url2", Type = ChannelType.Live }
+            };
+
+            var playlist = await service.AddFromChannelsAsync("Atomic Refresh", "http://source.com/atomic.m3u", initialChannels);
+
+            var refreshedChannels = new List<Channel>
+            {
+                new Channel { Name = "Replacement 1", StreamUrl = "new-url1", Type = ChannelType.Live }
+            };
+            _parserMock.Setup(p => p.ParseFromUrlAsync(playlist.Url)).ReturnsAsync(refreshedChannels);
+
+            using (var setupContext = new AppDbContext(_options))
+            {
+                await setupContext.Database.ExecuteSqlRawAsync("""
+                    CREATE TRIGGER FailChannelInsertDuringRefresh
+                    BEFORE INSERT ON Channels
+                    WHEN NEW.Name = 'Replacement 1'
+                    BEGIN
+                        SELECT RAISE(ABORT, 'simulated replacement insert failure');
+                    END;
+                    """);
+            }
+
+            await Assert.ThrowsAsync<SqliteException>(() => service.RefreshAsync(playlist.Id));
+
+            using var context = new AppDbContext(_options);
+            var remainingChannels = await context.Channels
+                .Where(c => c.PlaylistId == playlist.Id)
+                .OrderBy(c => c.Name)
+                .Select(c => c.Name)
+                .ToListAsync();
+
+            Assert.Equal(new[] { "Existing 1", "Existing 2" }, remainingChannels);
+            var persistedPlaylist = await context.Playlists.SingleAsync(p => p.Id == playlist.Id);
+            Assert.Equal(2, persistedPlaylist.ChannelCount);
         }
 
         [Fact]

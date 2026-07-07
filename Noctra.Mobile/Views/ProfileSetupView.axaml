@@ -281,23 +281,21 @@
 
               <!-- Sağlayıcı tipi seçici: local M3U dosya modunda gizlenir;
                    kaynak tipi değiştirmek ayrı, onaylı bir aksiyondur. -->
-              <Grid ColumnDefinitions="*,*,*"
-                    Margin="28,14,28,14"
-                    IsVisible="{Binding IsRemoteProviderSource}"
-                    IsEnabled="{Binding CanSwitchProviderType}">
-                <RadioButton Grid.Column="0"
-                             Content="Xtream"
+              <StackPanel Orientation="Horizontal"
+                          Spacing="12"
+                          Margin="28,14,28,14"
+                          IsVisible="{Binding IsRemoteProviderSource}"
+                          IsEnabled="{Binding CanSwitchProviderType}">
+                <RadioButton Content="Xtream"
                              GroupName="ProviderType"
                              IsChecked="{Binding IsXtream}" />
-                <RadioButton Grid.Column="1"
-                             Content="M3U"
+                <RadioButton Content="M3U"
                              GroupName="ProviderType"
                              IsChecked="{Binding IsM3U}" />
-                <RadioButton Grid.Column="2"
-                             Content="Stalker Portal"
+                <RadioButton Content="Stalker Portal"
                              GroupName="ProviderType"
                              IsChecked="{Binding IsStalker}" />
-              </Grid>
+              </StackPanel>
 
               <Border Classes="Divider" />
 

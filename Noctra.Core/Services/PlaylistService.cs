@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using Noctra.Data;
 using Noctra.Models;
 using Noctra.Services.Interfaces;
@@ -1147,17 +1148,6 @@ WHERE PlaylistId = {playlistId}
             System.Diagnostics.Debug.WriteLine($"[PlaylistService] WatchHistory backup failed (non-fatal): {ex.Message}");
         }
 
-        await DeletePlaylistContentForReplacementAsync(
-            context,
-            playlistId,
-            existingChannelData
-                .SelectMany(c => new[] { c.TvgId, c.TvgName, c.Name })
-                .Where(id => !string.IsNullOrWhiteSpace(id))
-                .Select(id => id!)
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToList());
-        InvalidateLinearStreamRepair(playlistId);
-
         // 3. YENİ KANALLARA YEDEK VERİLERİ UYGULA
         foreach (var nc in organizedChannels)
         {
@@ -1174,25 +1164,84 @@ WHERE PlaylistId = {playlistId}
             nc.PlaylistId = playlist.Id;
         }
 
-        // 4. TOPLU EKLEME
-        if (organizedChannels.Count > 0)
+        await using (var replacementTransaction = await context.Database.BeginTransactionAsync())
         {
-            await FastSqliteBulkInsertAsync(context, organizedChannels);
-            InvalidateLinearStreamRepair(playlist.Id);
+            try
+            {
+                Playlist? stagingPlaylist = null;
+                if (organizedChannels.Count > 0)
+                {
+                    stagingPlaylist = new Playlist
+                    {
+                        Name = $"{playlist.Name} refresh staging",
+                        Url = playlist.Url,
+                        FilePath = playlist.FilePath,
+                        CreatedAt = DateTime.UtcNow,
+                        IsActive = false,
+                        ProfileId = playlist.ProfileId
+                    };
+
+                    context.Playlists.Add(stagingPlaylist);
+                    await context.SaveChangesAsync();
+
+                    foreach (var channel in organizedChannels)
+                    {
+                        channel.PlaylistId = stagingPlaylist.Id;
+                    }
+
+                    await FastSqliteBulkInsertAsync(context, organizedChannels, replacementTransaction.GetDbTransaction());
+                }
+
+                await DeletePlaylistContentForReplacementAsync(
+                    context,
+                    playlistId,
+                    existingChannelData
+                        .SelectMany(c => new[] { c.TvgId, c.TvgName, c.Name })
+                        .Where(id => !string.IsNullOrWhiteSpace(id))
+                        .Select(id => id!)
+                        .Distinct(StringComparer.OrdinalIgnoreCase)
+                        .ToList(),
+                    replacementTransaction.GetDbTransaction());
+
+                if (stagingPlaylist is not null)
+                {
+                    await MoveStagedChannelsToPlaylistAsync(
+                        context.Database.GetDbConnection(),
+                        replacementTransaction.GetDbTransaction(),
+                        stagingPlaylist.Id,
+                        playlist.Id);
+
+                    await ExecuteNonQueryInTransactionAsync(
+                        context.Database.GetDbConnection(),
+                        replacementTransaction.GetDbTransaction(),
+                        "DELETE FROM Playlists WHERE Id = $playlistId",
+                        stagingPlaylist.Id);
+                }
+
+                var finalCount = await context.Channels.CountAsync(c => c.PlaylistId == playlist.Id);
+                playlist.ChannelCount = finalCount;
+                playlist.LastUpdated = DateTime.UtcNow;
+                if (latestRemoteMetadata != null)
+                {
+                    UpdatePlaylistSourceMetadata(playlist, latestRemoteMetadata);
+                }
+                context.Playlists.Update(playlist);
+                await context.SaveChangesAsync();
+
+                await replacementTransaction.CommitAsync();
+            }
+            catch
+            {
+                _watchHistoryRepairData.TryRemove(playlistId, out _);
+                await replacementTransaction.RollbackAsync();
+                throw;
+            }
         }
+
+        InvalidateLinearStreamRepair(playlist.Id);
 
         // 4b. WATCHHISTORY ONARIMI: Eski kanal fingerprint'lerini yeni kanallarla eşleştir
         await RepairWatchHistoryChannelIdsAsync(playlist.Id);
-
-        var finalCount = await context.Channels.CountAsync(c => c.PlaylistId == playlist.Id);
-        playlist.ChannelCount = finalCount;
-        playlist.LastUpdated = DateTime.UtcNow;
-        if (latestRemoteMetadata != null)
-        {
-            UpdatePlaylistSourceMetadata(playlist, latestRemoteMetadata);
-        }
-        context.Playlists.Update(playlist);
-        await context.SaveChangesAsync();
 
         // Fire-and-forget: re-aggregate in background
         var refreshAggregationPlaylistId = playlist.Id;
@@ -1222,8 +1271,19 @@ WHERE PlaylistId = {playlistId}
     private static async Task DeletePlaylistContentForReplacementAsync(
         AppDbContext context,
         int playlistId,
-        IReadOnlyCollection<string> epgChannelIds)
+        IReadOnlyCollection<string> epgChannelIds,
+        System.Data.Common.DbTransaction? transaction = null)
     {
+        if (transaction is not null)
+        {
+            await DeletePlaylistContentForReplacementWithTransactionAsync(
+                context.Database.GetDbConnection(),
+                transaction,
+                playlistId,
+                epgChannelIds);
+            return;
+        }
+
         if (epgChannelIds.Count > 0)
         {
             const int batchSize = 500;
@@ -1244,6 +1304,90 @@ WHERE PlaylistId = {playlistId}
         await context.Channels
             .Where(c => c.PlaylistId == playlistId)
             .ExecuteDeleteAsync();
+    }
+
+    private static async Task DeletePlaylistContentForReplacementWithTransactionAsync(
+        System.Data.Common.DbConnection connection,
+        System.Data.Common.DbTransaction transaction,
+        int playlistId,
+        IReadOnlyCollection<string> epgChannelIds)
+    {
+        if (epgChannelIds.Count > 0)
+        {
+            const int batchSize = 500;
+            var ids = epgChannelIds.ToList();
+            for (var i = 0; i < ids.Count; i += batchSize)
+            {
+                var batch = ids.Skip(i).Take(batchSize).ToList();
+                var parameterNames = batch.Select((_, index) => $"$id{index}").ToArray();
+                using var command = connection.CreateCommand();
+                command.Transaction = transaction;
+                command.CommandText = $"DELETE FROM EpgPrograms WHERE ChannelId IN ({string.Join(", ", parameterNames)})";
+
+                for (var parameterIndex = 0; parameterIndex < batch.Count; parameterIndex++)
+                {
+                    var parameter = command.CreateParameter();
+                    parameter.ParameterName = parameterNames[parameterIndex];
+                    parameter.Value = batch[parameterIndex];
+                    command.Parameters.Add(parameter);
+                }
+
+                await command.ExecuteNonQueryAsync();
+            }
+        }
+
+        await ExecuteNonQueryInTransactionAsync(
+            connection,
+            transaction,
+            "DELETE FROM Series WHERE PlaylistId = $playlistId",
+            playlistId);
+
+        await ExecuteNonQueryInTransactionAsync(
+            connection,
+            transaction,
+            "DELETE FROM Channels WHERE PlaylistId = $playlistId",
+            playlistId);
+    }
+
+    private static async Task ExecuteNonQueryInTransactionAsync(
+        System.Data.Common.DbConnection connection,
+        System.Data.Common.DbTransaction transaction,
+        string commandText,
+        int playlistId)
+    {
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = commandText;
+
+        var parameter = command.CreateParameter();
+        parameter.ParameterName = "$playlistId";
+        parameter.Value = playlistId;
+        command.Parameters.Add(parameter);
+
+        await command.ExecuteNonQueryAsync();
+    }
+
+    private static async Task MoveStagedChannelsToPlaylistAsync(
+        System.Data.Common.DbConnection connection,
+        System.Data.Common.DbTransaction transaction,
+        int stagingPlaylistId,
+        int targetPlaylistId)
+    {
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = "UPDATE Channels SET PlaylistId = $targetPlaylistId WHERE PlaylistId = $stagingPlaylistId";
+
+        var targetParameter = command.CreateParameter();
+        targetParameter.ParameterName = "$targetPlaylistId";
+        targetParameter.Value = targetPlaylistId;
+        command.Parameters.Add(targetParameter);
+
+        var stagingParameter = command.CreateParameter();
+        stagingParameter.ParameterName = "$stagingPlaylistId";
+        stagingParameter.Value = stagingPlaylistId;
+        command.Parameters.Add(stagingParameter);
+
+        await command.ExecuteNonQueryAsync();
     }
 
     public async Task DeleteAsync(int playlistId)
@@ -2037,7 +2181,10 @@ WHERE PlaylistId = {playlistId}
         }
     }
 
-    private async Task FastSqliteBulkInsertAsync(AppDbContext context, IReadOnlyCollection<Channel> channels)
+    private async Task FastSqliteBulkInsertAsync(
+        AppDbContext context,
+        IReadOnlyCollection<Channel> channels,
+        System.Data.Common.DbTransaction? existingTransaction = null)
     {
         if (channels.Count == 0) return;
 
@@ -2049,7 +2196,13 @@ WHERE PlaylistId = {playlistId}
         // Tek transaction'ı koruyoruz: commit'i 1000'lik parçalara bölmek mobilde
         // kısmi import bırakabilir. Büyük listelerde asıl kazanç raw ADO.NET + prepared
         // command'dan geliyor; burada sadece ilerleme/hata loglarını güçlendiriyoruz.
-        using var transaction = await connection.BeginTransactionAsync();
+        System.Data.Common.DbTransaction? ownedTransaction = null;
+        var transaction = existingTransaction;
+        if (transaction is null)
+        {
+            ownedTransaction = await connection.BeginTransactionAsync();
+            transaction = ownedTransaction;
+        }
         var inserted = 0;
         var total = channels.Count;
 
@@ -2130,7 +2283,10 @@ WHERE PlaylistId = {playlistId}
                 }
             }
 
-            await transaction.CommitAsync();
+            if (ownedTransaction is not null)
+            {
+                await ownedTransaction.CommitAsync();
+            }
             System.Diagnostics.Debug.WriteLine($"[PlaylistService] FastSqliteBulkInsertAsync completed: {inserted}/{total} channel(s).");
         }
         catch (Exception ex)
@@ -2140,11 +2296,15 @@ WHERE PlaylistId = {playlistId}
             _logger?.LogError(ex, "FastSqliteBulkInsertAsync failed at channel {Inserted}/{Total}", inserted, total);
             try { Console.Error.WriteLine(msg); } catch { /* logging never throws */ }
 
-            try { await transaction.RollbackAsync(); } catch { /* rollback failure should not hide original error */ }
+            if (ownedTransaction is not null)
+            {
+                try { await ownedTransaction.RollbackAsync(); } catch { /* rollback failure should not hide original error */ }
+            }
             throw;
         }
         finally
         {
+            ownedTransaction?.Dispose();
             if (wasClosed) await connection.CloseAsync();
         }
     }
