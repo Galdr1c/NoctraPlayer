@@ -811,10 +811,11 @@
         </Style>
 
         <Style Selector="^:selected /template/ Border#PART_Border">
-            <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource GlowColor}"/>
         </Style>
         <Style Selector="^:selected">
-            <Setter Property="Foreground" Value="{DynamicResource Surface1Color}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryColor}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
         </Style>
     </ControlTheme>
 

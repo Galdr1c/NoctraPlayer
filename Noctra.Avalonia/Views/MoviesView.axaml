@@ -24,9 +24,9 @@
                     <DataTemplate>
                       <Grid ColumnDefinitions="Auto,*">
                         <Button Grid.Column="0" Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).HideGroupCommand}"
-                                CommandParameter="{Binding}" Padding="8" Margin="0,0,8,0" Background="Transparent" BorderThickness="0" CornerRadius="6" Cursor="Hand"
+                                CommandParameter="{Binding}" Padding="6" Margin="0,0,8,0" Background="Transparent" BorderThickness="0" CornerRadius="6" Cursor="Hand"
                                 ToolTip.Tip="{loc:Translate Live.HideCategory.Tooltip}">
-                          <materialIcons:MaterialIcon Kind="EyeOffOutline" Width="18" Height="18" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                          <materialIcons:MaterialIcon Kind="EyeOffOutline" Width="16" Height="16" Foreground="{DynamicResource TextPrimaryColor}"/>
                         </Button>
                         <TextBlock Grid.Column="1" Text="{Binding}" VerticalAlignment="Center"/>
                       </Grid>
