@@ -35,6 +35,7 @@
         <converters:CountToVisibilityConverter x:Key="CountToVisibilityConverter" />
         <converters:InverseBoolConverter x:Key="InverseBoolConverter" />
         <converters:StringNotEmptyToVisibilityConverter x:Key="StringNotEmptyToVisibilityConverter" />
+        <converters:StringNotEmptyToBoolConverter x:Key="StringNotEmptyToBoolConverter" />
         <converters:MediaSupportsFavoriteConverter x:Key="MediaSupportsFavoriteConverter" />
         <converters:MediaSupportsMyListConverter x:Key="MediaSupportsMyListConverter" />
         <converters:DoubleToLeftMarginConverter x:Key="DoubleToLeftMarginConverter" />

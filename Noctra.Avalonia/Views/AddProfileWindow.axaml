@@ -247,7 +247,7 @@
                                                         VerticalAlignment="Center"
                                                         IsVisible="{Binding !IsPinAvailable}">
                                                     <TextBlock Text="PREMIUM" FontSize="10" FontWeight="Bold"
-                                                               Foreground="#1A1A2E"/>
+                                                               Foreground="{DynamicResource PremiumBadgeTextBrush}"/>
                                                 </Border>
                                             </StackPanel>
                                             <TextBlock Text="{loc:Translate Profiles.Add.PinLockDescription}"

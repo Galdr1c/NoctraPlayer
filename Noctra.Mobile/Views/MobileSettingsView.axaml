@@ -925,7 +925,7 @@
       </Border>
 
       <!-- Upgrade to Premium Banner (shown when not premium, placed after Account card) -->
-      <Border Background="{DynamicResource Surface0Brush}"
+      <Border Background="{DynamicResource PremiumBadgeBrush}"
               CornerRadius="8"
               Padding="14"
               IsVisible="{Binding !IsPremium}">
@@ -934,17 +934,17 @@
           <icons:MaterialIcon Kind="Crown"
                               Width="32"
                               Height="32"
-                              Foreground="{DynamicResource AccentBrush}"
+                              Foreground="{DynamicResource PremiumBadgeTextBrush}"
                               VerticalAlignment="Center" />
           <StackPanel Grid.Column="1"
                       VerticalAlignment="Center"
                       Spacing="2">
             <TextBlock Text="{loc:Translate GlobalSettings.About.Upgrade}"
-                       Foreground="{DynamicResource TextPrimaryBrush}"
+                       Foreground="{DynamicResource PremiumBadgeTextBrush}"
                        FontWeight="SemiBold"
                        FontSize="14" />
             <TextBlock Text="{loc:Translate Upsell.Headline}"
-                       Foreground="{DynamicResource TextMutedBrush}"
+                       Foreground="{DynamicResource PremiumBadgeTextBrush}"
                        FontSize="12" />
           </StackPanel>
           <Button Grid.Column="2"
@@ -966,9 +966,9 @@
               Padding="14">
         <StackPanel Spacing="12">
           <StackPanel Orientation="Horizontal" Spacing="8">
-            <icons:MaterialIcon Kind="Crown" Width="20" Height="20" Foreground="{DynamicResource AccentBrush}" />
+            <icons:MaterialIcon Kind="Crown" Width="20" Height="20" Foreground="{DynamicResource PremiumBadgeBrush}" />
             <TextBlock Text="{loc:Translate Mobile.Settings.About.Title}"
-                       Foreground="{DynamicResource TextPrimaryBrush}"
+                       Foreground="{DynamicResource PremiumBadgeTextBrush}"
                        FontWeight="SemiBold" />
           </StackPanel>
 
@@ -1062,7 +1062,7 @@
               Padding="14">
         <StackPanel Spacing="12">
           <StackPanel Orientation="Horizontal" Spacing="8">
-            <icons:MaterialIcon Kind="GiftOutline" Width="20" Height="20" Foreground="{DynamicResource AccentBrush}" />
+            <icons:MaterialIcon Kind="GiftOutline" Width="20" Height="20" Foreground="{DynamicResource PremiumBadgeBrush}" />
             <TextBlock Text="{loc:Translate GlobalSettings.Promo.Title}"
                        Foreground="{DynamicResource TextPrimaryBrush}"
                        FontWeight="SemiBold" />
@@ -1094,8 +1094,13 @@
           <StackPanel Spacing="4">
             <TextBlock Text="{Binding PromoCodeStatus}"
                        Foreground="{Binding IsPromoCodeStatusSuccess, Converter={StaticResource BooleanToSuccessWarningBrushConverter}}"
-                       FontSize="13"
+                       FontSize="15"
+                       Padding="16,12"
+                       BorderThickness="1.5"
+                       BorderBrush="{DynamicResource BorderBrush}"
+                       Background="{DynamicResource Surface1Brush}"
                        FontWeight="SemiBold"
+                       LetterSpacing="1"
                        TextWrapping="Wrap"
                        IsVisible="{Binding PromoCodeStatus, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
             <TextBlock Text="{Binding PremiumStatusText}"

@@ -4,6 +4,21 @@
              xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="Noctra.Mobile.Views.MobileUpsellView"
              x:CompileBindings="False">
+
+  <Window.Styles>
+      <!-- Buy Button -->
+      <Style Selector="Button.BuyBtn">
+          <Setter Property="Background" Value="{DynamicResource PremiumBadgeBrush}"/>
+          <Setter Property="Foreground" Value="{DynamicResource PremiumBadgeTextBrush}"/>
+          <Setter Property="CornerRadius" Value="6"/>
+          <Setter Property="Cursor" Value="Hand"/>
+          <Setter Property="BorderThickness" Value="0"/>
+      </Style>
+      <Style Selector="Button.BuyBtn:pressed">
+          <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+      </Style>
+  </Window.Styles>
+
   <Grid Background="{DynamicResource OverlayDimBrush}">
     <Border Background="{DynamicResource BackgroundGradientBrush}"
             BorderBrush="{DynamicResource BorderBrush}"
@@ -61,8 +76,8 @@
                          TextWrapping="Wrap"  Margin="0,4,0,0"/>
             </StackPanel>
 
-            <Border Background="{DynamicResource Surface0Brush}"
-                    BorderBrush="{DynamicResource BorderBrush}"
+            <Border Background="{DynamicResource PremiumCardBackgroundBrush}"
+                    BorderBrush="{DynamicResource PremiumBadgeBrush}"
                     BorderThickness="1"
                     CornerRadius="8"
                     Padding="18">
@@ -78,12 +93,12 @@
                                FontSize="12" Margin="0,1,0,12"/>
                   </StackPanel>
                   <Border Grid.Column="1"
-                          Background="{DynamicResource AccentBrush}"
+                          Background="{DynamicResource PremiumBadgeBrush}"
                           CornerRadius="8"
                           Padding="10"
                           VerticalAlignment="Top">
                     <TextBlock Text="{loc:Translate Upsell.Premium.Recommended}"
-                               Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                               Foreground="{DynamicResource PremiumBadgeTextBrush}"
                                FontSize="10"
                                FontWeight="Bold" />
                   </Border>
@@ -126,15 +141,14 @@
               </StackPanel>
             </Border>
 
-            <Button Classes="SettingsPrimaryActionButton"
+            <Button Classes="BuyBtn"
                     MinHeight="52"
                     Click="Buy_Click">
               <StackPanel Orientation="Horizontal"
                           HorizontalAlignment="Center"
                           Spacing="8">
-                <icons:MaterialIcon Kind="Crown" Width="18" Height="18" Foreground="{DynamicResource PlayerOverlayTextBrush}" />
+                <icons:MaterialIcon Kind="Crown" Width="18" Height="18"/>
                 <TextBlock Text="{loc:Translate Upsell.Action.Buy}"
-                           Foreground="{DynamicResource PlayerOverlayTextBrush}"
                            FontSize="15"
                            FontWeight="Bold" />
               </StackPanel>

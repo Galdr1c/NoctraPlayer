@@ -136,8 +136,12 @@
   <!-- Overlay brushes for semi-transparent panels -->
   <SolidColorBrush x:Key="OverlayBackgroundBrush" Color="#0FFFFFFF" />
   <SolidColorBrush x:Key="OverlayTextBrush" Color="#E6FFFFFF" />
-  <SolidColorBrush x:Key="PremiumBadgeBrush" Color="#F5C842" />
-  <SolidColorBrush x:Key="PremiumBadgeTextBrush" Color="#000000" />
+  <LinearGradientBrush x:Key="PremiumBadgeBrush" StartPoint="0%,0%" EndPoint="100%,100%">
+    <GradientStop Color="#9333EA" Offset="0.0" />
+    <GradientStop Color="#7C3AED" Offset="0.5" />
+    <GradientStop Color="#5B21B6" Offset="1.2" />
+  </LinearGradientBrush>
+  <SolidColorBrush x:Key="PremiumBadgeTextBrush" Color="White" />
   <SolidColorBrush x:Key="OverlayDarkBrush" Color="#CC090B10" />
   <SolidColorBrush x:Key="OverlayDimBrush" Color="#AA000000" />
   <SolidColorBrush x:Key="OverlayModalDimBrush" Color="#E6000000" />

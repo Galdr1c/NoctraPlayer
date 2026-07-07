@@ -1140,7 +1140,7 @@
                             <!-- ABOUT SECTION -->
                             <Panel Margin="0,0,0,16">
                                 <!-- PREMIUM CARD -->
-                                <Border Background="{DynamicResource PrimaryGradientBrush}" 
+                                <Border Background="{DynamicResource PremiumBadgeBrush}" 
                                         CornerRadius="8" 
                                         Padding="1.5"
                                         IsVisible="{Binding IsPremium}"
@@ -1153,7 +1153,7 @@
                                             <!-- Crown Icon (Top Right Background) -->
                                             <materialIcons:MaterialIcon Kind="Crown" 
                                                                     Width="140" Height="140" 
-                                                                    Foreground="#f5c842" 
+                                                                    Foreground="{DynamicResource PremiumBadgeTextBrush}" 
                                                                     Opacity="0.05"
                                                                     HorizontalAlignment="Center" 
                                                                     VerticalAlignment="Top"
@@ -1169,22 +1169,17 @@
 
                                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                                     <StackPanel Orientation="Horizontal" Spacing="10">
-                                                        <TextBlock Text="Noctra" FontSize="22" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                                        <TextBlock Text="Noctra" FontSize="22" FontWeight="Bold" Foreground="{DynamicResource PremiumBadgeTextBrush}"/>
                                                         
                                                         <!-- PREMIUM BADGE -->
                                                         <Border Padding="10,3" 
                                                                 CornerRadius="3"
-                                                                VerticalAlignment="Center">
-                                                            <Border.Background>
-                                                                <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
-                                                                    <GradientStop Color="#f5c842" Offset="0"/>
-                                                                    <GradientStop Color="#f0a832" Offset="1"/>
-                                                                </LinearGradientBrush>
-                                                            </Border.Background>
+                                                                VerticalAlignment="Center"
+                                                                Background="{DynamicResource PremiumBadgeBrush}">
                                                             <TextBlock Text="PREMIUM" 
                                                                     FontSize="11" 
                                                                     FontWeight="ExtraBold" 
-                                                                    Foreground="Black"/>
+                                                                    Foreground="{DynamicResource PremiumBadgeTextBrush}"/>
                                                     </Border>
                                                     </StackPanel>
                                                     <TextBlock Text="{Binding CurrentVersion, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.About.PremiumVersionFormat'}" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0"/>
@@ -1230,14 +1225,14 @@
                                             <Button Grid.Column="2" 
                                                     Command="{Binding ShowUpsellCommand}"
                                                     Padding="16,8"
-                                                    Background="{DynamicResource PrimaryGradientBrush}"
+                                                    Background="{DynamicResource PremiumBadgeBrush}"
                                                     Foreground="White"
                                                     CornerRadius="8"
                                                     VerticalAlignment="Center"
                                                     Cursor="Hand">
                                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                                     <materialIcons:MaterialIcon Kind="Crown" Width="16" Height="16"/>
-                                                    <TextBlock Text="{loc:Translate Settings.About.UpgradeToPremium}" FontWeight="SemiBold"/>
+                                                    <TextBlock Text="{loc:Translate Settings.About.UpgradeToPremium}" FontWeight="SemiBold" Foreground="{DynamicResource PremiumBadgeTextBrush}"/>
                                                 </StackPanel>
                                             </Button>
                                         </Grid>
