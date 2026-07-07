@@ -1,6 +1,7 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Moq;
+using Noctra.Core.Services;
 using Noctra.Data;
 using Noctra.Models;
 using Noctra.Services;
@@ -118,6 +119,231 @@ namespace Noctra.Tests
         }
 
         [Fact]
+        public async Task AddFromChannelsAsync_WhenChannelsEmpty_DoesNotCreatePlaylist()
+        {
+            var service = CreateService();
+
+            await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                service.AddFromChannelsAsync("Empty Playlist", "http://source.com/empty.m3u", Array.Empty<Channel>()));
+
+            using var context = new AppDbContext(_options);
+            Assert.Equal(0, await context.Playlists.CountAsync());
+            Assert.Equal(0, await context.Channels.CountAsync());
+        }
+
+        [Fact]
+        public async Task AddFromUrlAsync_AfterSuccessfulParse_CompletesImportJob()
+        {
+            var service = CreateService();
+            int profileId;
+            using (var setupContext = new AppDbContext(_options))
+            {
+                var account = new ProviderAccount { Name = "Import Account", Url = "http://source.com" };
+                setupContext.ProviderAccounts.Add(account);
+                await setupContext.SaveChangesAsync();
+
+                var profile = new Profile { Name = "Import Profile", ProviderAccountId = account.Id };
+                setupContext.Profiles.Add(profile);
+                await setupContext.SaveChangesAsync();
+                profileId = profile.Id;
+            }
+
+            var parsedChannels = new List<Channel>
+            {
+                new Channel { Name = "Live", StreamUrl = "live-url", Type = ChannelType.Live },
+                new Channel { Name = "Movie", StreamUrl = "movie-url", Type = ChannelType.VOD }
+            };
+
+            _parserMock
+                .Setup(p => p.ParseFromUrlAsync("http://source.com/import.m3u"))
+                .ReturnsAsync(parsedChannels);
+
+            var playlist = await service.AddFromUrlAsync("Initial Import", "http://source.com/import.m3u", profileId);
+
+            using var context = new AppDbContext(_options);
+            var job = await context.ImportJobs.SingleAsync(j => j.PlaylistId == playlist.Id);
+
+            Assert.Equal(ImportJobKind.M3U, job.Kind);
+            Assert.Equal(ImportJobStatus.Completed, job.Status);
+            Assert.Equal(profileId, job.ProfileId);
+            Assert.Equal("Completed", job.Stage);
+            Assert.Equal(1, job.LiveCount);
+            Assert.Equal(1, job.VodCount);
+            Assert.Equal(0, job.SeriesCount);
+        }
+
+        [Fact]
+        public async Task AddFromUrlAsync_WhenParseFails_FailsImportJob()
+        {
+            var service = CreateService();
+            int profileId;
+            using (var setupContext = new AppDbContext(_options))
+            {
+                var account = new ProviderAccount { Name = "Import Account", Url = "http://source.com" };
+                setupContext.ProviderAccounts.Add(account);
+                await setupContext.SaveChangesAsync();
+
+                var profile = new Profile { Name = "Import Profile", ProviderAccountId = account.Id };
+                setupContext.Profiles.Add(profile);
+                await setupContext.SaveChangesAsync();
+                profileId = profile.Id;
+            }
+
+            _parserMock
+                .Setup(p => p.ParseFromUrlAsync("http://source.com/fail.m3u"))
+                .ThrowsAsync(new TimeoutException("provider timed out"));
+
+            await Assert.ThrowsAsync<TimeoutException>(() =>
+                service.AddFromUrlAsync("Initial Import", "http://source.com/fail.m3u", profileId));
+
+            using var context = new AppDbContext(_options);
+            var job = await context.ImportJobs.SingleAsync();
+
+            Assert.Equal(ImportJobKind.M3U, job.Kind);
+            Assert.Equal(ImportJobStatus.Failed, job.Status);
+            Assert.Null(job.PlaylistId);
+            Assert.Equal(profileId, job.ProfileId);
+            Assert.Equal("Failed", job.Stage);
+            Assert.Equal("provider timed out", job.ErrorMessage);
+        }
+
+        [Fact]
+        public async Task AddFromFileAsync_AfterSuccessfulParse_CompletesImportJob()
+        {
+            var service = CreateService();
+            int profileId;
+            using (var setupContext = new AppDbContext(_options))
+            {
+                var account = new ProviderAccount { Name = "File Account", Url = "file://local" };
+                setupContext.ProviderAccounts.Add(account);
+                await setupContext.SaveChangesAsync();
+
+                var profile = new Profile { Name = "File Profile", ProviderAccountId = account.Id };
+                setupContext.Profiles.Add(profile);
+                await setupContext.SaveChangesAsync();
+                profileId = profile.Id;
+            }
+
+            var parsedChannels = new List<Channel>
+            {
+                new Channel { Name = "Local Live", StreamUrl = "live-url", Type = ChannelType.Live },
+                new Channel { Name = "Local Series", StreamUrl = "series-url", Type = ChannelType.Series }
+            };
+
+            _parserMock
+                .Setup(p => p.ParseFromFileAsync("D:\\imports\\local.m3u"))
+                .ReturnsAsync(parsedChannels);
+
+            var playlist = await service.AddFromFileAsync("Local Import", "D:\\imports\\local.m3u", profileId);
+
+            using var context = new AppDbContext(_options);
+            var job = await context.ImportJobs.SingleAsync(j => j.PlaylistId == playlist.Id);
+
+            Assert.Equal(ImportJobKind.M3U, job.Kind);
+            Assert.Equal(ImportJobStatus.Completed, job.Status);
+            Assert.Equal(profileId, job.ProfileId);
+            Assert.Equal("Completed", job.Stage);
+            Assert.Equal(1, job.LiveCount);
+            Assert.Equal(0, job.VodCount);
+            Assert.Equal(1, job.SeriesCount);
+        }
+
+        [Fact]
+        public async Task AddFromFileAsync_WhenParseFails_FailsImportJob()
+        {
+            var service = CreateService();
+            int profileId;
+            using (var setupContext = new AppDbContext(_options))
+            {
+                var account = new ProviderAccount { Name = "File Account", Url = "file://local" };
+                setupContext.ProviderAccounts.Add(account);
+                await setupContext.SaveChangesAsync();
+
+                var profile = new Profile { Name = "File Profile", ProviderAccountId = account.Id };
+                setupContext.Profiles.Add(profile);
+                await setupContext.SaveChangesAsync();
+                profileId = profile.Id;
+            }
+
+            _parserMock
+                .Setup(p => p.ParseFromFileAsync("D:\\imports\\broken.m3u"))
+                .ThrowsAsync(new IOException("local file unreadable"));
+
+            await Assert.ThrowsAsync<IOException>(() =>
+                service.AddFromFileAsync("Local Import", "D:\\imports\\broken.m3u", profileId));
+
+            using var context = new AppDbContext(_options);
+            var job = await context.ImportJobs.SingleAsync();
+
+            Assert.Equal(ImportJobKind.M3U, job.Kind);
+            Assert.Equal(ImportJobStatus.Failed, job.Status);
+            Assert.Null(job.PlaylistId);
+            Assert.Equal(profileId, job.ProfileId);
+            Assert.Equal("Failed", job.Stage);
+            Assert.Equal("local file unreadable", job.ErrorMessage);
+        }
+
+        [Fact]
+        public async Task AddFromUrlAsync_WhenChildFilterRemovesAllChannels_DoesNotCreatePlaylistAndFailsImportJob()
+        {
+            var service = CreateService();
+            int profileId;
+            using (var setupContext = new AppDbContext(_options))
+            {
+                var account = new ProviderAccount { Name = "Child Account", Url = "http://child.test" };
+                setupContext.ProviderAccounts.Add(account);
+                await setupContext.SaveChangesAsync();
+
+                var profile = new Profile { Name = "Child", IsChild = true, ProviderAccountId = account.Id };
+                setupContext.Profiles.Add(profile);
+                await setupContext.SaveChangesAsync();
+                profileId = profile.Id;
+            }
+
+            _parserMock
+                .Setup(p => p.ParseFromUrlAsync("http://child.test/adult-only.m3u"))
+                .ReturnsAsync(new List<Channel>
+                {
+                    new Channel { Name = "Adult Only", GroupTitle = "Adult", StreamUrl = "adult-url", Type = ChannelType.Live }
+                });
+
+            await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                service.AddFromUrlAsync("Adult Only", "http://child.test/adult-only.m3u", profileId));
+
+            using var context = new AppDbContext(_options);
+            Assert.Equal(0, await context.Playlists.CountAsync());
+            Assert.Equal(0, await context.Channels.CountAsync());
+
+            var job = await context.ImportJobs.SingleAsync();
+            Assert.Equal(ImportJobKind.M3U, job.Kind);
+            Assert.Equal(ImportJobStatus.Failed, job.Status);
+            Assert.Null(job.PlaylistId);
+            Assert.Equal(profileId, job.ProfileId);
+        }
+
+        [Fact]
+        public async Task AddFromFileAsync_WhenParseReturnsEmpty_DoesNotCreatePlaylistAndFailsImportJob()
+        {
+            var service = CreateService();
+
+            _parserMock
+                .Setup(p => p.ParseFromFileAsync("D:\\imports\\empty.m3u"))
+                .ReturnsAsync(new List<Channel>());
+
+            await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                service.AddFromFileAsync("Empty Local Import", "D:\\imports\\empty.m3u"));
+
+            using var context = new AppDbContext(_options);
+            Assert.Equal(0, await context.Playlists.CountAsync());
+            Assert.Equal(0, await context.Channels.CountAsync());
+
+            var job = await context.ImportJobs.SingleAsync();
+            Assert.Equal(ImportJobKind.M3U, job.Kind);
+            Assert.Equal(ImportJobStatus.Failed, job.Status);
+            Assert.Null(job.PlaylistId);
+        }
+
+        [Fact]
         public async Task RefreshAsync_ShouldAddOnlyNewChannels_DiffUpsertLogic()
         {
             // Arrange
@@ -226,6 +452,90 @@ namespace Noctra.Tests
         }
 
         [Fact]
+        public async Task RefreshAsync_WhenChildFilterRemovesAllNewChannels_PreservesExistingChannels()
+        {
+            var service = CreateService();
+
+            int profileId;
+            using (var context = new AppDbContext(_options))
+            {
+                var account = new ProviderAccount { Name = "Child Account", Url = "http://child.test" };
+                context.ProviderAccounts.Add(account);
+                await context.SaveChangesAsync();
+
+                var profile = new Profile { Name = "Child", IsChild = true, ProviderAccountId = account.Id };
+                context.Profiles.Add(profile);
+                await context.SaveChangesAsync();
+                profileId = profile.Id;
+            }
+
+            var playlist = await service.AddFromChannelsAsync(
+                "Child Safe Playlist",
+                "http://source.com/child-safe.m3u",
+                new List<Channel>
+                {
+                    new Channel { Name = "Kid Show", GroupTitle = "Kids", StreamUrl = "kid-url", Type = ChannelType.Live }
+                },
+                profileId);
+
+            _parserMock
+                .Setup(p => p.ParseFromUrlAsync(playlist.Url))
+                .ReturnsAsync(new List<Channel>
+                {
+                    new Channel { Name = "Adult Only", GroupTitle = "Adult", StreamUrl = "adult-url", Type = ChannelType.Live }
+                });
+
+            await Assert.ThrowsAsync<InvalidOperationException>(() => service.RefreshAsync(playlist.Id));
+
+            using var verifyContext = new AppDbContext(_options);
+            var remainingChannels = await verifyContext.Channels
+                .Where(c => c.PlaylistId == playlist.Id)
+                .Select(c => c.Name)
+                .ToListAsync();
+
+            var persistedPlaylist = await verifyContext.Playlists.SingleAsync(p => p.Id == playlist.Id);
+            Assert.Equal(new[] { "Kid Show" }, remainingChannels);
+            Assert.Equal(1, persistedPlaylist.ChannelCount);
+        }
+
+        [Fact]
+        public async Task RefreshAsync_WhenOrganizerRemovesAllParsedChannels_PreservesExistingChannels()
+        {
+            var service = CreateService();
+            var initialChannels = new List<Channel>
+            {
+                new Channel { Name = "Existing Safe", StreamUrl = "existing-url", Type = ChannelType.Live }
+            };
+
+            var playlist = await service.AddFromChannelsAsync(
+                "Organizer Empty Playlist",
+                "http://source.com/organizer-empty.m3u",
+                initialChannels);
+
+            var parsedChannels = new List<Channel>
+            {
+                new Channel { Name = "Parsed But Removed", StreamUrl = "parsed-url", Type = ChannelType.Live }
+            };
+
+            _parserMock.Setup(p => p.ParseFromUrlAsync(playlist.Url)).ReturnsAsync(parsedChannels);
+            _organizerMock
+                .Setup(o => o.Organize(It.Is<List<Channel>>(channels => channels == parsedChannels), It.IsAny<bool>()))
+                .Returns(new List<Channel>());
+
+            await Assert.ThrowsAsync<InvalidOperationException>(() => service.RefreshAsync(playlist.Id));
+
+            using var verifyContext = new AppDbContext(_options);
+            var remainingChannels = await verifyContext.Channels
+                .Where(c => c.PlaylistId == playlist.Id)
+                .Select(c => c.Name)
+                .ToListAsync();
+
+            var persistedPlaylist = await verifyContext.Playlists.SingleAsync(p => p.Id == playlist.Id);
+            Assert.Equal(new[] { "Existing Safe" }, remainingChannels);
+            Assert.Equal(1, persistedPlaylist.ChannelCount);
+        }
+
+        [Fact]
         public async Task RefreshAsync_AfterSuccessfulParse_ReplacesDerivedPlaylistData()
         {
             var service = CreateService();
@@ -283,6 +593,157 @@ namespace Noctra.Tests
                 Assert.Equal("New Channel", channel.Name);
                 Assert.False(await context.Series.AnyAsync(s => s.PlaylistId == playlistId));
                 Assert.False(await context.EpgPrograms.AnyAsync(e => e.ChannelId == "old.epg"));
+            }
+        }
+
+        [Fact]
+        public async Task RefreshAsync_AfterSuccessfulParse_CompletesImportJob()
+        {
+            var service = CreateService();
+            var playlist = await service.AddFromChannelsAsync(
+                "Job Tracked Refresh",
+                "http://source.com/job-refresh.m3u",
+                new List<Channel>
+                {
+                    new Channel { Name = "Old Channel", StreamUrl = "old-url", Type = ChannelType.Live }
+                });
+
+            _parserMock
+                .Setup(p => p.ParseFromUrlAsync(playlist.Url))
+                .ReturnsAsync(new List<Channel>
+                {
+                    new Channel { Name = "New Live", StreamUrl = "live-url", Type = ChannelType.Live },
+                    new Channel { Name = "New Movie", StreamUrl = "vod-url", Type = ChannelType.VOD }
+                });
+
+            await service.RefreshAsync(playlist.Id);
+
+            using var context = new AppDbContext(_options);
+            var job = await context.ImportJobs.SingleAsync(j => j.PlaylistId == playlist.Id);
+
+            Assert.Equal(ImportJobKind.PlaylistRefresh, job.Kind);
+            Assert.Equal(ImportJobStatus.Completed, job.Status);
+            Assert.Equal("Completed", job.Stage);
+            Assert.Equal(1, job.LiveCount);
+            Assert.Equal(1, job.VodCount);
+            Assert.Equal(0, job.SeriesCount);
+            Assert.NotNull(job.CompletedAt);
+            Assert.Null(job.ErrorMessage);
+        }
+
+        [Fact]
+        public async Task RefreshAsync_WhenReplacementInsertFails_FailsImportJob()
+        {
+            var service = CreateService();
+            var playlist = await service.AddFromChannelsAsync(
+                "Job Failed Refresh",
+                "http://source.com/job-fail.m3u",
+                new List<Channel>
+                {
+                    new Channel { Name = "Old Channel", StreamUrl = "old-url", Type = ChannelType.Live }
+                });
+
+            _parserMock
+                .Setup(p => p.ParseFromUrlAsync(playlist.Url))
+                .ReturnsAsync(new List<Channel>
+                {
+                    new Channel { Name = "Replacement 1", StreamUrl = "replacement-url", Type = ChannelType.Live }
+                });
+
+            using (var setupContext = new AppDbContext(_options))
+            {
+                await setupContext.Database.ExecuteSqlRawAsync("""
+                    CREATE TRIGGER FailTrackedRefreshInsert
+                    BEFORE INSERT ON Channels
+                    WHEN NEW.Name = 'Replacement 1'
+                    BEGIN
+                        SELECT RAISE(ABORT, 'simulated tracked refresh failure');
+                    END;
+                    """);
+            }
+
+            await Assert.ThrowsAsync<SqliteException>(() => service.RefreshAsync(playlist.Id));
+
+            using var context = new AppDbContext(_options);
+            var job = await context.ImportJobs.SingleAsync(j => j.PlaylistId == playlist.Id);
+
+            Assert.Equal(ImportJobKind.PlaylistRefresh, job.Kind);
+            Assert.Equal(ImportJobStatus.Failed, job.Status);
+            Assert.Equal("Failed", job.Stage);
+            Assert.Contains("simulated tracked refresh failure", job.ErrorMessage);
+            Assert.NotNull(job.CompletedAt);
+        }
+
+        [Fact]
+        public async Task RefreshAsync_AfterSuccessfulParse_RemovesStaleRefreshStagingArtifacts()
+        {
+            var service = CreateService();
+            int playlistId;
+            int staleStagingPlaylistId;
+
+            using (var context = new AppDbContext(_options))
+            {
+                var playlist = new Playlist
+                {
+                    Name = "Refresh Source",
+                    Url = "http://source.com/list.m3u",
+                    IsActive = true,
+                    ChannelCount = 1,
+                    CreatedAt = DateTime.UtcNow,
+                    LastUpdated = DateTime.UtcNow
+                };
+                context.Playlists.Add(playlist);
+                await context.SaveChangesAsync();
+                playlistId = playlist.Id;
+
+                context.Channels.Add(new Channel
+                {
+                    PlaylistId = playlistId,
+                    Name = "Old Channel",
+                    StreamUrl = "old-url",
+                    Type = ChannelType.Live
+                });
+
+                var staleStagingPlaylist = new Playlist
+                {
+                    Name = "Refresh Source refresh staging",
+                    Url = "http://source.com/list.m3u",
+                    IsActive = false,
+                    ChannelCount = 1,
+                    CreatedAt = DateTime.UtcNow.AddMinutes(-10),
+                    LastUpdated = DateTime.UtcNow.AddMinutes(-10)
+                };
+                context.Playlists.Add(staleStagingPlaylist);
+                await context.SaveChangesAsync();
+                staleStagingPlaylistId = staleStagingPlaylist.Id;
+
+                context.Channels.Add(new Channel
+                {
+                    PlaylistId = staleStagingPlaylistId,
+                    Name = "Stale Staged Channel",
+                    StreamUrl = "stale-url",
+                    Type = ChannelType.Live
+                });
+
+                await context.SaveChangesAsync();
+            }
+
+            _parserMock
+                .Setup(p => p.ParseFromUrlAsync("http://source.com/list.m3u"))
+                .ReturnsAsync(new List<Channel>
+                {
+                    new Channel { Name = "New Channel", StreamUrl = "new-url", Type = ChannelType.Live }
+                });
+
+            await service.RefreshAsync(playlistId);
+
+            using (var context = new AppDbContext(_options))
+            {
+                Assert.False(await context.Playlists.AnyAsync(p => p.Id == staleStagingPlaylistId));
+                Assert.False(await context.Channels.AnyAsync(c => c.PlaylistId == staleStagingPlaylistId));
+
+                var channel = Assert.Single(await context.Channels.Where(c => c.PlaylistId == playlistId).ToListAsync());
+                Assert.Equal("New Channel", channel.Name);
             }
         }
 
@@ -644,7 +1105,8 @@ namespace Noctra.Tests
                 _epgServiceMock.Object,
                 _httpClient,
                 _settingsServiceMock.Object,
-                _localizationServiceMock.Object
+                _localizationServiceMock.Object,
+                new ImportJobService(_contextFactory)
             );
         }
     }

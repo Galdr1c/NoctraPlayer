@@ -49,6 +49,7 @@ public static class ServiceCollectionExtensions
                 serviceProvider.GetService<ILogger<StalkerPortalService>>()));
         services.AddTransient<ICacheService>(serviceProvider =>
             new CacheService(serviceProvider.GetRequiredService<IAppPathService>()));
+        services.AddSingleton<IImportJobService, ImportJobService>();
 
         services.AddSingleton<IPlaylistService>(serviceProvider =>
             new PlaylistService(
@@ -62,6 +63,7 @@ public static class ServiceCollectionExtensions
                 serviceProvider.GetRequiredService<HttpClient>(),
                 serviceProvider.GetRequiredService<ISettingsService>(),
                 serviceProvider.GetRequiredService<ILocalizationService>(),
+                serviceProvider.GetRequiredService<IImportJobService>(),
                 serviceProvider.GetService<ILogger<PlaylistService>>()));
         services.AddSingleton<IPlaylistOrganizerService, PlaylistOrganizerService>();
         services.AddSingleton<IMediaService, MediaService>();

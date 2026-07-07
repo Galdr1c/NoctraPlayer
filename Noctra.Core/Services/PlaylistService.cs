@@ -37,6 +37,7 @@ public partial class PlaylistService : IPlaylistService
     private readonly HttpClient _httpClient;
     private readonly ISettingsService _settingsService;
     private readonly ILocalizationService _localizationService;
+    private readonly IImportJobService? _importJobService;
     private readonly ILogger<PlaylistService>? _logger;
 
     public PlaylistService(
@@ -49,6 +50,7 @@ public partial class PlaylistService : IPlaylistService
         IEpgService epgService,
         HttpClient httpClient,
         ISettingsService settingsService, ILocalizationService localizationService,
+        IImportJobService? importJobService = null,
         ILogger<PlaylistService>? logger = null)
     {
         _contextFactory = contextFactory;
@@ -61,6 +63,7 @@ public partial class PlaylistService : IPlaylistService
         _httpClient = httpClient;
         _settingsService = settingsService;
         _localizationService = localizationService;
+        _importJobService = importJobService;
         _logger = logger;
     }
 
@@ -70,6 +73,7 @@ public partial class PlaylistService : IPlaylistService
         var lockKey = $"{profileId?.ToString() ?? "null"}|{normalizedUrl}";
         var gate = AddPlaylistLocks.GetOrAdd(lockKey, _ => new SemaphoreSlim(1, 1));
         await gate.WaitAsync();
+        ImportJob? importJob = null;
 
         try 
         {
@@ -133,6 +137,12 @@ public partial class PlaylistService : IPlaylistService
                 await context.SaveChangesAsync();
             }
 
+            importJob = await StartImportJobAsync(
+                ImportJobKind.M3U,
+                profileId,
+                playlistId: null,
+                sourceName: name).ConfigureAwait(false);
+
             System.Diagnostics.Debug.WriteLine($"[PlaylistService] Downloading and parsing M3U from: {normalizedUrl}");
             var channels = await _parser.ParseFromUrlAsync(normalizedUrl);
             var detectedEpgUrl = NormalizeEpgUrl(_parser.LastDetectedEpgUrl);
@@ -160,10 +170,21 @@ public partial class PlaylistService : IPlaylistService
 
             System.Diagnostics.Debug.WriteLine($"[PlaylistService] Organized: {channels.Count} › {organized.Count} channels");
 
-            return await AddFromChannelsAsync(name, normalizedUrl, organized, profileId, detectedEpgUrl);
+            if (organized.Count == 0)
+            {
+                throw new InvalidOperationException(_localizationService.GetString("Playlist.Error.EmptyNoDelete"));
+            }
+
+            var playlist = await AddFromChannelsAsync(name, normalizedUrl, organized, profileId, detectedEpgUrl);
+            await AttachImportJobPlaylistAsync(importJob, playlist.Id).ConfigureAwait(false);
+            await ReportImportJobProgressAsync(importJob, organized, "Completed").ConfigureAwait(false);
+            await CompleteImportJobAsync(importJob, "Completed").ConfigureAwait(false);
+
+            return playlist;
         }
         catch (Exception ex)
         {
+            await FailImportJobAsync(importJob, ex.GetBaseException().Message).ConfigureAwait(false);
             System.Diagnostics.Debug.WriteLine($"AddFromUrlAsync error: {ex}");
             throw;
         }
@@ -211,6 +232,11 @@ public partial class PlaylistService : IPlaylistService
             // Otomatik organizasyon: dedup, kategorize, sıralama
             var organizedChannels = _organizer.Organize(channels.ToList());
             
+            if (organizedChannels.Count == 0)
+            {
+                throw new InvalidOperationException(_localizationService.GetString("Playlist.Error.EmptyNoDelete"));
+            }
+
             playlist.ChannelCount = organizedChannels.Count;
             context.Playlists.Add(playlist);
             await context.SaveChangesAsync();
@@ -861,8 +887,15 @@ WHERE PlaylistId = {playlistId}
     public async Task<Playlist> AddFromFileAsync(string name, string filePath, int? profileId = null)
     {
         using var context = await _contextFactory.CreateDbContextAsync();
+        ImportJob? importJob = null;
         try 
         {
+            importJob = await StartImportJobAsync(
+                ImportJobKind.M3U,
+                profileId,
+                playlistId: null,
+                sourceName: name).ConfigureAwait(false);
+
             var rawChannels = await _parser.ParseFromFileAsync(filePath);
             var detectedEpgUrl = NormalizeEpgUrl(_parser.LastDetectedEpgUrl);
             var channels = _organizer.Organize(rawChannels);
@@ -928,6 +961,11 @@ WHERE PlaylistId = {playlistId}
                 EpgUrl = detectedEpgUrl
             };
 
+            if (organized.Count == 0)
+            {
+                throw new InvalidOperationException(_localizationService.GetString("Playlist.Error.EmptyNoDelete"));
+            }
+
             context.ChangeTracker.AutoDetectChangesEnabled = false;
             context.Playlists.Add(playlist);
             await context.SaveChangesAsync();
@@ -939,6 +977,9 @@ WHERE PlaylistId = {playlistId}
             }
             await FastSqliteBulkInsertAsync(context, organized);
             InvalidateLinearStreamRepair(playlist.Id);
+            await AttachImportJobPlaylistAsync(importJob, playlist.Id).ConfigureAwait(false);
+            await ReportImportJobProgressAsync(importJob, organized, "Completed").ConfigureAwait(false);
+            await CompleteImportJobAsync(importJob, "Completed").ConfigureAwait(false);
 
             // Fire-and-forget: aggregation runs in background, UI unblocked
             var fileAggregationPlaylistId = playlist.Id;
@@ -956,6 +997,11 @@ WHERE PlaylistId = {playlistId}
             });
 
             return playlist;
+        }
+        catch (Exception ex)
+        {
+            await FailImportJobAsync(importJob, ex.GetBaseException().Message).ConfigureAwait(false);
+            throw;
         }
         finally
         {
@@ -990,6 +1036,8 @@ WHERE PlaylistId = {playlistId}
         if (playlist == null)
             throw new KeyNotFoundException(string.Format(_localizationService.GetString("Playlist.Error.NotFound"), playlistId));
 
+        var importJob = await StartRefreshImportJobAsync(playlist).ConfigureAwait(false);
+
         RemotePlaylistMetadata? latestRemoteMetadata = null;
         if (!string.IsNullOrWhiteSpace(playlist.Url))
         {
@@ -1010,6 +1058,7 @@ WHERE PlaylistId = {playlistId}
                         await EnsureChildProfileCleanedAsync(context, playlist);
                     }
 
+                    await CompleteImportJobAsync(importJob, "Unchanged").ConfigureAwait(false);
                     return playlist;
                 }
             }
@@ -1041,6 +1090,7 @@ WHERE PlaylistId = {playlistId}
         if (organizedChannels.Count == 0 && newChannels.Count > 0)
         {
             // All channels were deduped/filtered out but original list wasn't empty. This is likely a profile filter issue.
+            throw new InvalidOperationException(_localizationService.GetString("Playlist.Error.EmptyNoDelete"));
         }
         else if (organizedChannels.Count == 0)
         {
@@ -1050,6 +1100,10 @@ WHERE PlaylistId = {playlistId}
         if (playlist.Profile?.IsChild == true)
         {
             organizedChannels = ApplyChildFilter(organizedChannels).ToList();
+            if (organizedChannels.Count == 0)
+            {
+                throw new InvalidOperationException(_localizationService.GetString("Playlist.Error.EmptyNoDelete"));
+            }
         }
 
         // 1. MEVCUT KULLANICI VERİLERİNİ YEDEKLE (Favori, İzleme Geçmişi vb.)
@@ -1168,6 +1222,8 @@ WHERE PlaylistId = {playlistId}
         {
             try
             {
+                await CleanupRefreshStagingArtifactsAsync(context, playlist);
+
                 Playlist? stagingPlaylist = null;
                 if (organizedChannels.Count > 0)
                 {
@@ -1230,10 +1286,11 @@ WHERE PlaylistId = {playlistId}
 
                 await replacementTransaction.CommitAsync();
             }
-            catch
+            catch (Exception ex)
             {
                 _watchHistoryRepairData.TryRemove(playlistId, out _);
                 await replacementTransaction.RollbackAsync();
+                await FailImportJobAsync(importJob, ex.GetBaseException().Message).ConfigureAwait(false);
                 throw;
             }
         }
@@ -1242,6 +1299,9 @@ WHERE PlaylistId = {playlistId}
 
         // 4b. WATCHHISTORY ONARIMI: Eski kanal fingerprint'lerini yeni kanallarla eşleştir
         await RepairWatchHistoryChannelIdsAsync(playlist.Id);
+
+        await ReportImportJobProgressAsync(importJob, organizedChannels, "Completed").ConfigureAwait(false);
+        await CompleteImportJobAsync(importJob, "Completed").ConfigureAwait(false);
 
         // Fire-and-forget: re-aggregate in background
         var refreshAggregationPlaylistId = playlist.Id;
@@ -1266,6 +1326,107 @@ WHERE PlaylistId = {playlistId}
     {
         System.Diagnostics.Debug.WriteLine($"[RefreshError] {context}: {ex}");
         return Task.CompletedTask;
+    }
+
+    private async Task<ImportJob?> StartRefreshImportJobAsync(Playlist playlist)
+        => await StartImportJobAsync(
+            ImportJobKind.PlaylistRefresh,
+            playlist.ProfileId,
+            playlist.Id,
+            playlist.Name).ConfigureAwait(false);
+
+    private async Task<ImportJob?> StartImportJobAsync(
+        ImportJobKind kind,
+        int? profileId,
+        int? playlistId,
+        string sourceName)
+    {
+        if (_importJobService is null)
+        {
+            return null;
+        }
+
+        return await _importJobService.StartAsync(
+            kind,
+            profileId,
+            playlistId,
+            sourceName).ConfigureAwait(false);
+    }
+
+    private async Task AttachImportJobPlaylistAsync(ImportJob? importJob, int playlistId)
+    {
+        if (_importJobService is null || importJob is null)
+        {
+            return;
+        }
+
+        await _importJobService.AttachPlaylistAsync(importJob.Id, playlistId).ConfigureAwait(false);
+    }
+
+    private async Task ReportImportJobProgressAsync(
+        ImportJob? importJob,
+        IEnumerable<Channel> channels,
+        string stage)
+    {
+        if (_importJobService is null || importJob is null)
+        {
+            return;
+        }
+
+        var liveCount = 0;
+        var vodCount = 0;
+        var seriesCount = 0;
+
+        foreach (var channel in channels)
+        {
+            switch (channel.Type)
+            {
+                case ChannelType.Live:
+                    liveCount++;
+                    break;
+                case ChannelType.VOD:
+                    vodCount++;
+                    break;
+                case ChannelType.Series:
+                    seriesCount++;
+                    break;
+            }
+        }
+
+        await _importJobService.ReportProgressAsync(
+            importJob.Id,
+            stage,
+            liveCount,
+            vodCount,
+            seriesCount,
+            failedCategoryCount: 0).ConfigureAwait(false);
+    }
+
+    private async Task CompleteImportJobAsync(ImportJob? importJob, string stage)
+    {
+        if (_importJobService is null || importJob is null)
+        {
+            return;
+        }
+
+        await _importJobService.CompleteAsync(importJob.Id, stage).ConfigureAwait(false);
+    }
+
+    private async Task FailImportJobAsync(ImportJob? importJob, string errorMessage)
+    {
+        if (_importJobService is null || importJob is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await _importJobService.FailAsync(importJob.Id, errorMessage).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(ex, "Failed to mark import job {ImportJobId} as failed.", importJob.Id);
+        }
     }
 
     private static async Task DeletePlaylistContentForReplacementAsync(
@@ -1303,6 +1464,38 @@ WHERE PlaylistId = {playlistId}
 
         await context.Channels
             .Where(c => c.PlaylistId == playlistId)
+            .ExecuteDeleteAsync();
+    }
+
+    private static async Task CleanupRefreshStagingArtifactsAsync(AppDbContext context, Playlist playlist)
+    {
+        var stagingName = $"{playlist.Name} refresh staging";
+        var staleStagingPlaylistIds = await context.Playlists
+            .Where(p =>
+                p.Id != playlist.Id &&
+                !p.IsActive &&
+                p.Name == stagingName &&
+                p.Url == playlist.Url &&
+                p.FilePath == playlist.FilePath &&
+                p.ProfileId == playlist.ProfileId)
+            .Select(p => p.Id)
+            .ToListAsync();
+
+        if (staleStagingPlaylistIds.Count == 0)
+        {
+            return;
+        }
+
+        await context.Series
+            .Where(s => staleStagingPlaylistIds.Contains(s.PlaylistId))
+            .ExecuteDeleteAsync();
+
+        await context.Channels
+            .Where(c => staleStagingPlaylistIds.Contains(c.PlaylistId))
+            .ExecuteDeleteAsync();
+
+        await context.Playlists
+            .Where(p => staleStagingPlaylistIds.Contains(p.Id))
             .ExecuteDeleteAsync();
     }
 

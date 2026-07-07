@@ -19,6 +19,7 @@ public class AppDbContext : DbContext
     public DbSet<WatchHistory> WatchHistories { get; set; }
     public DbSet<SeriesEpisodeProgress> SeriesEpisodeProgresses { get; set; }
     public DbSet<DownloadItem> DownloadItems { get; set; }
+    public DbSet<ImportJob> ImportJobs { get; set; }
 
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
     {
@@ -168,6 +169,16 @@ public class AppDbContext : DbContext
             entity.Property(e => e.SourceUrl).IsRequired();
             entity.HasIndex(e => e.ProfileId);
             entity.HasIndex(e => e.Status);
+            entity.HasIndex(e => new { e.ProfileId, e.Status, e.CreatedAt });
+        });
+
+        modelBuilder.Entity<ImportJob>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.SourceName).IsRequired().HasMaxLength(255);
+            entity.Property(e => e.Stage).IsRequired().HasMaxLength(128);
+            entity.HasIndex(e => e.ProfileId);
+            entity.HasIndex(e => e.PlaylistId);
             entity.HasIndex(e => new { e.ProfileId, e.Status, e.CreatedAt });
         });
     }

@@ -152,6 +152,32 @@ public sealed class DatabaseSchemaFixupService : IDatabaseSchemaFixupService
             "UPDATE DownloadItems SET Status = 4, ErrorMessage = 'Eski format. Lütfen tekrar indirin.' WHERE LocalFilePath LIKE '%.nctra' AND Status = 3;",
             cancellationToken).ConfigureAwait(false);
 
+        await TryExecuteAsync(
+            context,
+            """
+            CREATE TABLE IF NOT EXISTS ImportJobs (
+                Id INTEGER NOT NULL CONSTRAINT PK_ImportJobs PRIMARY KEY AUTOINCREMENT,
+                ProfileId INTEGER NULL,
+                PlaylistId INTEGER NULL,
+                Kind INTEGER NOT NULL,
+                Status INTEGER NOT NULL,
+                SourceName TEXT NOT NULL,
+                Stage TEXT NOT NULL,
+                LiveCount INTEGER NOT NULL DEFAULT 0,
+                VodCount INTEGER NOT NULL DEFAULT 0,
+                SeriesCount INTEGER NOT NULL DEFAULT 0,
+                FailedCategoryCount INTEGER NOT NULL DEFAULT 0,
+                ErrorMessage TEXT NULL,
+                CreatedAt TEXT NOT NULL,
+                UpdatedAt TEXT NOT NULL,
+                CompletedAt TEXT NULL
+            );
+            """,
+            cancellationToken).ConfigureAwait(false);
+        await TryExecuteAsync(context, "CREATE INDEX IF NOT EXISTS IX_ImportJobs_ProfileId ON ImportJobs(ProfileId);", cancellationToken).ConfigureAwait(false);
+        await TryExecuteAsync(context, "CREATE INDEX IF NOT EXISTS IX_ImportJobs_PlaylistId ON ImportJobs(PlaylistId);", cancellationToken).ConfigureAwait(false);
+        await TryExecuteAsync(context, "CREATE INDEX IF NOT EXISTS IX_ImportJobs_ProfileStatusCreated ON ImportJobs(ProfileId, Status, CreatedAt);", cancellationToken).ConfigureAwait(false);
+
         await TryExecuteAsync(context, "PRAGMA foreign_keys = ON;", cancellationToken).ConfigureAwait(false);
         await TryExecuteAsync(context, "PRAGMA journal_mode=WAL;", cancellationToken).ConfigureAwait(false);
         await TryExecuteAsync(context, "PRAGMA synchronous=NORMAL;", cancellationToken).ConfigureAwait(false);
