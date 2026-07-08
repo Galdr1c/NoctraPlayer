@@ -559,12 +559,11 @@
                                             Command="{Binding ShowUpsellCommand}"
                                             Padding="16,8"
                                             Background="{DynamicResource PremiumBadgeBrush}"
-                                            Foreground="White"
                                             CornerRadius="8"
                                             VerticalAlignment="Center"
                                             Cursor="Hand">
                                         <StackPanel Orientation="Horizontal" Spacing="8">
-                                            <materialIcons:MaterialIcon Kind="Crown" Width="16" Height="16"/>
+                                            <materialIcons:MaterialIcon Kind="Crown" Width="16" Height="16" Foreground="{DynamicResource PremiumBadgeTextBrush}"/>
                                             <TextBlock Text="{loc:Translate GlobalSettings.About.Upgrade}" FontWeight="SemiBold" Foreground="{DynamicResource PremiumBadgeTextBrush}"/>
                                         </StackPanel>
                                     </Button>

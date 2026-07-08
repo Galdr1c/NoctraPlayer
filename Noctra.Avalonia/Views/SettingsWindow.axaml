@@ -1231,7 +1231,7 @@
                                                     VerticalAlignment="Center"
                                                     Cursor="Hand">
                                                 <StackPanel Orientation="Horizontal" Spacing="8">
-                                                    <materialIcons:MaterialIcon Kind="Crown" Width="16" Height="16"/>
+                                                    <materialIcons:MaterialIcon Kind="Crown" Width="16" Height="16" Foreground="{DynamicResource PremiumBadgeTextBrush}"/>
                                                     <TextBlock Text="{loc:Translate Settings.About.UpgradeToPremium}" FontWeight="SemiBold" Foreground="{DynamicResource PremiumBadgeTextBrush}"/>
                                                 </StackPanel>
                                             </Button>

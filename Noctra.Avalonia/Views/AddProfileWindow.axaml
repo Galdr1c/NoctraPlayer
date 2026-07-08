@@ -236,7 +236,7 @@
 
                                         <StackPanel Spacing="2">
                                             <StackPanel Orientation="Horizontal" Spacing="8">
-                                                <materialIcons:MaterialIcon Kind="Lock" Width="18" Height="18"
+                                                <materialIcons:MaterialIcon Kind="Lock" Width="22" Height="22" Margin="-5,0,0,-15"
                                                                              Foreground="{DynamicResource AccentBrush}"
                                                                              VerticalAlignment="Center"/>
                                                 <TextBlock Text="{loc:Translate Profiles.Add.PinLock}" FontSize="15" FontWeight="SemiBold"
