@@ -24,6 +24,8 @@ namespace Noctra.Android;
     ConfigurationChanges = ConfigChanges.Orientation | ConfigChanges.ScreenSize | ConfigChanges.SmallestScreenSize | ConfigChanges.UiMode)]
 public class MainActivity : AvaloniaMainActivity
 {
+    private const int PostNotificationsRequestCode = 1001;
+
     // OnStop'ta bizim duraklattığımız oynatmayı OnStart'ta devam ettirmek için işaret.
     // Kullanıcının manuel duraklatmasını geri almamak adına yalnızca bu flag set ise resume edilir.
     private bool _pausedByLifecycle;
@@ -53,6 +55,8 @@ public class MainActivity : AvaloniaMainActivity
         {
             app.Services?.GetRequiredService<AndroidActivityProvider>().SetCurrent(this);
         }
+
+        RequestNotificationPermission();
     }
 
     protected override void OnActivityResult(int requestCode, Result resultCode, Intent? data)
@@ -149,5 +153,16 @@ public class MainActivity : AvaloniaMainActivity
         }
 
         base.OnDestroy();
+    }
+
+    private void RequestNotificationPermission()
+    {
+        if (Build.VERSION.SdkInt >= BuildVersionCodes.Tiramisu)
+        {
+            if (CheckSelfPermission("android.permission.POST_NOTIFICATIONS") != Permission.Granted)
+            {
+                RequestPermissions(new[] { "android.permission.POST_NOTIFICATIONS" }, PostNotificationsRequestCode);
+            }
+        }
     }
 }
