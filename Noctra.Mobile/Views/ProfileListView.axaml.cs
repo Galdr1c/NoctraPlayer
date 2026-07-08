@@ -331,8 +331,19 @@ public partial class ProfileListView : UserControl
 
             loadingViewModel.SetProfile(reloadedProfile);
             loadingViewModel.StatusMessage = localizationService.GetString("Profiles.Status.Preparing");
+            CopyImportJobStatus(mainViewModel, loadingViewModel);
             ProfileLoadingContent.DataContext = loadingViewModel;
             ProfileLoadingHost.IsVisible = true;
+
+            static void CopyImportJobStatus(CoreMainViewModel source, ProfileLoadingViewModel target)
+            {
+                target.HasActiveImportJob = source.HasActiveImportJob;
+                target.ActiveImportJobStage = source.ActiveImportJobStage;
+                target.ActiveImportJobLiveCount = source.ActiveImportJobLiveCount;
+                target.ActiveImportJobVodCount = source.ActiveImportJobVodCount;
+                target.ActiveImportJobSeriesCount = source.ActiveImportJobSeriesCount;
+                target.ActiveImportJobFailedCategoryCount = source.ActiveImportJobFailedCategoryCount;
+            }
 
             void OnStatusChanged(object? sender, PropertyChangedEventArgs e)
             {
@@ -343,6 +354,15 @@ public partial class ProfileListView : UserControl
                 else if (e.PropertyName == nameof(CoreMainViewModel.LoadingWarningMessage))
                 {
                     loadingViewModel.LoadingWarningMessage = mainViewModel.LoadingWarningMessage;
+                }
+                else if (e.PropertyName == nameof(CoreMainViewModel.HasActiveImportJob)
+                         || e.PropertyName == nameof(CoreMainViewModel.ActiveImportJobStage)
+                         || e.PropertyName == nameof(CoreMainViewModel.ActiveImportJobLiveCount)
+                         || e.PropertyName == nameof(CoreMainViewModel.ActiveImportJobVodCount)
+                         || e.PropertyName == nameof(CoreMainViewModel.ActiveImportJobSeriesCount)
+                         || e.PropertyName == nameof(CoreMainViewModel.ActiveImportJobFailedCategoryCount))
+                {
+                    CopyImportJobStatus(mainViewModel, loadingViewModel);
                 }
             }
 

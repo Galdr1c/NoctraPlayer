@@ -266,6 +266,7 @@ public class StalkerPortalService : IStalkerPortalService
         // Stalker sunucuları 5-8 eş zamanlı isteği genellikle kaldırır
         const int MaxCategoryParallel = 5;
         var baseUrl = ExtractBaseUrl(endpoint);
+        var failedCategories = 0;
 
         // Kategori türüne göre ChannelType belirle
         ChannelType GetChanType(string t) => t switch
@@ -312,6 +313,7 @@ public class StalkerPortalService : IStalkerPortalService
                             CurrentCategory = category.Name,
                             LoadedCategories = loaded,
                             TotalCategories = totalCategories,
+                            FailedCategories = failedCategories,
                             LoadedChannels = totalChannelCount,
                             TotalChannels = null
                         });
@@ -332,6 +334,7 @@ public class StalkerPortalService : IStalkerPortalService
                             CurrentCategory = category.Name,
                             LoadedCategories = loaded,
                             TotalCategories = totalCategories,
+                            FailedCategories = failedCategories,
                             LoadedChannels = total, 
                             TotalChannels = null 
                         });
@@ -345,16 +348,38 @@ public class StalkerPortalService : IStalkerPortalService
                 }
                 catch (OperationCanceledException ex)
                 {
-                    Interlocked.Increment(ref loadedCategories);
+                    var loaded = Interlocked.Increment(ref loadedCategories);
+                    var failed = Interlocked.Increment(ref failedCategories);
                     Log($"[Timeout] Category {category.Name} (ID: {category.Id}, Type: {category.Type}) exceeded {CategoryLoadTimeout.TotalSeconds:0}s: {ex.Message}");
+
+                    progress?.Report(new StalkerLoadProgress
+                    {
+                        CurrentCategory = category.Name,
+                        LoadedCategories = loaded,
+                        TotalCategories = totalCategories,
+                        FailedCategories = failed,
+                        LoadedChannels = totalChannelCount,
+                        TotalChannels = null
+                    });
 
                     await onCategoryLoaded([], category);
                 }
                 catch (Exception ex)
                 {
-                    Interlocked.Increment(ref loadedCategories);
+                    var loaded = Interlocked.Increment(ref loadedCategories);
+                    var failed = Interlocked.Increment(ref failedCategories);
                     Log($"[Error] Category {category.Name} (ID: {category.Id}, Type: {category.Type}) failed: {ex.Message}");
-                    
+
+                    progress?.Report(new StalkerLoadProgress
+                    {
+                        CurrentCategory = category.Name,
+                        LoadedCategories = loaded,
+                        TotalCategories = totalCategories,
+                        FailedCategories = failed,
+                        LoadedChannels = totalChannelCount,
+                        TotalChannels = null
+                    });
+
                     // Hata durumunda da boş liste bildir ki UI'daki "yükleniyor..." uyarısı kalksın
                     await onCategoryLoaded([], category);
                 }

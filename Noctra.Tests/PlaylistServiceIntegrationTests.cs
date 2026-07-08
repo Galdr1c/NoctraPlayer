@@ -173,6 +173,45 @@ namespace Noctra.Tests
         }
 
         [Fact]
+        public async Task AddFromUrlAsync_ReportsImportProgressBeforeCompletion()
+        {
+            var importJobs = new Mock<IImportJobService>();
+            importJobs
+                .Setup(service => service.StartAsync(
+                    It.IsAny<ImportJobKind>(),
+                    It.IsAny<int?>(),
+                    It.IsAny<int?>(),
+                    It.IsAny<string>(),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new ImportJob { Id = 42, Status = ImportJobStatus.Running });
+
+            var service = CreateService(importJobs.Object);
+            var parsedChannels = new List<Channel>
+            {
+                new Channel { Name = "Live", StreamUrl = "live-url", Type = ChannelType.Live },
+                new Channel { Name = "Movie", StreamUrl = "movie-url", Type = ChannelType.VOD },
+                new Channel { Name = "Series", StreamUrl = "series-url", Type = ChannelType.Series }
+            };
+
+            _parserMock
+                .Setup(p => p.ParseFromUrlAsync("http://progress.test/list.m3u"))
+                .ReturnsAsync(parsedChannels);
+
+            await service.AddFromUrlAsync("Progress", "http://progress.test/list.m3u");
+
+            var stages = importJobs.Invocations
+                .Where(invocation => invocation.Method.Name == nameof(IImportJobService.ReportProgressAsync))
+                .Select(invocation => (string)invocation.Arguments[1])
+                .ToList();
+
+            Assert.Contains("Parsed", stages);
+            Assert.Contains("Organized", stages);
+            Assert.Contains("Writing", stages);
+            Assert.Contains("Completed", stages);
+            importJobs.Verify(service => service.CompleteAsync(42, "Completed", It.IsAny<CancellationToken>()), Times.Once);
+        }
+
+        [Fact]
         public async Task AddFromUrlAsync_WhenParseFails_FailsImportJob()
         {
             var service = CreateService();
@@ -748,6 +787,106 @@ namespace Noctra.Tests
         }
 
         [Fact]
+        public async Task RefreshStagingCommit_ReplacesActivePlaylistOnlyOnCommitAndPreservesUserData()
+        {
+            var service = CreateService();
+            var lastWatched = DateTime.UtcNow.AddHours(-2);
+
+            var playlist = await service.AddFromChannelsAsync(
+                "Provider Refresh",
+                "provider://refresh",
+                new List<Channel>
+                {
+                    new Channel
+                    {
+                        Name = "Channel A",
+                        StreamUrl = "stream-a",
+                        GroupTitle = "Live",
+                        TvgId = "channel-a",
+                        Type = ChannelType.Live,
+                        IsFavorite = true,
+                        IsInMyList = true,
+                        WatchedPosition = TimeSpan.FromMinutes(10),
+                        Duration = TimeSpan.FromMinutes(60),
+                        LastWatched = lastWatched
+                    },
+                    new Channel
+                    {
+                        Name = "Removed B",
+                        StreamUrl = "stream-b",
+                        GroupTitle = "Live",
+                        Type = ChannelType.Live
+                    }
+                });
+
+            var staging = await service.CreateRefreshStagingPlaylistAsync(playlist.Id);
+
+            await service.AppendChannelsAsync(
+                staging.Id,
+                new List<Channel>
+                {
+                    new Channel
+                    {
+                        Name = "Channel A",
+                        StreamUrl = "stream-a",
+                        GroupTitle = "Live",
+                        TvgId = "channel-a",
+                        Type = ChannelType.Live
+                    },
+                    new Channel
+                    {
+                        Name = "Channel C",
+                        StreamUrl = "stream-c",
+                        GroupTitle = "Live",
+                        Type = ChannelType.Live
+                    }
+                });
+
+            using (var beforeCommit = new AppDbContext(_options))
+            {
+                var activeNames = await beforeCommit.Channels
+                    .Where(c => c.PlaylistId == playlist.Id)
+                    .OrderBy(c => c.Name)
+                    .Select(c => c.Name)
+                    .ToListAsync();
+
+                var stagedNames = await beforeCommit.Channels
+                    .Where(c => c.PlaylistId == staging.Id)
+                    .OrderBy(c => c.Name)
+                    .Select(c => c.Name)
+                    .ToListAsync();
+
+                Assert.Equal(new[] { "Channel A", "Removed B" }, activeNames);
+                Assert.Equal(new[] { "Channel A", "Channel C" }, stagedNames);
+            }
+
+            await service.CommitRefreshStagingPlaylistAsync(playlist.Id, staging.Id);
+
+            using (var afterCommit = new AppDbContext(_options))
+            {
+                Assert.False(await afterCommit.Playlists.AnyAsync(p => p.Id == staging.Id));
+                Assert.False(await afterCommit.Channels.AnyAsync(c => c.PlaylistId == staging.Id));
+
+                var activeChannels = await afterCommit.Channels
+                    .Where(c => c.PlaylistId == playlist.Id)
+                    .OrderBy(c => c.Name)
+                    .ToListAsync();
+
+                Assert.Equal(new[] { "Channel A", "Channel C" }, activeChannels.Select(c => c.Name).ToArray());
+
+                var preserved = activeChannels.Single(c => c.Name == "Channel A");
+                Assert.True(preserved.IsFavorite);
+                Assert.True(preserved.IsInMyList);
+                Assert.Equal(TimeSpan.FromMinutes(10), preserved.WatchedPosition);
+                Assert.Equal(TimeSpan.FromMinutes(60), preserved.Duration);
+                Assert.Equal(lastWatched.ToUniversalTime(), preserved.LastWatched?.ToUniversalTime());
+
+                var persistedPlaylist = await afterCommit.Playlists.SingleAsync(p => p.Id == playlist.Id);
+                Assert.Equal(2, persistedPlaylist.ChannelCount);
+            }
+        }
+
+        [Fact]
         public async Task RefreshAsync_WithChildProfile_ShouldApplyFilter()
         {
             // Arrange
@@ -1093,7 +1232,7 @@ namespace Noctra.Tests
             var channel = Assert.Single(live);
             Assert.Equal("Canal 2026", channel.Name);
         }
-        private PlaylistService CreateService()
+        private PlaylistService CreateService(IImportJobService? importJobService = null)
         {
             return new PlaylistService(
                 _contextFactory,
@@ -1106,7 +1245,7 @@ namespace Noctra.Tests
                 _httpClient,
                 _settingsServiceMock.Object,
                 _localizationServiceMock.Object,
-                new ImportJobService(_contextFactory)
+                importJobService ?? new ImportJobService(_contextFactory)
             );
         }
     }

@@ -5,7 +5,7 @@
              x:Class="Noctra.Mobile.Views.MobileUpsellView"
              x:CompileBindings="False">
 
-  <Window.Styles>
+  <UserControl.Styles>
       <!-- Buy Button -->
       <Style Selector="Button.BuyBtn">
           <Setter Property="Background" Value="{DynamicResource PremiumBadgeBrush}"/>
@@ -17,7 +17,7 @@
       <Style Selector="Button.BuyBtn:pressed">
           <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
       </Style>
-  </Window.Styles>
+  </UserControl.Styles>
 
   <Grid Background="{DynamicResource OverlayDimBrush}">
     <Border Background="{DynamicResource BackgroundGradientBrush}"

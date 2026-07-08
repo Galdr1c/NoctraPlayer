@@ -111,70 +111,55 @@ public class XtreamCodesService : IXtreamCodesService
         var vodCategoryMap = BuildCategoryMapFromXtream(allCategories.Where(c => c.Type == "vod"));
         var seriesCategoryMap = BuildCategoryMapFromXtream(allCategories.Where(c => c.Type == "series"));
 
-        // Helper: Kategorileri öncelik sırasına göre raporla
-        async Task ReportGroupsAsync(IEnumerable<Channel> channels, string fallbackLabel, string contentType)
+        var orderedCategories = categoriesToLoad
+            .OrderBy(c => string.Equals(c.Name, prioritizedCategory, StringComparison.OrdinalIgnoreCase) ? 0 : 1)
+            .ThenBy(c => c.Type, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(c => c.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        foreach (var category in orderedCategories)
         {
-             var groups = channels.GroupBy(c => c.GroupTitle ?? fallbackLabel).ToDictionary(g => g.Key, g => g.ToList());
-             
-             // Önceden bildirilen veya keşfedilen tüm grupları temizlemek için (Empty state fix)
-             // dummy kanalların silinmesi için onCategoryLoaded Boş liste ile çağrılmalı.
-             var reportedGroups = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            cancellationToken.ThrowIfCancellationRequested();
 
-             foreach (var group in groups)
-             {
-                 await onCategoryLoaded(group.Value, group.Key);
-                 reportedGroups.Add(group.Key);
-             }
-
-             // Eksik grupları da temizle (Eğer keşfedilmiş ama kanalı yoksa)
-             // ÖNEMLİ: Sadece bu tipe (live/vod/series) ait kategorileri temizle!
-             foreach (var cat in categoriesToLoad.Where(c => c.Type == contentType))
-             {
-                 if (!reportedGroups.Contains(cat.Name))
-                 {
-                     await onCategoryLoaded([], cat.Name);
-                     reportedGroups.Add(cat.Name);
-                 }
-             }
-        }
-
-        // 2. İçerikleri Paralel Çek (3 Büyük Görev)
-        var liveTask = Task.Run(async () =>
-        {
-            var streams = await GetJsonAsync<List<XtreamLiveStreamDto>>(
-                BuildApiUrl(normalizedBaseUrl, username, password, "get_live_streams"), cancellationToken);
-            
-            var channels = MapLiveChannels(streams, normalizedBaseUrl, username, password, liveCategoryMap);
-            await ReportGroupsAsync(channels, "Live", "live");
-        }, cancellationToken);
-
-        Task? vodTask = null;
-        Task? seriesTask = null;
-
-        if (includeVod)
-        {
-            vodTask = Task.Run(async () =>
+            switch (category.Type)
             {
-                var streams = await GetJsonAsync<List<XtreamVodStreamDto>>(
-                    BuildApiUrl(normalizedBaseUrl, username, password, "get_vod_streams"), cancellationToken);
-                
-                var channels = MapVodChannels(streams, normalizedBaseUrl, username, password, vodCategoryMap);
-                await ReportGroupsAsync(channels, "VOD", "vod");
-            }, cancellationToken);
+                case "live":
+                {
+                    var streams = await GetJsonAsync<List<XtreamLiveStreamDto>>(
+                        BuildCategoryApiUrl(normalizedBaseUrl, username, password, "get_live_streams", category.Id),
+                        cancellationToken);
+                    var channels = MapLiveChannels(streams, normalizedBaseUrl, username, password, liveCategoryMap)
+                        .Where(c => string.Equals(c.GroupTitle, category.Name, StringComparison.OrdinalIgnoreCase))
+                        .ToList();
+                    await onCategoryLoaded(channels, category.Name);
+                    break;
+                }
 
-            seriesTask = Task.Run(async () =>
-            {
-                var seriesDtos = await GetJsonAsync<List<XtreamSeriesDto>>(
-                    BuildApiUrl(normalizedBaseUrl, username, password, "get_series"), cancellationToken);
-                
-                if (seriesDtos == null) return;
+                case "vod" when includeVod:
+                {
+                    var streams = await GetJsonAsync<List<XtreamVodStreamDto>>(
+                        BuildCategoryApiUrl(normalizedBaseUrl, username, password, "get_vod_streams", category.Id),
+                        cancellationToken);
+                    var channels = MapVodChannels(streams, normalizedBaseUrl, username, password, vodCategoryMap)
+                        .Where(c => string.Equals(c.GroupTitle, category.Name, StringComparison.OrdinalIgnoreCase))
+                        .ToList();
+                    await onCategoryLoaded(channels, category.Name);
+                    break;
+                }
 
-                var seriesChannels = MapSeriesAsEntries(seriesDtos, seriesCategoryMap);
-                await ReportGroupsAsync(seriesChannels, "Series", "series");
-            }, cancellationToken);
+                case "series" when includeVod:
+                {
+                    var seriesDtos = await GetJsonAsync<List<XtreamSeriesDto>>(
+                        BuildCategoryApiUrl(normalizedBaseUrl, username, password, "get_series", category.Id),
+                        cancellationToken);
+                    var channels = MapSeriesAsEntries(seriesDtos, seriesCategoryMap)
+                        .Where(c => string.Equals(c.GroupTitle, category.Name, StringComparison.OrdinalIgnoreCase))
+                        .ToList();
+                    await onCategoryLoaded(channels, category.Name);
+                    break;
+                }
+            }
         }
-
-        await Task.WhenAll(new[] { liveTask, vodTask ?? Task.CompletedTask, seriesTask ?? Task.CompletedTask });
     }
 
     private static IReadOnlyDictionary<string, string> BuildCategoryMapFromXtream(IEnumerable<XtreamCategory> categories)
@@ -765,6 +750,18 @@ public class XtreamCodesService : IXtreamCodesService
         }
 
         return $"{NormalizeBaseUrl(baseUrl)}/player_api.php?{string.Join("&", query)}";
+    }
+
+    private static string BuildCategoryApiUrl(
+        string baseUrl,
+        string username,
+        string password,
+        string action,
+        string? categoryId)
+    {
+        return string.IsNullOrWhiteSpace(categoryId)
+            ? BuildApiUrl(baseUrl, username, password, action)
+            : BuildApiUrl(baseUrl, username, password, action, ("category_id", categoryId));
     }
 
     private static string NormalizeBaseUrl(string baseUrl)

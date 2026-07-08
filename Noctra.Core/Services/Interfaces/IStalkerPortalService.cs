@@ -138,5 +138,6 @@ public class StalkerLoadProgress
     public int? TotalChannels { get; set; }
     public int LoadedCategories { get; set; }
     public int TotalCategories { get; set; }
+    public int FailedCategories { get; set; }
     public string CurrentCategory { get; set; } = string.Empty;
 }

@@ -118,6 +118,12 @@ public interface IPlaylistService
     /// </summary>
     Task DeleteAllChannelsForRefreshAsync(int playlistId);
 
+    Task<Playlist> CreateRefreshStagingPlaylistAsync(int playlistId);
+
+    Task CommitRefreshStagingPlaylistAsync(int playlistId, int stagingPlaylistId);
+
+    Task AbandonRefreshStagingPlaylistAsync(int stagingPlaylistId);
+
     /// <summary>
     /// Tüm geçici (Dummy) kanalları siler.
     /// Aşamalı yükleme bittiğinde veya iptal edildiğinde temizlik için kullanılır.

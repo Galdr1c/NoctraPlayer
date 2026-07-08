@@ -81,7 +81,7 @@ public static class AndroidServiceCollectionExtensions
     {
         var handler = new HttpClientHandler
         {
-            AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
+            AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate | DecompressionMethods.Brotli
         };
 
         var client = new HttpClient(handler)

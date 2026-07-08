@@ -147,6 +147,7 @@ public partial class PlaylistService : IPlaylistService
             var channels = await _parser.ParseFromUrlAsync(normalizedUrl);
             var detectedEpgUrl = NormalizeEpgUrl(_parser.LastDetectedEpgUrl);
             System.Diagnostics.Debug.WriteLine($"[PlaylistService] Parsed {channels.Count} channels from M3U");
+            await ReportImportJobProgressAsync(importJob, channels, "Parsed").ConfigureAwait(false);
 
             if (channels.Count == 0)
             {
@@ -170,11 +171,14 @@ public partial class PlaylistService : IPlaylistService
 
             System.Diagnostics.Debug.WriteLine($"[PlaylistService] Organized: {channels.Count} › {organized.Count} channels");
 
+            await ReportImportJobProgressAsync(importJob, organized, "Organized").ConfigureAwait(false);
+
             if (organized.Count == 0)
             {
                 throw new InvalidOperationException(_localizationService.GetString("Playlist.Error.EmptyNoDelete"));
             }
 
+            await ReportImportJobProgressAsync(importJob, organized, "Writing").ConfigureAwait(false);
             var playlist = await AddFromChannelsAsync(name, normalizedUrl, organized, profileId, detectedEpgUrl);
             await AttachImportJobPlaylistAsync(importJob, playlist.Id).ConfigureAwait(false);
             await ReportImportJobProgressAsync(importJob, organized, "Completed").ConfigureAwait(false);
@@ -679,12 +683,7 @@ public partial class PlaylistService : IPlaylistService
         await DeletePlaylistContentForReplacementAsync(
             context,
             playlistId,
-            existingChannelData
-                .SelectMany(c => new[] { c.TvgId, c.TvgName, c.Name })
-                .Where(id => !string.IsNullOrWhiteSpace(id))
-                .Select(id => id!)
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToList());
+            BuildEpgCleanupIds(existingChannelData.SelectMany(c => new string?[] { c.TvgId, c.TvgName, c.Name })));
         InvalidateLinearStreamRepair(playlistId);
 
         // Kanal sayısını sıfırla
@@ -693,6 +692,152 @@ public partial class PlaylistService : IPlaylistService
             .ExecuteUpdateAsync(s => s
                 .SetProperty(p => p.ChannelCount, 0)
                 .SetProperty(p => p.LastUpdated, DateTime.UtcNow));
+    }
+
+    public async Task<Playlist> CreateRefreshStagingPlaylistAsync(int playlistId)
+    {
+        using var context = await _contextFactory.CreateDbContextAsync();
+        var playlist = await context.Playlists
+            .AsNoTracking()
+            .FirstOrDefaultAsync(p => p.Id == playlistId);
+
+        if (playlist == null)
+            throw new KeyNotFoundException(string.Format(_localizationService.GetString("Playlist.Error.NotFound"), playlistId));
+
+        await CleanupRefreshStagingArtifactsAsync(context, playlist);
+
+        var existingChannelData = await context.Channels
+            .AsNoTracking()
+            .Where(c => c.PlaylistId == playlistId)
+            .Select(c => new { c.Id, c.Name, c.StreamUrl, c.GroupTitle, c.TvgId, c.TvgName, c.Type, c.IsFavorite, c.IsInMyList, c.WatchedPosition, c.Duration, c.IsCompleted, c.LastWatched })
+            .ToListAsync();
+
+        var stagingPlaylist = new Playlist
+        {
+            Name = $"{playlist.Name} refresh staging",
+            Url = playlist.Url,
+            FilePath = playlist.FilePath,
+            CreatedAt = DateTime.UtcNow,
+            LastUpdated = DateTime.UtcNow,
+            IsActive = false,
+            ChannelCount = 0,
+            ProfileId = playlist.ProfileId,
+            EpgUrl = playlist.EpgUrl,
+            DetectedCountry = playlist.DetectedCountry,
+            EpgLastUpdated = playlist.EpgLastUpdated,
+            EpgLastError = playlist.EpgLastError,
+            SourceEtag = playlist.SourceEtag,
+            SourceLastModified = playlist.SourceLastModified,
+            SourceContentLength = playlist.SourceContentLength
+        };
+
+        context.Playlists.Add(stagingPlaylist);
+        await context.SaveChangesAsync();
+
+        var userDataMap = new Dictionary<string, ChannelBackupData>(StringComparer.OrdinalIgnoreCase);
+        foreach (var c in existingChannelData)
+        {
+            var chStub = new Channel { Name = c.Name, StreamUrl = c.StreamUrl, GroupTitle = c.GroupTitle, TvgId = c.TvgId, TvgName = c.TvgName };
+            var fingerprint = BuildChannelFingerprint(chStub);
+            if (!userDataMap.TryGetValue(fingerprint, out var existing))
+            {
+                userDataMap[fingerprint] = new ChannelBackupData(c.IsFavorite, c.IsInMyList, c.WatchedPosition, c.Duration, c.IsCompleted, c.LastWatched);
+            }
+            else
+            {
+                userDataMap[fingerprint] = new ChannelBackupData(
+                    existing.Fav || c.IsFavorite,
+                    existing.List || c.IsInMyList,
+                    (c.WatchedPosition > existing.Pos) ? c.WatchedPosition : existing.Pos,
+                    (c.Duration > existing.Dur) ? c.Duration : existing.Dur,
+                    existing.Comp || c.IsCompleted,
+                    (c.LastWatched > existing.LastW) ? c.LastWatched : existing.LastW);
+            }
+        }
+
+        _refreshBackups[stagingPlaylist.Id] = userDataMap;
+        return stagingPlaylist;
+    }
+
+    public async Task CommitRefreshStagingPlaylistAsync(int playlistId, int stagingPlaylistId)
+    {
+        using var context = await _contextFactory.CreateDbContextAsync();
+        var playlist = await context.Playlists.FirstOrDefaultAsync(p => p.Id == playlistId);
+        if (playlist == null)
+            throw new KeyNotFoundException(string.Format(_localizationService.GetString("Playlist.Error.NotFound"), playlistId));
+
+        var stagingPlaylist = await context.Playlists.FirstOrDefaultAsync(p => p.Id == stagingPlaylistId);
+        if (stagingPlaylist == null)
+            throw new KeyNotFoundException(string.Format(_localizationService.GetString("Playlist.Error.NotFound"), stagingPlaylistId));
+
+        var existingEpgRows = await context.Channels
+            .AsNoTracking()
+            .Where(c => c.PlaylistId == playlistId)
+            .Select(c => new { c.TvgId, c.TvgName, c.Name })
+            .ToListAsync();
+        var existingEpgIds = BuildEpgCleanupIds(existingEpgRows.SelectMany(c => new string?[] { c.TvgId, c.TvgName, c.Name }));
+
+        await using var transaction = await context.Database.BeginTransactionAsync();
+        try
+        {
+            await DeletePlaylistContentForReplacementAsync(
+                context,
+                playlistId,
+                existingEpgIds,
+                transaction.GetDbTransaction());
+
+            await MoveStagedChannelsToPlaylistAsync(
+                context.Database.GetDbConnection(),
+                transaction.GetDbTransaction(),
+                stagingPlaylistId,
+                playlistId);
+
+            await ExecuteNonQueryInTransactionAsync(
+                context.Database.GetDbConnection(),
+                transaction.GetDbTransaction(),
+                "DELETE FROM Playlists WHERE Id = $playlistId",
+                stagingPlaylistId);
+
+            var finalCount = await context.Channels.CountAsync(c => c.PlaylistId == playlistId);
+            playlist.ChannelCount = finalCount;
+            playlist.LastUpdated = DateTime.UtcNow;
+            context.Playlists.Update(playlist);
+            await context.SaveChangesAsync();
+
+            await transaction.CommitAsync();
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+        finally
+        {
+            _refreshBackups.TryRemove(stagingPlaylistId, out _);
+        }
+
+        InvalidateLinearStreamRepair(playlistId);
+        await RepairWatchHistoryChannelIdsAsync(playlistId);
+    }
+
+    public async Task AbandonRefreshStagingPlaylistAsync(int stagingPlaylistId)
+    {
+        using var context = await _contextFactory.CreateDbContextAsync();
+
+        await context.Series
+            .Where(s => s.PlaylistId == stagingPlaylistId)
+            .ExecuteDeleteAsync();
+
+        await context.Channels
+            .Where(c => c.PlaylistId == stagingPlaylistId)
+            .ExecuteDeleteAsync();
+
+        await context.Playlists
+            .Where(p => p.Id == stagingPlaylistId && !p.IsActive)
+            .ExecuteDeleteAsync();
+
+        _refreshBackups.TryRemove(stagingPlaylistId, out _);
+        InvalidateLinearStreamRepair(stagingPlaylistId);
     }
 
     private void ApplyBackupData(int playlistId, IEnumerable<Channel> channels)
@@ -844,6 +989,15 @@ WHERE PlaylistId = {playlistId}
         return repaired;
     }
 
+    private static List<string> BuildEpgCleanupIds(IEnumerable<string?> ids)
+    {
+        return ids
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .Select(id => id!)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
     private static bool ShouldForceLiveFromStreamUrl(string? streamUrl)
     {
         if (string.IsNullOrWhiteSpace(streamUrl))
@@ -898,6 +1052,7 @@ WHERE PlaylistId = {playlistId}
 
             var rawChannels = await _parser.ParseFromFileAsync(filePath);
             var detectedEpgUrl = NormalizeEpgUrl(_parser.LastDetectedEpgUrl);
+            await ReportImportJobProgressAsync(importJob, rawChannels, "Parsed").ConfigureAwait(false);
             var channels = _organizer.Organize(rawChannels);
 
             var isChild = false;
@@ -948,6 +1103,7 @@ WHERE PlaylistId = {playlistId}
             
             // Otomatik organizasyon: dedup, kategorize, sıralama
             var organized = _organizer.Organize(channels.ToList());
+            await ReportImportJobProgressAsync(importJob, organized, "Organized").ConfigureAwait(false);
 
             var playlist = new Playlist
             {
@@ -967,6 +1123,7 @@ WHERE PlaylistId = {playlistId}
             }
 
             context.ChangeTracker.AutoDetectChangesEnabled = false;
+            await ReportImportJobProgressAsync(importJob, organized, "Writing").ConfigureAwait(false);
             context.Playlists.Add(playlist);
             await context.SaveChangesAsync();
 
@@ -1085,6 +1242,7 @@ WHERE PlaylistId = {playlistId}
         }
 
         // Organizasyon pipeline'ı uygula
+        await ReportImportJobProgressAsync(importJob, newChannels, "Parsed").ConfigureAwait(false);
         var organizedChannels = _organizer.Organize(newChannels);
         
         if (organizedChannels.Count == 0 && newChannels.Count > 0)
@@ -1107,6 +1265,7 @@ WHERE PlaylistId = {playlistId}
         }
 
         // 1. MEVCUT KULLANICI VERİLERİNİ YEDEKLE (Favori, İzleme Geçmişi vb.)
+        await ReportImportJobProgressAsync(importJob, organizedChannels, "Organized").ConfigureAwait(false);
         // Fingerprint -> (IsFavorite, IsInMyList, WatchedPosition, Duration, IsCompleted, LastWatched)
         var existingChannelData = await context.Channels
             .Where(c => c.PlaylistId == playlistId)
@@ -1218,6 +1377,7 @@ WHERE PlaylistId = {playlistId}
             nc.PlaylistId = playlist.Id;
         }
 
+        await ReportImportJobProgressAsync(importJob, organizedChannels, "Writing").ConfigureAwait(false);
         await using (var replacementTransaction = await context.Database.BeginTransactionAsync())
         {
             try
@@ -1251,12 +1411,7 @@ WHERE PlaylistId = {playlistId}
                 await DeletePlaylistContentForReplacementAsync(
                     context,
                     playlistId,
-                    existingChannelData
-                        .SelectMany(c => new[] { c.TvgId, c.TvgName, c.Name })
-                        .Where(id => !string.IsNullOrWhiteSpace(id))
-                        .Select(id => id!)
-                        .Distinct(StringComparer.OrdinalIgnoreCase)
-                        .ToList(),
+                    BuildEpgCleanupIds(existingChannelData.SelectMany(c => new string?[] { c.TvgId, c.TvgName, c.Name })),
                     replacementTransaction.GetDbTransaction());
 
                 if (stagingPlaylist is not null)

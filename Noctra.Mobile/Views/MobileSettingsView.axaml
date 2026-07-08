@@ -1092,17 +1092,19 @@
             </Button>
           </StackPanel>
           <StackPanel Spacing="4">
-            <TextBlock Text="{Binding PromoCodeStatus}"
-                       Foreground="{Binding IsPromoCodeStatusSuccess, Converter={StaticResource BooleanToSuccessWarningBrushConverter}}"
-                       FontSize="15"
-                       Padding="16,12"
-                       BorderThickness="1.5"
-                       BorderBrush="{DynamicResource BorderBrush}"
-                       Background="{DynamicResource Surface1Brush}"
-                       FontWeight="SemiBold"
-                       LetterSpacing="1"
-                       TextWrapping="Wrap"
-                       IsVisible="{Binding PromoCodeStatus, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
+            <Border Padding="16,12"
+                    BorderThickness="1.5"
+                    BorderBrush="{DynamicResource BorderBrush}"
+                    Background="{DynamicResource Surface1Brush}"
+                    CornerRadius="12"
+                    IsVisible="{Binding PromoCodeStatus, Converter={StaticResource StringNotEmptyToVisibilityConverter}}">
+              <TextBlock Text="{Binding PromoCodeStatus}"
+                         Foreground="{Binding IsPromoCodeStatusSuccess, Converter={StaticResource BooleanToSuccessWarningBrushConverter}}"
+                         FontSize="15"
+                         FontWeight="SemiBold"
+                         LetterSpacing="1"
+                         TextWrapping="Wrap" />
+            </Border>
             <TextBlock Text="{Binding PremiumStatusText}"
                        Foreground="{DynamicResource SuccessBrush}"
                        FontSize="13"

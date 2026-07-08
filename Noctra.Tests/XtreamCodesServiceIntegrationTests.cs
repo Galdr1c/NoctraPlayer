@@ -122,6 +122,69 @@ namespace Noctra.Tests
         }
 
         [Fact]
+        public async Task GetChannelsProgressiveAsync_LoadsStreamsPerCategory()
+        {
+            var baseUrl = "http://progressive.com";
+            var requestedStreamUrls = new List<string>();
+
+            SetupMockByAction(baseUrl, null, new { user_info = new { status = "Active" } });
+            SetupMockByAction(baseUrl, "get_live_categories", new[]
+            {
+                new { category_id = "1", category_name = "Sports" },
+                new { category_id = "2", category_name = "News" }
+            });
+            SetupMockByAction(baseUrl, "get_vod_categories", new List<object>());
+            SetupMockByAction(baseUrl, "get_series_categories", new List<object>());
+
+            _handlerMock
+                .Protected()
+                .Setup<Task<HttpResponseMessage>>(
+                    "SendAsync",
+                    ItExpr.Is<HttpRequestMessage>(req =>
+                        req.RequestUri!.AbsoluteUri.StartsWith(baseUrl) &&
+                        req.RequestUri.Query.Contains("action=get_live_streams")),
+                    ItExpr.IsAny<CancellationToken>())
+                .Returns<HttpRequestMessage, CancellationToken>((req, _) =>
+                {
+                    lock (requestedStreamUrls)
+                    {
+                        requestedStreamUrls.Add(req.RequestUri!.AbsoluteUri);
+                    }
+
+                    object payload = req.RequestUri!.Query.Contains("category_id=1")
+                        ? new[] { new { name = "ESPN", stream_id = 100, category_id = "1" } }
+                        : req.RequestUri.Query.Contains("category_id=2")
+                            ? new[] { new { name = "CNN", stream_id = 200, category_id = "2" } }
+                            : Array.Empty<object>();
+
+                    return Task.FromResult(new HttpResponseMessage
+                    {
+                        StatusCode = HttpStatusCode.OK,
+                        Content = new StringContent(JsonSerializer.Serialize(payload))
+                    });
+                });
+
+            var loadedGroups = new List<(string Group, List<Channel> Channels)>();
+
+            await _service.GetChannelsProgressiveAsync(
+                baseUrl,
+                "user",
+                "pass",
+                includeVod: false,
+                onCategoriesDiscovered: (categories, _) => Task.FromResult(categories),
+                onCategoryLoaded: (channels, group) =>
+                {
+                    loadedGroups.Add((group, channels));
+                    return Task.CompletedTask;
+                });
+
+            Assert.Equal(2, requestedStreamUrls.Count);
+            Assert.All(requestedStreamUrls, url => Assert.Contains("category_id=", url));
+            Assert.Contains(loadedGroups, g => g.Group == "Sports" && g.Channels.Single().Name == "ESPN");
+            Assert.Contains(loadedGroups, g => g.Group == "News" && g.Channels.Single().Name == "CNN");
+        }
+
+        [Fact]
         public async Task GetSeriesInfoAsync_HandlesEpisodesAsObject_ReturnsCorrectData()
         {
             // Arrange
