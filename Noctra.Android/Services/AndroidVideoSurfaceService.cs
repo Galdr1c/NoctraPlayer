@@ -14,6 +14,7 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurface
     private readonly AndroidActivityProvider _activityProvider;
     private readonly object _surfaceLock = new();
     private TextureView? _textureView;
+    private Surface? _currentSurface;
     private TaskCompletionSource<Surface>? _surfaceReady;
 
     // EPG split görünümü için video yüzeyi konum/boyutu (piksel).
@@ -89,6 +90,7 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurface
 
             lock (_surfaceLock)
             {
+                ReleaseSurface();
                 _surfaceReady = null;
             }
 
@@ -368,24 +370,32 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurface
         return false;
     }
 
-    internal async Task<Surface?> WaitForSurfaceAsync()
+    internal async Task<Surface?> WaitForSurfaceAsync(TimeSpan timeout)
     {
         await ShowAsync().ConfigureAwait(false);
 
         lock (_surfaceLock)
         {
+            if (_currentSurface is not null)
+            {
+                return _currentSurface;
+            }
+
             if (_textureView?.IsAttachedToWindow == true &&
                 _textureView?.SurfaceTexture is { } st &&
                 st.IsReleased == false)
             {
-                return new Surface(st);
+                ReplaceSurface(st);
+                return _currentSurface;
             }
 
             _surfaceReady ??= new TaskCompletionSource<Surface>(TaskCreationOptions.RunContinuationsAsynchronously);
         }
 
         var tcs = _surfaceReady!;
-        return await tcs.Task.ConfigureAwait(false);
+        using var cts = new CancellationTokenSource(timeout);
+        var completed = await Task.WhenAny(tcs.Task, Task.Delay(timeout, cts.Token)).ConfigureAwait(false);
+        return completed == tcs.Task ? await tcs.Task.ConfigureAwait(false) : null;
     }
 
     // ── TextureView.ISurfaceTextureListener ──────────────────────────────────
@@ -395,13 +405,12 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurface
         TaskCompletionSource<Surface>? tcs;
         lock (_surfaceLock)
         {
+            ReplaceSurface(surface);
             _surfaceReady ??= new TaskCompletionSource<Surface>(TaskCreationOptions.RunContinuationsAsynchronously);
             tcs = _surfaceReady;
         }
 
-        var surfaceObj = new Surface(surface);
-        tcs.TrySetResult(surfaceObj);
-        SurfaceAvailable?.Invoke(this, surfaceObj);
+        tcs.TrySetResult(_currentSurface!);
 
         // İlk boyut bilgisi geldiğinde transform'u uygula.
         _activityProvider.CurrentActivity?.RunOnUiThread(ApplyVideoTransform);
@@ -415,12 +424,13 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurface
 
     public bool OnSurfaceTextureDestroyed(SurfaceTexture surface)
     {
-        NotifySurfaceDestroyed();
         lock (_surfaceLock)
         {
+            ReleaseSurface();
             _surfaceReady = new TaskCompletionSource<Surface>(TaskCreationOptions.RunContinuationsAsynchronously);
         }
 
+        NotifySurfaceDestroyed();
         return true; // Uygulamanın SurfaceTexture'ı serbest bırakmasına izin ver.
     }
 
@@ -431,6 +441,39 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurface
     {
         // İlk kare geldiğinde view boyutlarıyla transform'u uygula.
         _activityProvider.CurrentActivity?.RunOnUiThread(ApplyVideoTransform);
+    }
+
+    private void ReplaceSurface(SurfaceTexture texture)
+    {
+        _currentSurface?.Dispose();
+        _currentSurface = new Surface(texture);
+    }
+
+    private void ReleaseSurface()
+    {
+        _currentSurface?.Dispose();
+        _currentSurface = null;
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            lock (_surfaceLock)
+            {
+                ReleaseSurface();
+                _surfaceReady = null;
+            }
+
+            if (_textureView is not null)
+            {
+                _textureView.SurfaceTextureListener = null;
+                _textureView?.Dispose();
+                _textureView = null;
+            }
+        }
+
+        base.Dispose(disposing);
     }
 
     private void EnsureTextureView(Activity activity)
@@ -453,9 +496,15 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurface
 
         _textureView = new TextureView(activity);
         _textureView.SurfaceTextureListener = this;
+        _textureView.Clickable = false;
+        _textureView.Focusable = false;
+        _textureView.ImportantForAccessibility = ImportantForAccessibility.No;
 
+        // TextureView'i content root'un en altına ekle (z-index 0) ki Avalonia
+        // overlay kontrolleri her zaman native view'ın önünde kalsın.
         content.AddView(
             _textureView,
+            0,
             new WidgetFrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MatchParent,
                 ViewGroup.LayoutParams.MatchParent));

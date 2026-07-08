@@ -130,7 +130,9 @@ public sealed class AddProfileLocalM3uTests
             "picked-playlist.m3u");
         var filePicker = new Mock<IPlaylistFilePickerService>();
         filePicker
-            .Setup(service => service.PickM3uFileAsync(It.IsAny<CancellationToken>()))
+            .Setup(service => service.PickM3uFileAsync(
+                It.IsAny<IProgress<Noctra.Core.Models.FileCopyProgress>?>(),
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync(selectedPath);
         var avatarService = new Mock<IAvatarService>();
         avatarService

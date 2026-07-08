@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Noctra.Core.Models;
 using Noctra.Models;
 using Noctra.Services;
 using Noctra.Services.Interfaces;
@@ -145,11 +146,51 @@ public partial class AddProfileViewModel : ObservableObject
             return;
         }
 
-        var filePath = await _playlistFilePickerService.PickM3uFileAsync();
-        if (!string.IsNullOrWhiteSpace(filePath))
+        var copyProgress = new Progress<FileCopyProgress>(OnFileCopyProgressChanged);
+        try
         {
-            SetM3uFileSource(filePath);
+            var filePath = await _playlistFilePickerService.PickM3uFileAsync(copyProgress);
+            if (!string.IsNullOrWhiteSpace(filePath))
+            {
+                SetM3uFileSource(filePath);
+            }
         }
+        finally
+        {
+            StatusMessage = string.Empty;
+        }
+    }
+
+    private void OnFileCopyProgressChanged(FileCopyProgress progress)
+    {
+        if (progress.TotalBytes is > 0)
+        {
+            var copied = FormatBytes(progress.BytesCopied);
+            var total = FormatBytes(progress.TotalBytes.Value);
+            StatusMessage = string.Format(
+                CultureInfo.CurrentCulture,
+                _localizationService.GetString("AddProfile.Status.CopyingFileFormat"),
+                copied, total);
+        }
+        else
+        {
+            StatusMessage = _localizationService.GetString("AddProfile.Status.CopyingFile");
+        }
+    }
+
+    private static string FormatBytes(long bytes)
+    {
+        const long kb = 1024;
+        const long mb = kb * 1024;
+        const long gb = mb * 1024;
+
+        return bytes switch
+        {
+            >= gb => $"{bytes / (double)gb:F1} GB",
+            >= mb => $"{bytes / (double)mb:F1} MB",
+            >= kb => $"{bytes / (double)kb:F1} KB",
+            _ => $"{bytes} B"
+        };
     }
 
     [RelayCommand]

@@ -13,6 +13,13 @@ namespace Noctra.Android.Services;
 
 public sealed class AndroidPictureInPictureService : IPictureInPictureService
 {
+    // Fixed request codes for PiP action PendingIntents.
+    // String hashes may not be stable across processes; constants are deterministic.
+    private const int RequestPlayPause = 1001;
+    private const int RequestPreviousLive = 1002;
+    private const int RequestNextLive = 1003;
+    private const int RequestNextEpisode = 1004;
+
     private readonly AndroidActivityProvider _activityProvider;
     private readonly ILocalizationService _localizationService;
     private PictureInPicturePlaybackState _state = new();
@@ -192,7 +199,14 @@ public sealed class AndroidPictureInPictureService : IPictureInPictureService
         intent.SetAction(AndroidPictureInPictureActionReceiver.ActionControl);
         intent.PutExtra(AndroidPictureInPictureActionReceiver.ExtraControl, control);
 
-        var requestCode = control.GetHashCode(StringComparison.Ordinal);
+        var requestCode = control switch
+        {
+            AndroidPictureInPictureActionReceiver.ControlPlayPause => RequestPlayPause,
+            AndroidPictureInPictureActionReceiver.ControlPreviousLive => RequestPreviousLive,
+            AndroidPictureInPictureActionReceiver.ControlNextLive => RequestNextLive,
+            AndroidPictureInPictureActionReceiver.ControlNextEpisode => RequestNextEpisode,
+            _ => control.GetHashCode(StringComparison.Ordinal)
+        };
         var pendingIntent = PendingIntent.GetBroadcast(
             context,
             requestCode,

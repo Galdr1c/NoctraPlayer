@@ -312,11 +312,13 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
 
                 // Setup Video Surface
                 await _videoSurfaceService.ShowAsync().ConfigureAwait(true);
-                var surface = await _videoSurfaceService.WaitForSurfaceAsync().ConfigureAwait(true);
-                if (surface is not null)
+                var surface = await _videoSurfaceService.WaitForSurfaceAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(true);
+                if (surface is null)
                 {
-                    _exoPlayer.SetVideoSurface(surface);
+                    throw new InvalidOperationException(
+                        _localizationService.GetString("Player.Error.SurfaceTimeout"));
                 }
+                _exoPlayer.SetVideoSurface(surface);
                 
                 if (startTimeSeconds > 0)
                 {
@@ -928,9 +930,10 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
 
     private static bool IsNetworkStreamUrl(string url)
     {
+        // RTMP excluded: Media3/ExoPlayer has no RTMP extension bundled.
+        // RTSP included: ExoPlayer has built-in RTSP support.
         return url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
                url.StartsWith("https://", StringComparison.OrdinalIgnoreCase) ||
-               url.StartsWith("rtmp://", StringComparison.OrdinalIgnoreCase) ||
                url.StartsWith("rtsp://", StringComparison.OrdinalIgnoreCase);
     }
 
@@ -1048,7 +1051,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
             }
             if (videoFormat.FrameRate > 0)
             {
-                quality.Fps = (int)videoFormat.FrameRate;
+                quality.Fps = (int)Math.Round(videoFormat.FrameRate);
             }
         }
 

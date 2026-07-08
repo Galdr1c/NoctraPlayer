@@ -102,6 +102,19 @@ public sealed class AndroidReviewPromptService : IReviewPromptService
                 return;
             }
 
+            // Last-moment surface guard: check player, import, profile setup,
+            // legal consent, orientation transition, etc. via the UI layer.
+            // Must run on UI thread because the callback reads Avalonia controls.
+            var surfaceReady = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            activity.RunOnUiThread(() => surfaceReady.TrySetResult(_fallbackHandler.IsSurfaceReady));
+            var surfaceCheckTask = surfaceReady.Task;
+            if (await Task.WhenAny(surfaceCheckTask, Task.Delay(2000)).ConfigureAwait(false) != surfaceCheckTask ||
+                !await surfaceCheckTask.ConfigureAwait(false))
+            {
+                Debug.WriteLine("[ReviewPrompt] Surface not ready or check timed out — prompt suppressed");
+                return;
+            }
+
             settings.ReviewPromptLastShownAtUtc = DateTime.UtcNow;
             await _settingsService.SaveAsync();
 

@@ -205,6 +205,7 @@ public partial class MainView : UserControl
         if (_fallbackHandler is not null)
         {
             _fallbackHandler.Register(ShowReviewPromptOverlayAsync);
+            _fallbackHandler.RegisterSurfaceCheck(IsReviewSurfaceReady);
         }
     }
 

@@ -7,6 +7,7 @@ using Android.App;
 using Android.Content;
 using Android.Database;
 using Android.Provider;
+using Noctra.Core.Models;
 using Noctra.Core.Services;
 using Noctra.Services.Interfaces;
 
@@ -15,6 +16,9 @@ namespace Noctra.Android.Services;
 public sealed class AndroidFilePickerService : IPlaylistFilePickerService
 {
     public const int M3uFileRequestCode = 4107;
+
+    /// <summary>Buffer size used when copying the selected playlist file into app storage.</summary>
+    private const int CopyBufferSize = 81920;
 
     private static readonly string[] AcceptedMimeTypes =
     {
@@ -31,6 +35,7 @@ public sealed class AndroidFilePickerService : IPlaylistFilePickerService
     private readonly object _sync = new();
     private TaskCompletionSource<string?>? _pendingSelection;
     private CancellationTokenRegistration _cancellationRegistration;
+    private IProgress<FileCopyProgress>? _copyProgress;
 
     public AndroidFilePickerService(
         AndroidActivityProvider activityProvider,
@@ -42,7 +47,9 @@ public sealed class AndroidFilePickerService : IPlaylistFilePickerService
         _appPaths = appPaths;
     }
 
-    public Task<string?> PickM3uFileAsync(CancellationToken cancellationToken = default)
+    public Task<string?> PickM3uFileAsync(
+        IProgress<FileCopyProgress>? copyProgress = null,
+        CancellationToken cancellationToken = default)
     {
         var activity = _activityProvider.CurrentActivity
             ?? throw new InvalidOperationException("No active Android activity is available.");
@@ -58,6 +65,7 @@ public sealed class AndroidFilePickerService : IPlaylistFilePickerService
             completion = new TaskCompletionSource<string?>(
                 TaskCreationOptions.RunContinuationsAsynchronously);
             _pendingSelection = completion;
+            _copyProgress = copyProgress;
             _cancellationRegistration = cancellationToken.Register(
                 () => CompleteSelection((string?)null));
         }
@@ -125,6 +133,8 @@ public sealed class AndroidFilePickerService : IPlaylistFilePickerService
             var fileName = GetSafeFileName(uri);
             var destinationPath = CreateUniqueDestinationPath(importsDirectory, fileName);
 
+            var totalBytes = QueryFileSize(uri);
+
             await using var input = _context.ContentResolver?.OpenInputStream(uri)
                 ?? throw new IOException("The selected document could not be opened.");
             await using var output = new FileStream(
@@ -132,15 +142,80 @@ public sealed class AndroidFilePickerService : IPlaylistFilePickerService
                 FileMode.CreateNew,
                 FileAccess.Write,
                 FileShare.None,
-                81920,
+                CopyBufferSize,
                 FileOptions.Asynchronous);
-            await input.CopyToAsync(output);
+
+            await CopyWithProgressAsync(input, output, totalBytes);
 
             CompleteSelection(destinationPath);
         }
         catch (Exception ex)
         {
             CompleteSelection(ex);
+        }
+        finally
+        {
+            lock (_sync)
+            {
+                _copyProgress = null;
+            }
+        }
+    }
+
+    private async Task CopyWithProgressAsync(
+        Stream input, Stream output, long? totalBytes)
+    {
+        var buffer = new byte[CopyBufferSize];
+        long totalRead = 0;
+        int bytesRead;
+
+        IProgress<FileCopyProgress>? progress;
+        lock (_sync)
+        {
+            progress = _copyProgress;
+        }
+
+        // Report initial state so the UI can display the copying stage.
+        progress?.Report(new FileCopyProgress { TotalBytes = totalBytes, BytesCopied = 0 });
+
+        while ((bytesRead = await input.ReadAsync(buffer).ConfigureAwait(false)) > 0)
+        {
+            await output.WriteAsync(buffer.AsMemory(0, bytesRead)).ConfigureAwait(false);
+            totalRead += bytesRead;
+
+            progress?.Report(new FileCopyProgress
+            {
+                TotalBytes = totalBytes,
+                BytesCopied = totalRead
+            });
+        }
+
+        await output.FlushAsync().ConfigureAwait(false);
+    }
+
+    private long? QueryFileSize(global::Android.Net.Uri uri)
+    {
+        try
+        {
+            using ICursor? cursor = _context.ContentResolver?.Query(
+                uri,
+                new[] { IOpenableColumns.Size },
+                null,
+                null,
+                null);
+            if (cursor is null || !cursor.MoveToFirst())
+            {
+                return null;
+            }
+
+            var sizeIndex = cursor.GetColumnIndex(IOpenableColumns.Size);
+            return sizeIndex >= 0 ? cursor.GetLong(sizeIndex) : null;
+        }
+        catch
+        {
+            // Some providers may not support size queries; progress will still work
+            // with an indeterminate indicator.
+            return null;
         }
     }
 
