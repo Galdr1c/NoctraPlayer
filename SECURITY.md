@@ -3,11 +3,13 @@
 ## Supported Versions
 
 Kynora Studio provides security fixes for the latest publicly released version
-of Noctra. Older builds may be required to update before receiving support.
+of Noctra on all supported platforms. Older builds may be required to update
+before receiving support.
 
 | Release | Security support |
 | --- | --- |
-| Latest Microsoft Store release | Supported |
+| Latest Microsoft Store release (Windows) | Supported |
+| Latest Google Play Store release (Android) | Supported |
 | Preview, development, or modified builds | Best effort |
 | Older public releases | Not supported |
 
@@ -22,8 +24,8 @@ Report security concerns privately to:
 
 Include, when available:
 
-- The affected Noctra version and edition.
-- Windows version and processor architecture.
+- The affected Noctra version, edition, and platform (Windows or Android).
+- Windows version and processor architecture, or Android version and device model.
 - A clear description of the issue and its potential impact.
 - Reproduction steps or a minimal proof of concept.
 - Relevant logs with credentials, playlist URLs, tokens, and personal data removed.
@@ -41,8 +43,9 @@ update flow, local data protection, authentication or entitlement handling,
 and Kynora Studio-operated services used by Noctra.
 
 Issues in IPTV providers, playlists, streams, portals, EPG sources, Microsoft
-Store, operating systems, or other third-party services should normally be
-reported to their operators unless Noctra introduces the vulnerability.
+Store, Google Play Store, operating systems, or other third-party services
+should normally be reported to their operators unless Noctra introduces the
+vulnerability.
 
 ## Safe Research
 

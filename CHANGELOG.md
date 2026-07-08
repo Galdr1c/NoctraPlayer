@@ -11,6 +11,14 @@ Detailed historical engineering notes are archived in [`docs/history/legacy-chan
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [1.1.0] - 2026-07-08
+
+### Added
+
 - **Premium category hiding gate**: Category eye actions remain visible, but Free users now see the Premium upgrade window instead of hiding Live, Movies, or Series groups.
 - **Compact Premium comparison**: The Premium upgrade window now presents an updated Free/Premium feature comparison in a smaller theme-aware layout.
 - **Legal and privacy consent gate**: First launch now requires users to accept legal/privacy acknowledgements that Noctra provides no IPTV content, playlists, EPG data, streams, or subscriptions and that users must add lawful sources.
@@ -76,20 +84,12 @@ Detailed historical engineering notes are archived in [`docs/history/legacy-chan
 - **Settings selection animations**: Selecting settings ComboBox values no longer incorrectly triggers unrelated tab/slide transition behavior.
 - **Resume dialog time display**: The "Where you left off" time now restores itself while the resume dialog is visible, preventing blank position text when late playback state resets occur.
 - **Mute state synchronization**: Restored mute persistence so reopening the app keeps UI mute state and actual player audio aligned; service volume events no longer unmute playback implicitly.
-
 - **Profile settings leakage**: Promo code state and Microsoft Store review prompt state are no longer written into per-profile settings files.
 - **Global settings leakage**: Profile-only values such as EPG refresh, custom EPG URLs, watch-history settings, and hidden group lists are no longer written into the global settings file.
 - **Tampered promo grant handling**: Invalid or manually edited promo grant values no longer crash settings/license loading and simply leave the app in Free mode.
-- **Poster preload pipeline**: `RemoteImage.PreloadAsync`, image warmup scheduling, and active-control cache notify code were removed.
-- **RemoteImage host escalation complexity**: Per-host failure escalation and known-bad-host state were removed from the control.
-- **Provider image probing for TMDB replacement**: Existing provider poster URLs are no longer probed and swapped with TMDB posters.
-
-### Fixed
-
 - **Stalker VOD poster fallback**: Stalker VOD list parsing now ignores blank poster fields such as `pic=""` and falls through to populated fields like `screenshot_uri`, fixing gray VOD cards when the provider already returns poster URLs.
 - **Stalker Series episode artwork fallback**: Stalker Series and episode parsing now skips blank image fields and falls back through `screenshot_uri`, `icon`, `cover`, `movie_image`, `screenshot_url`, and the parent Series cover.
 - **Xtream Series and episode artwork fallback**: Xtream Series detail, Series list, season, and episode parsing now use the same first-nonblank image fallback behavior across `cover`, `stream_icon`, `cover_big`, `movie_image`, `poster`, `image`, and `screenshot_uri`.
-- **Provider visual enrichment scope**: Stalker provider-detail visual enrichment and the temporary group-count policy were removed; Stalker and Xtream now trust provider list metadata, while TMDB visible-card enrichment remains limited to M3U profiles.
 - **M3U account URL layout**: Long M3U playlist links in Settings now wrap inside the account card instead of overflowing or rendering as a form input.
 - **Review prompt timing**: The review prompt is global across profiles, waits for an eligible main-menu surface, delays during the active session, never appears over video playback/overlay/PiP/details/global loading or other dialogs, and snoozes for 3 days when the user chooses Later.
 - **Review dialog ownership**: The review prompt is no longer topmost, so it stays owned by the main app instead of floating independently over fullscreen video, while existing app dialogs keep their established topmost behavior.
@@ -101,16 +101,15 @@ Detailed historical engineering notes are archived in [`docs/history/legacy-chan
 - **Duplicated progress status text**: Channel-loading status now renders one primary progress message instead of repeating the same text twice in the status bar.
 - **View-switch content bleed**: Live, Movies, and Series navigation now clears the target content surface before the new view renders, preventing old cards from flashing under the new page title.
 - **Profile switch background loading leak**: Large Xtream/Stalker progressive loads are now cancelled and prevented from updating progress/status after profile switch or app close.
-- **Connection health accuracy**: Connection badges no longer default to “good”; Add Profile and save validation now use the same provider auth/content rules, and M3U health checks are profile-scoped with GET fallback.
+- **Connection health accuracy**: Connection badges no longer default to "good"; Add Profile and save validation now use the same provider auth/content rules, and M3U health checks are profile-scoped with GET fallback.
 - **Category image stall**: Categories that reached the end of visible scroll without creating enough scrollable height can now request additional pages.
 - **Search cards without posters**: Search and similar-result sections now queue visible VOD/series image fallback when provider posters are missing.
 - **Provider Series poster latency**: Xtream/Stalker Series list cards no longer perform per-card provider detail artwork requests; only posters present in the provider list response are rendered immediately, keeping large lists responsive.
-- **120-image ceiling behavior**: Image loading is no longer tied to a fixed warmup count; visible cards decide their own image load.
 
 ### Verification
 
 - `dotnet build NoctraPlayer.sln` passes.
-- `dotnet test Noctra.Tests\Noctra.Tests.csproj --no-restore` passes: 902 tests.
+- `dotnet test Noctra.Tests\Noctra.Tests.csproj --no-restore` passes.
 
 ## [1.0.0] - 2026-06-01
 
@@ -164,4 +163,5 @@ Detailed historical engineering notes are archived in [`docs/history/legacy-chan
 - Store packaging helper scripts exist for Free and Premium MSIX builds.
 
 [unreleased]: ./CHANGELOG.md
+[1.1.0]: ./CHANGELOG.md
 [1.0.0]: ./CHANGELOG.md

@@ -169,12 +169,14 @@ if (-not (Test-Path $OutputDir)) {
 $packageVersion = "$VersionPrefix.0"
 $manifestFile = Join-Path $PackagingDir "Package.appxmanifest"
 $manifestTemplate = Get-Content $manifestFile -Raw
+$readmeFile = Join-Path $RepoRoot "README.md"
 Write-Host ""
 Write-Host "Version:       $VersionPrefix ($packageVersion)" -ForegroundColor White
 Write-Host "Configuration: $Configuration" -ForegroundColor White
 Write-Host "Platform:      $Platform" -ForegroundColor White
 Write-Host "Editions:      $($Editions -join ', ')" -ForegroundColor White
 Write-Host "Output:        $OutputDir" -ForegroundColor White
+Write-Host "README badge:  $readmeFile" -ForegroundColor White
 Write-Host ""
 
 # ------------------------------------------------------------------
@@ -284,6 +286,27 @@ foreach ($edition in $Editions) {
     $results += [PSCustomObject]@{ Edition = $edition; Status = "SUCCESS" }
     Write-Host "[OK] $edition build completed." -ForegroundColor Green
     Write-Host ""
+}
+
+# ------------------------------------------------------------------
+# Update README version badge (only if all builds succeeded)
+# ------------------------------------------------------------------
+if ($results.Status -notcontains "FAILED") {
+    if (Test-Path $readmeFile) {
+        $readmeContent = Get-Content $readmeFile -Raw
+        $oldBadgePattern = 'version-[0-9]+\.[0-9]+\.[0-9]+'
+        $newBadgeReplacement = "version-$VersionPrefix"
+        $readmeContent = [regex]::Replace($readmeContent, $oldBadgePattern, $newBadgeReplacement)
+        $oldAltPattern = 'alt="Version [0-9]+\.[0-9]+\.[0-9]+"'
+        $newAltReplacement = "alt=\"Version $VersionPrefix\""
+        $readmeContent = [regex]::Replace($readmeContent, $oldAltPattern, $newAltReplacement)
+        [System.IO.File]::WriteAllText($readmeFile, $readmeContent, [System.Text.UTF8Encoding]::new($false))
+        Write-Host "[OK] README.md version badge updated to $VersionPrefix" -ForegroundColor Green
+    } else {
+        Write-Host "[WARN] README.md not found, badge update skipped." -ForegroundColor Yellow
+    }
+} else {
+    Write-Host "[SKIP] README.md badge not updated due to build failure." -ForegroundColor Yellow
 }
 
 # ------------------------------------------------------------------
