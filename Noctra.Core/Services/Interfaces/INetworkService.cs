@@ -8,7 +8,7 @@ namespace Noctra.Services.Interfaces;
 public interface INetworkService
 {
     /// <summary>
-    /// Gets the current network kind token (e.g. "Wi-Fi", "Ethernet", "Cellular", "Offline", "Online", "Unknown") — localize for display.
+    /// Gets the current network kind token (e.g. "Wi-Fi", "Ethernet", "Cellular", "Offline", "Unvalidated", "Online", "Unknown") — localize for display.
     /// </summary>
     string CurrentNetworkStatus { get; }
 

@@ -132,6 +132,7 @@ public partial class VideoOverlayViewModel : ObservableObject, IDisposable
             "Cellular" => _localizationService.GetString("Player.Network.Cellular"),
             "Offline" => _localizationService.GetString("Player.Network.Offline"),
             "Online" => _localizationService.GetString("Player.Network.Online"),
+            "Unvalidated" => _localizationService.GetString("Player.Network.Unvalidated"),
             "Unknown" => _localizationService.GetString("Player.Network.Unknown"),
             _ => _networkStatusRaw
         };

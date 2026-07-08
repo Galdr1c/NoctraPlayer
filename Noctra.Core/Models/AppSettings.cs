@@ -75,6 +75,11 @@ public class AppSettings
     public bool IsMuted { get; set; } = false;
 
     /// <summary>
+    /// Arka plan oynatmasına izin ver (Android: PiP modu yokken bile devam etsin)
+    /// </summary>
+    public bool AllowBackgroundPlayback { get; set; } = false;
+
+    /// <summary>
     /// Altyazı varsayılan olarak açık mı? (VOD/Dizi için)
     /// </summary>
     public bool SubtitleEnabled { get; set; } = false;

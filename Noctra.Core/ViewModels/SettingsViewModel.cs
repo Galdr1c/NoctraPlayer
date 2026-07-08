@@ -82,6 +82,9 @@ public partial class SettingsViewModel : ObservableObject
 
     [ObservableProperty]
     private bool _showDownloadNotification;
+
+    [ObservableProperty]
+    private bool _allowBackgroundPlayback;
     
     // ============ Görünüm ============
     
@@ -675,6 +678,7 @@ public partial class SettingsViewModel : ObservableObject
         DownloadWifiOnly = s.DownloadWifiOnly;
         DownloadPath = NormalizeDownloadPath(s.DownloadPath);
         ShowDownloadNotification = s.ShowDownloadNotification;
+        AllowBackgroundPlayback = s.AllowBackgroundPlayback;
 
         // Privacy
         SaveWatchHistory = s.SaveWatchHistory;
@@ -764,6 +768,7 @@ public partial class SettingsViewModel : ObservableObject
             DownloadWifiOnly,
             DownloadPath,
             ShowDownloadNotification,
+            AllowBackgroundPlayback,
             IsDarkTheme,
             string.IsNullOrWhiteSpace(AppLanguage) ? "en" : AppLanguage,
             Math.Max(0, ChannelListRefreshFrequencyHours),
@@ -833,6 +838,7 @@ public partial class SettingsViewModel : ObservableObject
         bool DownloadWifiOnly,
         string DownloadPath,
         bool ShowDownloadNotification,
+        bool AllowBackgroundPlayback,
         bool IsDarkTheme,
         string Language,
         int ChannelListRefreshFrequencyHours,
@@ -859,6 +865,7 @@ public partial class SettingsViewModel : ObservableObject
             settings.DownloadWifiOnly = DownloadWifiOnly;
             settings.DownloadPath = DownloadPath;
             settings.ShowDownloadNotification = ShowDownloadNotification;
+            settings.AllowBackgroundPlayback = AllowBackgroundPlayback;
             settings.IsDarkTheme = IsDarkTheme;
             settings.Language = Language;
             settings.ChannelListRefreshFrequencyHours = ChannelListRefreshFrequencyHours;

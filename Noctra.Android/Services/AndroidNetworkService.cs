@@ -54,6 +54,21 @@ public sealed class AndroidNetworkService : INetworkService, IDisposable
             return "Unknown";
         }
 
+        // Internet capability kontrolü: Wi-Fi bağlı ama internet yoksa "NoInternet" dön.
+        var hasInternet = capabilities.HasCapability(NetCapability.Internet);
+        var isValidated = capabilities.HasCapability(NetCapability.Validated);
+
+        if (!hasInternet)
+        {
+            return "Offline";
+        }
+
+        // Validated değilse captive portal veya VPN/proxy olabilir.
+        if (!isValidated)
+        {
+            return "Unvalidated";
+        }
+
         if (capabilities.HasTransport(TransportType.Wifi))
         {
             return "Wi-Fi";

@@ -379,6 +379,14 @@
                           VerticalAlignment="Center" />
           </Grid>
           <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Text="{loc:Translate Settings.Playback.BackgroundPlayback}"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
+                       VerticalAlignment="Center" />
+            <ToggleSwitch Grid.Column="1"
+                          IsChecked="{Binding AllowBackgroundPlayback}"
+                          VerticalAlignment="Center" />
+          </Grid>
+          <Grid ColumnDefinitions="*,Auto">
             <TextBlock Text="{loc:Translate Settings.Privacy.ClearOnExit}"
                        Foreground="{DynamicResource TextPrimaryBrush}"
                        VerticalAlignment="Center" />

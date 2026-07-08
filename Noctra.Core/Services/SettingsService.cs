@@ -134,6 +134,7 @@ public class SettingsService : ISettingsService
         target.LegalConsentAcceptedAtUtc = source.LegalConsentAcceptedAtUtc;
         target.PrivacyNoticeVersion = source.PrivacyNoticeVersion;
         target.DiagnosticDataConsent = source.DiagnosticDataConsent;
+        target.AllowBackgroundPlayback = source.AllowBackgroundPlayback;
         target.ReviewPromptLaunchCount = source.ReviewPromptLaunchCount;
         target.ReviewPromptLastShownAtUtc = source.ReviewPromptLastShownAtUtc;
         target.ReviewPromptSnoozedUntilUtc = source.ReviewPromptSnoozedUntilUtc;
