@@ -58,32 +58,12 @@
           <Border.IsVisible>
             <Binding Path="#BackdropImage.IsImageLoaded" Converter="{StaticResource InverseBoolConverter}" />
           </Border.IsVisible>
-          <icons:MaterialIcon Kind="MoviePlay"
-                              Foreground="{DynamicResource TextMutedBrush}"
-                              Width="34"
-                              Height="34"
-                              Opacity="0.32"
-                              HorizontalAlignment="Center"
-                              VerticalAlignment="Center" />
         </Border>
 
         <controls:RemoteImage x:Name="BackdropImage"
                               Url="{Binding CoverUrl}"
                               Stretch="UniformToFill"
                               RenderOptions.BitmapInterpolationMode="MediumQuality" />
-
-        <Button HorizontalAlignment="Right"
-                VerticalAlignment="Top"
-                Margin="6"
-                MinWidth="44"
-                MinHeight="44"
-                Padding="0"
-                Background="{DynamicResource OverlayButtonScrimBrush}"
-                BorderThickness="0"
-                CornerRadius="22"
-                Flyout="{StaticResource CardActionsFlyout}">
-          <icons:MaterialIcon Kind="DotsVertical" Width="20" Height="20" Foreground="{DynamicResource PlayerOverlayTextBrush}" />
-        </Button>
 
         <StackPanel VerticalAlignment="Bottom" Spacing="0">
           <Border Padding="10,20,10,10"

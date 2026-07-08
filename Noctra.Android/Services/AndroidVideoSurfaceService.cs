@@ -403,14 +403,17 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurface
     public void OnSurfaceTextureAvailable(SurfaceTexture surface, int width, int height)
     {
         TaskCompletionSource<Surface>? tcs;
+        Surface surfaceObj;
         lock (_surfaceLock)
         {
             ReplaceSurface(surface);
             _surfaceReady ??= new TaskCompletionSource<Surface>(TaskCreationOptions.RunContinuationsAsynchronously);
             tcs = _surfaceReady;
+            surfaceObj = _currentSurface!;
         }
 
-        tcs.TrySetResult(_currentSurface!);
+        tcs.TrySetResult(surfaceObj);
+        SurfaceAvailable?.Invoke(this, surfaceObj);
 
         // İlk boyut bilgisi geldiğinde transform'u uygula.
         _activityProvider.CurrentActivity?.RunOnUiThread(ApplyVideoTransform);

@@ -67,7 +67,7 @@
                       Height="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=profileWidth}">
                 <Border BorderBrush="Transparent"
                         BorderThickness="2"
-                        Background="{Binding Converter={StaticResource ProfileColorConverter}}"
+                        Background="Transparent"
                         ClipToBounds="False">
                   <Image Source="{Binding Converter={StaticResource AvatarPathConverter}}"
                          Stretch="Uniform"

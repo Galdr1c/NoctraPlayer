@@ -78,14 +78,13 @@
             Background="{DynamicResource Surface0Brush}"
             BoxShadow="{DynamicResource CardShadow}">
       <Grid>
-        <!-- Poster Area Placeholder 
-            <Border x:Name="PlaceholderBorder" Width="160" Height="240" Background="{DynamicResource SurfaceLightBrush}">
-              <Border.IsVisible>
-                <Binding Path="#PosterImage.IsImageLoaded" Converter="{StaticResource InverseBoolConverter}"/>
-              </Border.IsVisible>
-            </Border>
-            -->
-        <controls:RemoteImage Url="{Binding CoverUrl}"
+        <Border Background="{DynamicResource SurfaceLightBrush}">
+          <Border.IsVisible>
+            <Binding Path="#SeriesPoster.IsImageLoaded" Converter="{StaticResource InverseBoolConverter}"/>
+          </Border.IsVisible>
+        </Border>
+        <controls:RemoteImage x:Name="SeriesPoster"
+                                        Url="{Binding CoverUrl}"
                                         Stretch="UniformToFill"
                                         RenderOptions.BitmapInterpolationMode="MediumQuality" />
 
@@ -98,7 +97,7 @@
                        TextTrimming="CharacterEllipsis"
                        MaxLines="1" />
             <TextBlock Text="{Binding DisplayCategory}"
-                       Foreground="#A6FFFFFF"
+                       Foreground="{DynamicResource PlayerOverlaySecondaryTextBrush}"
                        FontSize="10"
                        TextTrimming="CharacterEllipsis"
                        IsVisible="{Binding DisplayCategory, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />

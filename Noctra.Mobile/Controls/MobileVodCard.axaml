@@ -79,39 +79,38 @@
             Background="{DynamicResource Surface0Brush}"
             BoxShadow="{DynamicResource CardShadow}">
       <Grid>
-            <!-- Poster Area Placeholder 
-            <Border x:Name="PlaceholderBorder" Width="160" Height="240" Background="{DynamicResource SurfaceLightBrush}">
-              <Border.IsVisible>
-                <Binding Path="#PosterImage.IsImageLoaded" Converter="{StaticResource InverseBoolConverter}"/>
-              </Border.IsVisible>
-            </Border>
-            -->
-        <controls:RemoteImage Url="{Binding CoverUrl}"
+        <Border Background="{DynamicResource SurfaceLightBrush}">
+          <Border.IsVisible>
+            <Binding Path="#PosterImage.IsImageLoaded" Converter="{StaticResource InverseBoolConverter}"/>
+          </Border.IsVisible>
+        </Border>
+        <controls:RemoteImage x:Name="PosterImage"
+                                    Url="{Binding CoverUrl}"
                                     Stretch="UniformToFill"
                                     RenderOptions.BitmapInterpolationMode="MediumQuality" />
         
         <!-- Bottom Section: Info + Progress -->
         <StackPanel VerticalAlignment="Bottom">
           <!-- Bottom Solid Overlay -->
-          <Border Background="#CC000000" Padding="8">
+          <Border Background="{DynamicResource PlayerBottomGradientBrush}" Padding="8">
             <StackPanel Spacing="2">
               <TextBlock Text="{Binding Name}"
-                         Foreground="White"
+                         Foreground="{DynamicResource PlayerOverlayTextBrush}"
                          FontSize="12"
                          FontWeight="Bold"
                          TextTrimming="CharacterEllipsis"/>
               <StackPanel Orientation="Horizontal" Spacing="6">
                 <TextBlock Text="{Binding ReleaseYear}"
-                           Foreground="#A6FFFFFF"
+                           Foreground="{DynamicResource PlayerOverlaySecondaryTextBrush}"
                            FontSize="10"
                            IsVisible="{Binding ReleaseYear, Converter={x:Static ObjectConverters.IsNotNull}}" />
                 <Ellipse Width="3"
                          Height="3"
-                         Fill="#66FFFFFF"
+                         Fill="{DynamicResource PlayerOverlaySecondaryTextBrush}"
                          VerticalAlignment="Center"
                          IsVisible="{Binding ReleaseYear, Converter={x:Static ObjectConverters.IsNotNull}}" />
                 <TextBlock Text="{Binding GroupTitle}"
-                           Foreground="#A6FFFFFF"
+                           Foreground="{DynamicResource PlayerOverlaySecondaryTextBrush}"
                            FontSize="10"
                            TextTrimming="CharacterEllipsis" />
               </StackPanel>
@@ -125,7 +124,7 @@
                        Value="{Binding WatchedPercentage}"
                        IsVisible="{Binding ., Converter={StaticResource WatchedProgressVisibilityConverter}}"
                        Foreground="{DynamicResource AccentBrush}"
-                       Background="#4D000000"
+                       Background="{DynamicResource OverlayHoverScrimBrush}"
                        BorderThickness="0" />
         </StackPanel>
 

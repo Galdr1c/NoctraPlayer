@@ -7,12 +7,12 @@ public class ModernComboBoxStyleTests
     private static readonly XNamespace XamlNamespace = "http://schemas.microsoft.com/winfx/2006/xaml";
 
     [Fact]
-    public void ModernComboBox_KeepsSelectedContentInsideTextColumn()
+    public void ComboBoxTheme_KeepsSelectedContentInsideTextColumn()
     {
         var styles = LoadProjectXaml("Noctra.Avalonia", "Resources", "Styles.axaml");
         var comboTheme = styles.Descendants()
             .Single(e => e.Name.LocalName == "ControlTheme"
-                         && (string?)e.Attribute(XamlNamespace + "Key") == "ModernComboBox");
+                         && (string?)e.Attribute(XamlNamespace + "Key") == "{x:Type ComboBox}");
 
         var border = comboTheme.Descendants()
             .Single(e => e.Name.LocalName == "Border" && (string?)e.Attribute(XamlNamespace + "Name") == "PART_Border");
@@ -27,7 +27,7 @@ public class ModernComboBoxStyleTests
     }
 
     [Fact]
-    public void Application_AppliesModernComboBoxAndTextTrimmingGlobally()
+    public void Application_AppliesComboBoxCursorAndTextTrimmingGlobally()
     {
         var app = LoadProjectXaml("Noctra.Avalonia", "App.axaml");
 
@@ -36,9 +36,6 @@ public class ModernComboBoxStyleTests
                          && (string?)e.Attribute("Selector") == "ComboBox");
         var comboSetters = comboStyle.Elements().Where(e => e.Name.LocalName == "Setter").ToList();
 
-        Assert.Contains(comboSetters, setter =>
-            (string?)setter.Attribute("Property") == "Theme"
-            && (string?)setter.Attribute("Value") == "{StaticResource ModernComboBox}");
         Assert.Contains(comboSetters, setter =>
             (string?)setter.Attribute("Property") == "Cursor"
             && (string?)setter.Attribute("Value") == "Hand");

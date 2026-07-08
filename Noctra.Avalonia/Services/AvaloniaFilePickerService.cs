@@ -106,13 +106,17 @@ public sealed class AvaloniaFilePickerService : IPlaylistFilePickerService
             CopyBufferSize,
             FileOptions.Asynchronous);
 
-        await CopyWithProgressAsync(input, output, totalBytes, copyProgress);
+        await CopyWithProgressAsync(input, output, totalBytes, copyProgress, cancellationToken);
 
         return destinationPath;
     }
 
     private static async Task CopyWithProgressAsync(
-        Stream input, Stream output, long? totalBytes, IProgress<FileCopyProgress>? progress)
+        Stream input,
+        Stream output,
+        long? totalBytes,
+        IProgress<FileCopyProgress>? progress,
+        CancellationToken cancellationToken)
     {
         var buffer = new byte[CopyBufferSize];
         long totalRead = 0;
@@ -120,9 +124,9 @@ public sealed class AvaloniaFilePickerService : IPlaylistFilePickerService
 
         progress?.Report(new FileCopyProgress { TotalBytes = totalBytes, BytesCopied = 0 });
 
-        while ((bytesRead = await input.ReadAsync(buffer).ConfigureAwait(false)) > 0)
+        while ((bytesRead = await input.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken).ConfigureAwait(false)) > 0)
         {
-            await output.WriteAsync(buffer.AsMemory(0, bytesRead)).ConfigureAwait(false);
+            await output.WriteAsync(buffer.AsMemory(0, bytesRead), cancellationToken).ConfigureAwait(false);
             totalRead += bytesRead;
 
             progress?.Report(new FileCopyProgress
@@ -132,7 +136,7 @@ public sealed class AvaloniaFilePickerService : IPlaylistFilePickerService
             });
         }
 
-        await output.FlushAsync().ConfigureAwait(false);
+        await output.FlushAsync(cancellationToken).ConfigureAwait(false);
     }
 
     private static string GetSafeFileName(string fullPath)

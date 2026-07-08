@@ -60,7 +60,11 @@
                Width="80"
                Height="80"
                Opacity="0.6"
+               RenderTransformOrigin="50%,50%"
                Margin="0,0,0,10">
+          <Image.RenderTransform>
+            <ScaleTransform ScaleX="1" ScaleY="1" />
+          </Image.RenderTransform>
           <Image.Styles>
             <Style Selector="Image">
               <Style.Animations>
@@ -69,12 +73,18 @@
                            Easing="SineEaseInOut">
                   <KeyFrame Cue="0%">
                     <Setter Property="Opacity" Value="0.45" />
+                    <Setter Property="ScaleTransform.ScaleX" Value="0.96" />
+                    <Setter Property="ScaleTransform.ScaleY" Value="0.96" />
                   </KeyFrame>
                   <KeyFrame Cue="50%">
                     <Setter Property="Opacity" Value="0.8" />
+                    <Setter Property="ScaleTransform.ScaleX" Value="1.04" />
+                    <Setter Property="ScaleTransform.ScaleY" Value="1.04" />
                   </KeyFrame>
                   <KeyFrame Cue="100%">
                     <Setter Property="Opacity" Value="0.45" />
+                    <Setter Property="ScaleTransform.ScaleX" Value="0.96" />
+                    <Setter Property="ScaleTransform.ScaleY" Value="0.96" />
                   </KeyFrame>
                 </Animation>
               </Style.Animations>

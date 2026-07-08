@@ -406,7 +406,7 @@ public sealed class ReleaseSourceCleanlinessTests
     }
 
     [Fact]
-    public void MobileCollectionScreens_UseMaterialIconsForMediaFallbacks()
+    public void MobileCollectionScreens_UseSurfacePlaceholdersForMediaFallbacks()
     {
         var repositoryRoot = FindRepositoryRoot();
         var liveCardSource = File.ReadAllText(Path.Combine(
@@ -444,13 +444,16 @@ public sealed class ReleaseSourceCleanlinessTests
             Assert.DoesNotContain("Text=\"VOD\"", source);
         }
 
-        Assert.Contains("Kind=\"Television\"", liveCardSource);
-        Assert.Contains("Kind=\"TelevisionPlay\"", seriesCardSource);
-        Assert.Contains("Kind=\"Movie\"", vodCardSource);
+        Assert.Contains("Background=\"{DynamicResource SurfaceLightBrush}\"", liveCardSource);
+        Assert.Contains("Path=\"#ChannelLogo.IsImageLoaded\"", liveCardSource);
+        Assert.Contains("Background=\"{DynamicResource SurfaceLightBrush}\"", seriesCardSource);
+        Assert.Contains("Path=\"#SeriesPoster.IsImageLoaded\"", seriesCardSource);
+        Assert.Contains("Background=\"{DynamicResource SurfaceLightBrush}\"", vodCardSource);
+        Assert.Contains("Path=\"#PosterImage.IsImageLoaded\"", vodCardSource);
     }
 
     [Fact]
-    public void MobileLiveView_UsesMaterialIconForChannelFallback()
+    public void MobileLiveView_UsesSurfacePlaceholderForChannelFallback()
     {
         var repositoryRoot = FindRepositoryRoot();
         var source = File.ReadAllText(Path.Combine(
@@ -459,46 +462,34 @@ public sealed class ReleaseSourceCleanlinessTests
             "Views",
             "MobileLiveView.axaml"));
 
-        Assert.Contains("xmlns:icons=\"clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia\"", source);
-        Assert.Contains("Kind=\"Television\"", source);
         Assert.DoesNotContain("Text=\"TV\"", source);
     }
 
     [Fact]
-    public void MobileMediaCards_UseMaterialIconsForPosterFallbacks()
+    public void MobileMediaCards_UseSurfacePlaceholdersForPosterFallbacks()
     {
         var repositoryRoot = FindRepositoryRoot();
-        var cardExpectations = new[]
+        var cardPaths = new[]
         {
-            new
-            {
-                Path = Path.Combine(repositoryRoot, "Noctra.Mobile", "Controls", "MobileVodCard.axaml"),
-                Icon = "Kind=\"Movie\""
-            },
-            new
-            {
-                Path = Path.Combine(repositoryRoot, "Noctra.Mobile", "Controls", "MobileSeriesCard.axaml"),
-                Icon = "Kind=\"TelevisionPlay\""
-            },
-            new
-            {
-                Path = Path.Combine(repositoryRoot, "Noctra.Mobile", "Controls", "MobileContinueWatchingCard.axaml"),
-                Icon = "Kind=\"MoviePlay\""
-            }
+            Path.Combine(repositoryRoot, "Noctra.Mobile", "Controls", "MobileVodCard.axaml"),
+            Path.Combine(repositoryRoot, "Noctra.Mobile", "Controls", "MobileSeriesCard.axaml"),
+            Path.Combine(repositoryRoot, "Noctra.Mobile", "Controls", "MobileContinueWatchingCard.axaml")
         };
 
-        foreach (var expectation in cardExpectations)
+        foreach (var cardPath in cardPaths)
         {
-            var source = File.ReadAllText(expectation.Path);
+            var source = File.ReadAllText(cardPath);
 
-            Assert.Contains("xmlns:icons=\"clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia\"", source);
-            Assert.Contains(expectation.Icon, source);
-            Assert.Contains("Opacity=\"0.32\"", source);
+            Assert.Contains("Background=\"{DynamicResource SurfaceLightBrush}\"", source);
+            Assert.Contains("IsImageLoaded", source);
+            Assert.DoesNotContain("Kind=\"Movie\"", source);
+            Assert.DoesNotContain("Kind=\"TelevisionPlay\"", source);
+            Assert.DoesNotContain("Kind=\"MoviePlay\"", source);
         }
     }
 
     [Fact]
-    public void MobileMediaCards_ExposeVisibleOverflowActions()
+    public void MobileMediaCards_ExposeContextFlyoutActions()
     {
         var repositoryRoot = FindRepositoryRoot();
         var posterCardPaths = new[]
@@ -513,10 +504,11 @@ public sealed class ReleaseSourceCleanlinessTests
             var source = File.ReadAllText(cardPath);
 
             Assert.Contains("ActionsFlyout", source);
-            Assert.Contains("Flyout=\"{StaticResource", source);
-            Assert.Contains("Kind=\"DotsVertical\"", source);
+            Assert.Contains("Border.ContextFlyout", source);
+            Assert.Contains("StaticResource ResourceKey=\"CardActionsFlyout\"", source);
             Assert.Contains("Context.Favorite.Toggle", source);
             Assert.Contains("Context.MyList.Toggle", source);
+            Assert.DoesNotContain("Kind=\"DotsVertical\"", source);
         }
 
         var liveCardSource = File.ReadAllText(Path.Combine(
@@ -1504,8 +1496,8 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("SelectedSeriesNetworkLogoUrl", seriesDetailSource);
         Assert.Contains("Series.WatchTrailer", seriesDetailSource);
         Assert.Contains("Series.Detail.DownloadSeason", seriesDetailSource);
-        Assert.Contains("Context.MyList.Toggle", seriesDetailSource);
-        Assert.Contains("Context.Favorite.Toggle", seriesDetailSource);
+        Assert.Contains("AddToMyListCommand", seriesDetailSource);
+        Assert.Contains("ToggleFavoriteCommand", seriesDetailSource);
         Assert.DoesNotContain("Content=\"Back\"", seriesDetailSource);
         Assert.DoesNotContain("Content=\"My List\"", seriesDetailSource);
         Assert.DoesNotContain("Content=\"Favorite\"", seriesDetailSource);
@@ -1550,7 +1542,7 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("vm:MainViewModel", downloadsSource);
         Assert.Contains("TotalDownloadsInfoText", downloadsSource);
         Assert.Contains("SelectedDownloadSortOrder", downloadsSource);
-        Assert.Contains("Theme=\"{StaticResource ModernComboBox}\"", downloadsSource);
+        Assert.Contains("<ComboBox", downloadsSource);
         Assert.Contains("DownloadedSeriesItems", downloadsSource);
         Assert.Contains("DownloadedVodChannels", downloadsSource);
         Assert.Contains("DeleteDownloadedMediaCommand", downloadsSource);
@@ -1938,7 +1930,7 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("Settings.Theme.Dark", settingsSource);
         Assert.Contains("Settings.Theme.Light", settingsSource);
         Assert.Contains("Settings.Language.Title", settingsSource);
-        Assert.Contains("Theme=\"{StaticResource ModernComboBox}\"", settingsSource);
+        Assert.Contains("<ComboBox", settingsSource);
         Assert.Contains("AppLanguage", settingsSource);
         Assert.True(
             CountOccurrences(settingsSource, "Tag=\"de\"") >= 3,
@@ -2189,9 +2181,9 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("MobileLiveTvCard", liveSource);
         Assert.Contains("MobileVodCard", moviesSource);
         Assert.Contains("MobileSeriesCard", seriesSource);
-        Assert.Contains("Theme=\"{StaticResource ModernComboBox}\"", liveSource);
-        Assert.Contains("Theme=\"{StaticResource ModernComboBox}\"", moviesSource);
-        Assert.Contains("Theme=\"{StaticResource ModernComboBox}\"", seriesSource);
+        Assert.Contains("<ComboBox", liveSource);
+        Assert.Contains("<ComboBox", moviesSource);
+        Assert.Contains("<ComboBox", seriesSource);
         Assert.Contains("ClearGroupSelection_Click", liveSource);
         Assert.Contains("ClearGroupSelection_Click", moviesSource);
         Assert.Contains("ClearGroupSelection_Click", seriesSource);
@@ -3126,6 +3118,7 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.Contains("AndroidActivityProvider", surfaceService);
         Assert.Contains("WaitForSurfaceAsync", surfaceService);
         Assert.Contains("SurfaceTextureListener", surfaceService);
+        Assert.Contains("SurfaceAvailable?.Invoke", surfaceService);
 
         Assert.Contains("AndroidVideoSurfaceService", videoService);
         Assert.Contains("WaitForSurfaceAsync", videoService);
@@ -3166,7 +3159,7 @@ public sealed class ReleaseSourceCleanlinessTests
 
         Assert.Contains("NormalizeDurationSeconds", androidVideoService);
         Assert.Contains("C.TimeUnset", androidVideoService);
-        Assert.Contains("_localizationService.GetString(\"Player.Error.NetworkOffline\")", androidVideoService);
+        Assert.Contains("_localizationService.GetString(\"Player.Warning.NetworkOfflineTrying\")", androidVideoService);
         Assert.Contains("ClearVideoSurface", androidVideoService);
         Assert.Contains("quality.VideoBitrate = videoFormat.Bitrate / 1000", androidVideoService);
         Assert.Contains("quality.AudioBitrate = audioFormat.Bitrate / 1000", androidVideoService);
@@ -3175,6 +3168,49 @@ public sealed class ReleaseSourceCleanlinessTests
         Assert.DoesNotContain("UpdateStreamQualityFromPreparedPlayer", androidVideoService);
         Assert.DoesNotContain("OnPreparedListener", androidVideoService);
         Assert.DoesNotContain("player.Start();", androidVideoService);
+    }
+
+    [Fact]
+    public void AndroidNotificationPermission_IsNotRequestedAtLaunch()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var mainActivitySource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Android",
+            "MainActivity.cs"));
+
+        var onCreateStart = mainActivitySource.IndexOf("protected override void OnCreate", StringComparison.Ordinal);
+        var nextMethodStart = mainActivitySource.IndexOf("protected override void OnActivityResult", onCreateStart, StringComparison.Ordinal);
+        Assert.True(onCreateStart >= 0);
+        Assert.True(nextMethodStart > onCreateStart);
+
+        var onCreateBody = mainActivitySource[onCreateStart..nextMethodStart];
+        Assert.DoesNotContain("RequestNotificationPermission();", onCreateBody);
+        Assert.Contains("RequestNotificationPermission", mainActivitySource);
+    }
+
+    [Fact]
+    public void PlaylistFilePickerCopy_PropagatesCancellationDuringCopy()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var androidFilePicker = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Android",
+            "Services",
+            "AndroidFilePickerService.cs"));
+        var avaloniaFilePicker = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "Noctra.Avalonia",
+            "Services",
+            "AvaloniaFilePickerService.cs"));
+
+        Assert.Contains("CopyWithProgressAsync(input, output, totalBytes, cancellationToken)", androidFilePicker);
+        Assert.Contains("ReadAsync(buffer.AsMemory", androidFilePicker);
+        Assert.Contains("cancellationToken", androidFilePicker);
+
+        Assert.Contains("CopyWithProgressAsync(input, output, totalBytes, copyProgress, cancellationToken)", avaloniaFilePicker);
+        Assert.Contains("ReadAsync(buffer.AsMemory", avaloniaFilePicker);
+        Assert.Contains("cancellationToken", avaloniaFilePicker);
     }
 
     [Fact]

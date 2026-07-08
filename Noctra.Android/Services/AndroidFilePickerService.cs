@@ -36,6 +36,7 @@ public sealed class AndroidFilePickerService : IPlaylistFilePickerService
     private TaskCompletionSource<string?>? _pendingSelection;
     private CancellationTokenRegistration _cancellationRegistration;
     private IProgress<FileCopyProgress>? _copyProgress;
+    private CancellationToken _copyCancellationToken;
 
     public AndroidFilePickerService(
         AndroidActivityProvider activityProvider,
@@ -66,6 +67,7 @@ public sealed class AndroidFilePickerService : IPlaylistFilePickerService
                 TaskCreationOptions.RunContinuationsAsynchronously);
             _pendingSelection = completion;
             _copyProgress = copyProgress;
+            _copyCancellationToken = cancellationToken;
             _cancellationRegistration = cancellationToken.Register(
                 () => CompleteSelection((string?)null));
         }
@@ -106,14 +108,23 @@ public sealed class AndroidFilePickerService : IPlaylistFilePickerService
             return true;
         }
 
-        _ = ImportSelectedFileAsync(data);
+        CancellationToken cancellationToken;
+        lock (_sync)
+        {
+            cancellationToken = _copyCancellationToken;
+        }
+
+        _ = ImportSelectedFileAsync(data, cancellationToken);
         return true;
     }
 
-    private async Task ImportSelectedFileAsync(Intent data)
+    private async Task ImportSelectedFileAsync(Intent data, CancellationToken cancellationToken)
     {
+        string? destinationPath = null;
         try
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             var uri = data.Data
                 ?? throw new InvalidOperationException("The selected document has no URI.");
             var takeFlags = data.Flags &
@@ -131,7 +142,7 @@ public sealed class AndroidFilePickerService : IPlaylistFilePickerService
             var importsDirectory = Path.Combine(_appPaths.UserDataDirectory, "Imports");
             Directory.CreateDirectory(importsDirectory);
             var fileName = GetSafeFileName(uri);
-            var destinationPath = CreateUniqueDestinationPath(importsDirectory, fileName);
+            destinationPath = CreateUniqueDestinationPath(importsDirectory, fileName);
 
             var totalBytes = QueryFileSize(uri);
 
@@ -145,12 +156,26 @@ public sealed class AndroidFilePickerService : IPlaylistFilePickerService
                 CopyBufferSize,
                 FileOptions.Asynchronous);
 
-            await CopyWithProgressAsync(input, output, totalBytes);
+            await CopyWithProgressAsync(input, output, totalBytes, cancellationToken);
 
             CompleteSelection(destinationPath);
         }
+        catch (OperationCanceledException)
+        {
+            if (!string.IsNullOrWhiteSpace(destinationPath))
+            {
+                TryDeletePartialCopy(destinationPath);
+            }
+
+            CompleteSelection((string?)null);
+        }
         catch (Exception ex)
         {
+            if (!string.IsNullOrWhiteSpace(destinationPath))
+            {
+                TryDeletePartialCopy(destinationPath);
+            }
+
             CompleteSelection(ex);
         }
         finally
@@ -163,7 +188,7 @@ public sealed class AndroidFilePickerService : IPlaylistFilePickerService
     }
 
     private async Task CopyWithProgressAsync(
-        Stream input, Stream output, long? totalBytes)
+        Stream input, Stream output, long? totalBytes, CancellationToken cancellationToken)
     {
         var buffer = new byte[CopyBufferSize];
         long totalRead = 0;
@@ -178,9 +203,9 @@ public sealed class AndroidFilePickerService : IPlaylistFilePickerService
         // Report initial state so the UI can display the copying stage.
         progress?.Report(new FileCopyProgress { TotalBytes = totalBytes, BytesCopied = 0 });
 
-        while ((bytesRead = await input.ReadAsync(buffer).ConfigureAwait(false)) > 0)
+        while ((bytesRead = await input.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken).ConfigureAwait(false)) > 0)
         {
-            await output.WriteAsync(buffer.AsMemory(0, bytesRead)).ConfigureAwait(false);
+            await output.WriteAsync(buffer.AsMemory(0, bytesRead), cancellationToken).ConfigureAwait(false);
             totalRead += bytesRead;
 
             progress?.Report(new FileCopyProgress
@@ -190,7 +215,22 @@ public sealed class AndroidFilePickerService : IPlaylistFilePickerService
             });
         }
 
-        await output.FlushAsync().ConfigureAwait(false);
+        await output.FlushAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    private static void TryDeletePartialCopy(string destinationPath)
+    {
+        try
+        {
+            if (File.Exists(destinationPath))
+            {
+                File.Delete(destinationPath);
+            }
+        }
+        catch
+        {
+            // Best-effort cleanup; the next import will create a unique file name.
+        }
     }
 
     private long? QueryFileSize(global::Android.Net.Uri uri)
@@ -287,6 +327,8 @@ public sealed class AndroidFilePickerService : IPlaylistFilePickerService
         {
             completion = _pendingSelection;
             _pendingSelection = null;
+            _copyProgress = null;
+            _copyCancellationToken = default;
             _cancellationRegistration.Dispose();
         }
 
@@ -300,6 +342,8 @@ public sealed class AndroidFilePickerService : IPlaylistFilePickerService
         {
             completion = _pendingSelection;
             _pendingSelection = null;
+            _copyProgress = null;
+            _copyCancellationToken = default;
             _cancellationRegistration.Dispose();
         }
 

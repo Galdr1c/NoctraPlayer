@@ -7,7 +7,7 @@
         xmlns:loc="using:Noctra.Avalonia.Localization"
         mc:Ignorable="d"
         x:CompileBindings="False"
-        Title="{Binding [Upsell.Title], Source={x:Static loc:LocalizationSource.Instance}}" Height="490" Width="700"
+        Title="{Binding [Upsell.Title], Source={x:Static loc:LocalizationSource.Instance}}" Height="520" Width="760"
         WindowStartupLocation="CenterScreen"
         ShowInTaskbar="False"
         WindowDecorations="None"

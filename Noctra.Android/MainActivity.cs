@@ -56,8 +56,6 @@ public class MainActivity : AvaloniaMainActivity
         {
             app.Services?.GetRequiredService<AndroidActivityProvider>().SetCurrent(this);
         }
-
-        RequestNotificationPermission();
     }
 
     protected override void OnActivityResult(int requestCode, Result resultCode, Intent? data)

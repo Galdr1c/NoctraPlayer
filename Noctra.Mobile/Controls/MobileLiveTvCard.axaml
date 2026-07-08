@@ -97,14 +97,13 @@
                   Background="{DynamicResource Surface0Brush}"
                   IsHitTestVisible="False">
             <Grid>
-              <!-- Placeholder 
               <Border Background="{DynamicResource SurfaceLightBrush}">
                 <Border.IsVisible>
                   <Binding Path="#ChannelLogo.IsImageLoaded" Converter="{StaticResource InverseBoolConverter}"/>
                 </Border.IsVisible>
               </Border>
-              -->
-              <controls:RemoteImage Url="{Binding CoverUrl}"
+              <controls:RemoteImage x:Name="ChannelLogo"
+                                    Url="{Binding CoverUrl}"
                                     Width="36" Height="36"
                                     Stretch="Uniform"
                                     RenderOptions.BitmapInterpolationMode="MediumQuality" />
@@ -136,6 +135,9 @@
                   Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).ToggleFavoriteCommand}"
                   CommandParameter="{Binding}"
                   IsVisible="{Binding #LiveTvCardControl.ShowFavoriteMenu}">
+            <Button.ContextFlyout>
+              <StaticResource ResourceKey="LiveCardActionsFlyout" />
+            </Button.ContextFlyout>
             <Grid>
               <icons:MaterialIcon Kind="Heart"
                                   Width="20"

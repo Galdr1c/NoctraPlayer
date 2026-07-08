@@ -244,7 +244,7 @@
                       CornerRadius="5" Padding="3,1"
                       HorizontalAlignment="Right" VerticalAlignment="Top"
                       Margin="0,-4,-6,0">
-                <TextBlock Text="{Binding SleepTimerCountdown}" FontSize="7" FontWeight="Bold" Foreground="White" Margin="0" />
+                <TextBlock Text="{Binding SleepTimerCountdown}" FontSize="7" FontWeight="Bold" Foreground="{DynamicResource PlayerOverlayTextBrush}" Margin="0" />
               </Border>
             </Panel>
             <TextBlock Text="{Binding SleepTimerLabel}" TextTrimming="CharacterEllipsis" MaxLines="1" />
