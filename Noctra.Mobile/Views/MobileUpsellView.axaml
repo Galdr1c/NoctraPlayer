@@ -13,6 +13,9 @@
           <Setter Property="CornerRadius" Value="6"/>
           <Setter Property="Cursor" Value="Hand"/>
           <Setter Property="BorderThickness" Value="0"/>
+          <Setter Property="HorizontalContentAlignment" Value="Center"/>
+          <Setter Property="VerticalContentAlignment" Value="Center"/>
+          <Setter Property="HorizontalAlignment" Value="Stretch"/>
       </Style>
       <Style Selector="Button.BuyBtn:pressed">
           <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
@@ -21,26 +24,13 @@
 
   <Grid Background="{DynamicResource OverlayDimBrush}">
     <Border Background="{DynamicResource BackgroundGradientBrush}"
-            BorderBrush="{DynamicResource BorderBrush}"
-            BorderThickness="1"
-            CornerRadius="8"
+            BorderBrush="{DynamicResource PremiumBadgeBrush}"
+            BorderThickness="0,1.5,0,0"
+            CornerRadius="0"
             Padding="22,20,22,18"
             VerticalAlignment="Bottom"
             BoxShadow="{DynamicResource OverlaySheetShadow}">
       <Grid RowDefinitions="Auto,*">
-        <Button HorizontalAlignment="Right"
-                VerticalAlignment="Top"
-                Background="Transparent"
-                BorderThickness="0"
-                Width="44"
-                Height="44"
-                Click="Close_Click">
-          <icons:MaterialIcon Kind="Close"
-                              Width="20"
-                              Height="20"
-                              Foreground="{DynamicResource TextMutedBrush}" />
-        </Button>
-
         <ScrollViewer Grid.Row="0"
                       MaxHeight="620">
           <StackPanel Spacing="16">

@@ -933,9 +933,10 @@
       </Border>
 
       <!-- Upgrade to Premium Banner (shown when not premium, placed after Account card) -->
-      <Border Background="{DynamicResource PremiumBadgeBrush}"
+      <Button Background="{DynamicResource PremiumBadgeBrush}"
               CornerRadius="8"
               Padding="14"
+              Click="ShowUpsell_Click"
               IsVisible="{Binding !IsPremium}">
         <Grid ColumnDefinitions="Auto,*,Auto"
               ColumnSpacing="12">
@@ -955,16 +956,6 @@
                        Foreground="{DynamicResource PremiumBadgeTextBrush}"
                        FontSize="12" />
           </StackPanel>
-          <Button Grid.Column="2"
-                  Classes="SettingsPrimaryActionButton"
-                  Click="ShowUpsell_Click"
-                  MinHeight="40"
-                  Padding="14,0">
-            <StackPanel Orientation="Horizontal" Spacing="6">
-              <TextBlock Text="{loc:Translate Upsell.Action.Buy}" FontWeight="SemiBold" FontSize="12" />
-              <icons:MaterialIcon Kind="ChevronRight" Width="16" Height="16" />
-            </StackPanel>
-          </Button>
         </Grid>
       </Border>
 
@@ -974,7 +965,7 @@
               Padding="14">
         <StackPanel Spacing="12">
           <StackPanel Orientation="Horizontal" Spacing="8">
-            <icons:MaterialIcon Kind="Crown" Width="20" Height="20" Foreground="{DynamicResource PremiumBadgeBrush}" />
+            <icons:MaterialIcon Kind="Crown" Width="20" Height="20" Foreground="{DynamicResource AccentBrush}" />
             <TextBlock Text="{loc:Translate Mobile.Settings.About.Title}"
                        Foreground="{DynamicResource PremiumBadgeTextBrush}"
                        FontWeight="SemiBold" />
