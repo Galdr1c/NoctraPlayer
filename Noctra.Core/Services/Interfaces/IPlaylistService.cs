@@ -112,12 +112,6 @@ public interface IPlaylistService
     /// </summary>
     Task RepairWatchHistoryChannelIdsAsync(int playlistId);
 
-    /// <summary>
-    /// Tam yenileme için playlist'e ait TÜM kanalları siler.
-    /// Sunucudan başarılı yanıt geldikten sonra, yeni dummy kanallar eklenmeden önce çağrılır.
-    /// </summary>
-    Task DeleteAllChannelsForRefreshAsync(int playlistId);
-
     Task<Playlist> CreateRefreshStagingPlaylistAsync(int playlistId);
 
     Task CommitRefreshStagingPlaylistAsync(int playlistId, int stagingPlaylistId);

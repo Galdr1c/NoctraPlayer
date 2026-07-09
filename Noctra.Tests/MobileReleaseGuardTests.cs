@@ -81,6 +81,22 @@ public class MobileReleaseGuardTests
         Assert.Contains("ScrollViewer.IsScrollChainingEnabled=\"False\"", styles);
     }
 
+    [Fact]
+    public void PlaylistRefresh_UsesStagingCommitInsteadOfPublicDeleteAllRefreshPath()
+    {
+        var playlistService = ReadProjectFile("Noctra.Core", "Services", "PlaylistService.cs");
+        var playlistInterface = ReadProjectFile("Noctra.Core", "Services", "Interfaces", "IPlaylistService.cs");
+        var mainViewModel = ReadProjectFile("Noctra.Core", "ViewModels", "MainViewModel.cs");
+
+        Assert.DoesNotContain("DeleteAllChannelsForRefreshAsync", playlistInterface);
+        Assert.DoesNotContain("DeleteAllChannelsForRefreshAsync", mainViewModel);
+        Assert.DoesNotContain("public async Task DeleteAllChannelsForRefreshAsync", playlistService);
+        Assert.Contains("CreateRefreshStagingPlaylistAsync", playlistInterface);
+        Assert.Contains("CommitRefreshStagingPlaylistAsync", playlistInterface);
+        Assert.Contains("CommitRefreshStagingPlaylistAsync", mainViewModel);
+        Assert.Contains("MoveStagedChannelsToPlaylistAsync", playlistService);
+    }
+
     private static string ReadProjectFile(params string[] relativeParts)
         => File.ReadAllText(FindProjectFile(relativeParts));
 
