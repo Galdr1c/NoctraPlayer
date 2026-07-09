@@ -84,82 +84,33 @@ public class XtreamCodesService : IXtreamCodesService
         Func<List<Channel>, string, Task> onCategoryLoaded,
         CancellationToken cancellationToken = default)
     {
-        var normalizedBaseUrl = NormalizeBaseUrl(baseUrl);
-        var authenticated = await EnsureAuthenticatedAsync(normalizedBaseUrl, username, password, cancellationToken);
+        var categoryBuffers = new Dictionary<string, List<Channel>>(StringComparer.OrdinalIgnoreCase);
 
-        if (!authenticated)
-        {
-            throw new InvalidOperationException(_localizationService.GetString("Xtream.Error.AuthFailed"));
-        }
-
-        // 1. Kategorileri Çek
-        var allCategories = await GetCategoriesAsync(normalizedBaseUrl, username, password, cancellationToken);
-        
-        string? prioritizedCategory = null;
-        
-        // Önemli: Discover Callback - UI'ın dolması için
-        var categoriesToLoad = await onCategoriesDiscovered(allCategories, (catName) => 
-        {
-            prioritizedCategory = catName;
-            System.Diagnostics.Debug.WriteLine($"[Xtream] Category prioritized: {catName}");
-        });
-        
-        if (categoriesToLoad.Count == 0) return;
-
-        // Map'ler
-        var liveCategoryMap = BuildCategoryMapFromXtream(allCategories.Where(c => c.Type == "live"));
-        var vodCategoryMap = BuildCategoryMapFromXtream(allCategories.Where(c => c.Type == "vod"));
-        var seriesCategoryMap = BuildCategoryMapFromXtream(allCategories.Where(c => c.Type == "series"));
-
-        var orderedCategories = categoriesToLoad
-            .OrderBy(c => string.Equals(c.Name, prioritizedCategory, StringComparison.OrdinalIgnoreCase) ? 0 : 1)
-            .ThenBy(c => c.Type, StringComparer.OrdinalIgnoreCase)
-            .ThenBy(c => c.Name, StringComparer.OrdinalIgnoreCase)
-            .ToList();
-
-        foreach (var category in orderedCategories)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            switch (category.Type)
+        await GetChannelsProgressiveBatchedAsync(
+            baseUrl,
+            username,
+            password,
+            includeVod,
+            onCategoriesDiscovered,
+            async (channels, groupName, categoryCompleted) =>
             {
-                case "live":
+                if (!categoryBuffers.TryGetValue(groupName, out var buffer))
                 {
-                    var streams = await GetJsonAsync<List<XtreamLiveStreamDto>>(
-                        BuildCategoryApiUrl(normalizedBaseUrl, username, password, "get_live_streams", category.Id),
-                        cancellationToken);
-                    var channels = MapLiveChannels(streams, normalizedBaseUrl, username, password, liveCategoryMap)
-                        .Where(c => string.Equals(c.GroupTitle, category.Name, StringComparison.OrdinalIgnoreCase))
-                        .ToList();
-                    await onCategoryLoaded(channels, category.Name);
-                    break;
+                    buffer = new List<Channel>();
+                    categoryBuffers[groupName] = buffer;
                 }
 
-                case "vod" when includeVod:
+                buffer.AddRange(channels);
+
+                if (!categoryCompleted)
                 {
-                    var streams = await GetJsonAsync<List<XtreamVodStreamDto>>(
-                        BuildCategoryApiUrl(normalizedBaseUrl, username, password, "get_vod_streams", category.Id),
-                        cancellationToken);
-                    var channels = MapVodChannels(streams, normalizedBaseUrl, username, password, vodCategoryMap)
-                        .Where(c => string.Equals(c.GroupTitle, category.Name, StringComparison.OrdinalIgnoreCase))
-                        .ToList();
-                    await onCategoryLoaded(channels, category.Name);
-                    break;
+                    return;
                 }
 
-                case "series" when includeVod:
-                {
-                    var seriesDtos = await GetJsonAsync<List<XtreamSeriesDto>>(
-                        BuildCategoryApiUrl(normalizedBaseUrl, username, password, "get_series", category.Id),
-                        cancellationToken);
-                    var channels = MapSeriesAsEntries(seriesDtos, seriesCategoryMap)
-                        .Where(c => string.Equals(c.GroupTitle, category.Name, StringComparison.OrdinalIgnoreCase))
-                        .ToList();
-                    await onCategoryLoaded(channels, category.Name);
-                    break;
-                }
-            }
-        }
+                categoryBuffers.Remove(groupName);
+                await onCategoryLoaded(buffer, groupName).ConfigureAwait(false);
+            },
+            cancellationToken).ConfigureAwait(false);
     }
 
     public async Task GetChannelsProgressiveBatchedAsync(
@@ -395,7 +346,7 @@ public class XtreamCodesService : IXtreamCodesService
                 }
             }
 
-            // episodes block — can be { "1": [...], "2": [...] } (Object) or [...] (Array)
+            // episodes block - can be { "1": [...], "2": [...] } (Object) or [...] (Array)
             if (root.TryGetProperty("episodes", out var episodes))
             {
                 if (episodes.ValueKind == JsonValueKind.Object)
@@ -423,7 +374,7 @@ public class XtreamCodesService : IXtreamCodesService
 
             return detail;
         }
-        catch (Exception ex)
+        catch
         {
             return null;
         }
@@ -663,7 +614,7 @@ public class XtreamCodesService : IXtreamCodesService
                 return new Channel
                 {
                     Name = SafeName(s.Name, _localizationService.GetString("Xtream.Channel.DefaultSeries")),
-                    // ← ID'yi URL'e göm — lazy load için anahtar
+                    // Series id is embedded in the URL for lazy loading.
                     StreamUrl = $"xtream-series://{s.SeriesId}",
                     LogoUrl = GetSeriesPoster(s),
                     GroupTitle = groupTitle,
