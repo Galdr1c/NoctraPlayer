@@ -1113,7 +1113,7 @@ public partial class MainViewModel : ObservableObject
                                                             int importVodCount = 0;
                                                             int importSeriesCount = 0;
 
-                                                            await _xtreamCodesService.GetChannelsProgressiveAsync(
+                                                            await _xtreamCodesService.GetChannelsProgressiveBatchedAsync(
                                                                 baseUrl, username, password,
                                                                 includeVod: true,
                                                                 onCategoriesDiscovered: async (categories, prioritizeAction) =>
@@ -1148,10 +1148,13 @@ public partial class MainViewModel : ObservableObject
                                                                     });
                                                                     return categories;
                                                                 },
-                                                                onCategoryLoaded: async (channels, groupName) =>
+                                                                onCategoryBatchLoaded: async (channels, groupName, categoryCompleted) =>
                                                                 {
                                                                     ThrowIfProfileLoadCancelled(profileScope);
-                                                                    await _playlistService.ReplaceDummyWithRealChannelsAsync(playlist.Id, groupName, channels);
+                                                                    await _playlistService.ReplaceDummyWithRealChannelsAsync(
+                                                                        playlist.Id,
+                                                                        groupName,
+                                                                        channels.ToList());
                                                                     ThrowIfProfileLoadCancelled(profileScope);
 
                                                                     foreach (var channel in channels)
@@ -1170,7 +1173,10 @@ public partial class MainViewModel : ObservableObject
                                                                         }
                                                                     }
                                                                     
-                                                                    loadedCats++;
+                                                                    if (categoryCompleted)
+                                                                    {
+                                                                        loadedCats++;
+                                                                    }
                                                                     await ReportProviderImportJobProgressAsync(
                                                                         importJob,
                                                                         groupName,
@@ -1626,7 +1632,7 @@ public partial class MainViewModel : ObservableObject
             int importVodCount = 0;
             int importSeriesCount = 0;
 
-            await _xtreamCodesService.GetChannelsProgressiveAsync(
+            await _xtreamCodesService.GetChannelsProgressiveBatchedAsync(
                 baseUrl, username, password,
                 includeVod: true,
                 onCategoriesDiscovered: async (categories, prioritizeAction) =>
@@ -1681,10 +1687,13 @@ public partial class MainViewModel : ObservableObject
                         cancellationToken: profileScope.Token);
                     return toLoad;
                 },
-                onCategoryLoaded: async (channels, groupName) =>
+                onCategoryBatchLoaded: async (channels, groupName, categoryCompleted) =>
                 {
                     ThrowIfProfileLoadCancelled(profileScope);
-                    await _playlistService.ReplaceDummyWithRealChannelsAsync(writePlaylist.Id, groupName, channels);
+                    await _playlistService.ReplaceDummyWithRealChannelsAsync(
+                        writePlaylist.Id,
+                        groupName,
+                        channels.ToList());
                     ThrowIfProfileLoadCancelled(profileScope);
 
                     foreach (var channel in channels)
@@ -1711,7 +1720,7 @@ public partial class MainViewModel : ObservableObject
                         importSeriesCount,
                         cancellationToken: profileScope.Token);
 
-                    if (isFullRefresh)
+                    if (isFullRefresh && categoryCompleted)
                     {
                         loadedCategories++;
                         var loaded = loadedCategories;

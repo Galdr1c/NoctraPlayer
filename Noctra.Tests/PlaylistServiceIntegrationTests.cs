@@ -132,6 +132,31 @@ namespace Noctra.Tests
         }
 
         [Fact]
+        public async Task AddFromUrlAsync_WithStreamingChannels_UsesBatchPipeline()
+        {
+            const string url = "https://example.com/large.m3u";
+            var service = CreateService();
+
+            _parserMock
+                .Setup(p => p.ParseFromUrlStreamAsync(url, It.IsAny<CancellationToken>()))
+                .Returns(StreamChannels(501));
+
+            var playlist = await service.AddFromUrlAsync("Remote Import", url);
+
+            using var context = new AppDbContext(_options);
+            var persisted = await context.Playlists.SingleAsync();
+            Assert.Equal(playlist.Id, persisted.Id);
+            Assert.Equal(url, persisted.Url);
+            Assert.True(persisted.IsActive);
+            Assert.Equal(501, persisted.ChannelCount);
+            Assert.Equal(501, await context.Channels.CountAsync());
+            _parserMock.Verify(p => p.ParseFromUrlAsync(It.IsAny<string>()), Times.Never);
+            _organizerMock.Verify(
+                o => o.Organize(It.IsAny<List<Channel>>(), true),
+                Times.Exactly(2));
+        }
+
+        [Fact]
         public async Task AddFromUrlAsync_AfterSuccessfulParse_CompletesImportJob()
         {
             var service = CreateService();
@@ -320,6 +345,56 @@ namespace Noctra.Tests
             Assert.Equal(profileId, job.ProfileId);
             Assert.Equal("Failed", job.Stage);
             Assert.Equal("local file unreadable", job.ErrorMessage);
+        }
+
+        [Fact]
+        public async Task AddFromFileAsync_WhenStreamingFailsAfterFirstBatch_RemovesStagingData()
+        {
+            const string filePath = "D:\\imports\\partial.m3u";
+            var service = CreateService();
+
+            _parserMock
+                .Setup(p => p.ParseFromFileStreamAsync(filePath, It.IsAny<CancellationToken>()))
+                .Returns(StreamChannelsThenFail());
+
+            var error = await Assert.ThrowsAsync<IOException>(() =>
+                service.AddFromFileAsync("Partial Import", filePath));
+
+            Assert.Equal("stream interrupted", error.Message);
+            _parserMock.Verify(
+                p => p.ParseFromFileStreamAsync(filePath, It.IsAny<CancellationToken>()),
+                Times.Once);
+
+            using var context = new AppDbContext(_options);
+            Assert.Empty(await context.Playlists.ToListAsync());
+            Assert.Empty(await context.Channels.ToListAsync());
+        }
+
+        [Fact]
+        public async Task AddFromFileAsync_WithStreamingChannels_ActivatesCompletedPlaylist()
+        {
+            const string filePath = "D:\\imports\\large.m3u";
+            var service = CreateService();
+
+            _parserMock
+                .Setup(p => p.ParseFromFileStreamAsync(filePath, It.IsAny<CancellationToken>()))
+                .Returns(StreamChannels(501));
+
+            var playlist = await service.AddFromFileAsync("Large Import", filePath);
+
+            using var context = new AppDbContext(_options);
+            var persisted = await context.Playlists.SingleAsync();
+            var job = await context.ImportJobs.SingleAsync();
+
+            Assert.Equal(playlist.Id, persisted.Id);
+            Assert.True(persisted.IsActive);
+            Assert.Equal(501, persisted.ChannelCount);
+            Assert.Equal(501, await context.Channels.CountAsync());
+            Assert.Equal(ImportJobStatus.Completed, job.Status);
+            Assert.Equal(501, job.LiveCount);
+            _organizerMock.Verify(
+                o => o.Organize(It.IsAny<List<Channel>>(), true),
+                Times.Exactly(2));
         }
 
         [Fact]
@@ -1247,6 +1322,34 @@ namespace Noctra.Tests
                 _localizationServiceMock.Object,
                 importJobService ?? new ImportJobService(_contextFactory)
             );
+        }
+
+        private static async IAsyncEnumerable<Channel> StreamChannelsThenFail()
+        {
+            yield return new Channel
+            {
+                Name = "Partial Channel",
+                StreamUrl = "partial-url",
+                Type = ChannelType.Live
+            };
+
+            await Task.Yield();
+            throw new IOException("stream interrupted");
+        }
+
+        private static async IAsyncEnumerable<Channel> StreamChannels(int count)
+        {
+            for (var index = 0; index < count; index++)
+            {
+                yield return new Channel
+                {
+                    Name = $"Channel {index}",
+                    StreamUrl = $"stream-{index}",
+                    Type = ChannelType.Live
+                };
+            }
+
+            await Task.CompletedTask;
         }
     }
 }

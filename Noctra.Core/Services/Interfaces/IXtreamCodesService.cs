@@ -41,6 +41,15 @@ public interface IXtreamCodesService
         Func<List<Channel>, string, Task> onCategoryLoaded,
         CancellationToken cancellationToken = default);
 
+    Task GetChannelsProgressiveBatchedAsync(
+        string baseUrl,
+        string username,
+        string password,
+        bool includeVod,
+        Func<List<XtreamCategory>, Action<string>, Task<List<XtreamCategory>>> onCategoriesDiscovered,
+        Func<IReadOnlyList<Channel>, string, bool, Task> onCategoryBatchLoaded,
+        CancellationToken cancellationToken = default);
+
     /// <summary>
     /// Tek bir dizinin tüm sezon ve bölümlerini çeker (get_series_info).
     /// Kullanıcı diziyi açtığında lazy load için çağrılır.
@@ -100,4 +109,3 @@ public class XtreamEpisodeDetail
     public string? AirDate { get; set; }
     public double? Rating { get; set; }
 }
-

@@ -143,6 +143,19 @@ public partial class PlaylistService : IPlaylistService
                 playlistId: null,
                 sourceName: name).ConfigureAwait(false);
 
+            var channelStream = _parser.ParseFromUrlStreamAsync(normalizedUrl);
+            if (channelStream is not null)
+            {
+                return await AddFromChannelStreamAsync(
+                    context,
+                    importJob,
+                    name,
+                    sourceUrl: normalizedUrl,
+                    filePath: null,
+                    profileId: profileId,
+                    channelStream: channelStream).ConfigureAwait(false);
+            }
+
             System.Diagnostics.Debug.WriteLine($"[PlaylistService] Downloading and parsing M3U from: {normalizedUrl}");
             var channels = await _parser.ParseFromUrlAsync(normalizedUrl);
             var detectedEpgUrl = NormalizeEpgUrl(_parser.LastDetectedEpgUrl);
@@ -1050,6 +1063,19 @@ WHERE PlaylistId = {playlistId}
                 playlistId: null,
                 sourceName: name).ConfigureAwait(false);
 
+            var channelStream = _parser.ParseFromFileStreamAsync(filePath);
+            if (channelStream is not null)
+            {
+                return await AddFromChannelStreamAsync(
+                    context,
+                    importJob,
+                    name,
+                    sourceUrl: null,
+                    filePath: filePath,
+                    profileId: profileId,
+                    channelStream: channelStream).ConfigureAwait(false);
+            }
+
             var rawChannels = await _parser.ParseFromFileAsync(filePath);
             var detectedEpgUrl = NormalizeEpgUrl(_parser.LastDetectedEpgUrl);
             await ReportImportJobProgressAsync(importJob, rawChannels, "Parsed").ConfigureAwait(false);
@@ -1557,6 +1583,27 @@ WHERE PlaylistId = {playlistId}
             failedCategoryCount: 0).ConfigureAwait(false);
     }
 
+    private async Task ReportImportJobCountsAsync(
+        ImportJob? importJob,
+        string stage,
+        int liveCount,
+        int vodCount,
+        int seriesCount)
+    {
+        if (_importJobService is null || importJob is null)
+        {
+            return;
+        }
+
+        await _importJobService.ReportProgressAsync(
+            importJob.Id,
+            stage,
+            liveCount,
+            vodCount,
+            seriesCount,
+            failedCategoryCount: 0).ConfigureAwait(false);
+    }
+
     private async Task CompleteImportJobAsync(ImportJob? importJob, string stage)
     {
         if (_importJobService is null || importJob is null)
@@ -1581,6 +1628,157 @@ WHERE PlaylistId = {playlistId}
         catch (Exception ex)
         {
             _logger?.LogWarning(ex, "Failed to mark import job {ImportJobId} as failed.", importJob.Id);
+        }
+    }
+
+    private async Task<Playlist> AddFromChannelStreamAsync(
+        AppDbContext context,
+        ImportJob? importJob,
+        string name,
+        string? sourceUrl,
+        string? filePath,
+        int? profileId,
+        IAsyncEnumerable<Channel> channelStream)
+    {
+        const int batchSize = 500;
+        var isChild = profileId.HasValue &&
+                      await context.Profiles.AsNoTracking()
+                          .AnyAsync(p => p.Id == profileId && p.IsChild);
+        var playlist = new Playlist
+        {
+            Name = name,
+            Url = sourceUrl,
+            FilePath = filePath,
+            ProfileId = profileId,
+            CreatedAt = DateTime.UtcNow,
+            LastUpdated = DateTime.UtcNow,
+            ChannelCount = 0,
+            IsActive = false
+        };
+
+        context.Playlists.Add(playlist);
+        await context.SaveChangesAsync();
+
+        var batch = new List<Channel>(batchSize);
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var liveCount = 0;
+        var vodCount = 0;
+        var seriesCount = 0;
+
+        try
+        {
+            await foreach (var channel in channelStream)
+            {
+                var dedupKey = $"{NormalizeIdentityToken(channel.Name)}|{NormalizeStreamIdentity(channel.StreamUrl)}";
+                if (!seen.Add(dedupKey))
+                {
+                    continue;
+                }
+
+                batch.Add(channel);
+                if (batch.Count >= batchSize)
+                {
+                    var written = await WriteStreamingBatchAsync(context, playlist.Id, batch, isChild);
+                    CountChannels(written, ref liveCount, ref vodCount, ref seriesCount);
+                    await ReportImportJobCountsAsync(importJob, "Writing", liveCount, vodCount, seriesCount);
+                    batch.Clear();
+                }
+            }
+
+            if (batch.Count > 0)
+            {
+                var written = await WriteStreamingBatchAsync(context, playlist.Id, batch, isChild);
+                CountChannels(written, ref liveCount, ref vodCount, ref seriesCount);
+                batch.Clear();
+            }
+
+            var totalCount = liveCount + vodCount + seriesCount;
+            if (totalCount == 0)
+            {
+                throw new InvalidOperationException(_localizationService.GetString("Playlist.Error.EmptyNoDelete"));
+            }
+
+            playlist.ChannelCount = totalCount;
+            playlist.EpgUrl = NormalizeEpgUrl(_parser.LastDetectedEpgUrl);
+            playlist.LastUpdated = DateTime.UtcNow;
+            playlist.IsActive = true;
+            context.Playlists.Update(playlist);
+            await context.SaveChangesAsync();
+
+            InvalidateLinearStreamRepair(playlist.Id);
+            await AttachImportJobPlaylistAsync(importJob, playlist.Id).ConfigureAwait(false);
+            await ReportImportJobCountsAsync(importJob, "Completed", liveCount, vodCount, seriesCount);
+            await CompleteImportJobAsync(importJob, "Completed").ConfigureAwait(false);
+
+            var aggregationPlaylistId = playlist.Id;
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await _mediaService.AggregateContentAsync(aggregationPlaylistId);
+                    _mediaService.RaiseAggregationCompleted(aggregationPlaylistId);
+                }
+                catch (Exception ex)
+                {
+                    _logger?.LogWarning(ex, "Background aggregation failed for playlist {PlaylistId}", aggregationPlaylistId);
+                }
+            });
+
+            return playlist;
+        }
+        catch
+        {
+            await context.Channels
+                .Where(c => c.PlaylistId == playlist.Id)
+                .ExecuteDeleteAsync();
+            await context.Playlists
+                .Where(p => p.Id == playlist.Id && !p.IsActive)
+                .ExecuteDeleteAsync();
+            throw;
+        }
+    }
+
+    private async Task<List<Channel>> WriteStreamingBatchAsync(
+        AppDbContext context,
+        int playlistId,
+        List<Channel> batch,
+        bool applyChildFilter)
+    {
+        var organized = _organizer.Organize(batch, trustProviderTypes: true);
+        if (applyChildFilter)
+        {
+            organized = ApplyChildFilter(organized).ToList();
+        }
+
+        foreach (var channel in organized)
+        {
+            channel.PlaylistId = playlistId;
+        }
+
+        await FastSqliteBulkInsertAsync(context, organized);
+        return organized;
+    }
+
+    private static void CountChannels(
+        IEnumerable<Channel> channels,
+        ref int liveCount,
+        ref int vodCount,
+        ref int seriesCount)
+    {
+        foreach (var channel in channels)
+        {
+            switch (channel.Type)
+            {
+                case ChannelType.Live:
+                    liveCount++;
+                    break;
+                case ChannelType.VOD:
+                    vodCount++;
+                    break;
+                case ChannelType.Series:
+                    seriesCount++;
+                    break;
+            }
         }
     }
 

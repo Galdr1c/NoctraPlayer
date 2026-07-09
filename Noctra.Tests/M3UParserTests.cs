@@ -4,7 +4,9 @@ using Noctra.Models;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Net;
 
 namespace Noctra.Tests
 {
@@ -16,6 +18,56 @@ namespace Noctra.Tests
         {
             // HttpClient is not used for ParseAsync(string content), but required by constructor
             _parser = new M3UParser(new HttpClient());
+        }
+
+        [Fact]
+        public async Task ParseFromFileStreamAsync_YieldsChannelsAndPreservesDetectedEpgUrl()
+        {
+            var filePath = Path.GetTempFileName();
+            await File.WriteAllTextAsync(
+                filePath,
+                """
+                #EXTM3U x-tvg-url="https://example.com/epg.xml"
+                #EXTINF:-1 group-title="News",Channel One
+                https://example.com/live/1.m3u8
+                #EXTINF:-1 group-title="Movies",Movie Two
+                https://example.com/movie/2.mp4
+                """);
+
+            try
+            {
+                var channels = new List<Channel>();
+
+                await foreach (var channel in _parser.ParseFromFileStreamAsync(filePath))
+                {
+                    channels.Add(channel);
+                }
+
+                Assert.Equal(new[] { "Channel One", "Movie Two" }, channels.Select(c => c.Name));
+                Assert.Equal("https://example.com/epg.xml", _parser.LastDetectedEpgUrl);
+            }
+            finally
+            {
+                File.Delete(filePath);
+            }
+        }
+
+        [Fact]
+        public async Task ParseFromUrlStreamAsync_WhenInitialRequestIsNotFound_RetriesWithVlcUserAgent()
+        {
+            var handler = new VlcFallbackHandler();
+            var parser = new M3UParser(new HttpClient(handler));
+            var channels = new List<Channel>();
+
+            await foreach (var channel in parser.ParseFromUrlStreamAsync("https://example.com/list.m3u"))
+            {
+                channels.Add(channel);
+            }
+
+            Assert.Single(channels);
+            Assert.Equal("Fallback Channel", channels[0].Name);
+            Assert.Equal(2, handler.RequestCount);
+            Assert.Equal("VLC/3.0.18", handler.LastUserAgent);
         }
 
         [Theory]
@@ -73,6 +125,31 @@ namespace Noctra.Tests
             // Assert
             Assert.Single(channels);
             Assert.Equal(expectedType, channels[0].Type);
+        }
+
+        private sealed class VlcFallbackHandler : HttpMessageHandler
+        {
+            public int RequestCount { get; private set; }
+            public string? LastUserAgent { get; private set; }
+
+            protected override Task<HttpResponseMessage> SendAsync(
+                HttpRequestMessage request,
+                CancellationToken cancellationToken)
+            {
+                RequestCount++;
+                LastUserAgent = request.Headers.UserAgent.ToString();
+
+                if (RequestCount == 1)
+                {
+                    return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+                }
+
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent(
+                        "#EXTM3U\n#EXTINF:-1,Fallback Channel\nhttps://example.com/live/1.m3u8")
+                });
+            }
         }
 
         [Fact]

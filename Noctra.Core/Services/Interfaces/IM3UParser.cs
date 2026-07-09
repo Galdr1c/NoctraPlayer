@@ -25,6 +25,13 @@ public interface IM3UParser
     /// <param name="filePath">Dosya yolu</param>
     /// <returns>Parse edilen kanal listesi</returns>
     Task<List<Channel>> ParseFromFileAsync(string filePath);
+
+    /// <summary>
+    /// Dosyadaki kanallari tum listeyi bellekte biriktirmeden sirayla uretir.
+    /// </summary>
+    IAsyncEnumerable<Channel> ParseFromFileStreamAsync(
+        string filePath,
+        CancellationToken cancellationToken = default);
     
     /// <summary>
     /// URL'den M3U parse eder
@@ -32,6 +39,13 @@ public interface IM3UParser
     /// <param name="url">M3U URL</param>
     /// <returns>Parse edilen kanal listesi</returns>
     Task<List<Channel>> ParseFromUrlAsync(string url);
+
+    /// <summary>
+    /// URL'deki kanallari yanit govdesini listeye donusturmeden sirayla uretir.
+    /// </summary>
+    IAsyncEnumerable<Channel> ParseFromUrlStreamAsync(
+        string url,
+        CancellationToken cancellationToken = default);
 }
 
 

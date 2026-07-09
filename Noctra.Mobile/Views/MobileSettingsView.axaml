@@ -957,7 +957,7 @@
                        FontSize="12" />
           </StackPanel>
         </Grid>
-      </Border>
+      </Button>
 
       <!-- About Card (clean, no nested Update section) -->
       <Border Classes="SettingsSectionCard" Background="{DynamicResource Surface0Brush}"

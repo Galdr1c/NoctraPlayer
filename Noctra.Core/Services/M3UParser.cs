@@ -1,6 +1,7 @@
 using System.IO;
 using System.Net;
 using System.Net.Http;
+using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using Noctra.Models;
 using Noctra.Services.Interfaces;
@@ -39,6 +40,30 @@ public partial class M3UParser : IM3UParser
         return await ParseFromReaderAsync(reader);
     }
 
+    public async IAsyncEnumerable<Channel> ParseFromFileStreamAsync(
+        string filePath,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        if (!File.Exists(filePath))
+        {
+            throw new FileNotFoundException("M3U file was not found.", filePath);
+        }
+
+        await using var stream = new FileStream(
+            filePath,
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.Read,
+            4096,
+            FileOptions.Asynchronous | FileOptions.SequentialScan);
+        using var reader = new StreamReader(stream);
+
+        await foreach (var channel in ParseFromReaderStreamAsync(reader, cancellationToken))
+        {
+            yield return channel;
+        }
+    }
+
     public async Task<List<Channel>> ParseFromUrlAsync(string url)
     {
         try
@@ -73,6 +98,75 @@ public partial class M3UParser : IM3UParser
             throw new InvalidOperationException(
                 $"Geçersiz M3U formatı: {url}\n" +
                 $"Dosya içeriği M3U standardına uygun değil.", ex);
+        }
+    }
+
+    public async IAsyncEnumerable<Channel> ParseFromUrlStreamAsync(
+        string url,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeoutCts.CancelAfter(TimeSpan.FromMinutes(3));
+
+        var yielded = 0;
+        await foreach (var channel in DownloadAndParseStreamInternalAsync(
+                           url,
+                           overrideUserAgent: null,
+                           allowNotFound: true,
+                           timeoutCts.Token))
+        {
+            yielded++;
+            yield return channel;
+        }
+
+        if (yielded > 0 || string.IsNullOrWhiteSpace(url))
+        {
+            yield break;
+        }
+
+        System.Diagnostics.Debug.WriteLine(
+            $"[M3UParser] 0 channels or 404 for {url}. Retrying with VLC User-Agent...");
+
+        await foreach (var channel in DownloadAndParseStreamInternalAsync(
+                           url,
+                           "VLC/3.0.18",
+                           allowNotFound: false,
+                           timeoutCts.Token))
+        {
+            yield return channel;
+        }
+    }
+
+    private async IAsyncEnumerable<Channel> DownloadAndParseStreamInternalAsync(
+        string url,
+        string? overrideUserAgent,
+        bool allowNotFound,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, url);
+        if (!string.IsNullOrEmpty(overrideUserAgent))
+        {
+            request.Headers.UserAgent.Clear();
+            request.Headers.TryAddWithoutValidation("User-Agent", overrideUserAgent);
+        }
+
+        using var response = await _httpClient.SendAsync(
+            request,
+            HttpCompletionOption.ResponseHeadersRead,
+            cancellationToken);
+
+        if (allowNotFound && response.StatusCode == HttpStatusCode.NotFound)
+        {
+            yield break;
+        }
+
+        response.EnsureSuccessStatusCode();
+        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+        using var reader = new StreamReader(stream);
+
+        await foreach (var channel in ParseFromReaderStreamAsync(reader, cancellationToken))
+        {
+            yield return channel;
         }
     }
 
@@ -122,10 +216,24 @@ public partial class M3UParser : IM3UParser
     private async Task<List<Channel>> ParseFromReaderAsync(TextReader reader)
     {
         var channels = new List<Channel>();
+        _lastPartialChannels = channels;
+
+        await foreach (var channel in ParseFromReaderStreamAsync(reader))
+        {
+            channels.Add(channel);
+        }
+
+        return channels;
+    }
+
+    private async IAsyncEnumerable<Channel> ParseFromReaderStreamAsync(
+        TextReader reader,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
         LastDetectedEpgUrl = null;
 
         string? firstLine = null;
-        while ((firstLine = await reader.ReadLineAsync()) != null)
+        while ((firstLine = await reader.ReadLineAsync(cancellationToken)) != null)
         {
             if (!string.IsNullOrWhiteSpace(firstLine))
                 break;
@@ -133,7 +241,7 @@ public partial class M3UParser : IM3UParser
 
         if (string.IsNullOrWhiteSpace(firstLine))
         {
-            return channels;
+            yield break;
         }
 
         // Header check should be lenient. Some providers might skip it or have garbage before it.
@@ -153,8 +261,7 @@ public partial class M3UParser : IM3UParser
 
         Channel? currentChannel = null;
         var pendingPlaybackHeaders = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        _lastPartialChannels = channels;
-        string? line = hasHeader ? await reader.ReadLineAsync() : firstLine;
+        string? line = hasHeader ? await reader.ReadLineAsync(cancellationToken) : firstLine;
         
         while (line != null)
         {
@@ -184,16 +291,14 @@ public partial class M3UParser : IM3UParser
                     currentChannel.StreamUrl = AppendPlaybackHeaders(line, pendingPlaybackHeaders);
                     currentChannel.Type = DetectChannelType(line, currentChannel.Name, currentChannel.GroupTitle);
                     ProcessGroupTitleAndNameFallback(currentChannel);
-                    channels.Add(currentChannel);
+                    yield return currentChannel;
                     currentChannel = null;
                     pendingPlaybackHeaders.Clear();
                 }
             }
 
-            line = await reader.ReadLineAsync();
+            line = await reader.ReadLineAsync(cancellationToken);
         }
-
-        return channels;
     }
 
     /// <summary>

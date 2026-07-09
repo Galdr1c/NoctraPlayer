@@ -185,6 +185,45 @@ namespace Noctra.Tests
         }
 
         [Fact]
+        public async Task GetChannelsProgressiveBatchedAsync_StreamsLargeCategoryInBoundedBatches()
+        {
+            const string baseUrl = "http://batched.com";
+            SetupMockByAction(baseUrl, null, new { user_info = new { status = "Active" } });
+            SetupMockByAction(baseUrl, "get_live_categories", new[]
+            {
+                new { category_id = "1", category_name = "Large" }
+            });
+            SetupMockByAction(baseUrl, "get_vod_categories", Array.Empty<object>());
+            SetupMockByAction(baseUrl, "get_series_categories", Array.Empty<object>());
+            SetupMockByAction(
+                baseUrl,
+                "get_live_streams",
+                Enumerable.Range(1, 1201).Select(index => new
+                {
+                    name = $"Channel {index}",
+                    stream_id = index,
+                    category_id = "1"
+                }).ToArray());
+
+            var batches = new List<(int Count, bool Completed)>();
+
+            await _service.GetChannelsProgressiveBatchedAsync(
+                baseUrl,
+                "user",
+                "pass",
+                includeVod: false,
+                onCategoriesDiscovered: (categories, _) => Task.FromResult(categories),
+                onCategoryBatchLoaded: (channels, _, completed) =>
+                {
+                    batches.Add((channels.Count, completed));
+                    return Task.CompletedTask;
+                });
+
+            Assert.Equal(new[] { 500, 500, 201 }, batches.Select(batch => batch.Count));
+            Assert.Equal(new[] { false, false, true }, batches.Select(batch => batch.Completed));
+        }
+
+        [Fact]
         public async Task GetSeriesInfoAsync_HandlesEpisodesAsObject_ReturnsCorrectData()
         {
             // Arrange

@@ -162,6 +162,120 @@ public class XtreamCodesService : IXtreamCodesService
         }
     }
 
+    public async Task GetChannelsProgressiveBatchedAsync(
+        string baseUrl,
+        string username,
+        string password,
+        bool includeVod,
+        Func<List<XtreamCategory>, Action<string>, Task<List<XtreamCategory>>> onCategoriesDiscovered,
+        Func<IReadOnlyList<Channel>, string, bool, Task> onCategoryBatchLoaded,
+        CancellationToken cancellationToken = default)
+    {
+        var normalizedBaseUrl = NormalizeBaseUrl(baseUrl);
+        if (!await EnsureAuthenticatedAsync(normalizedBaseUrl, username, password, cancellationToken))
+        {
+            throw new InvalidOperationException(_localizationService.GetString("Xtream.Error.AuthFailed"));
+        }
+
+        var allCategories = await GetCategoriesAsync(normalizedBaseUrl, username, password, cancellationToken);
+        string? prioritizedCategory = null;
+        var categoriesToLoad = await onCategoriesDiscovered(
+            allCategories,
+            name => prioritizedCategory = name);
+
+        var liveMap = BuildCategoryMapFromXtream(allCategories.Where(c => c.Type == "live"));
+        var vodMap = BuildCategoryMapFromXtream(allCategories.Where(c => c.Type == "vod"));
+        var seriesMap = BuildCategoryMapFromXtream(allCategories.Where(c => c.Type == "series"));
+
+        foreach (var category in categoriesToLoad
+                     .OrderBy(c => string.Equals(c.Name, prioritizedCategory, StringComparison.OrdinalIgnoreCase) ? 0 : 1)
+                     .ThenBy(c => c.Type, StringComparer.OrdinalIgnoreCase)
+                     .ThenBy(c => c.Name, StringComparer.OrdinalIgnoreCase))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            switch (category.Type)
+            {
+                case "live":
+                    await StreamCategoryBatchesAsync<XtreamLiveStreamDto>(
+                        BuildCategoryApiUrl(normalizedBaseUrl, username, password, "get_live_streams", category.Id),
+                        category.Name,
+                        dtos => MapLiveChannels(dtos, normalizedBaseUrl, username, password, liveMap),
+                        onCategoryBatchLoaded,
+                        cancellationToken);
+                    break;
+
+                case "vod" when includeVod:
+                    await StreamCategoryBatchesAsync<XtreamVodStreamDto>(
+                        BuildCategoryApiUrl(normalizedBaseUrl, username, password, "get_vod_streams", category.Id),
+                        category.Name,
+                        dtos => MapVodChannels(dtos, normalizedBaseUrl, username, password, vodMap),
+                        onCategoryBatchLoaded,
+                        cancellationToken);
+                    break;
+
+                case "series" when includeVod:
+                    await StreamCategoryBatchesAsync<XtreamSeriesDto>(
+                        BuildCategoryApiUrl(normalizedBaseUrl, username, password, "get_series", category.Id),
+                        category.Name,
+                        dtos => MapSeriesAsEntries(dtos, seriesMap),
+                        onCategoryBatchLoaded,
+                        cancellationToken);
+                    break;
+            }
+        }
+    }
+
+    private async Task StreamCategoryBatchesAsync<TDto>(
+        string url,
+        string categoryName,
+        Func<List<TDto>, List<Channel>> mapBatch,
+        Func<IReadOnlyList<Channel>, string, bool, Task> onCategoryBatchLoaded,
+        CancellationToken cancellationToken)
+    {
+        const int batchSize = 500;
+        using var response = await _httpClient.GetAsync(
+            url,
+            HttpCompletionOption.ResponseHeadersRead,
+            cancellationToken);
+        response.EnsureSuccessStatusCode();
+        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+        var batch = new List<TDto>(batchSize);
+
+        await foreach (var dto in JsonSerializer.DeserializeAsyncEnumerable<TDto>(
+                           stream,
+                           JsonOptions,
+                           cancellationToken))
+        {
+            if (dto is null)
+            {
+                continue;
+            }
+
+            if (batch.Count == batchSize)
+            {
+                await EmitCategoryBatchAsync(batch, categoryName, false, mapBatch, onCategoryBatchLoaded);
+                batch.Clear();
+            }
+
+            batch.Add(dto);
+        }
+
+        await EmitCategoryBatchAsync(batch, categoryName, true, mapBatch, onCategoryBatchLoaded);
+    }
+
+    private static async Task EmitCategoryBatchAsync<TDto>(
+        List<TDto> batch,
+        string categoryName,
+        bool completed,
+        Func<List<TDto>, List<Channel>> mapBatch,
+        Func<IReadOnlyList<Channel>, string, bool, Task> callback)
+    {
+        var channels = mapBatch(batch)
+            .Where(c => string.Equals(c.GroupTitle, categoryName, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        await callback(channels, categoryName, completed);
+    }
+
     private static IReadOnlyDictionary<string, string> BuildCategoryMapFromXtream(IEnumerable<XtreamCategory> categories)
     {
         return categories.ToDictionary(c => c.Id, c => c.Name, StringComparer.OrdinalIgnoreCase);
