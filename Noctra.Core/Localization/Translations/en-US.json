@@ -738,6 +738,7 @@
   "Stalker.Error.MacRequired": "MAC address cannot be empty.",
   "Stalker.Error.EndpointNotFound": "Stalker Portal endpoint not found. Check URL or MAC address.",
   "Stalker.Error.HandshakeFailed": "Stalker Portal handshake failed. Check MAC address.",
+  "Stalker.Error.CategoriesFailed": "{0} Stalker categories could not be loaded.",
   "Stalker.Category.AllContent": "All Content",
   "Stalker.Category.AllSeries": "All Series",
   "Stalker.Progress.WithTotalFormat": "{0} - {1:N0} / {2:N0} content",

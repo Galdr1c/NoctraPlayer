@@ -738,6 +738,7 @@
   "Stalker.Error.MacRequired": "L'adresse MAC ne peut pas être vide.",
   "Stalker.Error.EndpointNotFound": "Point de terminaison du portail Stalker non trouvé. Vérifiez l'URL ou l'adresse MAC.",
   "Stalker.Error.HandshakeFailed": "Échec de la poignée de main du portail Stalker. Vérifiez l'adresse MAC.",
+  "Stalker.Error.CategoriesFailed": "Impossible de charger {0} catégories Stalker.",
   "Stalker.Category.AllContent": "Tout le contenu",
   "Stalker.Category.AllSeries": "Toutes les séries",
   "Stalker.Progress.WithTotalFormat": "{0} - {1:N0} / {2:N0} contenus",

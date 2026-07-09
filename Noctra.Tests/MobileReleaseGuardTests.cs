@@ -36,6 +36,32 @@ public class MobileReleaseGuardTests
         Assert.True(File.Exists(iconPath), $"Missing desktop application icon: {iconPath}");
     }
 
+    [Fact]
+    public void MobilePrimaryContentGrids_UseRowVirtualization()
+    {
+        var gridControl = ReadProjectFile(
+            "Noctra.Mobile",
+            "Controls",
+            "VirtualizedResponsiveGrid.axaml");
+        Assert.Contains("<VirtualizingStackPanel", gridControl);
+
+        foreach (var viewName in new[]
+                 {
+                     "MobileLiveView.axaml",
+                     "MobileMoviesView.axaml",
+                     "MobileSeriesView.axaml",
+                     "MobileFavoritesView.axaml",
+                     "MobileMyListView.axaml",
+                     "MobileHistoryView.axaml",
+                     "MobileSearchView.axaml"
+                 })
+        {
+            var view = ReadProjectFile("Noctra.Mobile", "Views", viewName);
+            Assert.Contains("<controls:VirtualizedResponsiveGrid", view);
+            Assert.DoesNotContain("<WrapPanel HorizontalAlignment=\"Center\"", view);
+        }
+    }
+
     private static string ReadProjectFile(params string[] relativeParts)
         => File.ReadAllText(FindProjectFile(relativeParts));
 

@@ -738,6 +738,7 @@
   "Stalker.Error.MacRequired": "MAC adresi boş olamaz.",
   "Stalker.Error.EndpointNotFound": "Stalker Portal endpoint bulunamadı. URL veya MAC adresini kontrol edin.",
   "Stalker.Error.HandshakeFailed": "Stalker Portal handshake başarısız. MAC adresini kontrol edin.",
+  "Stalker.Error.CategoriesFailed": "{0} Stalker kategorisi yüklenemedi.",
   "Stalker.Category.AllContent": "Tüm İçerikler",
   "Stalker.Category.AllSeries": "Tüm Diziler",
   "Stalker.Progress.WithTotalFormat": "{0} - {1:N0} / {2:N0} içerik",

@@ -11,128 +11,100 @@
              x:DataType="vm:MainViewModel"
              x:CompileBindings="False"
              mc:Ignorable="d"
-             d:DesignWidth="390" d:DesignHeight="720">
+             d:DesignWidth="390"
+             d:DesignHeight="720">
+  <Grid Margin="20,16,20,28"
+        RowDefinitions="Auto,*"
+        RowSpacing="16">
+    <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
+      <TextBlock Text="{loc:Translate History.Title}"
+                 FontSize="28"
+                 FontWeight="Bold"
+                 Foreground="{DynamicResource TextPrimaryBrush}"
+                 VerticalAlignment="Center" />
+      <Button Grid.Column="1"
+              Command="{Binding ClearHistoryCommand}"
+              IsVisible="{Binding ShowHistoryEmptyState, Converter={StaticResource InverseBoolConverter}}"
+              Background="Transparent"
+              BorderThickness="1"
+              BorderBrush="{DynamicResource ErrorBrush}"
+              CornerRadius="20"
+              Padding="14,7"
+              VerticalAlignment="Center">
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <icons:MaterialIcon Kind="TrashCanOutline"
+                              Width="14"
+                              Height="14"
+                              Foreground="{DynamicResource ErrorBrush}" />
+          <TextBlock Text="{loc:Translate History.ClearAll}"
+                     Foreground="{DynamicResource ErrorBrush}"
+                     FontSize="13"
+                     FontWeight="Medium" />
+        </StackPanel>
+      </Button>
+    </Grid>
 
-  <ScrollViewer x:Name="HistoryScrollViewer"
-                ScrollChanged="HistoryScrollViewer_ScrollChanged">
-    <StackPanel Margin="20,16,20,28" Spacing="24">
-
-      <!-- Title and clear action -->
-      <Grid ColumnDefinitions="*,Auto">
-        <TextBlock Text="{loc:Translate History.Title}"
-                   FontSize="28" FontWeight="Bold"
-                   Foreground="{DynamicResource TextPrimaryBrush}"
-                   VerticalAlignment="Center" />
-        <Button Grid.Column="1"
-                Command="{Binding ClearHistoryCommand}"
-                IsVisible="{Binding ShowHistoryEmptyState,
-                                    Converter={StaticResource InverseBoolConverter}}"
-                Background="Transparent"
-                BorderThickness="1"
-                BorderBrush="{DynamicResource ErrorBrush}"
-                CornerRadius="20"
-                Padding="14,7"
-                VerticalAlignment="Center">
-          <StackPanel Orientation="Horizontal" Spacing="6">
-            <icons:MaterialIcon Kind="TrashCanOutline" Width="14" Height="14"
-                                Foreground="{DynamicResource ErrorBrush}" />
-            <TextBlock Text="{loc:Translate History.ClearAll}"
-                       Foreground="{DynamicResource ErrorBrush}"
-                       FontSize="13" FontWeight="Medium" />
-          </StackPanel>
-        </Button>
-      </Grid>
-
-      <!-- Live TV with inline history removal. -->
-      <StackPanel Spacing="12"
-                  IsVisible="{Binding HistoryLiveChannels.Count,
-                                      Converter={StaticResource CountToVisibilityConverter}}">
-        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-          <Border Width="3" Height="20" CornerRadius="2"
-                  Background="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
-          <TextBlock Grid.Column="1"
-                     Text="{loc:Translate History.LiveTv}"
-                     FontSize="18" FontWeight="SemiBold"
-                     Foreground="{DynamicResource TextPrimaryBrush}" />
-        </Grid>
-        <ItemsControl ItemsSource="{Binding HistoryLiveChannels}">
-          <ItemsControl.ItemsPanel>
-            <ItemsPanelTemplate><WrapPanel HorizontalAlignment="Center" /></ItemsPanelTemplate>
-          </ItemsControl.ItemsPanel>
-          <ItemsControl.ItemTemplate>
+    <TabControl Grid.Row="1"
+                IsVisible="{Binding ShowHistoryEmptyState, Converter={StaticResource InverseBoolConverter}}">
+      <TabItem Header="{loc:Translate History.LiveTv}"
+               IsVisible="{Binding HistoryLiveChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
+        <controls:VirtualizedResponsiveGrid ItemsSource="{Binding HistoryLiveChannels}"
+                                            MinItemWidth="280"
+                                            MaxColumns="3"
+                                            ItemSpacing="16"
+                                            ScrollChanged="HistoryScrollViewer_ScrollChanged">
+          <controls:VirtualizedResponsiveGrid.ItemTemplate>
             <DataTemplate x:DataType="models:Channel">
-              <controls:MobileLiveTvCard ShowHistoryMenu="True"
+              <controls:MobileLiveTvCard
+                  ShowHistoryMenu="True"
                   ShowFavoriteMenu="False"
-                  Margin="0,0,12,12"
-                  Width="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl},
-                                  Converter={StaticResource ResponsiveCardMetricConverter},
-                                  ConverterParameter=liveWidth}" />
+                  Width="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=liveWidth}" />
             </DataTemplate>
-          </ItemsControl.ItemTemplate>
-        </ItemsControl>
-      </StackPanel>
+          </controls:VirtualizedResponsiveGrid.ItemTemplate>
+        </controls:VirtualizedResponsiveGrid>
+      </TabItem>
 
-      <!-- Series -->
-      <StackPanel Spacing="12"
-                  IsVisible="{Binding HistorySeriesItems.Count,
-                                      Converter={StaticResource CountToVisibilityConverter}}">
-        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-          <Border Width="3" Height="20" CornerRadius="2"
-                  Background="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
-          <TextBlock Grid.Column="1"
-                     Text="{loc:Translate History.Series}"
-                     FontSize="18" FontWeight="SemiBold"
-                     Foreground="{DynamicResource TextPrimaryBrush}" />
-        </Grid>
-        <ItemsControl ItemsSource="{Binding HistorySeriesItems}">
-          <ItemsControl.ItemsPanel>
-            <ItemsPanelTemplate><WrapPanel HorizontalAlignment="Center" /></ItemsPanelTemplate>
-          </ItemsControl.ItemsPanel>
-          <ItemsControl.ItemTemplate>
+      <TabItem Header="{loc:Translate History.Series}"
+               IsVisible="{Binding HistorySeriesItems.Count, Converter={StaticResource CountToVisibilityConverter}}">
+        <controls:VirtualizedResponsiveGrid ItemsSource="{Binding HistorySeriesItems}"
+                                            MinItemWidth="150"
+                                            MaxColumns="6"
+                                            ItemSpacing="16"
+                                            ScrollChanged="HistoryScrollViewer_ScrollChanged">
+          <controls:VirtualizedResponsiveGrid.ItemTemplate>
             <DataTemplate x:DataType="models:Series">
-              <controls:MobileSeriesCard ShowHistoryMenu="True"
-                  Margin="0,0,12,12"
+              <controls:MobileSeriesCard
+                  ShowHistoryMenu="True"
                   Width="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=posterWidth}"
                   Height="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=posterHeight}" />
             </DataTemplate>
-          </ItemsControl.ItemTemplate>
-        </ItemsControl>
-      </StackPanel>
+          </controls:VirtualizedResponsiveGrid.ItemTemplate>
+        </controls:VirtualizedResponsiveGrid>
+      </TabItem>
 
-      <!-- Movies -->
-      <StackPanel Spacing="12"
-                  IsVisible="{Binding HistoryVodChannels.Count,
-                                      Converter={StaticResource CountToVisibilityConverter}}">
-        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-          <Border Width="3" Height="20" CornerRadius="2"
-                  Background="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
-          <TextBlock Grid.Column="1"
-                     Text="{loc:Translate History.Movies}"
-                     FontSize="18" FontWeight="SemiBold"
-                     Foreground="{DynamicResource TextPrimaryBrush}" />
-        </Grid>
-        <ItemsControl ItemsSource="{Binding HistoryVodChannels}">
-          <ItemsControl.ItemsPanel>
-            <ItemsPanelTemplate><WrapPanel HorizontalAlignment="Center" /></ItemsPanelTemplate>
-          </ItemsControl.ItemsPanel>
-          <ItemsControl.ItemTemplate>
+      <TabItem Header="{loc:Translate History.Movies}"
+               IsVisible="{Binding HistoryVodChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
+        <controls:VirtualizedResponsiveGrid ItemsSource="{Binding HistoryVodChannels}"
+                                            MinItemWidth="150"
+                                            MaxColumns="6"
+                                            ItemSpacing="16"
+                                            ScrollChanged="HistoryScrollViewer_ScrollChanged">
+          <controls:VirtualizedResponsiveGrid.ItemTemplate>
             <DataTemplate x:DataType="models:Channel">
-              <controls:MobileVodCard ShowHistoryMenu="True"
-                  Margin="0,0,12,12"
+              <controls:MobileVodCard
+                  ShowHistoryMenu="True"
                   Width="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=posterWidth}"
                   Height="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=posterHeight}" />
             </DataTemplate>
-          </ItemsControl.ItemTemplate>
-        </ItemsControl>
-      </StackPanel>
+          </controls:VirtualizedResponsiveGrid.ItemTemplate>
+        </controls:VirtualizedResponsiveGrid>
+      </TabItem>
+    </TabControl>
 
-      <!-- Empty state -->
-      <controls:MobileEmptyStateView
-                  IsVisible="{Binding ShowHistoryEmptyState}"
-                  IconKind="History"
-                  Title="{loc:Translate History.Empty.Title}"
-                  Description="{loc:Translate History.Empty.Description}" />
-
-    </StackPanel>
-  </ScrollViewer>
+    <controls:MobileEmptyStateView Grid.Row="1"
+                                   IsVisible="{Binding ShowHistoryEmptyState}"
+                                   IconKind="History"
+                                   Title="{loc:Translate History.Empty.Title}"
+                                   Description="{loc:Translate History.Empty.Description}" />
+  </Grid>
 </UserControl>

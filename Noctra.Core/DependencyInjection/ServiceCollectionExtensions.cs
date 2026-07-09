@@ -67,6 +67,7 @@ public static class ServiceCollectionExtensions
                 serviceProvider.GetService<ILogger<PlaylistService>>()));
         services.AddSingleton<IPlaylistOrganizerService, PlaylistOrganizerService>();
         services.AddSingleton<IMediaService, MediaService>();
+        services.AddSingleton<IContentQueryService, ContentQueryService>();
         services.AddSingleton<IChannelService, ChannelService>();
         services.AddSingleton<IWatchHistoryService, WatchHistoryService>();
         services.AddSingleton<IAvatarService, AvatarService>();

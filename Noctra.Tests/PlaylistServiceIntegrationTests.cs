@@ -962,6 +962,46 @@ namespace Noctra.Tests
         }
 
         [Fact]
+        public async Task AppendChannelsAsync_ReplacesExistingStreamInsteadOfDuplicatingIt()
+        {
+            var service = CreateService();
+            var playlist = await service.CreateEmptyPlaylistAsync(
+                "Progressive",
+                "stalker://progressive");
+            var firstBatch = new List<Channel>
+            {
+                new()
+                {
+                    Name = "Original",
+                    StreamUrl = "http://stream.test/1",
+                    GroupTitle = "News",
+                    Type = ChannelType.Live
+                }
+            };
+            var retriedBatch = new List<Channel>
+            {
+                new()
+                {
+                    Name = "Updated",
+                    StreamUrl = "http://stream.test/1",
+                    GroupTitle = "News",
+                    Type = ChannelType.Live
+                }
+            };
+
+            await service.AppendChannelsAsync(playlist.Id, firstBatch);
+            await service.AppendChannelsAsync(playlist.Id, retriedBatch);
+
+            using var context = new AppDbContext(_options);
+            var channels = await context.Channels
+                .Where(channel => channel.PlaylistId == playlist.Id)
+                .ToListAsync();
+
+            var channel = Assert.Single(channels);
+            Assert.Equal("Updated", channel.Name);
+        }
+
+        [Fact]
         public async Task RefreshAsync_WithChildProfile_ShouldApplyFilter()
         {
             // Arrange

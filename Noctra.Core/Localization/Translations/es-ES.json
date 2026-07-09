@@ -738,6 +738,7 @@
   "Stalker.Error.MacRequired": "La dirección MAC no puede estar vacía.",
   "Stalker.Error.EndpointNotFound": "Punto final de Stalker Portal no encontrado. Verifique la URL o la dirección MAC.",
   "Stalker.Error.HandshakeFailed": "Fallo en el handshake de Stalker Portal. Verifique la dirección MAC.",
+  "Stalker.Error.CategoriesFailed": "No se pudieron cargar {0} categorías de Stalker.",
   "Stalker.Category.AllContent": "Todo el contenido",
   "Stalker.Category.AllSeries": "Todas las series",
   "Stalker.Progress.WithTotalFormat": "{0} - {1:N0} / {2:N0} contenidos",

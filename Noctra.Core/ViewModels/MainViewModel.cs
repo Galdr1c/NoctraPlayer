@@ -58,6 +58,7 @@ public partial class MainViewModel : ObservableObject
     private readonly ISecurityService _securityService;
     private readonly IChannelService _channelService;
     private readonly IMediaService _mediaService;
+    private readonly IContentQueryService _contentQueryService;
     private readonly IEpgService _epgService;
     private readonly IPlaylistService _playlistService;
     private readonly IImportJobService? _importJobService;
@@ -344,7 +345,8 @@ public partial class MainViewModel : ObservableObject
         ILogger<MainViewModel>? logger = null,
         IAppPathService? appPaths = null,
         IPlatformActionService? platformActions = null,
-        IImportJobService? importJobService = null)
+        IImportJobService? importJobService = null,
+        IContentQueryService? contentQueryService = null)
     {
         _localizationService = localizationService;
         _settingsService = settingsService;
@@ -356,6 +358,8 @@ public partial class MainViewModel : ObservableObject
         WatermarkViewModel = watermarkViewModel;
         _channelService = channelService;
         _mediaService = mediaService;
+        _contentQueryService = contentQueryService ??
+            new ContentQueryService(playlistService, mediaService, settingsService, contextFactory);
         _epgService = epgService;
         _playlistService = playlistService;
         _importJobService = importJobService;
@@ -1906,7 +1910,7 @@ public partial class MainViewModel : ObservableObject
                 }
             });
 
-            await _stalkerPortalService.GetChannelsProgressiveAsync(
+            await _stalkerPortalService.GetChannelsProgressiveBatchedAsync(
                 portalUrl,
                 macAddress,
                 includeVod: true,
@@ -1967,11 +1971,26 @@ public partial class MainViewModel : ObservableObject
                     _logger?.LogInformation($"[Stalker] Filtered categories for resume: {categoriesToDownload.Count} categories will be downloaded (from {categories.Count} total).");
                     return categoriesToDownload;
                 },
-                onCategoryLoaded: async (channels, category) =>
+                onCategoryBatchLoaded: async (channels, category, categoryCompleted) =>
                 {
                     ThrowIfProfileLoadCancelled(profileScope);
-                    _logger?.LogInformation($"[Stalker] Category Loaded: {category.Name} ({channels.Count} real channels replacing dummy)");
-                    await _playlistService.ReplaceDummyWithRealChannelsAsync(writePlaylist.Id, category.Name, channels);
+                    _logger?.LogInformation(
+                        "[Stalker] Category batch: {Category} ({Count} channels, completed={Completed})",
+                        category.Name,
+                        channels.Count,
+                        categoryCompleted);
+
+                    if (categoryCompleted)
+                    {
+                        await _playlistService.ReplaceDummyWithRealChannelsAsync(
+                            writePlaylist.Id,
+                            category.Name,
+                            channels);
+                    }
+                    else
+                    {
+                        await _playlistService.AppendChannelsAsync(writePlaylist.Id, channels);
+                    }
                     ThrowIfProfileLoadCancelled(profileScope);
 
                     foreach (var channel in channels)
@@ -2298,7 +2317,7 @@ public partial class MainViewModel : ObservableObject
             StatusMessage = _localizationService.GetString("Main.Status.OptimizingLayout");
             
             // Single-pass query: Fetch all groups and total count at once (Significantly faster)
-            var meta = await _playlistService.GetChannelGroupMetadataAsync(playlistId);
+            var meta = await _contentQueryService.GetChannelGroupMetadataAsync(playlistId);
             
             _allGroupsCache = OrderGroupsByLanguagePreference(meta.AllGroups);
             _liveGroupsCache = OrderGroupsByLanguagePreference(meta.LiveGroups);
@@ -2403,7 +2422,7 @@ public partial class MainViewModel : ObservableObject
         try 
         {
             var playlistId = SelectedPlaylist?.Id ?? 0;
-            _allSeriesCache = await _mediaService.GetSeriesListAsync(playlistId);
+            _allSeriesCache = await _contentQueryService.GetSeriesListAsync(playlistId);
             if (_allSeriesCache.Count == 0 && playlistId > 0)
             {
                 var hasSeriesChannels = await PlaylistHasSeriesChannelsAsync(playlistId);
@@ -2415,7 +2434,7 @@ public partial class MainViewModel : ObservableObject
                 {
                     await _mediaService.AggregateContentAsync(playlistId);
                     _mediaService.RaiseAggregationCompleted(playlistId);
-                    _allSeriesCache = await _mediaService.GetSeriesListAsync(playlistId);
+                    _allSeriesCache = await _contentQueryService.GetSeriesListAsync(playlistId);
                 }
             }
 
@@ -2673,11 +2692,11 @@ public partial class MainViewModel : ObservableObject
 
     private async Task<bool> PlaylistHasSeriesChannelsAsync(int playlistId)
     {
-        var sample = await _playlistService.GetChannelsFilteredPageAsync(
-            playlistId,
-            skip: 0,
-            take: 1,
-            type: ChannelType.Series);
+        var sample = await _contentQueryService.GetChannelPageAsync(new ContentPageRequest(
+            PlaylistId: playlistId,
+            Skip: 0,
+            Take: 1,
+            Type: ChannelType.Series));
 
         return sample.Count > 0;
     }
@@ -2995,28 +3014,15 @@ public partial class MainViewModel : ObservableObject
             var effectiveGroup = hasSearch ? null : SelectedGroup;
             var effectiveType = hasSearch ? null : SelectedChannelType;
 
-            var s = _settingsService.Settings;
-            var hiddenGroups = effectiveType switch
-            {
-                ChannelType.Live => s.HiddenLiveGroups,
-                ChannelType.VOD => s.HiddenMovieGroups,
-                ChannelType.Series => s.HiddenSeriesGroups,
-                _ => s.HiddenLiveGroups.Concat(s.HiddenMovieGroups).Concat(s.HiddenSeriesGroups).ToList()
-            };
-
-            List<Channel> page;
-            {
-                page = await _playlistService.GetChannelsFilteredPageAsync(
-                    SelectedPlaylist.Id,
-                    skip: _currentPage * IncrementalPageSize,
-                    take: IncrementalPageSize,
-                    searchText: SearchText,
-                    group: effectiveGroup,
-                    type: effectiveType,
-                    onlyFavorites: ShowOnlyFavorites,
-                    sortOrder: SelectedSortOrder,
-                    hiddenGroups: hiddenGroups);
-            }
+            var page = await _contentQueryService.GetChannelPageAsync(new ContentPageRequest(
+                PlaylistId: SelectedPlaylist.Id,
+                Skip: _currentPage * IncrementalPageSize,
+                Take: IncrementalPageSize,
+                SearchText: SearchText,
+                Group: effectiveGroup,
+                Type: effectiveType,
+                OnlyFavorites: ShowOnlyFavorites,
+                SortOrder: SelectedSortOrder));
 
             // If selected group returns nothing on first page, fallback to "all" to avoid false empty UI.
             if (_currentPage == 0 &&
@@ -3024,18 +3030,15 @@ public partial class MainViewModel : ObservableObject
                 !hasSearch &&
                 !string.IsNullOrWhiteSpace(effectiveGroup))
             {
-                List<Channel> fallbackPage;
-                {
-                    fallbackPage = await _playlistService.GetChannelsFilteredPageAsync(
-                        SelectedPlaylist.Id,
-                        skip: 0,
-                        take: IncrementalPageSize,
-                        searchText: SearchText,
-                        group: null,
-                        type: effectiveType,
-                        onlyFavorites: ShowOnlyFavorites,
-                        sortOrder: SelectedSortOrder);
-                }
+                var fallbackPage = await _contentQueryService.GetChannelPageAsync(new ContentPageRequest(
+                    PlaylistId: SelectedPlaylist.Id,
+                    Skip: 0,
+                    Take: IncrementalPageSize,
+                    SearchText: SearchText,
+                    Group: null,
+                    Type: effectiveType,
+                    OnlyFavorites: ShowOnlyFavorites,
+                    SortOrder: SelectedSortOrder));
 
                 if (fallbackPage.Count > 0)
                 {
@@ -6726,7 +6729,7 @@ public partial class MainViewModel : ObservableObject
 
             using var db = await _contextFactory.CreateDbContextAsync();
             await _watchHistoryService.CleanupOlderThanDaysAsync(CurrentProfileId.Value, 7);
-            var profilePlaylistIds = await GetProfilePlaylistIdsAsync(db, CurrentProfileId.Value);
+            var profilePlaylistIds = await _contentQueryService.GetProfilePlaylistIdsAsync(CurrentProfileId.Value);
 
             if (profilePlaylistIds.Count == 0)
             {
@@ -6793,7 +6796,11 @@ public partial class MainViewModel : ObservableObject
                 });
             _dispatcherService.Invoke(() => OnPropertyChanged(nameof(FavoriteChannels)));
 
-            SetItems(HistoryChannels, await GetHistoryChannelsFromWatchHistoryAsync(db, profilePlaylistIds), () => {
+            SetItems(HistoryChannels, await _contentQueryService.GetHistoryPageAsync(
+                CurrentProfileId.Value,
+                profilePlaylistIds,
+                skip: 0,
+                take: 50), () => {
                 _ = UpdateHistoryBucketsAsync();
                 _ = EnrichChannelsWithEpgAsync(HistoryChannels);
             });
@@ -6821,15 +6828,13 @@ public partial class MainViewModel : ObservableObject
             return;
         }
 
-        using var db = await _contextFactory.CreateDbContextAsync();
-        
         var retentionDays = _settingsService.Settings.WatchHistoryRetentionDays;
         if (retentionDays > 0)
         {
             await _watchHistoryService.CleanupOlderThanDaysAsync(CurrentProfileId.Value, retentionDays);
         }
         
-        var profilePlaylistIds = await GetProfilePlaylistIdsAsync(db, CurrentProfileId.Value);
+        var profilePlaylistIds = await _contentQueryService.GetProfilePlaylistIdsAsync(CurrentProfileId.Value);
 
         if (profilePlaylistIds.Count == 0)
         {
@@ -6846,7 +6851,11 @@ public partial class MainViewModel : ObservableObject
 
         try
         {
-            var initialChannels = await GetHistoryChannelsFromWatchHistoryAsync(db, profilePlaylistIds, skip: 0, take: IncrementalPageSize);
+            var initialChannels = await _contentQueryService.GetHistoryPageAsync(
+                CurrentProfileId.Value,
+                profilePlaylistIds,
+                skip: 0,
+                take: IncrementalPageSize);
             _historyPage = 1;
             _hasMoreHistory = initialChannels.Count == IncrementalPageSize;
 
@@ -6858,96 +6867,6 @@ public partial class MainViewModel : ObservableObject
         {
             _logger?.LogError(ex, "Failed to refresh history channels only.");
         }
-    }
-
-    private static async Task<List<int>> GetProfilePlaylistIdsAsync(AppDbContext db, int profileId)
-    {
-        var activeIds = await db.Playlists
-            .AsNoTracking()
-            .Where(p => p.ProfileId == profileId && p.IsActive)
-            .Select(p => p.Id)
-            .ToListAsync();
-
-        if (activeIds.Count > 0)
-        {
-            return activeIds;
-        }
-
-        return await db.Playlists
-            .AsNoTracking()
-            .Where(p => p.ProfileId == profileId)
-            .Select(p => p.Id)
-            .ToListAsync();
-    }
-
-    private async Task<List<Channel>> GetHistoryChannelsFromWatchHistoryAsync(AppDbContext db, List<int> profilePlaylistIds, int skip = 0, int take = 50)
-    {
-        if (!CurrentProfileId.HasValue)
-        {
-            return new List<Channel>();
-        }
-
-        var profileId = CurrentProfileId.Value;
-        var histories = await db.WatchHistories
-            .AsNoTracking()
-            .Include(h => h.Channel)
-            .Include(h => h.Episode)
-                .ThenInclude(e => e!.Season)
-                .ThenInclude(s => s!.Series)
-            .Where(h => h.ProfileId == profileId &&
-                        ((h.ChannelId.HasValue && h.Channel != null && profilePlaylistIds.Contains(h.Channel.PlaylistId)) ||
-                         (h.EpisodeId.HasValue && h.Episode != null && h.Episode.Season != null && h.Episode.Season.Series != null &&
-                          profilePlaylistIds.Contains(h.Episode.Season.Series.PlaylistId))))
-            .OrderByDescending(h => h.WatchedAt)
-            .Skip(skip)
-            .Take(take)
-            .ToListAsync();
-
-        var result = new List<Channel>(histories.Count);
-        foreach (var history in histories)
-        {
-            var resolvedPosition = ResolveHistoryPosition(history.StoppedAt, history.WatchedDuration);
-
-            if (history.Channel != null)
-            {
-                var channelItem = history.Channel;
-                channelItem.LastWatched = history.WatchedAt;
-                if (resolvedPosition.HasValue && resolvedPosition.Value > TimeSpan.Zero)
-                {
-                    channelItem.WatchedPosition = resolvedPosition.Value;
-                }
-                if ((!channelItem.Duration.HasValue || channelItem.Duration.Value.TotalSeconds <= 0) &&
-                    channelItem.WatchedPosition.HasValue &&
-                    channelItem.WatchedPosition.Value.TotalSeconds > 0)
-                {
-                    // Unknown total duration: keep a visible partial progress instead of zero.
-                    channelItem.Duration = channelItem.WatchedPosition.Value + TimeSpan.FromMinutes(30);
-                }
-                result.Add(channelItem);
-                continue;
-            }
-
-            if (history.Episode?.Season?.Series == null)
-            {
-                continue;
-            }
-
-            var series = history.Episode.Season.Series;
-            result.Add(new Channel
-            {
-                Id = 0,
-                Name = history.Episode.Name,
-                StreamUrl = history.Episode.StreamUrl,
-                LogoUrl = history.Episode.CoverUrl ?? series.CoverUrl,
-                Type = ChannelType.Series,
-                PlaylistId = series.PlaylistId,
-                LastWatched = history.WatchedAt,
-                WatchedPosition = resolvedPosition ?? history.Episode.WatchedPosition,
-                Duration = ResolveHistoryDuration(history.Episode.Duration, resolvedPosition ?? history.Episode.WatchedPosition)
-            });
-        }
-
-        return result;
     }
 
     [RelayCommand]
@@ -6962,10 +6881,11 @@ public partial class MainViewModel : ObservableObject
 
         try
         {
-            using var db = await _contextFactory.CreateDbContextAsync();
-            var profilePlaylistIds = await GetProfilePlaylistIdsAsync(db, CurrentProfileId.Value);
+            var profilePlaylistIds = await _contentQueryService.GetProfilePlaylistIdsAsync(CurrentProfileId.Value);
             
-            var nextPage = await GetHistoryChannelsFromWatchHistoryAsync(db, profilePlaylistIds, 
+            var nextPage = await _contentQueryService.GetHistoryPageAsync(
+                CurrentProfileId.Value,
+                profilePlaylistIds,
                 skip: _historyPage * IncrementalPageSize, 
                 take: IncrementalPageSize);
 
@@ -7005,36 +6925,6 @@ public partial class MainViewModel : ObservableObject
         {
             await LoadMoreHistoryAsync();
         }
-    }
-
-    private static TimeSpan? ResolveHistoryDuration(TimeSpan? duration, TimeSpan? watchedPosition)
-    {
-        if (duration.HasValue && duration.Value.TotalSeconds > 0)
-        {
-            return duration;
-        }
-
-        if (watchedPosition.HasValue && watchedPosition.Value.TotalSeconds > 0)
-        {
-            return watchedPosition.Value + TimeSpan.FromMinutes(30);
-        }
-
-        return duration;
-    }
-
-    private static TimeSpan? ResolveHistoryPosition(TimeSpan stoppedAt, TimeSpan watchedDuration)
-    {
-        if (stoppedAt > TimeSpan.Zero)
-        {
-            return stoppedAt;
-        }
-
-        if (watchedDuration > TimeSpan.Zero)
-        {
-            return watchedDuration;
-        }
-
-        return null;
     }
 
     private void UpdateSearchBuckets()

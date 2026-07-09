@@ -460,6 +460,54 @@ public partial class PlaylistService : IPlaylistService
 
         ApplyBackupData(playlistId, organized);
 
+        var streamUrls = organized
+            .Select(channel => channel.StreamUrl)
+            .Where(url => !string.IsNullOrWhiteSpace(url))
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+        var existingByStreamUrl = new Dictionary<string, Channel>(StringComparer.Ordinal);
+
+        foreach (var urlBatch in streamUrls.Chunk(400))
+        {
+            var existingChannels = await context.Channels
+                .AsNoTracking()
+                .Where(channel =>
+                    channel.PlaylistId == playlistId &&
+                    urlBatch.Contains(channel.StreamUrl))
+                .ToListAsync();
+
+            foreach (var existing in existingChannels)
+                existingByStreamUrl[existing.StreamUrl] = existing;
+        }
+
+        foreach (var channel in organized)
+        {
+            if (!existingByStreamUrl.TryGetValue(channel.StreamUrl, out var existing))
+                continue;
+
+            channel.IsFavorite |= existing.IsFavorite;
+            channel.IsInMyList |= existing.IsInMyList;
+            channel.IsCompleted |= existing.IsCompleted;
+            channel.WatchedPosition = channel.WatchedPosition > existing.WatchedPosition
+                ? channel.WatchedPosition
+                : existing.WatchedPosition;
+            channel.Duration = channel.Duration > existing.Duration
+                ? channel.Duration
+                : existing.Duration;
+            channel.LastWatched = channel.LastWatched > existing.LastWatched
+                ? channel.LastWatched
+                : existing.LastWatched;
+        }
+
+        foreach (var urlBatch in streamUrls.Chunk(400))
+        {
+            await context.Channels
+                .Where(channel =>
+                    channel.PlaylistId == playlistId &&
+                    urlBatch.Contains(channel.StreamUrl))
+                .ExecuteDeleteAsync();
+        }
+
         // Mevcut FastSqliteBulkInsertAsync metodunu kullan
         await FastSqliteBulkInsertAsync(context, organized);
         InvalidateLinearStreamRepair(playlistId);

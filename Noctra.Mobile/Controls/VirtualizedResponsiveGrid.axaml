@@ -1,0 +1,49 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Noctra.Mobile.Controls.VirtualizedResponsiveGrid"
+             x:Name="Root"
+             x:CompileBindings="False">
+  <ListBox x:Name="RowsListBox"
+           ItemsSource="{Binding Rows, ElementName=Root}"
+           Background="Transparent"
+           BorderThickness="0"
+           Padding="0"
+           Focusable="False"
+           SelectionMode="Multiple">
+    <ListBox.Styles>
+      <Style Selector="ListBoxItem">
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="Margin" Value="0" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+      </Style>
+      <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="Transparent" />
+      </Style>
+      <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
+        <Setter Property="Background" Value="Transparent" />
+      </Style>
+    </ListBox.Styles>
+    <ListBox.ItemsPanel>
+      <ItemsPanelTemplate>
+        <VirtualizingStackPanel CacheLength="2" />
+      </ItemsPanelTemplate>
+    </ListBox.ItemsPanel>
+    <ListBox.ItemTemplate>
+      <DataTemplate>
+        <ItemsControl ItemsSource="{Binding Items}"
+                      ItemTemplate="{Binding ItemTemplate, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                      HorizontalAlignment="Stretch"
+                      Margin="0,0,0,16">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <StackPanel Orientation="Horizontal"
+                          HorizontalAlignment="Center"
+                          Spacing="{Binding ItemSpacing, RelativeSource={RelativeSource AncestorType=UserControl}}" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+        </ItemsControl>
+      </DataTemplate>
+    </ListBox.ItemTemplate>
+  </ListBox>
+</UserControl>

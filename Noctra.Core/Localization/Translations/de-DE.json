@@ -738,6 +738,7 @@
   "Stalker.Error.MacRequired": "MAC-Adresse darf nicht leer sein.",
   "Stalker.Error.EndpointNotFound": "Stalker-Portal-Endpunkt nicht gefunden. Überprüfen Sie URL oder MAC-Adresse.",
   "Stalker.Error.HandshakeFailed": "Stalker-Portal-Handshake fehlgeschlagen. Überprüfen Sie die MAC-Adresse.",
+  "Stalker.Error.CategoriesFailed": "{0} Stalker-Kategorien konnten nicht geladen werden.",
   "Stalker.Category.AllContent": "Alle Inhalte",
   "Stalker.Category.AllSeries": "Alle Serien",
   "Stalker.Progress.WithTotalFormat": "{0} - {1:N0} / {2:N0} Inhalte",

@@ -179,6 +179,38 @@ public class StalkerPortalService : IStalkerPortalService
         IProgress<StalkerLoadProgress>? progress = null,
         CancellationToken cancellationToken = default)
     {
+        var categoryBuffers = new ConcurrentDictionary<string, List<Channel>>(StringComparer.Ordinal);
+
+        await GetChannelsProgressiveBatchedAsync(
+            portalUrl,
+            macAddress,
+            includeVod,
+            onCategoriesDiscovered,
+            async (channels, category, completed) =>
+            {
+                var key = $"{category.Type}\u001f{category.Id}";
+                var buffer = categoryBuffers.GetOrAdd(key, _ => []);
+                buffer.AddRange(channels);
+
+                if (!completed)
+                    return;
+
+                categoryBuffers.TryRemove(key, out _);
+                await onCategoryLoaded(buffer, category);
+            },
+            progress,
+            cancellationToken);
+    }
+
+    public async Task GetChannelsProgressiveBatchedAsync(
+        string portalUrl,
+        string macAddress,
+        bool includeVod,
+        Func<List<StalkerCategory>, Action<string>, Task<List<StalkerCategory>>> onCategoriesDiscovered,
+        Func<IReadOnlyList<Channel>, StalkerCategory, bool, Task> onCategoryBatchLoaded,
+        IProgress<StalkerLoadProgress>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
         var sw = System.Diagnostics.Stopwatch.StartNew();
 
         var normalizedPortalUrl = NormalizePortalUrl(portalUrl);
@@ -257,7 +289,11 @@ public class StalkerPortalService : IStalkerPortalService
             var filteredFallback = await onCategoriesDiscovered(new List<StalkerCategory> { fakeCategory }, prioritizeAction);
             if (filteredFallback.Count > 0)
             {
-                await onCategoryLoaded(fallback, fakeCategory);
+                await EmitChannelBatchesAsync(
+                    fallback,
+                    fakeCategory,
+                    onCategoryBatchLoaded,
+                    cancellationToken);
             }
             return;
         }
@@ -300,47 +336,37 @@ public class StalkerPortalService : IStalkerPortalService
                     using var categoryCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                     categoryCts.CancelAfter(CategoryLoadTimeout);
 
-                    var items = await GetAllPagesForCategoryAsync(
+                    var categoryChannelCount = 0;
+                    await StreamCategoryBatchesAsync(
                         endpoint, token, macAddress,
-                        category.Type, category.Id, categoryCts.Token);
-
-                    // If zero items, call onCategoryLoaded anyway to clear the dummy channel from UI
-                    if (items.Count == 0)
-                    {
-                        var loaded = Interlocked.Increment(ref loadedCategories);
-                        progress?.Report(new StalkerLoadProgress
+                        category,
+                        baseUrl,
+                        GetChanType(category.Type),
+                        async (channels, completed) =>
                         {
-                            CurrentCategory = category.Name,
-                            LoadedCategories = loaded,
-                            TotalCategories = totalCategories,
-                            FailedCategories = failedCategories,
-                            LoadedChannels = totalChannelCount,
-                            TotalChannels = null
-                        });
+                            categoryChannelCount += channels.Count;
+                            var total = channels.Count > 0
+                                ? Interlocked.Add(ref totalChannelCount, channels.Count)
+                                : Volatile.Read(ref totalChannelCount);
+                            var loaded = completed
+                                ? Interlocked.Increment(ref loadedCategories)
+                                : Volatile.Read(ref loadedCategories);
 
-                        await onCategoryLoaded([], category);
-                    }
-                    else
-                    {
-                        var channels = BuildChannels(
-                            items, baseUrl, GetChanType(category.Type),
-                            new Dictionary<string, string> { [category.Id] = category.Name }, _localizationService);
+                            progress?.Report(new StalkerLoadProgress
+                            {
+                                CurrentCategory = category.Name,
+                                LoadedCategories = loaded,
+                                TotalCategories = totalCategories,
+                                FailedCategories = Volatile.Read(ref failedCategories),
+                                LoadedChannels = total,
+                                TotalChannels = null
+                            });
 
-                        var loaded = Interlocked.Increment(ref loadedCategories);
-                        var total  = Interlocked.Add(ref totalChannelCount, channels.Count);
+                            await onCategoryBatchLoaded(channels, category, completed);
+                        },
+                        categoryCts.Token);
 
-                        progress?.Report(new StalkerLoadProgress
-                        {
-                            CurrentCategory = category.Name,
-                            LoadedCategories = loaded,
-                            TotalCategories = totalCategories,
-                            FailedCategories = failedCategories,
-                            LoadedChannels = total, 
-                            TotalChannels = null 
-                        });
-
-                        await onCategoryLoaded(channels, category);
-                    }
+                    Log($"[Worker] Category complete: {category.Name} ({categoryChannelCount} channels)");
                 }
                 catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                 {
@@ -362,7 +388,6 @@ public class StalkerPortalService : IStalkerPortalService
                         TotalChannels = null
                     });
 
-                    await onCategoryLoaded([], category);
                 }
                 catch (Exception ex)
                 {
@@ -381,15 +406,22 @@ public class StalkerPortalService : IStalkerPortalService
                     });
 
                     // Hata durumunda da boş liste bildir ki UI'daki "yükleniyor..." uyarısı kalksın
-                    await onCategoryLoaded([], category);
                 }
             }
         });
 
         await Task.WhenAll(workerTasks);
 
-        Log($"GetChannelsProgressiveAsync DONE: {totalChannelCount} channels, " +
+        Log($"GetChannelsProgressiveBatchedAsync DONE: {totalChannelCount} channels, " +
             $"{totalCategories} categories, {sw.ElapsedMilliseconds}ms total");
+
+        if (failedCategories > 0)
+        {
+            throw new InvalidOperationException(
+                string.Format(
+                    _localizationService.GetString("Stalker.Error.CategoriesFailed"),
+                    failedCategories));
+        }
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -711,6 +743,104 @@ public class StalkerPortalService : IStalkerPortalService
     /// Belirli bir kategorinin TÜM sayfalarını çeker.
     /// Sayfa sayısı küçük olduğundan (~5-20 sayfa) hızlı çalışır.
     /// </summary>
+    private async Task StreamCategoryBatchesAsync(
+        string endpoint,
+        string token,
+        string macAddress,
+        StalkerCategory category,
+        string baseUrl,
+        ChannelType channelType,
+        Func<IReadOnlyList<Channel>, bool, Task> onBatch,
+        CancellationToken cancellationToken)
+    {
+        var (firstItems, totalItems, maxPageItems) = await GetPageAsync(
+            endpoint,
+            token,
+            macAddress,
+            category.Type,
+            category.Id,
+            1,
+            cancellationToken,
+            throwOnError: true);
+
+        if (firstItems.Count == 0)
+        {
+            await onBatch([], true);
+            return;
+        }
+
+        var itemsPerPage = maxPageItems ?? firstItems.Count;
+        if (itemsPerPage <= 0)
+            itemsPerPage = 14;
+
+        var totalPages = totalItems.HasValue
+            ? Math.Max(1, (int)Math.Ceiling(totalItems.Value / (double)itemsPerPage))
+            : 1;
+        var genreMap = new Dictionary<string, string>
+        {
+            [category.Id] = category.Name
+        };
+
+        for (var page = 1; page <= totalPages; page++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var items = page == 1
+                ? firstItems
+                : (await GetPageAsync(
+                    endpoint,
+                    token,
+                    macAddress,
+                    category.Type,
+                    category.Id,
+                    page,
+                    cancellationToken,
+                    throwOnError: true)).Items;
+            var channels = BuildChannels(
+                items,
+                baseUrl,
+                channelType,
+                genreMap,
+                _localizationService);
+
+            await EmitChannelBatchesAsync(
+                channels,
+                category,
+                (batch, _, completed) => onBatch(batch, completed),
+                cancellationToken,
+                page == totalPages);
+        }
+    }
+
+    private static async Task EmitChannelBatchesAsync(
+        IReadOnlyList<Channel> channels,
+        StalkerCategory category,
+        Func<IReadOnlyList<Channel>, StalkerCategory, bool, Task> onBatch,
+        CancellationToken cancellationToken,
+        bool categoryCompleted = true)
+    {
+        const int BatchSize = 500;
+
+        if (channels.Count == 0)
+        {
+            if (categoryCompleted)
+                await onBatch([], category, true);
+            return;
+        }
+
+        for (var offset = 0; offset < channels.Count; offset += BatchSize)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var count = Math.Min(BatchSize, channels.Count - offset);
+            var batch = channels.Skip(offset).Take(count).ToArray();
+            var completed = categoryCompleted && offset + count >= channels.Count;
+            await onBatch(batch, category, completed);
+        }
+    }
+
+    /// <summary>
+    /// Legacy materializing path used by single-category callers.
+    /// Progressive imports use StreamCategoryBatchesAsync instead.
+    /// </summary>
     private async Task<List<StalkerListItem>> GetAllPagesForCategoryAsync(
         string endpoint, string token, string macAddress,
         string listType, string categoryId, CancellationToken ct)
@@ -999,7 +1129,8 @@ public class StalkerPortalService : IStalkerPortalService
 
     private async Task<(List<StalkerListItem> Items, int? TotalItems, int? MaxPageItems)> GetPageAsync(
         string endpoint, string token, string macAddress,
-        string listType, string categoryId, int page, CancellationToken ct)
+        string listType, string categoryId, int page, CancellationToken ct,
+        bool throwOnError = false)
     {
         var queryParams = new Dictionary<string, string>
         {
@@ -1025,6 +1156,8 @@ public class StalkerPortalService : IStalkerPortalService
         catch (Exception ex)
         {
             Log($"GetPageAsync failed for category {categoryId}, page {page}: {ex.Message}");
+            if (throwOnError)
+                throw;
             return ([], null, null);
         }
 

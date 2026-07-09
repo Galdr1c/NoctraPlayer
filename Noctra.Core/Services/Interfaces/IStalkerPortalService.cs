@@ -70,6 +70,29 @@ public interface IStalkerPortalService
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Loads category content in bounded batches. The completion flag is true only for
+    /// the final batch of a category, including an empty category.
+    /// </summary>
+    async Task GetChannelsProgressiveBatchedAsync(
+        string portalUrl,
+        string macAddress,
+        bool includeVod,
+        Func<List<StalkerCategory>, Action<string>, Task<List<StalkerCategory>>> onCategoriesDiscovered,
+        Func<IReadOnlyList<Channel>, StalkerCategory, bool, Task> onCategoryBatchLoaded,
+        IProgress<StalkerLoadProgress>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
+        await GetChannelsProgressiveAsync(
+            portalUrl,
+            macAddress,
+            includeVod,
+            onCategoriesDiscovered,
+            (channels, category) => onCategoryBatchLoaded(channels, category, true),
+            progress,
+            cancellationToken);
+    }
+
+    /// <summary>
     /// Builds a likely XMLTV/EPG URL for a Stalker portal.
     /// </summary>
     string GetEpgUrl(string portalUrl);
