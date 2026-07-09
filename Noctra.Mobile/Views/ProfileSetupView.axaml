@@ -5,6 +5,7 @@
              xmlns:vm="clr-namespace:Noctra.ViewModels;assembly=Noctra.Core"
              xmlns:views="using:Noctra.Mobile.Views"
              xmlns:loc="using:Noctra.Mobile.Localization"
+             xmlns:behaviors="using:Noctra.Mobile.Behaviors"
              xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="Noctra.Mobile.Views.ProfileSetupView"
              x:DataType="vm:AddProfileViewModel"
@@ -26,6 +27,9 @@
       <Setter Property="Padding" Value="16,14" />
       <Setter Property="FontSize" Value="15" />
       <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+      <Setter Property="TextWrapping" Value="NoWrap" />
+      <Setter Property="AcceptsReturn" Value="False" />
+      <Setter Property="behaviors:MobileTextBoxMenuBehavior.IsEnabled" Value="True" />
     </Style>
     <Style Selector="TextBox:focus">
       <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
@@ -102,6 +106,12 @@
     </Style>
     <Style Selector="Button.DeleteBtn:pressed">
         <Setter Property="Background" Value="#33FF3333"/>
+    </Style>
+
+    <Style Selector="RadioButton.ProviderTypeOption">
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+      <Setter Property="MinHeight" Value="44" />
     </Style>
 
   </UserControl.Styles>
@@ -281,21 +291,27 @@
 
               <!-- Sağlayıcı tipi seçici: local M3U dosya modunda gizlenir;
                    kaynak tipi değiştirmek ayrı, onaylı bir aksiyondur. -->
-              <StackPanel Orientation="Horizontal"
-                          Spacing="12"
-                          Margin="28,14,28,14"
-                          IsVisible="{Binding IsRemoteProviderSource}"
-                          IsEnabled="{Binding CanSwitchProviderType}">
-                <RadioButton Content="Xtream"
+              <Grid ColumnDefinitions="*,*,*"
+                    ColumnSpacing="12"
+                    Margin="28,14,28,14"
+                    IsVisible="{Binding IsRemoteProviderSource}"
+                    IsEnabled="{Binding CanSwitchProviderType}">
+                <RadioButton Grid.Column="0"
+                             Classes="ProviderTypeOption"
+                             Content="Xtream"
                              GroupName="ProviderType"
                              IsChecked="{Binding IsXtream}" />
-                <RadioButton Content="M3U"
+                <RadioButton Grid.Column="1"
+                             Classes="ProviderTypeOption"
+                             Content="M3U"
                              GroupName="ProviderType"
                              IsChecked="{Binding IsM3U}" />
-                <RadioButton Content="Stalker Portal"
+                <RadioButton Grid.Column="2"
+                             Classes="ProviderTypeOption"
+                             Content="Stalker"
                              GroupName="ProviderType"
                              IsChecked="{Binding IsStalker}" />
-              </StackPanel>
+              </Grid>
 
               <Border Classes="Divider" />
 

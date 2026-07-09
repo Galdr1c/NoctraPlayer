@@ -62,6 +62,25 @@ public class MobileReleaseGuardTests
         }
     }
 
+    [Fact]
+    public void ProfileSetupProviderSelector_UsesEqualWidthProviderColumns()
+    {
+        var view = ReadProjectFile("Noctra.Mobile", "Views", "ProfileSetupView.axaml");
+
+        Assert.Contains("ColumnDefinitions=\"*,*,*\"", view);
+        Assert.Contains("Classes=\"ProviderTypeOption\"", view);
+        Assert.DoesNotContain("<StackPanel Orientation=\"Horizontal\"\r\n                          Spacing=\"12\"\r\n                          Margin=\"28,14,28,14\"", view);
+    }
+
+    [Fact]
+    public void MobileComboBoxDropdown_DoesNotChainScrollIntoPage()
+    {
+        var styles = ReadProjectFile("Noctra.Mobile", "Resources", "Styles.axaml");
+
+        Assert.Contains("MaxDropDownHeight\" Value=\"320\"", styles);
+        Assert.Contains("ScrollViewer.IsScrollChainingEnabled=\"False\"", styles);
+    }
+
     private static string ReadProjectFile(params string[] relativeParts)
         => File.ReadAllText(FindProjectFile(relativeParts));
 

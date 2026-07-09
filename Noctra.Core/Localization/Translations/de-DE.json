@@ -606,6 +606,7 @@
   "Error.Http.NotFound": "Inhalt nicht gefunden. Quelle eventuell nicht aktuell. (404)",
   "Error.Http.ServerUnreachableFormat": "Server aktuell nicht erreichbar. Versuchen Sie es später erneut. ({0})",
   "Error.Network.Generic": "Netzwerkfehler aufgetreten. Prüfen Sie Ihre Verbindung.",
+  "Error.Network.Dns": "Die Serveradresse konnte nicht aufgelöst werden. Prüfen Sie den Domainnamen und Ihre Internetverbindung.",
   "Error.System.Access": "Zugriffsberechtigungsfehler. Prüfen Sie die Dateiberechtigungen.",
   "Error.System.DataValidation": "Dateivalidierungsfehler. Laden Sie den Inhalt erneut herunter.",
   "Error.System.InvalidOperation": "Operation konnte nicht abgeschlossen werden. Quelldaten fehlen oder sind fehlerhaft.",

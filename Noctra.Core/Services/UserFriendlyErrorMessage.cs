@@ -133,6 +133,20 @@ public static class UserFriendlyErrorMessage
         var normalized = text.ToLowerInvariant();
 
         if (ContainsAny(normalized,
+                "android_getaddrinfo",
+                "eai_nodata",
+                "no address associated with hostname",
+                "nameresolutionfailure",
+                "nodename nor servname",
+                "name or service not known",
+                "temporary failure in name resolution",
+                "host not found",
+                "could not resolve host"))
+        {
+            return GetString("Error.Network.Dns", "Sunucu adresi çözümlenemedi. Alan adını ve internet bağlantınızı kontrol edin.");
+        }
+
+        if (ContainsAny(normalized,
                 "response ended prematurely",
                 "response ended",
                 "unexpected end",

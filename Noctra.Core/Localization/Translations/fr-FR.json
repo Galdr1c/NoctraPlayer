@@ -606,6 +606,7 @@
   "Error.Http.NotFound": "Contenu non trouvé. La source n'est peut-être pas à jour. (404)",
   "Error.Http.ServerUnreachableFormat": "Le serveur est actuellement inaccessible. Veuillez réessayer plus tard. ({0})",
   "Error.Network.Generic": "Une erreur réseau est survenue. Vérifiez votre connexion et réessayez.",
+  "Error.Network.Dns": "L'adresse du serveur est introuvable. Vérifiez le nom de domaine et votre connexion internet.",
   "Error.System.Access": "Erreur de permission d'accès. Vérifiez les permissions du fichier et réessayez.",
   "Error.System.DataValidation": "Erreur de validation du fichier. Téléchargez à nouveau le contenu et réessayez.",
   "Error.System.InvalidOperation": "L'opération n'a pas pu être terminée comme prévu. Les données sources peuvent être manquantes ou incorrectes.",

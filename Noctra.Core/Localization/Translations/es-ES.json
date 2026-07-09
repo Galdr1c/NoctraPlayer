@@ -606,6 +606,7 @@
   "Error.Http.NotFound": "Contenido no encontrado (404).",
   "Error.Http.ServerUnreachableFormat": "El servidor es inaccesible actualmente ({0}).",
   "Error.Network.Generic": "Error de red. Revisa tu conexión.",
+  "Error.Network.Dns": "No se pudo resolver la dirección del servidor. Comprueba el dominio y tu conexión a internet.",
   "Error.System.Access": "Error de permisos. Revisa los permisos de archivo.",
   "Error.System.DataValidation": "Error de validación. Descarga el contenido de nuevo.",
   "Error.System.InvalidOperation": "La operación no pudo completarse. Datos incorrectos o faltantes.",

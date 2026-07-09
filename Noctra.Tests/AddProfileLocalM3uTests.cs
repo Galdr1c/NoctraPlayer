@@ -122,6 +122,72 @@ public sealed class AddProfileLocalM3uTests
     }
 
     [Fact]
+    public async Task AnalyzeConnection_RemoteM3uWithCredentials_UsesM3uParserAndDoesNotAuthenticateAsXtream()
+    {
+        const string m3uUrl = "http://127.0.0.1:9/get.php?username=test-user&password=test-pass&type=m3u_plus&output=ts";
+        var parser = new Mock<IM3UParser>();
+        parser
+            .Setup(service => service.ParseFromUrlStreamAsync(
+                m3uUrl,
+                It.IsAny<CancellationToken>()))
+            .Returns(CreateChannelsAsync(new Channel
+            {
+                Name = "Remote test channel",
+                StreamUrl = "https://example.test/live/1.m3u8"
+            }));
+        var xtream = new Mock<IXtreamCodesService>();
+        var vm = CreateViewModel(parser: parser.Object, xtreamCodesService: xtream.Object);
+
+        vm.IsM3U = true;
+        vm.Url = m3uUrl;
+
+        await vm.AnalyzeConnectionCommand.ExecuteAsync(null);
+
+        parser.Verify(
+            service => service.ParseFromUrlStreamAsync(
+                m3uUrl,
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        xtream.Verify(
+            service => service.AuthenticateAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+        Assert.False(vm.HasError);
+        Assert.NotEqual(ConnectionHealth.Critical, vm.ConnectionHealth);
+        Assert.Null(vm.UrlError);
+    }
+
+    [Fact]
+    public async Task AnalyzeConnection_RemoteM3uFailure_ShowsSingleFriendlyDetailedError()
+    {
+        const string m3uUrl = "https://missing.example.test/playlist.m3u";
+        var parser = new Mock<IM3UParser>();
+        parser
+            .Setup(service => service.ParseFromUrlStreamAsync(
+                m3uUrl,
+                It.IsAny<CancellationToken>()))
+            .Returns(ThrowingChannelsAsync(new HttpRequestException(
+                "android_getaddrinfo failed: EAI_NODATA (No address associated with hostname)")));
+        var vm = CreateViewModel(parser: parser.Object);
+
+        vm.IsM3U = true;
+        vm.Url = m3uUrl;
+
+        await vm.AnalyzeConnectionCommand.ExecuteAsync(null);
+
+        Assert.True(vm.HasError);
+        Assert.Equal(ConnectionHealth.Critical, vm.ConnectionHealth);
+        Assert.Null(vm.UrlError);
+        Assert.True(string.IsNullOrEmpty(vm.StatusMessage));
+        Assert.False(string.IsNullOrWhiteSpace(vm.DetailedStatus));
+        Assert.DoesNotContain("android_getaddrinfo", vm.DetailedStatus, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("EAI_NODATA", vm.DetailedStatus, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task PickM3uFileCommand_SelectedFile_ConfiguresLocalM3uSource()
     {
         var selectedPath = Path.Combine(
@@ -586,7 +652,8 @@ public sealed class AddProfileLocalM3uTests
 
     private static AddProfileViewModel CreateViewModel(
         IM3UParser? parser = null,
-        IDialogService? dialogService = null)
+        IDialogService? dialogService = null,
+        IXtreamCodesService? xtreamCodesService = null)
     {
         var avatarService = new Mock<IAvatarService>();
         avatarService
@@ -605,10 +672,28 @@ public sealed class AddProfileLocalM3uTests
             dialogService ?? new Mock<IDialogService>().Object,
             licenseService.Object,
             parser ?? new Mock<IM3UParser>().Object,
-            new Mock<IXtreamCodesService>().Object,
+            xtreamCodesService ?? new Mock<IXtreamCodesService>().Object,
             new Mock<IStalkerPortalService>().Object,
             new DesktopSecurityService(),
             CreateLocalizationService());
+    }
+
+    private static async IAsyncEnumerable<Channel> CreateChannelsAsync(params Channel[] channels)
+    {
+        foreach (var channel in channels)
+        {
+            await Task.Yield();
+            yield return channel;
+        }
+    }
+
+    private static async IAsyncEnumerable<Channel> ThrowingChannelsAsync(Exception exception)
+    {
+        await Task.Yield();
+        throw exception;
+#pragma warning disable CS0162
+        yield break;
+#pragma warning restore CS0162
     }
 
     private static ILocalizationService CreateLocalizationService()

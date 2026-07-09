@@ -966,6 +966,18 @@ public partial class AddProfileViewModel : ObservableObject
             urlToCheck = "http://" + urlToCheck;
         }
 
+        if (IsM3U)
+        {
+            if (!Uri.TryCreate(urlToCheck, UriKind.Absolute, out _))
+            {
+                StatusMessage = _localizationService.GetString("AddProfile.Error.UrlInvalid");
+                return;
+            }
+
+            await AnalyzeRemoteM3uAsync(urlToCheck);
+            return;
+        }
+
         // Prepare the actual URL to check based on profile type
         if (IsXtream && !string.IsNullOrWhiteSpace(Username) && !string.IsNullOrWhiteSpace(Password))
         {
@@ -976,21 +988,6 @@ public partial class AddProfileViewModel : ObservableObject
             if (!uri.IsDefaultPort) baseUrl += $":{uri.Port}";
             
             urlToCheck = $"{baseUrl}/player_api.php?username={Uri.EscapeDataString(Username)}&password={Uri.EscapeDataString(Password)}";
-        }
-        else if (IsM3U && !string.IsNullOrWhiteSpace(Username) && !string.IsNullOrWhiteSpace(Password))
-        {
-            // ↓ YENİ BLOK — get.php yerine player_api.php ile kontrol et
-            // Çoğu sağlayıcı aynı sunucuda hem get.php hem player_api.php çalıştırır
-            var uri = new Uri(urlToCheck);
-            var baseUrl = $"{uri.Scheme}://{uri.Host}";
-            if (!uri.IsDefaultPort) baseUrl += $":{uri.Port}";
-            urlToCheck = $"{baseUrl}/player_api.php?username={Uri.EscapeDataString(Username)}&password={Uri.EscapeDataString(Password)}";
-        }
-        else if (IsM3U)
-        {
-            // M3U için linkin tamamını kontrol ediyoruz (HEAD/GET desteği için)
-            // Eğer username/password varsa player_api fallback'i yukarıda yapıldı.
-            // Yoksa doğrudan girilen URL'i kullanıyoruz.
         }
         else if (IsStalker)
         {
@@ -1009,6 +1006,12 @@ public partial class AddProfileViewModel : ObservableObject
         if (!Uri.TryCreate(urlToCheck, UriKind.Absolute, out _))
         {
             StatusMessage = _localizationService.GetString("AddProfile.Error.UrlInvalid");
+            return;
+        }
+
+        if (IsM3U)
+        {
+            await AnalyzeRemoteM3uAsync(urlToCheck);
             return;
         }
 
@@ -1069,6 +1072,51 @@ public partial class AddProfileViewModel : ObservableObject
             StatusMessage = UserFriendlyErrorMessage.WithPrefix(_localizationService.GetString("AddProfile.Analysis.ErrorPrefix"), ex);
             ConnectionHealth = ConnectionHealth.Critical;
             DetailedStatus = _localizationService.GetString("AddProfile.Analysis.UnexpectedError");
+        }
+        finally
+        {
+            IsAnalyzingConnection = false;
+        }
+    }
+
+    private async Task AnalyzeRemoteM3uAsync(string urlToCheck)
+    {
+        IsAnalyzingConnection = true;
+        HasError = false;
+        StatusMessage = _localizationService.GetString("AddProfile.Status.Analyzing");
+        PlaylistPreviewSummary = string.Empty;
+        ConnectionHealth = ConnectionHealth.Unknown;
+        DetailedStatus = string.Empty;
+        UrlError = null;
+
+        try
+        {
+            var result = await VerifyRemoteM3uAsync(urlToCheck, CancellationToken.None);
+            ConnectionHealth = result.Health;
+
+            if (result.Health == ConnectionHealth.Critical)
+            {
+                HasError = true;
+                DetailedStatus = string.IsNullOrWhiteSpace(result.Error)
+                    ? _localizationService.GetString("AddProfile.Analysis.Failed")
+                    : result.Error;
+                StatusMessage = string.Empty;
+                return;
+            }
+
+            DetailedStatus = string.Format(
+                CultureInfo.CurrentCulture,
+                _localizationService.GetString("Profiles.Account.LocalM3uValidationResult"),
+                result.ChannelCount);
+            HasError = false;
+            StatusMessage = string.Empty;
+        }
+        catch (Exception ex)
+        {
+            HasError = true;
+            ConnectionHealth = ConnectionHealth.Critical;
+            DetailedStatus = UserFriendlyErrorMessage.FromException(ex);
+            StatusMessage = string.Empty;
         }
         finally
         {
@@ -1189,14 +1237,10 @@ public partial class AddProfileViewModel : ObservableObject
                     : (ConnectionHealth.Critical, stopwatch.ElapsedMilliseconds, _localizationService.GetString("Playlist.Error.EmptyNoDelete"));
             }
 
-            if (IsM3U && !string.IsNullOrWhiteSpace(Username) && !string.IsNullOrWhiteSpace(Password))
+            if (IsM3U)
             {
-                var authenticated = await _xtreamCodesService.AuthenticateAsync(
-                    NormalizeProviderBaseUrl(Url), Username, Password, cancellationToken);
-                stopwatch.Stop();
-                return authenticated
-                    ? (ClassifyLatency(stopwatch.ElapsedMilliseconds), stopwatch.ElapsedMilliseconds, null)
-                    : (ConnectionHealth.Critical, stopwatch.ElapsedMilliseconds, _localizationService.GetString("Xtream.Error.AuthFailed"));
+                var result = await VerifyRemoteM3uAsync(Url.Trim(), cancellationToken);
+                return (result.Health, result.Latency, result.Error);
             }
 
             stopwatch.Stop();
@@ -1206,6 +1250,36 @@ public partial class AddProfileViewModel : ObservableObject
         {
             stopwatch.Stop();
             return (ConnectionHealth.Critical, stopwatch.ElapsedMilliseconds, UserFriendlyErrorMessage.FromException(ex));
+        }
+    }
+
+    private async Task<(ConnectionHealth Health, long Latency, string? Error, int ChannelCount)> VerifyRemoteM3uAsync(
+        string url,
+        CancellationToken cancellationToken)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        var count = 0;
+
+        try
+        {
+            await foreach (var _ in _m3uParser.ParseFromUrlStreamAsync(url, cancellationToken).WithCancellation(cancellationToken))
+            {
+                count++;
+                if (count >= 1)
+                {
+                    break;
+                }
+            }
+
+            stopwatch.Stop();
+            return count > 0
+                ? (ClassifyLatency(stopwatch.ElapsedMilliseconds), stopwatch.ElapsedMilliseconds, null, count)
+                : (ConnectionHealth.Critical, stopwatch.ElapsedMilliseconds, _localizationService.GetString("Playlist.Error.EmptyNoDelete"), 0);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            stopwatch.Stop();
+            return (ConnectionHealth.Critical, stopwatch.ElapsedMilliseconds, UserFriendlyErrorMessage.FromException(ex), 0);
         }
     }
 
@@ -1449,7 +1523,6 @@ public partial class AddProfileViewModel : ObservableObject
                     StatusMessage = string.IsNullOrWhiteSpace(providerValidation.Error)
                         ? _localizationService.GetString("AddProfile.Error.NewProviderValidationFailed")
                         : providerValidation.Error;
-                    UrlError = StatusMessage;
                     ConnectionHealth = ConnectionHealth.Critical;
                     DetailedStatus = StatusMessage;
                     return;
@@ -1464,7 +1537,6 @@ public partial class AddProfileViewModel : ObservableObject
                         StatusMessage = string.IsNullOrWhiteSpace(preview.ErrorMessage)
                             ? _localizationService.GetString("AddProfile.Error.NewProviderValidationFailed")
                             : preview.ErrorMessage;
-                        UrlError = StatusMessage;
                         ConnectionHealth = ConnectionHealth.Critical;
                         DetailedStatus = StatusMessage;
                         return;

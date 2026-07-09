@@ -606,6 +606,7 @@
   "Error.Http.NotFound": "İçerik bulunamadı. Kaynak güncel olmayabilir. (404)",
   "Error.Http.ServerUnreachableFormat": "Sunucuya şu anda ulaşılamıyor. Biraz sonra tekrar deneyin. ({0})",
   "Error.Network.Generic": "Ağ hatası oluştu. Bağlantınızı kontrol edip tekrar deneyin.",
+  "Error.Network.Dns": "Sunucu adresi çözümlenemedi. Alan adını ve internet bağlantınızı kontrol edin.",
   "Error.System.Access": "Erişim izni hatası. Dosya izinlerini kontrol edip tekrar deneyin.",
   "Error.System.DataValidation": "Dosya doğrulama hatası. İçeriği yeniden indirip tekrar deneyin.",
   "Error.System.InvalidOperation": "İşlem beklendiği gibi tamamlanamadı. Kaynak veri eksik veya hatalı olabilir.",
