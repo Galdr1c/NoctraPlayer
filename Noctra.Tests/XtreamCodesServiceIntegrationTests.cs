@@ -224,6 +224,66 @@ namespace Noctra.Tests
         }
 
         [Fact]
+        public async Task GetChannelsProgressiveBatchedAsync_CategoryFailureAfterSuccessfulBatch_DoesNotThrow()
+        {
+            const string baseUrl = "http://partial-xtream.com";
+            SetupMockByAction(baseUrl, null, new { user_info = new { status = "Active" } });
+            SetupMockByAction(baseUrl, "get_live_categories", new[]
+            {
+                new { category_id = "1", category_name = "Working" },
+                new { category_id = "2", category_name = "Broken" }
+            });
+            SetupMockByAction(baseUrl, "get_vod_categories", Array.Empty<object>());
+            SetupMockByAction(baseUrl, "get_series_categories", Array.Empty<object>());
+
+            _handlerMock
+                .Protected()
+                .Setup<Task<HttpResponseMessage>>(
+                    "SendAsync",
+                    ItExpr.Is<HttpRequestMessage>(req =>
+                        req.RequestUri!.AbsoluteUri.StartsWith(baseUrl) &&
+                        req.RequestUri.Query.Contains("action=get_live_streams")),
+                    ItExpr.IsAny<CancellationToken>())
+                .Returns<HttpRequestMessage, CancellationToken>((req, _) =>
+                {
+                    if (req.RequestUri!.Query.Contains("category_id=2"))
+                    {
+                        return Task.FromResult(new HttpResponseMessage(HttpStatusCode.InternalServerError)
+                        {
+                            Content = new StringContent("category failed")
+                        });
+                    }
+
+                    return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                    {
+                        Content = new StringContent(JsonSerializer.Serialize(new[]
+                        {
+                            new { name = "Working Channel", stream_id = 100, category_id = "1" }
+                        }))
+                    });
+                });
+
+            var batches = new List<(string Category, int Count, bool Completed)>();
+
+            await _service.GetChannelsProgressiveBatchedAsync(
+                baseUrl,
+                "user",
+                "pass",
+                includeVod: false,
+                onCategoriesDiscovered: (categories, _) => Task.FromResult(categories),
+                onCategoryBatchLoaded: (channels, category, completed) =>
+                {
+                    batches.Add((category, channels.Count, completed));
+                    return Task.CompletedTask;
+                });
+
+            var successfulBatch = Assert.Single(batches);
+            Assert.Equal("Working", successfulBatch.Category);
+            Assert.Equal(1, successfulBatch.Count);
+            Assert.True(successfulBatch.Completed);
+        }
+
+        [Fact]
         public async Task GetSeriesInfoAsync_HandlesEpisodesAsObject_ReturnsCorrectData()
         {
             // Arrange

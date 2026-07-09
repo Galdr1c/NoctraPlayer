@@ -186,6 +186,8 @@ public class XtreamCodesService : IXtreamCodesService
         var liveMap = BuildCategoryMapFromXtream(allCategories.Where(c => c.Type == "live"));
         var vodMap = BuildCategoryMapFromXtream(allCategories.Where(c => c.Type == "vod"));
         var seriesMap = BuildCategoryMapFromXtream(allCategories.Where(c => c.Type == "series"));
+        var failedCategories = 0;
+        var emittedChannelCount = 0;
 
         foreach (var category in categoriesToLoad
                      .OrderBy(c => string.Equals(c.Name, prioritizedCategory, StringComparison.OrdinalIgnoreCase) ? 0 : 1)
@@ -193,35 +195,73 @@ public class XtreamCodesService : IXtreamCodesService
                      .ThenBy(c => c.Name, StringComparer.OrdinalIgnoreCase))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            switch (category.Type)
+            try
             {
-                case "live":
-                    await StreamCategoryBatchesAsync<XtreamLiveStreamDto>(
-                        BuildCategoryApiUrl(normalizedBaseUrl, username, password, "get_live_streams", category.Id),
-                        category.Name,
-                        dtos => MapLiveChannels(dtos, normalizedBaseUrl, username, password, liveMap),
-                        onCategoryBatchLoaded,
-                        cancellationToken);
-                    break;
+                async Task CountAndForwardAsync(IReadOnlyList<Channel> channels, string group, bool completed)
+                {
+                    emittedChannelCount += channels.Count;
+                    await onCategoryBatchLoaded(channels, group, completed);
+                }
 
-                case "vod" when includeVod:
-                    await StreamCategoryBatchesAsync<XtreamVodStreamDto>(
-                        BuildCategoryApiUrl(normalizedBaseUrl, username, password, "get_vod_streams", category.Id),
-                        category.Name,
-                        dtos => MapVodChannels(dtos, normalizedBaseUrl, username, password, vodMap),
-                        onCategoryBatchLoaded,
-                        cancellationToken);
-                    break;
+                switch (category.Type)
+                {
+                    case "live":
+                        await StreamCategoryBatchesAsync<XtreamLiveStreamDto>(
+                            BuildCategoryApiUrl(normalizedBaseUrl, username, password, "get_live_streams", category.Id),
+                            category.Name,
+                            dtos => MapLiveChannels(dtos, normalizedBaseUrl, username, password, liveMap),
+                            CountAndForwardAsync,
+                            cancellationToken);
+                        break;
 
-                case "series" when includeVod:
-                    await StreamCategoryBatchesAsync<XtreamSeriesDto>(
-                        BuildCategoryApiUrl(normalizedBaseUrl, username, password, "get_series", category.Id),
-                        category.Name,
-                        dtos => MapSeriesAsEntries(dtos, seriesMap),
-                        onCategoryBatchLoaded,
-                        cancellationToken);
-                    break;
+                    case "vod" when includeVod:
+                        await StreamCategoryBatchesAsync<XtreamVodStreamDto>(
+                            BuildCategoryApiUrl(normalizedBaseUrl, username, password, "get_vod_streams", category.Id),
+                            category.Name,
+                            dtos => MapVodChannels(dtos, normalizedBaseUrl, username, password, vodMap),
+                            CountAndForwardAsync,
+                            cancellationToken);
+                        break;
+
+                    case "series" when includeVod:
+                        await StreamCategoryBatchesAsync<XtreamSeriesDto>(
+                            BuildCategoryApiUrl(normalizedBaseUrl, username, password, "get_series", category.Id),
+                            category.Name,
+                            dtos => MapSeriesAsEntries(dtos, seriesMap),
+                            CountAndForwardAsync,
+                            cancellationToken);
+                        break;
+                }
             }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                failedCategories++;
+                _logger?.LogWarning(
+                    ex,
+                    "Xtream category {CategoryName} ({CategoryType}/{CategoryId}) failed during progressive import.",
+                    category.Name,
+                    category.Type,
+                    category.Id);
+            }
+        }
+
+        if (failedCategories > 0 && emittedChannelCount == 0)
+        {
+            throw new InvalidOperationException(
+                string.Format(
+                    _localizationService.GetString("Xtream.Error.CategoriesFailed"),
+                    failedCategories));
+        }
+
+        if (failedCategories > 0)
+        {
+            _logger?.LogWarning(
+                "Xtream progressive import completed with {FailedCategoryCount} non-fatal category failures.",
+                failedCategories);
         }
     }
 

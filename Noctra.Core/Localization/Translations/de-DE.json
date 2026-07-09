@@ -760,6 +760,7 @@
   "Playlist.Error.NoSource": "Playlist hat keine URL oder keinen Dateipfad.",
   "Xtream.Error.AuthFailed": "Xtream-Authentifizierung fehlgeschlagen.",
   "Xtream.Error.AuthFailedDetail": "Xtream-Authentifizierung fehlgeschlagen. Benutzername/Passwort oder Server-Info könnten falsch sein.",
+  "Xtream.Error.CategoriesFailed": "{0} Xtream-Kategorien konnten nicht geladen werden.",
   "Xtream.Channel.DefaultLive": "Live-Kanal",
   "Xtream.Channel.DefaultSeries": "Serien",
   "Main.Error.ContentLoad": "Fehler beim Laden des Inhalts",

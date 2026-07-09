@@ -760,6 +760,7 @@
   "Playlist.Error.NoSource": "La liste de lecture n'a pas d'URL ou de chemin de fichier.",
   "Xtream.Error.AuthFailed": "Échec de l'authentification Xtream.",
   "Xtream.Error.AuthFailedDetail": "Échec de l'authentification Xtream. Le nom d'utilisateur/mot de passe ou les informations du serveur peuvent être incorrects.",
+  "Xtream.Error.CategoriesFailed": "{0} categories Xtream n'ont pas pu etre chargees.",
   "Xtream.Channel.DefaultLive": "Chaîne en direct",
   "Xtream.Channel.DefaultSeries": "Séries",
   "Main.Error.ContentLoad": "Erreur de chargement du contenu",

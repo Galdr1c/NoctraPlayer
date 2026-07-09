@@ -760,6 +760,7 @@
   "Playlist.Error.NoSource": "Playlist'in URL veya dosya yolu yok",
   "Xtream.Error.AuthFailed": "Xtream kimlik doğrulaması başarısız.",
   "Xtream.Error.AuthFailedDetail": "Xtream kimlik doğrulaması başarısız. Kullanıcı adı/şifre veya sunucu bilgisi hatalı olabilir.",
+  "Xtream.Error.CategoriesFailed": "{0} Xtream kategorisi yuklenemedi.",
   "Xtream.Channel.DefaultLive": "Canlı Kanal",
   "Xtream.Channel.DefaultSeries": "Dizi",
   "Main.Error.ContentLoad": "İçerik yükleme hatası",

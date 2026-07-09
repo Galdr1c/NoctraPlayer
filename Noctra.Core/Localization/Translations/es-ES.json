@@ -760,6 +760,7 @@
   "Playlist.Error.NoSource": "La lista de reproducción no tiene URL ni ruta de archivo.",
   "Xtream.Error.AuthFailed": "Fallo en la autenticación de Xtream.",
   "Xtream.Error.AuthFailedDetail": "Fallo en la autenticación de Xtream. El usuario/contraseña o la información del servidor pueden ser incorrectos.",
+  "Xtream.Error.CategoriesFailed": "No se pudieron cargar {0} categorias de Xtream.",
   "Xtream.Channel.DefaultLive": "Canal en vivo",
   "Xtream.Channel.DefaultSeries": "Series",
   "Main.Error.ContentLoad": "Error al cargar contenido",

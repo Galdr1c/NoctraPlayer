@@ -962,6 +962,87 @@ namespace Noctra.Tests
         }
 
         [Fact]
+        public async Task RefreshStagingCommit_EmptyStaging_DoesNotReplaceActivePlaylist()
+        {
+            var service = CreateService();
+            var playlist = await service.AddFromChannelsAsync(
+                "Provider Refresh",
+                "provider://empty-refresh",
+                new List<Channel>
+                {
+                    new Channel
+                    {
+                        Name = "Existing Channel",
+                        StreamUrl = "stream-existing",
+                        GroupTitle = "Live",
+                        Type = ChannelType.Live
+                    }
+                });
+
+            var staging = await service.CreateRefreshStagingPlaylistAsync(playlist.Id);
+
+            await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                service.CommitRefreshStagingPlaylistAsync(playlist.Id, staging.Id));
+
+            using var context = new AppDbContext(_options);
+            var activeChannels = await context.Channels
+                .Where(c => c.PlaylistId == playlist.Id)
+                .ToListAsync();
+
+            var existing = Assert.Single(activeChannels);
+            Assert.Equal("Existing Channel", existing.Name);
+
+            var persistedPlaylist = await context.Playlists.SingleAsync(p => p.Id == playlist.Id);
+            Assert.True(persistedPlaylist.IsActive);
+            Assert.Equal(1, persistedPlaylist.ChannelCount);
+            Assert.True(await context.Playlists.AnyAsync(p => p.Id == staging.Id && !p.IsActive));
+        }
+
+        [Fact]
+        public async Task RefreshStagingCommit_DummyOnlyStaging_DoesNotReplaceActivePlaylist()
+        {
+            var service = CreateService();
+            var playlist = await service.AddFromChannelsAsync(
+                "Provider Refresh",
+                "provider://dummy-refresh",
+                new List<Channel>
+                {
+                    new Channel
+                    {
+                        Name = "Existing Channel",
+                        StreamUrl = "stream-existing",
+                        GroupTitle = "Live",
+                        Type = ChannelType.Live
+                    }
+                });
+
+            var staging = await service.CreateRefreshStagingPlaylistAsync(playlist.Id);
+            await service.AppendChannelsAsync(
+                staging.Id,
+                new List<Channel>
+                {
+                    new Channel
+                    {
+                        Name = "Loading",
+                        StreamUrl = "xtream-dummy://news",
+                        GroupTitle = "News",
+                        Type = ChannelType.Live
+                    }
+                });
+
+            await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                service.CommitRefreshStagingPlaylistAsync(playlist.Id, staging.Id));
+
+            using var context = new AppDbContext(_options);
+            var existing = Assert.Single(await context.Channels
+                .Where(c => c.PlaylistId == playlist.Id)
+                .ToListAsync());
+
+            Assert.Equal("Existing Channel", existing.Name);
+            Assert.Equal(1, await context.Channels.CountAsync(c => c.PlaylistId == staging.Id));
+        }
+
+        [Fact]
         public async Task AppendChannelsAsync_ReplacesExistingStreamInsteadOfDuplicatingIt()
         {
             var service = CreateService();

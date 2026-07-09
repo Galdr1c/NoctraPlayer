@@ -415,12 +415,17 @@ public class StalkerPortalService : IStalkerPortalService
         Log($"GetChannelsProgressiveBatchedAsync DONE: {totalChannelCount} channels, " +
             $"{totalCategories} categories, {sw.ElapsedMilliseconds}ms total");
 
-        if (failedCategories > 0)
+        if (failedCategories > 0 && Volatile.Read(ref totalChannelCount) == 0)
         {
             throw new InvalidOperationException(
                 string.Format(
                     _localizationService.GetString("Stalker.Error.CategoriesFailed"),
                     failedCategories));
+        }
+
+        if (failedCategories > 0)
+        {
+            Log($"GetChannelsProgressiveBatchedAsync completed with {failedCategories} non-fatal category failures.");
         }
     }
 
@@ -1408,6 +1413,7 @@ public class StalkerPortalService : IStalkerPortalService
             }
             catch (HttpRequestException ex) when (retryCount < maxRetries)
             {
+                response?.Dispose();
                 retryCount++;
                 Log($"[StalkerService] Network error: {ex.Message}. Retrying in {delayMs}ms... (Attempt {retryCount}/{maxRetries})");
                 await Task.Delay(delayMs, ct);
@@ -1416,6 +1422,7 @@ public class StalkerPortalService : IStalkerPortalService
             }
             catch (Exception ex)
             {
+                response?.Dispose();
                 Log($"[StalkerService] HTTP error: {ex.Message}");
                 throw;
             }

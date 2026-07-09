@@ -715,6 +715,19 @@ public partial class PlaylistService : IPlaylistService
         if (stagingPlaylist == null)
             throw new KeyNotFoundException(string.Format(_localizationService.GetString("Playlist.Error.NotFound"), stagingPlaylistId));
 
+        var stagedRealChannelCount = await context.Channels
+            .AsNoTracking()
+            .CountAsync(c =>
+                c.PlaylistId == stagingPlaylistId &&
+                (c.StreamUrl == null ||
+                 (!c.StreamUrl.StartsWith("stalker-dummy://") &&
+                  !c.StreamUrl.StartsWith("xtream-dummy://"))));
+
+        if (stagedRealChannelCount == 0)
+        {
+            throw new InvalidOperationException(_localizationService.GetString("Playlist.Error.EmptyNoDelete"));
+        }
+
         var existingEpgRows = await context.Channels
             .AsNoTracking()
             .Where(c => c.PlaylistId == playlistId)
