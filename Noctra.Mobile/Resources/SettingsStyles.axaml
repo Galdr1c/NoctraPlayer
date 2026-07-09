@@ -1,10 +1,11 @@
 <Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+        
   <Style Selector="Border.SettingsSectionCard">
     <Setter Property="Background" Value="{DynamicResource Surface0Brush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="{DynamicResource RadiusLarge}" />
+    <Setter Property="CornerRadius" Value="8" />
     <Setter Property="Padding" Value="16" />
     <Setter Property="BoxShadow" Value="{DynamicResource DefaultShadow}" />
   </Style>
@@ -23,8 +24,11 @@
     <Setter Property="Background" Value="{DynamicResource Surface1Brush}" />
     <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="{DynamicResource RadiusMedium}" />
+    <Setter Property="CornerRadius" Value="6" />
   </Style>
   <Style Selector="Button.SettingsActionButton:pressed">
     <Setter Property="Background" Value="{DynamicResource InteractivePressedBrush}" />
@@ -37,7 +41,10 @@
     <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
     <Setter Property="Foreground" Value="White" />
     <Setter Property="BorderThickness" Value="0" />
-    <Setter Property="CornerRadius" Value="{DynamicResource RadiusMedium}" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
   </Style>
   <Style Selector="Button.SettingsPrimaryActionButton:pressed">
     <Setter Property="Opacity" Value="0.82" />
@@ -50,7 +57,10 @@
     <Setter Property="Foreground" Value="{DynamicResource ErrorBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource ErrorBrush}" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="{DynamicResource RadiusMedium}" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
   </Style>
   <Style Selector="Button.SettingsDangerActionButton:pressed">
     <Setter Property="Background" Value="{DynamicResource ErrorBrush}" />
