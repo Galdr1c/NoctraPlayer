@@ -19,7 +19,7 @@
             <Grid Margin="0,0,0,24" ColumnDefinitions="*,Auto">
               <TextBlock Text="{loc:Translate Live.Title}" FontSize="24" LetterSpacing="1" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
               <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" IsVisible="{Binding ShowContentFilters}">
-                <ComboBox Width="320" Height="45" ItemsSource="{Binding Groups}" SelectedItem="{Binding SelectedGroup}" IsVisible="{Binding ShowGroupFilter}">
+                <ComboBox Theme="{StaticResource ModernComboBox}" Width="320" Height="45" ItemsSource="{Binding Groups}" SelectedItem="{Binding SelectedGroup}" IsVisible="{Binding ShowGroupFilter}">
                   <ComboBox.ItemTemplate>
                     <DataTemplate>
                       <Grid ColumnDefinitions="Auto,*">

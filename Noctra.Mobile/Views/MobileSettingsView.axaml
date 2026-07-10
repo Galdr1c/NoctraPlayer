@@ -589,7 +589,7 @@
                     <Button Grid.Column="1"
                             Command="{Binding $parent[ItemsControl].((vm:SettingsViewModel)DataContext).UnhideGroupCommand}"
                             CommandParameter="{Binding}"
-                            MinHeight="44">
+                            Theme="{StaticResource FilterButtonStyle}">
                       <StackPanel Orientation="Horizontal" Spacing="5">
                         <icons:MaterialIcon Kind="EyeOutline" Width="14" Height="14" />
                         <TextBlock Text="{loc:Translate Settings.Channels.Hidden.Show}" />
@@ -631,7 +631,7 @@
                     <Button Grid.Column="1"
                             Command="{Binding $parent[ItemsControl].((vm:SettingsViewModel)DataContext).UnhideGroupCommand}"
                             CommandParameter="{Binding}"
-                            MinHeight="44">
+                            Theme="{StaticResource FilterButtonStyle}">
                       <StackPanel Orientation="Horizontal" Spacing="5">
                         <icons:MaterialIcon Kind="EyeOutline" Width="14" Height="14" />
                         <TextBlock Text="{loc:Translate Settings.Channels.Hidden.Show}" />
@@ -673,7 +673,7 @@
                     <Button Grid.Column="1"
                             Command="{Binding $parent[ItemsControl].((vm:SettingsViewModel)DataContext).UnhideGroupCommand}"
                             CommandParameter="{Binding}"
-                            MinHeight="44">
+                            Theme="{StaticResource FilterButtonStyle}">
                       <StackPanel Orientation="Horizontal" Spacing="5">
                         <icons:MaterialIcon Kind="EyeOutline" Width="14" Height="14" />
                         <TextBlock Text="{loc:Translate Settings.Channels.Hidden.Show}" />
@@ -821,9 +821,7 @@
                 <Button Grid.Column="1"
                         Command="{Binding AddCustomEpgCommand}"
                         IsEnabled="{Binding !IsGlobalLoading}"
-                        HorizontalContentAlignment="Center"
-                        VerticalContentAlignment="Center"
-                        MinHeight="40">
+                        Theme="{StaticResource FilterButtonStyle}">
                   <StackPanel Orientation="Horizontal" Spacing="6">
                     <icons:MaterialIcon Kind="Plus" Width="18" Height="18" />
                     <TextBlock Text="{loc:Translate Settings.Epg.AddNew}" />
@@ -856,7 +854,7 @@
                       <Button Grid.Column="1"
                               Command="{Binding $parent[ItemsControl].((vm:SettingsViewModel)DataContext).RemoveCustomEpgCommand}"
                               CommandParameter="{Binding .}"
-                              MinHeight="44">
+                              Theme="{StaticResource FilterButtonStyle}">
                         <StackPanel Orientation="Horizontal" Spacing="6">
                           <icons:MaterialIcon Kind="DeleteOutline" Width="18" Height="18" Foreground="{DynamicResource ErrorBrush}" />
                           <TextBlock Text="{loc:Translate Settings.Epg.RemoveSource.Tooltip}" />

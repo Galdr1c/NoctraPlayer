@@ -31,7 +31,7 @@
                    Foreground="{DynamicResource TextPrimaryBrush}" />
         <ComboBox Grid.Column="1"
                  
-                  Width="150"
+                  Width="250"
                   ItemsSource="{Binding SortOptions}"
                   SelectedValue="{Binding SelectedSortOrder}"
                   SelectedValueBinding="{Binding Key}"
@@ -43,7 +43,6 @@
             IsVisible="{Binding ShowGroupFilter}">
         <ComboBox Grid.Column="0"
                   x:Name="GroupFilterComboBox"
-                 
                   ItemsSource="{Binding Groups}"
                   SelectedItem="{Binding SelectedGroup}"
                   PlaceholderText="{loc:Translate Common.All}"
@@ -59,12 +58,7 @@
         </ComboBox>
         <Button Grid.Column="1"
                 Content="{loc:Translate Common.All}"
-                MinWidth="64"
-                MinHeight="48"
-                Padding="12"
-                CornerRadius="12"
-                Background="{DynamicResource Surface0Brush}"
-                BorderBrush="{DynamicResource BorderBrush}"
+                Theme="{StaticResource FilterButtonStyle}"
                 Click="ClearGroupSelection_Click" />
       </Grid>
 
