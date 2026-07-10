@@ -92,6 +92,17 @@ public class MobileReleaseGuardTests
         Assert.Contains("MoveStagedChannelsToPlaylistAsync", playlistService);
     }
 
+    [Fact]
+    public void XtreamLargePayloads_AreNotBufferedAsStrings()
+    {
+        var xtreamService = ReadProjectFile("Noctra.Core", "Services", "XtreamCodesService.cs");
+
+        Assert.Contains("DeserializeAsyncEnumerable", xtreamService);
+        Assert.Contains("HttpCompletionOption.ResponseHeadersRead", xtreamService);
+        Assert.DoesNotContain("ReadAsStringAsync", xtreamService);
+        Assert.DoesNotContain("Task<string> GetStringAsync", xtreamService);
+    }
+
     private static string ReadProjectFile(params string[] relativeParts)
         => File.ReadAllText(FindProjectFile(relativeParts));
 

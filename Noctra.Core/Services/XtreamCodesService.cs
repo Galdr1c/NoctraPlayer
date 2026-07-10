@@ -802,16 +802,6 @@ public class XtreamCodesService : IXtreamCodesService
         }
     }
 
-    private async Task<string> GetStringAsync(string url, CancellationToken cancellationToken)
-    {
-        return await NetworkRetry.ExecuteAsync(async () =>
-        {
-            using var response = await _httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
-            response.EnsureSuccessStatusCode();
-            return await response.Content.ReadAsStringAsync(cancellationToken);
-        }, cancellationToken: cancellationToken);
-    }
-
     private async Task<JsonDocument> GetJsonDocumentAsync(string url, CancellationToken cancellationToken)
     {
         try

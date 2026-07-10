@@ -61,7 +61,8 @@ public partial class MainViewModel : ObservableObject
     private readonly IContentQueryService _contentQueryService;
     private readonly IEpgService _epgService;
     private readonly IPlaylistService _playlistService;
-    private readonly IImportJobService? _importJobService;
+    private readonly ImportJobStatusCoordinator _importJobStatusCoordinator;
+    private readonly ProviderImportJobCoordinator _providerImportJobCoordinator;
     private readonly IWatchHistoryService _watchHistoryService;
     private readonly IXtreamCodesService _xtreamCodesService;
     private readonly IStalkerPortalService _stalkerPortalService;
@@ -362,7 +363,8 @@ public partial class MainViewModel : ObservableObject
             new ContentQueryService(playlistService, mediaService, settingsService, contextFactory);
         _epgService = epgService;
         _playlistService = playlistService;
-        _importJobService = importJobService;
+        _importJobStatusCoordinator = new ImportJobStatusCoordinator(importJobService, logger);
+        _providerImportJobCoordinator = new ProviderImportJobCoordinator(importJobService, logger);
         _watchHistoryService = watchHistoryService;
         _xtreamCodesService = xtreamCodesService;
         _stalkerPortalService = stalkerPortalService;
@@ -579,210 +581,6 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
-    private async Task<ImportJob?> StartProviderImportJobAsync(
-        ImportJobKind kind,
-        Profile profile,
-        Playlist playlist,
-        string stage,
-        CancellationToken cancellationToken)
-    {
-        if (_importJobService is null)
-        {
-            return null;
-        }
-
-        try
-        {
-            var job = await _importJobService.StartAsync(
-                kind,
-                profile.Id,
-                playlist.Id,
-                playlist.Name,
-                cancellationToken);
-
-            await ReportProviderImportJobProgressAsync(job, stage, Array.Empty<Channel>(), cancellationToken: cancellationToken);
-            return job;
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            _logger?.LogWarning(ex, "Failed to start provider import job for profile {ProfileId}, playlist {PlaylistId}.", profile.Id, playlist.Id);
-            return null;
-        }
-    }
-
-    private async Task ReportProviderImportJobProgressAsync(
-        ImportJob? importJob,
-        string stage,
-        IEnumerable<Channel> channels,
-        int failedCategoryCount = 0,
-        CancellationToken cancellationToken = default)
-    {
-        if (_importJobService is null || importJob is null)
-        {
-            return;
-        }
-
-        try
-        {
-            var liveCount = 0;
-            var vodCount = 0;
-            var seriesCount = 0;
-
-            foreach (var channel in channels)
-            {
-                switch (channel.Type)
-                {
-                    case ChannelType.Live:
-                        liveCount++;
-                        break;
-                    case ChannelType.VOD:
-                        vodCount++;
-                        break;
-                    case ChannelType.Series:
-                        seriesCount++;
-                        break;
-                }
-            }
-
-            await ReportProviderImportJobProgressAsync(
-                importJob,
-                stage,
-                liveCount,
-                vodCount,
-                seriesCount,
-                failedCategoryCount,
-                cancellationToken);
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            _logger?.LogWarning(ex, "Failed to report provider import job progress for job {ImportJobId}.", importJob.Id);
-        }
-    }
-
-    private async Task ReportProviderImportJobProgressAsync(
-        ImportJob? importJob,
-        string stage,
-        int liveCount,
-        int vodCount,
-        int seriesCount,
-        int failedCategoryCount = 0,
-        CancellationToken cancellationToken = default)
-    {
-        if (_importJobService is null || importJob is null)
-        {
-            return;
-        }
-
-        try
-        {
-            await _importJobService.ReportProgressAsync(
-                importJob.Id,
-                stage,
-                liveCount,
-                vodCount,
-                seriesCount,
-                failedCategoryCount,
-                cancellationToken);
-
-            ApplyActiveImportJobStatus(stage, liveCount, vodCount, seriesCount, failedCategoryCount);
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            _logger?.LogWarning(ex, "Failed to report provider import job progress for job {ImportJobId}.", importJob.Id);
-        }
-    }
-
-    private async Task CompleteProviderImportJobAsync(
-        ImportJob? importJob,
-        string stage,
-        CancellationToken cancellationToken)
-    {
-        if (_importJobService is null || importJob is null)
-        {
-            return;
-        }
-
-        try
-        {
-            await _importJobService.CompleteAsync(importJob.Id, stage, cancellationToken);
-            ClearActiveImportJobStatus();
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            _logger?.LogWarning(ex, "Failed to complete provider import job {ImportJobId}.", importJob.Id);
-        }
-    }
-
-    private async Task FailProviderImportJobAsync(ImportJob? importJob, Exception exception)
-    {
-        if (_importJobService is null || importJob is null)
-        {
-            return;
-        }
-
-        try
-        {
-            await _importJobService.FailAsync(importJob.Id, exception.GetBaseException().Message);
-            ClearActiveImportJobStatus();
-        }
-        catch (Exception ex)
-        {
-            _logger?.LogWarning(ex, "Failed to mark provider import job {ImportJobId} as failed.", importJob.Id);
-        }
-    }
-
-    private async Task CancelProviderImportJobAsync(ImportJob? importJob, string stage = "Canceled")
-    {
-        if (_importJobService is null || importJob is null)
-        {
-            return;
-        }
-
-        try
-        {
-            await _importJobService.CancelAsync(importJob.Id, stage, CancellationToken.None);
-            ClearActiveImportJobStatus();
-        }
-        catch (Exception ex)
-        {
-            _logger?.LogWarning(ex, "Failed to mark provider import job {ImportJobId} as canceled.", importJob.Id);
-        }
-    }
-
-    private void ApplyActiveImportJobStatus(
-        string stage,
-        int liveCount,
-        int vodCount,
-        int seriesCount,
-        int failedCategoryCount)
-    {
-        _dispatcherService.BeginInvoke(() =>
-        {
-            HasActiveImportJob = true;
-            ActiveImportJobStage = stage;
-            ActiveImportJobLiveCount = liveCount;
-            ActiveImportJobVodCount = vodCount;
-            ActiveImportJobSeriesCount = seriesCount;
-            ActiveImportJobFailedCategoryCount = failedCategoryCount;
-        });
-    }
-
     private string FormatStalkerLoadProgress(StalkerLoadProgress progress)
     {
         return progress.TotalChannels.HasValue
@@ -933,51 +731,6 @@ public partial class MainViewModel : ObservableObject
 
     [ObservableProperty]
     private Profile? _currentProfile;
-
-    public async Task RefreshActiveImportJobStatusAsync(CancellationToken cancellationToken = default)
-    {
-        if (_importJobService is null || CurrentProfileId is null)
-        {
-            ClearActiveImportJobStatus();
-            return;
-        }
-
-        try
-        {
-            var job = await _importJobService.GetActiveForProfileAsync(CurrentProfileId.Value, cancellationToken);
-            if (job is null)
-            {
-                ClearActiveImportJobStatus();
-                return;
-            }
-
-            HasActiveImportJob = true;
-            ActiveImportJobStage = job.Stage;
-            ActiveImportJobLiveCount = job.LiveCount;
-            ActiveImportJobVodCount = job.VodCount;
-            ActiveImportJobSeriesCount = job.SeriesCount;
-            ActiveImportJobFailedCategoryCount = job.FailedCategoryCount;
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            _logger?.LogWarning(ex, "Failed to refresh active import job status for profile {ProfileId}.", CurrentProfileId);
-            ClearActiveImportJobStatus();
-        }
-    }
-
-    private void ClearActiveImportJobStatus()
-    {
-        HasActiveImportJob = false;
-        ActiveImportJobStage = string.Empty;
-        ActiveImportJobLiveCount = 0;
-        ActiveImportJobVodCount = 0;
-        ActiveImportJobSeriesCount = 0;
-        ActiveImportJobFailedCategoryCount = 0;
-    }
 
     public async Task LoadProfileAsync(Profile profile)
     {
