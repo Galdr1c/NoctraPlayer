@@ -11,22 +11,21 @@
              x:DataType="vm:MainViewModel"
              x:CompileBindings="False"
              mc:Ignorable="d"
-             d:DesignWidth="390"
-             d:DesignHeight="720">
-  <Grid RowDefinitions="Auto,Auto,*,Auto">
-    <Border Grid.Row="0"
-            Padding="20,14,20,12"
+             d:DesignWidth="390" d:DesignHeight="720">
+
+  <Grid RowDefinitions="Auto,*">
+
+    <!-- Fixed search input -->
+    <Border Grid.Row="0" Padding="20,14,20,12"
             Background="{DynamicResource Bg0Brush}">
       <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+
         <Border Background="{DynamicResource Surface1Brush}"
                 CornerRadius="14">
           <Grid ColumnDefinitions="Auto,*,Auto">
-            <icons:MaterialIcon Kind="Magnify"
-                                Width="18"
-                                Height="18"
+            <icons:MaterialIcon Kind="Magnify" Width="18" Height="18"
                                 Foreground="{DynamicResource TextMutedBrush}"
-                                Margin="14,0,0,0"
-                                VerticalAlignment="Center" />
+                                Margin="14,0,0,0" VerticalAlignment="Center" />
             <TextBox Grid.Column="1"
                      x:Name="SearchInput"
                      Text="{Binding SearchQuery, Mode=TwoWay}"
@@ -34,176 +33,199 @@
                      Background="Transparent"
                      BorderThickness="0"
                      MinHeight="46"
-                     Padding="10,0"
+                     Padding="10,0,10,0"
                      FontSize="15"
                      VerticalContentAlignment="Center"
                      KeyDown="SearchInput_KeyDown" />
+              <!-- Clear button, visible when text exists -->
             <Button Grid.Column="2"
-                    Background="Transparent"
-                    BorderThickness="0"
-                    Padding="10,0"
-                    MinHeight="46"
+                    Background="Transparent" BorderThickness="0"
+                    Padding="10,0" MinHeight="46"
                     Click="ClearSearch_Click"
-                    IsVisible="{Binding SearchQuery, Converter={StaticResource StringNotEmptyToVisibilityConverter}}">
-              <icons:MaterialIcon Kind="Close"
-                                  Width="16"
-                                  Height="16"
+                    IsVisible="{Binding SearchQuery,
+                                        Converter={StaticResource StringNotEmptyToVisibilityConverter}}">
+              <icons:MaterialIcon Kind="Close" Width="16" Height="16"
                                   Foreground="{DynamicResource TextMutedBrush}" />
             </Button>
           </Grid>
         </Border>
+
         <Button Grid.Column="1"
                 Command="{Binding CommitSearchCommand}"
-                MinHeight="46"
-                Padding="16,0"
+                MinHeight="46" Padding="16,0"
                 Background="{DynamicResource AccentBrush}"
                 Foreground="{DynamicResource TextPrimaryBrush}"
-                BorderThickness="0"
-                CornerRadius="14"
-                FontWeight="Medium"
-                FontSize="14"
+                BorderThickness="0" CornerRadius="14"
+                FontWeight="Medium" FontSize="14"
                 Content="{loc:Translate Search.Button}" />
       </Grid>
     </Border>
 
-    <Border Grid.Row="1"
-            Margin="20,0,20,10"
-            Background="{DynamicResource Surface0Brush}"
-            CornerRadius="14"
-            Padding="14"
-            IsVisible="{Binding SearchSuggestion, Converter={StaticResource StringNotEmptyToVisibilityConverter}}">
-      <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-        <TextBlock Text="{loc:Translate Search.DidYouMean}"
-                   Foreground="{DynamicResource TextMutedBrush}"
-                   FontSize="12"
-                   VerticalAlignment="Center" />
-        <Button Grid.Column="1"
-                Content="{Binding SearchSuggestion}"
-                Command="{Binding ApplySearchSuggestionCommand}"
-                MinHeight="40"
-                Background="{DynamicResource Surface1Brush}"
-                Foreground="{DynamicResource AccentBrush}"
-                BorderThickness="0"
-                CornerRadius="10"
-                FontWeight="Medium"
-                FontSize="14" />
-      </Grid>
-    </Border>
+    <!-- Scrollable results -->
+    <ScrollViewer Grid.Row="1"
+                  x:Name="SearchScrollViewer"
+                  ScrollChanged="SearchScrollViewer_ScrollChanged">
+      <StackPanel Margin="20,4,20,28" Spacing="24">
 
-    <TabControl Grid.Row="2"
-                Margin="20,0"
-                IsVisible="{Binding ShowSearchEmptyState, Converter={StaticResource InverseBoolConverter}}">
-      <TabItem Header="{loc:Translate History.LiveTv}"
-               IsVisible="{Binding SearchLiveChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
-        <controls:VirtualizedResponsiveGrid ItemsSource="{Binding SearchLiveChannels}"
-                                            MinItemWidth="280"
-                                            MaxColumns="3"
-                                            ItemSpacing="16"
-                                            ScrollChanged="SearchScrollViewer_ScrollChanged">
-          <controls:VirtualizedResponsiveGrid.ItemTemplate>
-            <DataTemplate x:DataType="models:Channel">
-              <controls:MobileLiveTvCard
-                  Width="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=liveWidth}" />
-            </DataTemplate>
-          </controls:VirtualizedResponsiveGrid.ItemTemplate>
-        </controls:VirtualizedResponsiveGrid>
-      </TabItem>
+        <!-- Suggestion strip -->
+        <Border Background="{DynamicResource Surface0Brush}"
+                CornerRadius="14" Padding="14"
+                IsVisible="{Binding SearchSuggestion,
+                                    Converter={StaticResource StringNotEmptyToVisibilityConverter}}">
+          <StackPanel Spacing="8">
+            <TextBlock Text="{loc:Translate Search.DidYouMean}"
+                       Foreground="{DynamicResource TextMutedBrush}" FontSize="12" />
+            <Button Content="{Binding SearchSuggestion}"
+                    Command="{Binding ApplySearchSuggestionCommand}"
+                    MinHeight="42"
+                    Background="{DynamicResource Surface1Brush}"
+                    Foreground="{DynamicResource AccentBrush}"
+                    BorderThickness="0" CornerRadius="10"
+                    FontWeight="Medium" FontSize="14" />
+          </StackPanel>
+        </Border>
 
-      <TabItem Header="{loc:Translate History.Series}"
-               IsVisible="{Binding SearchSeriesChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
-        <controls:VirtualizedResponsiveGrid ItemsSource="{Binding SearchSeriesChannels}"
-                                            MinItemWidth="150"
-                                            MaxColumns="6"
-                                            ItemSpacing="16"
-                                            ScrollChanged="SearchScrollViewer_ScrollChanged">
-          <controls:VirtualizedResponsiveGrid.ItemTemplate>
-            <DataTemplate x:DataType="models:Series">
-              <controls:MobileSeriesCard
-                  Width="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=posterWidth}"
-                  Height="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=posterHeight}" />
-            </DataTemplate>
-          </controls:VirtualizedResponsiveGrid.ItemTemplate>
-        </controls:VirtualizedResponsiveGrid>
-      </TabItem>
+        <!-- Result sections -->
 
-      <TabItem Header="{loc:Translate History.Movies}"
-               IsVisible="{Binding SearchVodChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
-        <controls:VirtualizedResponsiveGrid ItemsSource="{Binding SearchVodChannels}"
-                                            MinItemWidth="150"
-                                            MaxColumns="6"
-                                            ItemSpacing="16"
-                                            ScrollChanged="SearchScrollViewer_ScrollChanged">
-          <controls:VirtualizedResponsiveGrid.ItemTemplate>
-            <DataTemplate x:DataType="models:Channel">
-              <controls:MobileVodCard
-                  Width="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=posterWidth}"
-                  Height="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=posterHeight}" />
-            </DataTemplate>
-          </controls:VirtualizedResponsiveGrid.ItemTemplate>
-        </controls:VirtualizedResponsiveGrid>
-      </TabItem>
-    </TabControl>
-
-    <controls:MobileEmptyStateView Grid.Row="2"
-                                   Margin="20"
-                                   IsVisible="{Binding ShowSearchEmptyState}"
-                                   IconKind="Magnify"
-                                   Title="{loc:Translate Search.Empty.Title}"
-                                   Description="{loc:Translate Search.Empty.Description}" />
-
-    <Expander Grid.Row="3"
-              Margin="20,8,20,16"
-              Header="{loc:Translate Search.SimilarResults}"
-              IsVisible="{Binding ShowSearchSimilarSection}">
-      <TabControl Height="280">
-        <TabItem Header="{loc:Translate History.LiveTv}"
-                 IsVisible="{Binding SearchSimilarLiveChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
-          <controls:VirtualizedResponsiveGrid ItemsSource="{Binding SearchSimilarLiveChannels}"
-                                              MinItemWidth="280"
-                                              MaxColumns="3"
-                                              ItemSpacing="16"
-                                              ScrollChanged="SearchScrollViewer_ScrollChanged">
-            <controls:VirtualizedResponsiveGrid.ItemTemplate>
+        <!-- Live -->
+        <StackPanel Spacing="12"
+                    IsVisible="{Binding SearchLiveChannels.Count,
+                                        Converter={StaticResource CountToVisibilityConverter}}">
+          <TextBlock Text="{loc:Translate History.LiveTv}"
+                     FontSize="18" FontWeight="SemiBold"
+                     Foreground="{DynamicResource TextPrimaryBrush}" />
+          <ItemsControl ItemsSource="{Binding SearchLiveChannels}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate><WrapPanel HorizontalAlignment="Center" /></ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="models:Channel">
-                <controls:MobileLiveTvCard
-                    Width="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=liveWidth}" />
+                <controls:MobileLiveTvCard Margin="0,0,12,12"
+                    Width="{Binding Bounds.Width,
+                                    RelativeSource={RelativeSource AncestorType=ItemsControl},
+                                    Converter={StaticResource ResponsiveCardMetricConverter},
+                                    ConverterParameter=liveWidth}" />
               </DataTemplate>
-            </controls:VirtualizedResponsiveGrid.ItemTemplate>
-          </controls:VirtualizedResponsiveGrid>
-        </TabItem>
-        <TabItem Header="{loc:Translate History.Series}"
-                 IsVisible="{Binding SearchSimilarSeriesChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
-          <controls:VirtualizedResponsiveGrid ItemsSource="{Binding SearchSimilarSeriesChannels}"
-                                              MinItemWidth="150"
-                                              MaxColumns="6"
-                                              ItemSpacing="16"
-                                              ScrollChanged="SearchScrollViewer_ScrollChanged">
-            <controls:VirtualizedResponsiveGrid.ItemTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+
+        <!-- Series -->
+        <StackPanel Spacing="12"
+                    IsVisible="{Binding SearchSeriesChannels.Count,
+                                        Converter={StaticResource CountToVisibilityConverter}}">
+          <TextBlock Text="{loc:Translate History.Series}"
+                     FontSize="18" FontWeight="SemiBold"
+                     Foreground="{DynamicResource TextPrimaryBrush}" />
+          <ItemsControl ItemsSource="{Binding SearchSeriesChannels}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate><WrapPanel HorizontalAlignment="Center" /></ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="models:Series">
-                <controls:MobileSeriesCard
+                <controls:MobileSeriesCard Margin="0,0,12,12"
                     Width="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=posterWidth}"
                     Height="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=posterHeight}" />
               </DataTemplate>
-            </controls:VirtualizedResponsiveGrid.ItemTemplate>
-          </controls:VirtualizedResponsiveGrid>
-        </TabItem>
-        <TabItem Header="{loc:Translate History.Movies}"
-                 IsVisible="{Binding SearchSimilarVodChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
-          <controls:VirtualizedResponsiveGrid ItemsSource="{Binding SearchSimilarVodChannels}"
-                                              MinItemWidth="150"
-                                              MaxColumns="6"
-                                              ItemSpacing="16"
-                                              ScrollChanged="SearchScrollViewer_ScrollChanged">
-            <controls:VirtualizedResponsiveGrid.ItemTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+
+        <!-- Movies -->
+        <StackPanel Spacing="12"
+                    IsVisible="{Binding SearchVodChannels.Count,
+                                        Converter={StaticResource CountToVisibilityConverter}}">
+          <TextBlock Text="{loc:Translate History.Movies}"
+                     FontSize="18" FontWeight="SemiBold"
+                     Foreground="{DynamicResource TextPrimaryBrush}" />
+          <ItemsControl ItemsSource="{Binding SearchVodChannels}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate><WrapPanel HorizontalAlignment="Center" /></ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="models:Channel">
-                <controls:MobileVodCard
+                <controls:MobileVodCard Margin="0,0,12,12"
                     Width="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=posterWidth}"
                     Height="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=posterHeight}" />
               </DataTemplate>
-            </controls:VirtualizedResponsiveGrid.ItemTemplate>
-          </controls:VirtualizedResponsiveGrid>
-        </TabItem>
-      </TabControl>
-    </Expander>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+
+        <!-- Similar results -->
+        <StackPanel Spacing="20" IsVisible="{Binding ShowSearchSimilarSection}">
+
+          <Border Height="1" Background="{DynamicResource BorderBrush}" />
+
+          <TextBlock Text="{loc:Translate Search.SimilarResults}"
+                     FontSize="18" FontWeight="SemiBold"
+                     Foreground="{DynamicResource TextPrimaryBrush}" />
+
+          <StackPanel Spacing="12"
+                      IsVisible="{Binding SearchSimilarLiveChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
+            <TextBlock Text="{loc:Translate History.LiveTv}"
+                       FontSize="15" FontWeight="Medium"
+                       Foreground="{DynamicResource TextMutedBrush}" />
+            <ItemsControl ItemsSource="{Binding SearchSimilarLiveChannels}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate><WrapPanel HorizontalAlignment="Center" /></ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="models:Channel">
+                  <controls:MobileLiveTvCard Margin="0,0,12,12"
+                      Width="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=liveWidth}" />
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+
+          <StackPanel Spacing="12"
+                      IsVisible="{Binding SearchSimilarSeriesChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
+            <TextBlock Text="{loc:Translate History.Series}"
+                       FontSize="15" FontWeight="Medium"
+                       Foreground="{DynamicResource TextMutedBrush}" />
+            <ItemsControl ItemsSource="{Binding SearchSimilarSeriesChannels}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate><WrapPanel HorizontalAlignment="Center" /></ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="models:Series">
+                  <controls:MobileSeriesCard Margin="0,0,12,12"
+                      Width="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=posterWidth}"
+                      Height="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=posterHeight}" />
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+
+          <StackPanel Spacing="12"
+                      IsVisible="{Binding SearchSimilarVodChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
+            <TextBlock Text="{loc:Translate History.Movies}"
+                       FontSize="15" FontWeight="Medium"
+                       Foreground="{DynamicResource TextMutedBrush}" />
+            <ItemsControl ItemsSource="{Binding SearchSimilarVodChannels}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate><WrapPanel HorizontalAlignment="Center" /></ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="models:Channel">
+                  <controls:MobileVodCard Margin="0,0,12,12"
+                      Width="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=posterWidth}"
+                      Height="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=posterHeight}" />
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+        </StackPanel>
+
+        <!-- Empty state -->
+        <controls:MobileEmptyStateView
+                    IsVisible="{Binding ShowSearchEmptyState}"
+                    IconKind="Magnify"
+                    Title="{loc:Translate Search.Empty.Title}"
+                    Description="{loc:Translate Search.Empty.Description}" />
+
+      </StackPanel>
+    </ScrollViewer>
   </Grid>
 </UserControl>

@@ -18,10 +18,11 @@
     <converters:StringNotEmptyToVisibilityConverter x:Key="StringNotEmptyToVisibilityConverter" />
   </UserControl.Resources>
 
-  <Grid Margin="24"
-        RowDefinitions="Auto,Auto,*"
-        RowSpacing="20">
-      <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
+  <ScrollViewer x:Name="MoviesScrollViewer"
+                ScrollChanged="MoviesScrollViewer_ScrollChanged">
+    <!-- Increase margins and spacing to better emulate desktop layout -->
+    <StackPanel Margin="24" Spacing="20">
+      <Grid ColumnDefinitions="*,Auto">
         <!-- Desktop-inspired title styling: bold weight and subtle letter spacing -->
         <TextBlock Text="{loc:Translate Movies.Title}"
                    FontSize="24"
@@ -37,8 +38,7 @@
                   DisplayMemberBinding="{Binding Value}"
                   IsVisible="{Binding ShowContentFilters}" />
       </Grid>
-      <Grid Grid.Row="1"
-            ColumnDefinitions="*,Auto"
+      <Grid ColumnDefinitions="*,Auto"
             ColumnSpacing="8"
             IsVisible="{Binding ShowGroupFilter}">
         <ComboBox Grid.Column="0"
@@ -68,27 +68,27 @@
                 Click="ClearGroupSelection_Click" />
       </Grid>
 
-      <controls:VirtualizedResponsiveGrid Grid.Row="2"
-                                          ItemsSource="{Binding FilteredChannels}"
-                                          MinItemWidth="150"
-                                          MaxColumns="6"
-                                          ItemSpacing="16"
-                                          MaxWidth="1400"
-                                          HorizontalAlignment="Stretch"
-                                          IsVisible="{Binding !IsContentLoading}"
-                                          ScrollChanged="MoviesScrollViewer_ScrollChanged">
-        <controls:VirtualizedResponsiveGrid.ItemTemplate>
+      <Border HorizontalAlignment="Center" MaxWidth="1400">
+        <ItemsControl ItemsSource="{Binding FilteredChannels}"
+                      IsVisible="{Binding !IsContentLoading}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <WrapPanel HorizontalAlignment="Center" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
           <DataTemplate x:DataType="models:Channel">
-            <controls:MobileVodCard
-                Width="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=posterWidth}"
-                Height="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=posterHeight}" />
+            <!-- Increase spacing between cards to match desktop -->
+            <controls:MobileVodCard Margin="0,0,16,16"
+                                    Width="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=posterWidth}"
+                                    Height="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=posterHeight}" />
           </DataTemplate>
-        </controls:VirtualizedResponsiveGrid.ItemTemplate>
-      </controls:VirtualizedResponsiveGrid>
+        </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </Border>
 
       <!-- Loading state: mirror desktop with two lines of status text -->
-      <StackPanel Grid.Row="2"
-                  Spacing="16"
+      <StackPanel Spacing="16"
                   Margin="0,80,0,0"
                   HorizontalAlignment="Center"
                   IsVisible="{Binding IsContentLoading}">
@@ -106,10 +106,10 @@
       </StackPanel>
 
       <controls:MobileEmptyStateView
-                  Grid.Row="2"
                   IsVisible="{Binding ShowEmptyChannels}"
                   IconKind="Filmstrip"
                   Title="{loc:Translate Movies.Empty.Title}"
                   Description="{loc:Translate Movies.Empty.Description}" />
-  </Grid>
+    </StackPanel>
+  </ScrollViewer>
 </UserControl>

@@ -37,14 +37,8 @@ public class MobileReleaseGuardTests
     }
 
     [Fact]
-    public void MobilePrimaryContentGrids_UseRowVirtualization()
+    public void MobilePrimaryContentGrids_UsePagedWrapPanelLayout()
     {
-        var gridControl = ReadProjectFile(
-            "Noctra.Mobile",
-            "Controls",
-            "VirtualizedResponsiveGrid.axaml");
-        Assert.Contains("<VirtualizingStackPanel", gridControl);
-
         foreach (var viewName in new[]
                  {
                      "MobileLiveView.axaml",
@@ -57,8 +51,9 @@ public class MobileReleaseGuardTests
                  })
         {
             var view = ReadProjectFile("Noctra.Mobile", "Views", viewName);
-            Assert.Contains("<controls:VirtualizedResponsiveGrid", view);
-            Assert.DoesNotContain("<WrapPanel HorizontalAlignment=\"Center\"", view);
+            Assert.DoesNotContain("<controls:VirtualizedResponsiveGrid", view);
+            Assert.Contains("<ScrollViewer", view);
+            Assert.Contains("<WrapPanel HorizontalAlignment=\"Center\"", view);
         }
     }
 

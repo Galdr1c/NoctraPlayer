@@ -6,97 +6,127 @@
              xmlns:models="using:Noctra.Models"
              xmlns:loc="using:Noctra.Mobile.Localization"
              xmlns:controls="using:Noctra.Mobile.Controls"
+             xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="Noctra.Mobile.Views.MobileFavoritesView"
              x:DataType="vm:MainViewModel"
              x:CompileBindings="False"
              mc:Ignorable="d"
-             d:DesignWidth="390"
-             d:DesignHeight="720">
-  <Grid Margin="20,16,20,28"
-        RowDefinitions="Auto,*"
-        RowSpacing="16">
-    <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
-      <TextBlock Text="{loc:Translate Favorites.Title}"
-                 FontSize="28"
-                 FontWeight="Bold"
-                 Foreground="{DynamicResource TextPrimaryBrush}"
-                 VerticalAlignment="Center" />
-      <Border Grid.Column="1"
-              Background="{DynamicResource Surface1Brush}"
-              CornerRadius="20"
-              Padding="12,6"
-              VerticalAlignment="Center"
-              IsVisible="{Binding FavoriteChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
-        <TextBlock Foreground="{DynamicResource TextMutedBrush}"
-                   FontSize="13"
-                   FontWeight="Medium">
-          <Run Text="{Binding FavoriteChannels.Count}" />
-          <Run Text=" items" />
-        </TextBlock>
-      </Border>
-    </Grid>
+             d:DesignWidth="390" d:DesignHeight="720">
 
-    <TabControl Grid.Row="1"
-                IsVisible="{Binding ShowFavoritesEmptyState, Converter={StaticResource InverseBoolConverter}}">
-      <TabItem Header="{loc:Translate History.LiveTv}"
-               IsVisible="{Binding FavoriteLiveChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
-        <controls:VirtualizedResponsiveGrid ItemsSource="{Binding FavoriteLiveChannels}"
-                                            MinItemWidth="280"
-                                            MaxColumns="3"
-                                            ItemSpacing="16"
-                                            ScrollChanged="FavoritesScrollViewer_ScrollChanged">
-          <controls:VirtualizedResponsiveGrid.ItemTemplate>
+  <ScrollViewer x:Name="FavoritesScrollViewer"
+                ScrollChanged="FavoritesScrollViewer_ScrollChanged">
+    <StackPanel Margin="20,16,20,28" Spacing="24">
+
+      <!-- Title and total count -->
+      <Grid ColumnDefinitions="*,Auto">
+        <TextBlock Text="{loc:Translate Favorites.Title}"
+                   FontSize="28" FontWeight="Bold"
+                   Foreground="{DynamicResource TextPrimaryBrush}"
+                   VerticalAlignment="Center" />
+        <Border Grid.Column="1"
+                Background="{DynamicResource Surface1Brush}"
+                CornerRadius="20" Padding="12,6"
+                VerticalAlignment="Center"
+                IsVisible="{Binding FavoriteChannels.Count,
+                                    Converter={StaticResource CountToVisibilityConverter}}">
+          <TextBlock Foreground="{DynamicResource TextMutedBrush}"
+                     FontSize="13" FontWeight="Medium">
+            <Run Text="{Binding FavoriteChannels.Count}" />
+            <Run Text=" items" />
+          </TextBlock>
+        </Border>
+      </Grid>
+
+      <!-- Live TV -->
+      <StackPanel Spacing="12"
+                  IsVisible="{Binding FavoriteLiveChannels.Count,
+                                      Converter={StaticResource CountToVisibilityConverter}}">
+        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+          <Border Width="3" Height="20" CornerRadius="2"
+                  Background="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
+          <TextBlock Grid.Column="1"
+                     Text="{loc:Translate History.LiveTv}"
+                     FontSize="18" FontWeight="SemiBold"
+                     Foreground="{DynamicResource TextPrimaryBrush}" />
+        </Grid>
+        <ItemsControl ItemsSource="{Binding FavoriteLiveChannels}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate><WrapPanel HorizontalAlignment="Center" /></ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="models:Channel">
-              <controls:MobileLiveTvCard
+              <controls:MobileLiveTvCard Margin="0,0,12,12"
                   ShowFavoriteMenu="False"
                   ShowRemoveFavoriteMenu="True"
-                  Width="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=liveWidth}" />
+                  Width="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl},
+                                  Converter={StaticResource ResponsiveCardMetricConverter},
+                                  ConverterParameter=liveWidth}" />
             </DataTemplate>
-          </controls:VirtualizedResponsiveGrid.ItemTemplate>
-        </controls:VirtualizedResponsiveGrid>
-      </TabItem>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
 
-      <TabItem Header="{loc:Translate History.Series}"
-               IsVisible="{Binding FavoriteSeriesItems.Count, Converter={StaticResource CountToVisibilityConverter}}">
-        <controls:VirtualizedResponsiveGrid ItemsSource="{Binding FavoriteSeriesItems}"
-                                            MinItemWidth="150"
-                                            MaxColumns="6"
-                                            ItemSpacing="16"
-                                            ScrollChanged="FavoritesScrollViewer_ScrollChanged">
-          <controls:VirtualizedResponsiveGrid.ItemTemplate>
+      <!-- Series -->
+      <StackPanel Spacing="12"
+                  IsVisible="{Binding FavoriteSeriesItems.Count,
+                                      Converter={StaticResource CountToVisibilityConverter}}">
+        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+          <Border Width="3" Height="20" CornerRadius="2"
+                  Background="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
+          <TextBlock Grid.Column="1"
+                     Text="{loc:Translate History.Series}"
+                     FontSize="18" FontWeight="SemiBold"
+                     Foreground="{DynamicResource TextPrimaryBrush}" />
+        </Grid>
+        <ItemsControl ItemsSource="{Binding FavoriteSeriesItems}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate><WrapPanel HorizontalAlignment="Center" /></ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="models:Series">
-              <controls:MobileSeriesCard
+              <controls:MobileSeriesCard Margin="0,0,12,12"
                   ShowRemoveFavoriteMenu="True"
                   Width="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=posterWidth}"
                   Height="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=posterHeight}" />
             </DataTemplate>
-          </controls:VirtualizedResponsiveGrid.ItemTemplate>
-        </controls:VirtualizedResponsiveGrid>
-      </TabItem>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
 
-      <TabItem Header="{loc:Translate History.Movies}"
-               IsVisible="{Binding FavoriteVodChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
-        <controls:VirtualizedResponsiveGrid ItemsSource="{Binding FavoriteVodChannels}"
-                                            MinItemWidth="150"
-                                            MaxColumns="6"
-                                            ItemSpacing="16"
-                                            ScrollChanged="FavoritesScrollViewer_ScrollChanged">
-          <controls:VirtualizedResponsiveGrid.ItemTemplate>
+      <!-- Movies -->
+      <StackPanel Spacing="12"
+                  IsVisible="{Binding FavoriteVodChannels.Count,
+                                      Converter={StaticResource CountToVisibilityConverter}}">
+        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+          <Border Width="3" Height="20" CornerRadius="2"
+                  Background="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
+          <TextBlock Grid.Column="1"
+                     Text="{loc:Translate History.Movies}"
+                     FontSize="18" FontWeight="SemiBold"
+                     Foreground="{DynamicResource TextPrimaryBrush}" />
+        </Grid>
+        <ItemsControl ItemsSource="{Binding FavoriteVodChannels}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate><WrapPanel HorizontalAlignment="Center" /></ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="models:Channel">
-              <controls:MobileVodCard
+              <controls:MobileVodCard Margin="0,0,12,12"
                   ShowRemoveFavoriteMenu="True"
                   Width="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=posterWidth}"
                   Height="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=posterHeight}" />
             </DataTemplate>
-          </controls:VirtualizedResponsiveGrid.ItemTemplate>
-        </controls:VirtualizedResponsiveGrid>
-      </TabItem>
-    </TabControl>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
 
-    <controls:MobileEmptyStateView Grid.Row="1"
-                                   IsVisible="{Binding ShowFavoritesEmptyState}"
-                                   IconKind="HeartOutline"
-                                   Title="{loc:Translate Favorites.Empty.Title}"
-                                   Description="{loc:Translate Favorites.Empty.Description}" />
-  </Grid>
+      <!-- Empty state -->
+      <controls:MobileEmptyStateView
+                  IsVisible="{Binding ShowFavoritesEmptyState}"
+                  IconKind="HeartOutline"
+                  Title="{loc:Translate Favorites.Empty.Title}"
+                  Description="{loc:Translate Favorites.Empty.Description}" />
+
+    </StackPanel>
+  </ScrollViewer>
 </UserControl>
