@@ -12,8 +12,6 @@
              x:DataType="vm:ProfilesViewModel"
              x:CompileBindings="True"
              mc:Ignorable="d"
-             d:DesignWidth="390"
-             d:DesignHeight="844"
              Background="{DynamicResource BackgroundGradientBrush}">
 
   <UserControl.Styles>

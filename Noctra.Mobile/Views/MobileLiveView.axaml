@@ -29,8 +29,6 @@
                    Foreground="{DynamicResource TextPrimaryBrush}" />
         <ComboBox Grid.Column="1"
                   Width="250"
-                  MinHeight="48"
-                  CornerRadius="12"
                   ItemsSource="{Binding SortOptions}"
                   SelectedValue="{Binding SelectedSortOrder}"
                   SelectedValueBinding="{Binding Key}"
@@ -44,9 +42,7 @@
                   x:Name="GroupFilterComboBox"
                   ItemsSource="{Binding Groups}"
                   SelectedItem="{Binding SelectedGroup}"
-                  PlaceholderText="{loc:Translate Common.All}"
-                  MinHeight="48"
-                  CornerRadius="12">
+                  PlaceholderText="{loc:Translate Common.All}">
           <ComboBox.ItemTemplate>
             <DataTemplate>
               <TextBlock Text="{Binding}"

@@ -11,9 +11,7 @@
              x:Class="Noctra.Mobile.Views.MobileSeriesView"
              x:DataType="vm:MainViewModel"
              x:CompileBindings="False"
-             mc:Ignorable="d"
-             d:DesignWidth="390"
-             d:DesignHeight="720">
+             mc:Ignorable="d">
   <UserControl.Resources>
     <converters:StringNotEmptyToVisibilityConverter x:Key="StringNotEmptyToVisibilityConverter" />
   </UserControl.Resources>
@@ -44,9 +42,7 @@
                   x:Name="GroupFilterComboBox"               
                   ItemsSource="{Binding Groups}"
                   SelectedItem="{Binding SelectedGroup}"
-                  PlaceholderText="{loc:Translate Common.All}"
-                  MinHeight="48"
-                  CornerRadius="12">
+                  PlaceholderText="{loc:Translate Common.All}">
           <ComboBox.ItemTemplate>
             <DataTemplate>
               <TextBlock Text="{Binding}"
