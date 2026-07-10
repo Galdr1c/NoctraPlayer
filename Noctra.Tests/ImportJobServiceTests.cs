@@ -138,6 +138,25 @@ public sealed class ImportJobServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task CancelAsync_MarksJobCanceledAndRemovesItFromActiveJobs()
+    {
+        var service = new ImportJobService(_contextFactory);
+        var job = await service.StartAsync(ImportJobKind.PlaylistRefresh, profileId: 9, playlistId: 3, sourceName: "Refresh");
+
+        await service.CancelAsync(job.Id, stage: "Canceled");
+
+        using var context = new AppDbContext(_options);
+        var persisted = await context.ImportJobs.SingleAsync(j => j.Id == job.Id);
+        var active = await service.GetActiveForProfileAsync(profileId: 9);
+
+        Assert.Equal(ImportJobStatus.Canceled, persisted.Status);
+        Assert.Equal("Canceled", persisted.Stage);
+        Assert.Null(persisted.ErrorMessage);
+        Assert.NotNull(persisted.CompletedAt);
+        Assert.Null(active);
+    }
+
+    [Fact]
     public async Task GetActiveForProfileAsync_ReturnsNewestRunningOrQueuedJob()
     {
         var service = new ImportJobService(_contextFactory);

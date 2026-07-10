@@ -103,6 +103,21 @@ public sealed class ImportJobService : IImportJobService
         await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
+    public async Task CancelAsync(int jobId, string stage, CancellationToken cancellationToken = default)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken).ConfigureAwait(false);
+        var job = await GetJobOrThrowAsync(context, jobId, cancellationToken).ConfigureAwait(false);
+        var now = DateTime.UtcNow;
+
+        job.Status = ImportJobStatus.Canceled;
+        job.Stage = string.IsNullOrWhiteSpace(stage) ? "Canceled" : stage;
+        job.ErrorMessage = null;
+        job.UpdatedAt = now;
+        job.CompletedAt = now;
+
+        await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+    }
+
     public async Task<ImportJob?> GetActiveForProfileAsync(int? profileId, CancellationToken cancellationToken = default)
     {
         await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken).ConfigureAwait(false);

@@ -747,6 +747,24 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
+    private async Task CancelProviderImportJobAsync(ImportJob? importJob, string stage = "Canceled")
+    {
+        if (_importJobService is null || importJob is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await _importJobService.CancelAsync(importJob.Id, stage, CancellationToken.None);
+            ClearActiveImportJobStatus();
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(ex, "Failed to mark provider import job {ImportJobId} as canceled.", importJob.Id);
+        }
+    }
+
     private void ApplyActiveImportJobStatus(
         string stage,
         int liveCount,
@@ -1788,6 +1806,18 @@ public partial class MainViewModel : ObservableObject
         catch (OperationCanceledException)
         {
             _logger?.LogDebug("[Xtream] Progressive load cancelled for profile {ProfileId}", profile.Id);
+            await CancelProviderImportJobAsync(importJob);
+            if (refreshStagingPlaylist is not null)
+            {
+                try
+                {
+                    await _playlistService.AbandonRefreshStagingPlaylistAsync(refreshStagingPlaylist.Id);
+                }
+                catch (Exception cleanupEx)
+                {
+                    _logger?.LogWarning(cleanupEx, "[Xtream] Failed to clean canceled refresh staging playlist {PlaylistId}", refreshStagingPlaylist.Id);
+                }
+            }
         }
         catch (Exception ex)
         {
@@ -2073,6 +2103,18 @@ public partial class MainViewModel : ObservableObject
         catch (OperationCanceledException)
         {
             _logger?.LogDebug("[Stalker] Progressive load cancelled for profile {ProfileId}", profile.Id);
+            await CancelProviderImportJobAsync(importJob);
+            if (refreshStagingPlaylist is not null)
+            {
+                try
+                {
+                    await _playlistService.AbandonRefreshStagingPlaylistAsync(refreshStagingPlaylist.Id);
+                }
+                catch (Exception cleanupEx)
+                {
+                    _logger?.LogWarning(cleanupEx, "[Stalker] Failed to clean canceled refresh staging playlist {PlaylistId}", refreshStagingPlaylist.Id);
+                }
+            }
         }
         catch (Exception ex)
         {

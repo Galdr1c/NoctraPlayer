@@ -26,6 +26,8 @@ public interface IImportJobService
 
     Task FailAsync(int jobId, string errorMessage, CancellationToken cancellationToken = default);
 
+    Task CancelAsync(int jobId, string stage, CancellationToken cancellationToken = default);
+
     Task<ImportJob?> GetActiveForProfileAsync(int? profileId, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<ImportJob>> GetRecentForProfileAsync(
