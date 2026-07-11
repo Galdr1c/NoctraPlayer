@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Threading;
@@ -47,6 +48,8 @@ public partial class MainView : UserControl
     private Thickness _lastSafeArea;
     private int _profileSelectionRetryCount;
     private bool _startupFlowStarted;
+    private readonly Stack<string> _navigationHistory = new();
+    private bool _isNavigatingBack;
 
     // Holds the currently active profiles view model when showing the profiles overlay.
     private ProfilesViewModel? _activeProfilesViewModel;
@@ -363,6 +366,21 @@ public partial class MainView : UserControl
 
         if (!string.Equals(_currentDestination, "Home", StringComparison.Ordinal))
         {
+            if (_navigationHistory.Count > 0)
+            {
+                var previous = _navigationHistory.Pop();
+                _isNavigatingBack = true;
+                try
+                {
+                    NavigateToDestination(previous);
+                }
+                finally
+                {
+                    _isNavigatingBack = false;
+                }
+                return true;
+            }
+
             NavigateToDestination("Home");
             return true;
         }
@@ -486,18 +504,7 @@ public partial class MainView : UserControl
 
     private void OnSettingsClick(object? sender, RoutedEventArgs e)
     {
-        if (DataContext is MobileMainViewModel viewModel)
-        {
-            viewModel.SelectDestination("Settings");
-            CloseSeriesDetailIfOpen();
-            var resolver = GetViewModelResolver();
-            if (resolver is not null)
-            {
-                MobileSettingsContent.DataContext = resolver.GetSettingsViewModel();
-            }
-
-            UpdateContentVisibility("Settings");
-        }
+        NavigateToDestination("Settings");
     }
 
     private void ShowProfileSelection()
@@ -623,6 +630,21 @@ public partial class MainView : UserControl
         if (DataContext is not MobileMainViewModel viewModel)
         {
             return;
+        }
+
+        // Navigation history management: push when navigating from More to a sub-page,
+        // clear when switching tabs. Skip during back navigation to avoid double-pushing.
+        if (!_isNavigatingBack)
+        {
+            if (string.Equals(_currentDestination, "More", StringComparison.Ordinal) &&
+                destination is not ("Home" or "Live" or "Movies" or "Series" or "More"))
+            {
+                _navigationHistory.Push(_currentDestination);
+            }
+            else if (destination is "Home" or "Live" or "Movies" or "Series" or "More")
+            {
+                _navigationHistory.Clear();
+            }
         }
 
         viewModel.SelectDestination(destination);
