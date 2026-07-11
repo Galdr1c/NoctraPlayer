@@ -133,10 +133,10 @@ public sealed class ResponsiveCardMetricConverter : IValueConverter
             if (mode.StartsWith("live", StringComparison.OrdinalIgnoreCase))
             {
                 // Live cards: tablet portrait'da en az 2, yatayda 3-4 kart.
-                // MinWidth 220: 496px+ ekranda 2 kart garanti (tablette 3 kart).
+                // MinWidth 200: daha dar ekranlarda 2. kart rahatça sığsın.
                 // MaxColumns 4: yatay tablette 4 kart.
-                // MaxWidth 460: büyük ekranda kartlar aşırı büyümesin.
-                return new CardMetricProfile(220, 460, 300, 0.30, 16, 4);
+                // MaxWidth 420: büyük ekranda kartlar aşırı büyümesin.
+                return new CardMetricProfile(220, 410, 270, 0.30, 16, 4);
             }
 
             if (mode.StartsWith("profile", StringComparison.OrdinalIgnoreCase))
@@ -153,7 +153,9 @@ public sealed class ResponsiveCardMetricConverter : IValueConverter
             }
 
             // Poster cards: 2 columns on most phones, 3+ on foldables/tablets.
-            return new CardMetricProfile(150, 190, 160, 1.50, 16, 6);
+            // MinWidth 135: dar ekranlarda 2. kart rahatça sığsın.
+            // MaxWidth 175: büyük ekranda kartlar aşırı büyümesin.
+            return new CardMetricProfile(150, 180, 150, 1.50, 16, 6);
         }
     }
 }

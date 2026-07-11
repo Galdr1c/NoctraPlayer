@@ -13,12 +13,10 @@
   <UserControl.Resources>
     <MenuFlyout x:Key="CardActionsFlyout">
       <MenuItem Header="{loc:Translate Context.MyList.Toggle}"
-                Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).AddToMyListCommand}"
-                CommandParameter="{Binding}"
+                Click="Context_AddToMyList_Click"
                 IsVisible="{Binding ., Converter={StaticResource MediaSupportsMyListConverter}}"/>
       <MenuItem Header="{loc:Translate Context.Favorite.Toggle}"
-                Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).ToggleFavoriteCommand}"
-                CommandParameter="{Binding}"
+                Click="Context_ToggleFavorite_Click"
                 IsVisible="{Binding ., Converter={StaticResource MediaSupportsFavoriteConverter}}"/>
     </MenuFlyout>
   </UserControl.Resources>

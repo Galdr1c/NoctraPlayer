@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.VisualTree;
 using Noctra.Models;
 using Noctra.ViewModels;
@@ -64,5 +65,63 @@ public partial class MobileLiveTvCard : UserControl
             viewModel.SelectMediaCommand.Execute(channel);
             e.Handled = true;
         }
+    }
+
+    private void Context_ToggleFavorite_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is Channel media && this.FindAncestorOfType<ItemsControl>()?.DataContext is MainViewModel vm)
+        {
+            if (vm.ToggleFavoriteCommand.CanExecute(media))
+            {
+                vm.ToggleFavoriteCommand.Execute(media);
+            }
+        }
+    }
+
+    private void Context_RemoveFromFavorites_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is Channel media && this.FindAncestorOfType<ItemsControl>()?.DataContext is MainViewModel vm)
+        {
+            if (vm.RemoveFromFavoritesCommand.CanExecute(media))
+            {
+                vm.RemoveFromFavoritesCommand.Execute(media);
+            }
+        }
+    }
+
+    private void Context_RemoveFromMyList_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is Channel media && this.FindAncestorOfType<ItemsControl>()?.DataContext is MainViewModel vm)
+        {
+            if (vm.RemoveFromMyListCommand.CanExecute(media))
+            {
+                vm.RemoveFromMyListCommand.Execute(media);
+            }
+        }
+    }
+
+    private void Context_RemoveFromHistory_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is Channel media && this.FindAncestorOfType<ItemsControl>()?.DataContext is MainViewModel vm)
+        {
+            if (vm.RemoveFromHistoryCommand.CanExecute(media))
+            {
+                vm.RemoveFromHistoryCommand.Execute(media);
+            }
+        }
+    }
+
+    private void FavoriteBtn_Tapped(object? sender, TappedEventArgs e)
+    {
+        // Kalp ikonuna dokununca favori toggle çalışsın ama KART AÇILMASIN.
+        // Event bubbling'i kır: e.Handled = true → CardContainer_Tapped tetiklenmez.
+        if (DataContext is Channel media && this.FindAncestorOfType<ItemsControl>()?.DataContext is MainViewModel vm)
+        {
+            if (vm.ToggleFavoriteCommand.CanExecute(media))
+            {
+                vm.ToggleFavoriteCommand.Execute(media);
+            }
+        }
+        e.Handled = true;
     }
 }

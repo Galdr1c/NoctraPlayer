@@ -13,32 +13,27 @@
   <UserControl.Resources>
     <MenuFlyout x:Key="CardActionsFlyout">
       <MenuItem Header="{loc:Translate Context.MyList.Toggle}"
-                Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).AddToMyListCommand}"
-                CommandParameter="{Binding}"
+                Click="Context_AddToMyList_Click"
                 IsVisible="{Binding ., Converter={StaticResource MediaSupportsMyListConverter}}"/>
       <MenuItem Header="{loc:Translate MyList.Remove}"
-                Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).RemoveFromMyListCommand}"
-                CommandParameter="{Binding}"
+                Click="Context_RemoveFromMyList_Click"
                 IsVisible="{Binding #SeriesCardControl.ShowRemoveMyListMenu}">
         <MenuItem.Icon>
           <icons:MaterialIcon Kind="BookmarkRemoveOutline" />
         </MenuItem.Icon>
       </MenuItem>
       <MenuItem Header="{loc:Translate Context.Favorite.Toggle}"
-                Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).ToggleFavoriteCommand}"
-                CommandParameter="{Binding}"
+                Click="Context_ToggleFavorite_Click"
                 IsVisible="{Binding ., Converter={StaticResource MediaSupportsFavoriteConverter}}"/>
       <MenuItem Header="{loc:Translate Context.Favorite.Toggle}"
-                Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).RemoveFromFavoritesCommand}"
-                CommandParameter="{Binding}"
+                Click="Context_RemoveFromFavorites_Click"
                 IsVisible="{Binding #SeriesCardControl.ShowRemoveFavoriteMenu}">
         <MenuItem.Icon>
           <icons:MaterialIcon Kind="HeartRemoveOutline" />
         </MenuItem.Icon>
       </MenuItem>
       <MenuItem Header="{loc:Translate History.Remove}"
-                Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).RemoveFromHistoryCommand}"
-                CommandParameter="{Binding}"
+                Click="Context_RemoveFromHistory_Click"
                 IsVisible="{Binding #SeriesCardControl.ShowHistoryMenu}">
         <MenuItem.Icon>
           <icons:MaterialIcon Kind="DeleteOutline" />

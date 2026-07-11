@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.VisualTree;
 using Noctra.Models;
 using Noctra.ViewModels;
@@ -54,6 +55,61 @@ public partial class MobileSeriesCard : UserControl
         {
             viewModel.SelectMediaCommand.Execute(series);
             e.Handled = true;
+        }
+    }
+
+    private void Context_AddToMyList_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is Series media && this.FindAncestorOfType<ItemsControl>()?.DataContext is MainViewModel vm)
+        {
+            if (vm.AddToMyListCommand.CanExecute(media))
+            {
+                vm.AddToMyListCommand.Execute(media);
+            }
+        }
+    }
+
+    private void Context_RemoveFromMyList_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is Series media && this.FindAncestorOfType<ItemsControl>()?.DataContext is MainViewModel vm)
+        {
+            if (vm.RemoveFromMyListCommand.CanExecute(media))
+            {
+                vm.RemoveFromMyListCommand.Execute(media);
+            }
+        }
+    }
+
+    private void Context_ToggleFavorite_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is Series media && this.FindAncestorOfType<ItemsControl>()?.DataContext is MainViewModel vm)
+        {
+            if (vm.ToggleFavoriteCommand.CanExecute(media))
+            {
+                vm.ToggleFavoriteCommand.Execute(media);
+            }
+        }
+    }
+
+    private void Context_RemoveFromFavorites_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is Series media && this.FindAncestorOfType<ItemsControl>()?.DataContext is MainViewModel vm)
+        {
+            if (vm.RemoveFromFavoritesCommand.CanExecute(media))
+            {
+                vm.RemoveFromFavoritesCommand.Execute(media);
+            }
+        }
+    }
+
+    private void Context_RemoveFromHistory_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is Series media && this.FindAncestorOfType<ItemsControl>()?.DataContext is MainViewModel vm)
+        {
+            if (vm.RemoveFromHistoryCommand.CanExecute(media))
+            {
+                vm.RemoveFromHistoryCommand.Execute(media);
+            }
         }
     }
 }

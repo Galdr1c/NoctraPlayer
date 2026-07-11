@@ -13,32 +13,28 @@
   <UserControl.Resources>
     <MenuFlyout x:Key="LiveCardActionsFlyout">
       <MenuItem Header="{loc:Translate Context.Favorite.Toggle}"
-                Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).ToggleFavoriteCommand}"
-                CommandParameter="{Binding}"
+                Click="Context_ToggleFavorite_Click"
                 IsVisible="{Binding #LiveTvCardControl.ShowFavoriteMenu}">
         <MenuItem.Icon>
           <icons:MaterialIcon Kind="HeartOutline" />
         </MenuItem.Icon>
       </MenuItem>
       <MenuItem Header="{loc:Translate Context.Favorite.Toggle}"
-                Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).RemoveFromFavoritesCommand}"
-                CommandParameter="{Binding}"
+                Click="Context_RemoveFromFavorites_Click"
                 IsVisible="{Binding #LiveTvCardControl.ShowRemoveFavoriteMenu}">
         <MenuItem.Icon>
           <icons:MaterialIcon Kind="HeartRemoveOutline" />
         </MenuItem.Icon>
       </MenuItem>
       <MenuItem Header="{loc:Translate MyList.Remove}"
-                Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).RemoveFromMyListCommand}"
-                CommandParameter="{Binding}"
+                Click="Context_RemoveFromMyList_Click"
                 IsVisible="{Binding #LiveTvCardControl.ShowMyListMenu}">
         <MenuItem.Icon>
           <icons:MaterialIcon Kind="BookmarkRemoveOutline" />
         </MenuItem.Icon>
       </MenuItem>
       <MenuItem Header="{loc:Translate History.Remove}"
-                Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).RemoveFromHistoryCommand}"
-                CommandParameter="{Binding}"
+                Click="Context_RemoveFromHistory_Click"
                 IsVisible="{Binding #LiveTvCardControl.ShowHistoryMenu}">
         <MenuItem.Icon>
           <icons:MaterialIcon Kind="DeleteOutline" />
@@ -132,8 +128,7 @@
                   BorderThickness="0"
                   Padding="6"
                   VerticalAlignment="Center"
-                  Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).ToggleFavoriteCommand}"
-                  CommandParameter="{Binding}"
+                  Tapped="FavoriteBtn_Tapped"
                   IsVisible="{Binding #LiveTvCardControl.ShowFavoriteMenu}">
             <Button.ContextFlyout>
               <StaticResource ResourceKey="LiveCardActionsFlyout" />

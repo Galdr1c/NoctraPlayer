@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.VisualTree;
 using Noctra.Models;
 using Noctra.ViewModels;
@@ -29,4 +30,27 @@ public partial class MobileContinueWatchingCard : UserControl
             e.Handled = true;
         }
     }
+
+    private void Context_AddToMyList_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is Channel media && this.FindAncestorOfType<ItemsControl>()?.DataContext is MainViewModel vm)
+        {
+            if (vm.AddToMyListCommand.CanExecute(media))
+            {
+                vm.AddToMyListCommand.Execute(media);
+            }
+        }
+    }
+
+    private void Context_ToggleFavorite_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is Channel media && this.FindAncestorOfType<ItemsControl>()?.DataContext is MainViewModel vm)
+        {
+            if (vm.ToggleFavoriteCommand.CanExecute(media))
+            {
+                vm.ToggleFavoriteCommand.Execute(media);
+            }
+        }
+    }
+
 }
