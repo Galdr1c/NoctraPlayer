@@ -73,8 +73,12 @@ public partial class MobileSettingsView : UserControl
         UpsellHost.Show();
     }
 
-    private void DarkTheme_PointerPressed(object? sender, PointerPressedEventArgs e)
+    private void DarkTheme_Tapped(object? sender, TappedEventArgs e)
     {
+        // Tapped (PointerPressed değil) kullanıyoruz: parmak ekrana değdiği an
+        // değil, gerçek bir "tap" (kısa dokunma) olduğunda tetiklenir. Böylece
+        // kullanıcı scroll için parmağını kaydırırken tema butonunun üstünden
+        // geçince yanlışlıkla tema değişmez.
         if (_viewModel is null)
         {
             return;
@@ -84,8 +88,9 @@ public partial class MobileSettingsView : UserControl
         UpdateThemeSelection(true);
     }
 
-    private void LightTheme_PointerPressed(object? sender, PointerPressedEventArgs e)
+    private void LightTheme_Tapped(object? sender, TappedEventArgs e)
     {
+        // Tapped: scroll sırasında yanlışlıkla tetiklenmeyi önler (yukarıya bakın).
         if (_viewModel is null)
         {
             return;
