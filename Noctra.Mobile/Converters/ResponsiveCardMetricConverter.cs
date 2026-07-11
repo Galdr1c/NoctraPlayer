@@ -20,13 +20,42 @@ namespace Noctra.Mobile.Converters;
 /// </summary>
 public sealed class ResponsiveCardMetricConverter : IValueConverter
 {
+    // Hysteresis: scroll sırasında scrollbar görünür/gizlenir veya küçük layout
+    // titreşimleri Bounds.Width'i 1-15px oynatabilir. Aynı column sayısı içinde
+    // kart genişliğinin sürekli değişip "shimmer" etmesini engellemek için, son
+    // hesaplanan genişliği mode bazında cache'ler ve sadece column sayısı gerçekten
+    // değiştiğinde veya anlamlı bir genişlik farkı (>8px) oluştuğunda günceller.
+    private static double? _lastAvailableWidth;
+    private static double _lastComputedWidth;
+    private static string? _lastMode;
+
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
         var availableWidth = ToDouble(value);
         var mode = parameter?.ToString() ?? "posterWidth";
 
         var profile = CardMetricProfile.For(mode);
+
+        // Aynı mode ve yaklaşık aynı genişlik: cache'lenen değeri döndür (shimmer önler).
+        // 8px hysteresis bandı: scrollbar/aşırı render titreşimlerini filtreler.
+        if (_lastMode == mode &&
+            _lastAvailableWidth.HasValue &&
+            Math.Abs(_lastAvailableWidth.Value - availableWidth) <= 8)
+        {
+            return mode.EndsWith("Height", StringComparison.OrdinalIgnoreCase)
+                ? Math.Round(_lastComputedWidth * profile.HeightRatio)
+                : _lastComputedWidth;
+        }
+
         var width = CalculateWidth(availableWidth, profile);
+
+        // Quantization: kart genişliğini 2px'lik birimlere yuvarla. Bu, sub-pixel
+        // titreşimlerini ve WrapPanel'in sürekli yeniden düzenlenmesini engeller.
+        width = Math.Floor(width / 2) * 2;
+
+        _lastAvailableWidth = availableWidth;
+        _lastComputedWidth = width;
+        _lastMode = mode;
 
         if (mode.EndsWith("Height", StringComparison.OrdinalIgnoreCase))
         {
@@ -103,8 +132,11 @@ public sealed class ResponsiveCardMetricConverter : IValueConverter
 
             if (mode.StartsWith("live", StringComparison.OrdinalIgnoreCase))
             {
-                // Live rows stay full-width on phones, then split cleanly on tablets.
-                return new CardMetricProfile(280, 420, 320, 0.30, 16, 3);
+                // Live cards: tablet portrait'da en az 2, yatayda 3-4 kart.
+                // MinWidth 220: 496px+ ekranda 2 kart garanti (tablette 3 kart).
+                // MaxColumns 4: yatay tablette 4 kart.
+                // MaxWidth 460: büyük ekranda kartlar aşırı büyümesin.
+                return new CardMetricProfile(220, 460, 300, 0.30, 16, 4);
             }
 
             if (mode.StartsWith("profile", StringComparison.OrdinalIgnoreCase))

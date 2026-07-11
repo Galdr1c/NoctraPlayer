@@ -17,7 +17,7 @@
   </UserControl.Resources>
 
   <ScrollViewer x:Name="SeriesScrollViewer"
-                ScrollChanged="SeriesScrollViewer_ScrollChanged">
+                ScrollChanged="SeriesScrollViewer_ScrollChanged" VerticalScrollBarVisibility="Visible" HorizontalScrollBarVisibility="Disabled">
     <!-- Increase margins and spacing to better emulate the desktop layout -->
     <StackPanel Margin="24" Spacing="20">
       <Grid ColumnDefinitions="*,Auto">
@@ -57,12 +57,12 @@
                 Click="ClearGroupSelection_Click" />
       </Grid>
 
-      <Border HorizontalAlignment="Center" MaxWidth="1400">
+      <Border HorizontalAlignment="Stretch" MaxWidth="1400">
         <ItemsControl ItemsSource="{Binding SeriesViewItems}"
-                      IsVisible="{Binding !IsContentLoading}">
+                      IsVisible="{Binding !IsContentLoading}" HorizontalAlignment="Stretch">
           <ItemsControl.ItemsPanel>
             <ItemsPanelTemplate>
-              <WrapPanel HorizontalAlignment="Center" />
+              <WrapPanel HorizontalAlignment="Stretch" />
             </ItemsPanelTemplate>
           </ItemsControl.ItemsPanel>
           <ItemsControl.ItemTemplate>

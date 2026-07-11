@@ -14,7 +14,7 @@
              d:DesignWidth="390" d:DesignHeight="720">
 
   <ScrollViewer x:Name="FavoritesScrollViewer"
-                ScrollChanged="FavoritesScrollViewer_ScrollChanged">
+                ScrollChanged="FavoritesScrollViewer_ScrollChanged" VerticalScrollBarVisibility="Visible" HorizontalScrollBarVisibility="Disabled">
     <StackPanel Margin="20,16,20,28" Spacing="24">
 
       <!-- Title and total count -->
@@ -49,9 +49,9 @@
                      FontSize="18" FontWeight="SemiBold"
                      Foreground="{DynamicResource TextPrimaryBrush}" />
         </Grid>
-        <ItemsControl ItemsSource="{Binding FavoriteLiveChannels}">
+        <ItemsControl ItemsSource="{Binding FavoriteLiveChannels}" HorizontalAlignment="Stretch">
           <ItemsControl.ItemsPanel>
-            <ItemsPanelTemplate><WrapPanel HorizontalAlignment="Center" /></ItemsPanelTemplate>
+            <ItemsPanelTemplate><WrapPanel HorizontalAlignment="Stretch" /></ItemsPanelTemplate>
           </ItemsControl.ItemsPanel>
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="models:Channel">
@@ -78,9 +78,9 @@
                      FontSize="18" FontWeight="SemiBold"
                      Foreground="{DynamicResource TextPrimaryBrush}" />
         </Grid>
-        <ItemsControl ItemsSource="{Binding FavoriteSeriesItems}">
+        <ItemsControl ItemsSource="{Binding FavoriteSeriesItems}" HorizontalAlignment="Stretch">
           <ItemsControl.ItemsPanel>
-            <ItemsPanelTemplate><WrapPanel HorizontalAlignment="Center" /></ItemsPanelTemplate>
+            <ItemsPanelTemplate><WrapPanel HorizontalAlignment="Stretch" /></ItemsPanelTemplate>
           </ItemsControl.ItemsPanel>
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="models:Series">
@@ -105,9 +105,9 @@
                      FontSize="18" FontWeight="SemiBold"
                      Foreground="{DynamicResource TextPrimaryBrush}" />
         </Grid>
-        <ItemsControl ItemsSource="{Binding FavoriteVodChannels}">
+        <ItemsControl ItemsSource="{Binding FavoriteVodChannels}" HorizontalAlignment="Stretch">
           <ItemsControl.ItemsPanel>
-            <ItemsPanelTemplate><WrapPanel HorizontalAlignment="Center" /></ItemsPanelTemplate>
+            <ItemsPanelTemplate><WrapPanel HorizontalAlignment="Stretch" /></ItemsPanelTemplate>
           </ItemsControl.ItemsPanel>
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="models:Channel">

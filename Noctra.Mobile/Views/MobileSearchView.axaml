@@ -64,7 +64,7 @@
     <!-- Scrollable results -->
     <ScrollViewer Grid.Row="1"
                   x:Name="SearchScrollViewer"
-                  ScrollChanged="SearchScrollViewer_ScrollChanged">
+                  ScrollChanged="SearchScrollViewer_ScrollChanged" VerticalScrollBarVisibility="Visible" HorizontalScrollBarVisibility="Disabled">
       <StackPanel Margin="20,4,20,28" Spacing="24">
 
         <!-- Suggestion strip -->
@@ -94,9 +94,9 @@
           <TextBlock Text="{loc:Translate History.LiveTv}"
                      FontSize="18" FontWeight="SemiBold"
                      Foreground="{DynamicResource TextPrimaryBrush}" />
-          <ItemsControl ItemsSource="{Binding SearchLiveChannels}">
+          <ItemsControl ItemsSource="{Binding SearchLiveChannels}" HorizontalAlignment="Stretch">
             <ItemsControl.ItemsPanel>
-              <ItemsPanelTemplate><WrapPanel HorizontalAlignment="Center" /></ItemsPanelTemplate>
+              <ItemsPanelTemplate><WrapPanel HorizontalAlignment="Stretch" /></ItemsPanelTemplate>
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="models:Channel">
@@ -117,9 +117,9 @@
           <TextBlock Text="{loc:Translate History.Series}"
                      FontSize="18" FontWeight="SemiBold"
                      Foreground="{DynamicResource TextPrimaryBrush}" />
-          <ItemsControl ItemsSource="{Binding SearchSeriesChannels}">
+          <ItemsControl ItemsSource="{Binding SearchSeriesChannels}" HorizontalAlignment="Stretch">
             <ItemsControl.ItemsPanel>
-              <ItemsPanelTemplate><WrapPanel HorizontalAlignment="Center" /></ItemsPanelTemplate>
+              <ItemsPanelTemplate><WrapPanel HorizontalAlignment="Stretch" /></ItemsPanelTemplate>
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="models:Series">
@@ -138,9 +138,9 @@
           <TextBlock Text="{loc:Translate History.Movies}"
                      FontSize="18" FontWeight="SemiBold"
                      Foreground="{DynamicResource TextPrimaryBrush}" />
-          <ItemsControl ItemsSource="{Binding SearchVodChannels}">
+          <ItemsControl ItemsSource="{Binding SearchVodChannels}" HorizontalAlignment="Stretch">
             <ItemsControl.ItemsPanel>
-              <ItemsPanelTemplate><WrapPanel HorizontalAlignment="Center" /></ItemsPanelTemplate>
+              <ItemsPanelTemplate><WrapPanel HorizontalAlignment="Stretch" /></ItemsPanelTemplate>
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="models:Channel">
@@ -166,9 +166,9 @@
             <TextBlock Text="{loc:Translate History.LiveTv}"
                        FontSize="15" FontWeight="Medium"
                        Foreground="{DynamicResource TextMutedBrush}" />
-            <ItemsControl ItemsSource="{Binding SearchSimilarLiveChannels}">
+            <ItemsControl ItemsSource="{Binding SearchSimilarLiveChannels}" HorizontalAlignment="Stretch">
               <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate><WrapPanel HorizontalAlignment="Center" /></ItemsPanelTemplate>
+                <ItemsPanelTemplate><WrapPanel HorizontalAlignment="Stretch" /></ItemsPanelTemplate>
               </ItemsControl.ItemsPanel>
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="models:Channel">
@@ -184,9 +184,9 @@
             <TextBlock Text="{loc:Translate History.Series}"
                        FontSize="15" FontWeight="Medium"
                        Foreground="{DynamicResource TextMutedBrush}" />
-            <ItemsControl ItemsSource="{Binding SearchSimilarSeriesChannels}">
+            <ItemsControl ItemsSource="{Binding SearchSimilarSeriesChannels}" HorizontalAlignment="Stretch">
               <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate><WrapPanel HorizontalAlignment="Center" /></ItemsPanelTemplate>
+                <ItemsPanelTemplate><WrapPanel HorizontalAlignment="Stretch" /></ItemsPanelTemplate>
               </ItemsControl.ItemsPanel>
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="models:Series">
@@ -203,9 +203,9 @@
             <TextBlock Text="{loc:Translate History.Movies}"
                        FontSize="15" FontWeight="Medium"
                        Foreground="{DynamicResource TextMutedBrush}" />
-            <ItemsControl ItemsSource="{Binding SearchSimilarVodChannels}">
+            <ItemsControl ItemsSource="{Binding SearchSimilarVodChannels}" HorizontalAlignment="Stretch">
               <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate><WrapPanel HorizontalAlignment="Center" /></ItemsPanelTemplate>
+                <ItemsPanelTemplate><WrapPanel HorizontalAlignment="Stretch" /></ItemsPanelTemplate>
               </ItemsControl.ItemsPanel>
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="models:Channel">

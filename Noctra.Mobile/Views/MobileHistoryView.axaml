@@ -14,7 +14,7 @@
              d:DesignWidth="390" d:DesignHeight="720">
 
   <ScrollViewer x:Name="HistoryScrollViewer"
-                ScrollChanged="HistoryScrollViewer_ScrollChanged">
+                ScrollChanged="HistoryScrollViewer_ScrollChanged" VerticalScrollBarVisibility="Visible" HorizontalScrollBarVisibility="Disabled">
     <StackPanel Margin="20,16,20,28" Spacing="24">
 
       <!-- Title and clear action -->
@@ -55,9 +55,9 @@
                      FontSize="18" FontWeight="SemiBold"
                      Foreground="{DynamicResource TextPrimaryBrush}" />
         </Grid>
-        <ItemsControl ItemsSource="{Binding HistoryLiveChannels}">
+        <ItemsControl ItemsSource="{Binding HistoryLiveChannels}" HorizontalAlignment="Stretch">
           <ItemsControl.ItemsPanel>
-            <ItemsPanelTemplate><WrapPanel HorizontalAlignment="Center" /></ItemsPanelTemplate>
+            <ItemsPanelTemplate><WrapPanel HorizontalAlignment="Stretch" /></ItemsPanelTemplate>
           </ItemsControl.ItemsPanel>
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="models:Channel">
@@ -84,9 +84,9 @@
                      FontSize="18" FontWeight="SemiBold"
                      Foreground="{DynamicResource TextPrimaryBrush}" />
         </Grid>
-        <ItemsControl ItemsSource="{Binding HistorySeriesItems}">
+        <ItemsControl ItemsSource="{Binding HistorySeriesItems}" HorizontalAlignment="Stretch">
           <ItemsControl.ItemsPanel>
-            <ItemsPanelTemplate><WrapPanel HorizontalAlignment="Center" /></ItemsPanelTemplate>
+            <ItemsPanelTemplate><WrapPanel HorizontalAlignment="Stretch" /></ItemsPanelTemplate>
           </ItemsControl.ItemsPanel>
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="models:Series">
@@ -111,9 +111,9 @@
                      FontSize="18" FontWeight="SemiBold"
                      Foreground="{DynamicResource TextPrimaryBrush}" />
         </Grid>
-        <ItemsControl ItemsSource="{Binding HistoryVodChannels}">
+        <ItemsControl ItemsSource="{Binding HistoryVodChannels}" HorizontalAlignment="Stretch">
           <ItemsControl.ItemsPanel>
-            <ItemsPanelTemplate><WrapPanel HorizontalAlignment="Center" /></ItemsPanelTemplate>
+            <ItemsPanelTemplate><WrapPanel HorizontalAlignment="Stretch" /></ItemsPanelTemplate>
           </ItemsControl.ItemsPanel>
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="models:Channel">
