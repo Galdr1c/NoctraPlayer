@@ -46,7 +46,7 @@
       <!-- Info Section: Logo, Name, Favorite -->
       <Grid Grid.Row="0" ColumnDefinitions="44,*,Auto" VerticalAlignment="Center">
         <!-- Logo -->
-        <Border Grid.Column="0" Width="44" Height="44" CornerRadius="8" ClipToBounds="True" Background="{DynamicResource Surface0Brush}">
+        <Border Grid.Column="0" Width="44" Height="44" CornerRadius="8" ClipToBounds="True" Background="Transparent">
           <Grid>
             <!-- Placeholder -->
             <Border Background="{DynamicResource SurfaceLightBrush}">
@@ -54,7 +54,7 @@
                 <Binding Path="#ChannelLogo.IsImageLoaded" Converter="{StaticResource InverseBoolConverter}"/>
               </Border.IsVisible>
             </Border>
-            <controls:RemoteImage x:Name="ChannelLogo" Width="36" Height="36" Stretch="Uniform" Url="{Binding CoverUrl}" RenderOptions.BitmapInterpolationMode="MediumQuality"/>
+            <controls:RemoteImage x:Name="ChannelLogo" Width="44" Height="44" Stretch="Uniform" Url="{Binding CoverUrl}" RenderOptions.BitmapInterpolationMode="MediumQuality"/>
           </Grid>
         </Border>
 

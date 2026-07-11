@@ -68,10 +68,7 @@
       <StaticResource ResourceKey="CardActionsFlyout" />
     </Border.ContextFlyout>
 
-    <Border CornerRadius="8"
-            ClipToBounds="True"
-            Background="{DynamicResource Surface0Brush}"
-            BoxShadow="{DynamicResource CardShadow}">
+    <Border Background="Transparent">
       <Grid>
         <Border Background="{DynamicResource SurfaceLightBrush}">
           <Border.IsVisible>

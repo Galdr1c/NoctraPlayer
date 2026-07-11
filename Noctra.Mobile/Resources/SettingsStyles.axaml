@@ -67,4 +67,8 @@
     <Setter Property="Foreground" Value="{DynamicResource ErrorBrush}" />
     <Setter Property="Background" Value="Transparent" />
   </Style>
+
+  <Style Selector="Button.UpgradeButton:pressed /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource PremiumBadgeBrush}" />
+  </Style>
 </Styles>
