@@ -107,6 +107,10 @@
     <Style Selector="Button.DeleteBtn:pressed">
         <Setter Property="Background" Value="#33FF3333"/>
     </Style>
+    <Style Selector="Button.DeleteBtn:pressed /template/ ContentPresenter">
+        <Setter Property="BorderBrush" Value="{DynamicResource ErrorBrush}"/>
+        <Setter Property="Background" Value="Transparent"/>
+    </Style>
 
     <Style Selector="RadioButton.ProviderTypeOption">
       <Setter Property="HorizontalAlignment" Value="Stretch" />

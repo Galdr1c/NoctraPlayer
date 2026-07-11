@@ -6,9 +6,7 @@
              xmlns:views="using:Noctra.Mobile.Views"
              xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="Noctra.Mobile.Views.MobileLegalConsentView"
-             mc:Ignorable="d"
-             d:DesignWidth="390"
-             d:DesignHeight="844">
+             mc:Ignorable="d">
   <Grid Background="{DynamicResource OverlayModalDimBrush}">
     <Border Background="{DynamicResource BackgroundGradientBrush}"
             BorderBrush="{DynamicResource BorderBrush}"

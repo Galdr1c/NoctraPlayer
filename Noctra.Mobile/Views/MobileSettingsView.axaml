@@ -61,6 +61,7 @@
             <TextBlock Text="{loc:Translate Settings.Profile.Management}"
                        Foreground="{DynamicResource TextPrimaryBrush}"
                        FontSize="18"
+                       Padding="2"
                        FontWeight="SemiBold" />
           </StackPanel>
           <TextBlock Text="{loc:Translate Settings.Profile.ManagementDetail}"
@@ -97,6 +98,7 @@
             <icons:MaterialIcon Kind="AccountBoxOutline" Width="20" Height="20" Foreground="{DynamicResource AccentBrush}" />
             <TextBlock Text="{loc:Translate Settings.Account.Title}"
                        Foreground="{DynamicResource TextPrimaryBrush}"
+                       Padding="2"
                        FontWeight="SemiBold" />
           </StackPanel>
           <Grid ColumnDefinitions="Auto,*"
@@ -152,6 +154,7 @@
             <icons:MaterialIcon Kind="BrushVariant" Width="20" Height="20" Foreground="{DynamicResource AccentBrush}" />
             <TextBlock Text="{loc:Translate GlobalSettings.Appearance.Title}"
                        Foreground="{DynamicResource TextPrimaryBrush}"
+                       Padding="2"
                        FontWeight="SemiBold" />
           </StackPanel>
 
@@ -295,14 +298,14 @@
                      Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="12" />
           <ComboBox SelectedValue="{Binding AppLanguage, Mode=TwoWay}"
-                   
-                    SelectedValueBinding="{Binding Tag, RelativeSource={RelativeSource Self}}"
+                   x:CompileBindings="False"
+                    SelectedValueBinding="{Binding Tag}"
                     MinHeight="44">
-            <ComboBoxItem Content="{loc:Translate Language.English}" Tag="en" />
-            <ComboBoxItem Content="{loc:Translate Language.Turkish}" Tag="tr" />
-            <ComboBoxItem Content="{loc:Translate Language.German}" Tag="de" />
-            <ComboBoxItem Content="{loc:Translate Language.French}" Tag="fr" />
-            <ComboBoxItem Content="{loc:Translate Language.Spanish}" Tag="es" />
+            <ComboBoxItem Content="{loc:Translate Language.English}" Tag="en" DataContext="{Binding RelativeSource={RelativeSource Self}}" />
+            <ComboBoxItem Content="{loc:Translate Language.Turkish}" Tag="tr" DataContext="{Binding RelativeSource={RelativeSource Self}}" />
+            <ComboBoxItem Content="{loc:Translate Language.German}" Tag="de" DataContext="{Binding RelativeSource={RelativeSource Self}}" />
+            <ComboBoxItem Content="{loc:Translate Language.French}" Tag="fr" DataContext="{Binding RelativeSource={RelativeSource Self}}" />
+            <ComboBoxItem Content="{loc:Translate Language.Spanish}" Tag="es" DataContext="{Binding RelativeSource={RelativeSource Self}}" />
           </ComboBox>
         </StackPanel>
       </Border>
@@ -313,6 +316,7 @@
             <icons:MaterialIcon Kind="PlayBoxOutline" Width="20" Height="20" Foreground="{DynamicResource AccentBrush}" />
             <TextBlock Text="{loc:Translate Settings.Playback.Network}"
                        Foreground="{DynamicResource TextPrimaryBrush}"
+                       Padding="2"
                        FontWeight="SemiBold" />
           </StackPanel>
           <TextBlock Text="{loc:Translate Settings.Playback.UserAgent}"
@@ -332,7 +336,7 @@
           <TextBlock Text="{loc:Translate Settings.Playback.Quality}"
                      Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="12" />
-          <ComboBox SelectedIndex="{Binding SelectedDataUsage}"
+          <ComboBox SelectedIndex="{Binding SelectedDataUsage, Mode=TwoWay}"
                    
                     MinHeight="44">
             <ComboBoxItem Content="{loc:Translate Settings.Playback.Quality.Low}" />
@@ -405,6 +409,7 @@
             <icons:MaterialIcon Kind="ClosedCaptionOutline" Width="20" Height="20" Foreground="{DynamicResource AccentBrush}" />
             <TextBlock Text="{loc:Translate Settings.Playback.AudioSubtitle}"
                        Foreground="{DynamicResource TextPrimaryBrush}"
+                       Padding="2"
                        FontWeight="SemiBold" />
           </StackPanel>
           <Grid ColumnDefinitions="*,Auto">
@@ -419,37 +424,37 @@
                      Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="12" />
           <ComboBox SelectedValue="{Binding SubtitleLanguage, Mode=TwoWay}"
-                   
-                    SelectedValueBinding="{Binding Tag, RelativeSource={RelativeSource Self}}"
+                   x:CompileBindings="False"
+                    SelectedValueBinding="{Binding Tag}"
                     MinHeight="44">
-            <ComboBoxItem Content="{loc:Translate Language.Turkish}" Tag="tr" />
-            <ComboBoxItem Content="{loc:Translate Language.English}" Tag="en" />
-            <ComboBoxItem Content="{loc:Translate Language.German}" Tag="de" />
-            <ComboBoxItem Content="{loc:Translate Language.French}" Tag="fr" />
-            <ComboBoxItem Content="{loc:Translate Language.Spanish}" Tag="es" />
-            <ComboBoxItem Content="{loc:Translate Language.Italian}" Tag="it" />
-            <ComboBoxItem Content="{loc:Translate Language.Portuguese}" Tag="pt" />
-            <ComboBoxItem Content="{loc:Translate Language.Russian}" Tag="ru" />
-            <ComboBoxItem Content="{loc:Translate Language.Arabic}" Tag="ar" />
-            <ComboBoxItem Content="{loc:Translate Language.Dutch}" Tag="nl" />
+            <ComboBoxItem Content="{loc:Translate Language.Turkish}" Tag="tr" DataContext="{Binding RelativeSource={RelativeSource Self}}" />
+            <ComboBoxItem Content="{loc:Translate Language.English}" Tag="en" DataContext="{Binding RelativeSource={RelativeSource Self}}" />
+            <ComboBoxItem Content="{loc:Translate Language.German}" Tag="de" DataContext="{Binding RelativeSource={RelativeSource Self}}" />
+            <ComboBoxItem Content="{loc:Translate Language.French}" Tag="fr" DataContext="{Binding RelativeSource={RelativeSource Self}}" />
+            <ComboBoxItem Content="{loc:Translate Language.Spanish}" Tag="es" DataContext="{Binding RelativeSource={RelativeSource Self}}" />
+            <ComboBoxItem Content="{loc:Translate Language.Italian}" Tag="it" DataContext="{Binding RelativeSource={RelativeSource Self}}" />
+            <ComboBoxItem Content="{loc:Translate Language.Portuguese}" Tag="pt" DataContext="{Binding RelativeSource={RelativeSource Self}}" />
+            <ComboBoxItem Content="{loc:Translate Language.Russian}" Tag="ru" DataContext="{Binding RelativeSource={RelativeSource Self}}" />
+            <ComboBoxItem Content="{loc:Translate Language.Arabic}" Tag="ar" DataContext="{Binding RelativeSource={RelativeSource Self}}" />
+            <ComboBoxItem Content="{loc:Translate Language.Dutch}" Tag="nl" DataContext="{Binding RelativeSource={RelativeSource Self}}" />
           </ComboBox>
           <TextBlock Text="{loc:Translate Settings.Playback.PreferredAudio}"
                      Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="12" />
           <ComboBox SelectedValue="{Binding PreferredAudioLanguage, Mode=TwoWay}"
-                   
-                    SelectedValueBinding="{Binding Tag, RelativeSource={RelativeSource Self}}"
+                   x:CompileBindings="False"
+                    SelectedValueBinding="{Binding Tag}"
                     MinHeight="44">
-            <ComboBoxItem Content="{loc:Translate Language.Turkish}" Tag="tr" />
-            <ComboBoxItem Content="{loc:Translate Language.English}" Tag="en" />
-            <ComboBoxItem Content="{loc:Translate Language.German}" Tag="de" />
-            <ComboBoxItem Content="{loc:Translate Language.French}" Tag="fr" />
-            <ComboBoxItem Content="{loc:Translate Language.Spanish}" Tag="es" />
-            <ComboBoxItem Content="{loc:Translate Language.Italian}" Tag="it" />
-            <ComboBoxItem Content="{loc:Translate Language.Portuguese}" Tag="pt" />
-            <ComboBoxItem Content="{loc:Translate Language.Russian}" Tag="ru" />
-            <ComboBoxItem Content="{loc:Translate Language.Arabic}" Tag="ar" />
-            <ComboBoxItem Content="{loc:Translate Language.Dutch}" Tag="nl" />
+            <ComboBoxItem Content="{loc:Translate Language.Turkish}" Tag="tr" DataContext="{Binding RelativeSource={RelativeSource Self}}" />
+            <ComboBoxItem Content="{loc:Translate Language.English}" Tag="en" DataContext="{Binding RelativeSource={RelativeSource Self}}" />
+            <ComboBoxItem Content="{loc:Translate Language.German}" Tag="de" DataContext="{Binding RelativeSource={RelativeSource Self}}" />
+            <ComboBoxItem Content="{loc:Translate Language.French}" Tag="fr" DataContext="{Binding RelativeSource={RelativeSource Self}}" />
+            <ComboBoxItem Content="{loc:Translate Language.Spanish}" Tag="es" DataContext="{Binding RelativeSource={RelativeSource Self}}" />
+            <ComboBoxItem Content="{loc:Translate Language.Italian}" Tag="it" DataContext="{Binding RelativeSource={RelativeSource Self}}" />
+            <ComboBoxItem Content="{loc:Translate Language.Portuguese}" Tag="pt" DataContext="{Binding RelativeSource={RelativeSource Self}}" />
+            <ComboBoxItem Content="{loc:Translate Language.Russian}" Tag="ru" DataContext="{Binding RelativeSource={RelativeSource Self}}" />
+            <ComboBoxItem Content="{loc:Translate Language.Arabic}" Tag="ar" DataContext="{Binding RelativeSource={RelativeSource Self}}" />
+            <ComboBoxItem Content="{loc:Translate Language.Dutch}" Tag="nl" DataContext="{Binding RelativeSource={RelativeSource Self}}" />
           </ComboBox>
         </StackPanel>
       </Border>
@@ -460,6 +465,7 @@
             <icons:MaterialIcon Kind="DownloadBoxOutline" Width="20" Height="20" Foreground="{DynamicResource AccentBrush}" />
             <TextBlock Text="{loc:Translate Settings.Download.Title}"
                        Foreground="{DynamicResource TextPrimaryBrush}"
+                       Padding="2"
                        FontWeight="SemiBold" />
           </StackPanel>
           <Grid ColumnDefinitions="*,Auto">
@@ -473,7 +479,7 @@
           <TextBlock Text="{loc:Translate Settings.Download.Quality}"
                      Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="12" />
-          <ComboBox SelectedIndex="{Binding SelectedDownloadQuality}"
+          <ComboBox SelectedIndex="{Binding SelectedDownloadQuality, Mode=TwoWay}"
                    
                     MinHeight="44">
             <ComboBoxItem Content="{loc:Translate Settings.Download.Quality.Standard}" />
@@ -507,6 +513,7 @@
             <icons:MaterialIcon Kind="FormatListBulletedSquare" Width="20" Height="20" Foreground="{DynamicResource AccentBrush}" />
             <TextBlock Text="{loc:Translate Settings.Channels.Title}"
                        Foreground="{DynamicResource TextPrimaryBrush}"
+                       Padding="2"
                        FontWeight="SemiBold" />
           </StackPanel>
           <Button Content="{loc:Translate Settings.Channels.RefreshNow}"
@@ -697,6 +704,7 @@
             <icons:MaterialIcon Kind="CalendarClock" Width="20" Height="20" Foreground="{DynamicResource AccentBrush}" />
             <TextBlock Text="{loc:Translate Settings.Epg.Title}"
                        Foreground="{DynamicResource TextPrimaryBrush}"
+                       Padding="2"
                        FontWeight="SemiBold" />
           </StackPanel>
           <Grid ColumnDefinitions="*,Auto">
@@ -875,12 +883,13 @@
             <icons:MaterialIcon Kind="ShieldAccountOutline" Width="20" Height="20" Foreground="{DynamicResource AccentBrush}" />
             <TextBlock Text="{loc:Translate LegalConsent.Action.Privacy}"
                        Foreground="{DynamicResource TextPrimaryBrush}"
+                       Padding="2"
                        FontWeight="SemiBold" />
           </StackPanel>
           <TextBlock Text="{loc:Translate Settings.Privacy.Retention}"
                      Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="12" />
-          <ComboBox SelectedIndex="{Binding WatchHistoryRetentionIndex}"
+          <ComboBox SelectedIndex="{Binding WatchHistoryRetentionIndex, Mode=TwoWay}"
                    
                     MinHeight="44">
             <ComboBoxItem Content="{loc:Translate Settings.Privacy.Retention.Forever}" />
@@ -952,7 +961,8 @@
           <StackPanel Orientation="Horizontal" Spacing="8">
             <icons:MaterialIcon Kind="Crown" Width="20" Height="20" Foreground="{DynamicResource AccentBrush}" />
             <TextBlock Text="{loc:Translate Mobile.Settings.About.Title}"
-                       Foreground="{DynamicResource PremiumBadgeTextBrush}"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
+                       Padding="2"
                        FontWeight="SemiBold" />
           </StackPanel>
 
@@ -1007,6 +1017,7 @@
             <icons:MaterialIcon Kind="Update" Width="20" Height="20" Foreground="{DynamicResource AccentBrush}" />
             <TextBlock Text="{loc:Translate GlobalSettings.Update.Title}"
                        Foreground="{DynamicResource TextPrimaryBrush}"
+                       Padding="2"
                        FontWeight="SemiBold" />
           </StackPanel>
           <TextBlock Text="{Binding UpdateStatusText}"
@@ -1043,6 +1054,7 @@
             <icons:MaterialIcon Kind="GiftOutline" Width="20" Height="20" Foreground="{DynamicResource AccentBrush}" />
             <TextBlock Text="{loc:Translate GlobalSettings.Promo.Title}"
                        Foreground="{DynamicResource TextPrimaryBrush}"
+                       Padding="2"
                        FontWeight="SemiBold" />
           </StackPanel>
           <TextBlock Text="{loc:Translate GlobalSettings.Promo.Description}"
@@ -1095,6 +1107,7 @@
             <icons:MaterialIcon Kind="DeleteSweepOutline" Width="20" Height="20" Foreground="{DynamicResource AccentBrush}" />
             <TextBlock Text="{loc:Translate GlobalSettings.Cache.Title}"
                        Foreground="{DynamicResource TextPrimaryBrush}"
+                       Padding="2"
                        FontWeight="SemiBold" />
           </StackPanel>
           <Grid ColumnDefinitions="*,Auto">
