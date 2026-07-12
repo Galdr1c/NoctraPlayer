@@ -78,4 +78,15 @@ public partial class ProfileSetupView : UserControl
         AvatarPickerHost.IsVisible = false;
         AvatarPickerContent.DataContext = null;
     }
+
+    public bool TryHandleBack()
+    {
+        if (AvatarPickerHost.IsVisible)
+        {
+            CloseAvatarPicker();
+            return true;
+        }
+
+        return false;
+    }
 }

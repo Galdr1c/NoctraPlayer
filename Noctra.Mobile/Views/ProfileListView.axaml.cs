@@ -394,4 +394,38 @@ public partial class ProfileListView : UserControl
             ProfileLoaded?.Invoke(this, EventArgs.Empty);
         }
     }
+
+    public bool TryHandleBack()
+    {
+        // 1. PIN girişini kapat
+        if (PinEntryHost.IsVisible && _activePinEntryViewModel is not null)
+        {
+            _activePinEntryViewModel.CancelCommand.Execute(null);
+            return true;
+        }
+
+        // 2. Profil kurulumunu (veya onun altındaki avatar seçiciyi) kapat
+        if (ProfileSetupHost.IsVisible && ProfileSetupContent.Content is ProfileSetupView setupView)
+        {
+            if (setupView.TryHandleBack())
+            {
+                return true;
+            }
+
+            if (_activeProfileSetupViewModel is not null)
+            {
+                _activeProfileSetupViewModel.CancelCommand.Execute(null);
+                return true;
+            }
+        }
+
+        // 3. Yönetim modundaysak kapat
+        if (_viewModel is { IsManageMode: true })
+        {
+            _viewModel.ToggleManageModeCommand.Execute(null);
+            return true;
+        }
+
+        return false;
+    }
 }

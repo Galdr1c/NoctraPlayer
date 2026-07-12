@@ -324,14 +324,43 @@ public partial class MainView : UserControl
             return true;
         }
 
-        // 1) Oynatıcı tam ekrandaysa -> tam ekrandan çık
+        // 1) Profil ekranı açıksa -> onun kendi iç geri yönlendirmesini çalıştır
         if (ProfilesOverlay.IsVisible)
         {
-            if (_activeProfilesViewModel is { IsManageMode: true })
+            if (OverlayProfileList.TryHandleBack())
             {
-                _activeProfilesViewModel.ToggleManageModeCommand.Execute(null);
+                return true;
             }
 
+            // Profil listesinde kapatılacak başka bir alt ekran yoksa:
+            _coreMainViewModel ??= GetViewModelResolver()?.GetCoreMainViewModel();
+            if (_coreMainViewModel?.CurrentProfile is not null)
+            {
+                // Eğer halihazırda yüklü bir profil varsa (örneğin ayarlardan profil değiştirmeye girildiyse),
+                // profil seçim ekranını kapat ve ana akışa dön.
+                ProfilesOverlay.IsVisible = false;
+                ProfilesOverlay.DataContext = null;
+                HeaderBar.IsVisible = true;
+                HeaderProfileButton.DataContext = _coreMainViewModel;
+                UpdateNavigationMode(Bounds.Width);
+                ShellContent.IsVisible = false;
+                CoreContentHost.IsVisible = true;
+                NavigateToDestination("Home");
+                return true;
+            }
+
+            // Yüklü profil yoksa, geri tuşu uygulamadan çıkış yapmalıdır (toast veya çıkış).
+            var nowUtc = DateTime.UtcNow;
+            if (nowUtc - _lastBackExitPromptUtc <= BackExitPromptWindow)
+            {
+                BackExitToast.IsVisible = false;
+                _backExitToastTimer.Stop();
+                _lastBackExitPromptUtc = DateTime.MinValue;
+                return false;
+            }
+
+            _lastBackExitPromptUtc = nowUtc;
+            ShowBackExitToast();
             return true;
         }
 
