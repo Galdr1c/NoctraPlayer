@@ -1,0 +1,63 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       NOCTRA MOBİLE — TASARIM TOKEN SÖZLÜĞÜ
+       Responsive Audit (47 bulgu) çözümü: P1 altyapı katmanı.
+       Tüm spacing/font/boyut değerleri burada merkezileştirildi.
+       View'lar {DynamicResource Xxx} ile kullanır.
+       ═══════════════════════════════════════════════════════════════════ -->
+
+  <!-- ── Spacing (4 dp grid, Material Design 3 uyumlu) ─────────────── -->
+  <x:Double x:Key="S1">4</x:Double>
+  <x:Double x:Key="S2">8</x:Double>
+  <x:Double x:Key="S3">12</x:Double>
+  <x:Double x:Key="S4">16</x:Double>
+  <x:Double x:Key="S5">20</x:Double>
+  <x:Double x:Key="S6">24</x:Double>
+  <x:Double x:Key="S7">32</x:Double>
+  <x:Double x:Key="S8">40</x:Double>
+
+  <!-- ── Font sizes (Material Design 3 tabanlı, 5.5" telefon optimize) ── -->
+  <x:Double x:Key="FDisplaySmall">28</x:Double>
+  <x:Double x:Key="FDisplay">32</x:Double>
+  <x:Double x:Key="FHeadline">22</x:Double>
+  <x:Double x:Key="FTitleL">18</x:Double>
+  <x:Double x:Key="FTitleM">16</x:Double>
+  <x:Double x:Key="FBodyL">15</x:Double>
+  <x:Double x:Key="FBody">14</x:Double>
+  <x:Double x:Key="FCaption">12</x:Double>
+  <x:Double x:Key="FOverline">10</x:Double>
+
+  <!-- ── Page/Card padding (Y-5/Y-6/Y-19 tutarsız margin'leri çözüm) ── -->
+  <Thickness x:Key="PagePadding">16,12,16,16</Thickness>
+  <Thickness x:Key="PagePaddingLarge">24,18,24,28</Thickness>
+  <Thickness x:Key="CardPadding">14</Thickness>
+  <Thickness x:Key="CardPaddingLarge">20</Thickness>
+  <Thickness x:Key="SheetPadding">16,12</Thickness>
+
+  <!-- ── Common layout dimensions (Y-13/O-12 hardcoded boyutları çözüm) ── -->
+  <x:Double x:Key="BottomNavHeight">62</x:Double>
+  <x:Double x:Key="HeaderHeight">56</x:Double>
+  <x:Double x:Key="NavRailWidth">72</x:Double>
+  <x:Double x:Key="AvatarSizeS">40</x:Double>
+  <x:Double x:Key="AvatarSizeM">56</x:Double>
+  <x:Double x:Key="AvatarSizeL">80</x:Double>
+  <x:Double x:Key="TouchTarget">44</x:Double>
+  <x:Double x:Key="CardMinHeight">120</x:Double>
+  <x:Double x:Key="ThumbnailWidth">48</x:Double>
+  <x:Double x:Key="ThumbnailHeight">64</x:Double>
+
+  <!-- ── Sheet MaxHeight (K-6/K-7/Y-17 hardcoded MaxHeight çözüm) ── -->
+  <x:Double x:Key="SheetMaxHeight">560</x:Double>
+  <x:Double x:Key="SheetMaxHeightLarge">620</x:Double>
+  <x:Double x:Key="SheetScrollMaxHeight">220</x:Double>
+  <x:Double x:Key="SheetScrollMaxHeightMedium">330</x:Double>
+
+  <!-- ── Breakpoints (DeviceMetricsService ile birlikte kullanılır) ── -->
+  <x:Double x:Key="BpCompact">360</x:Double>
+  <x:Double x:Key="BpPhone">480</x:Double>
+  <x:Double x:Key="BpTablet">720</x:Double>
+  <x:Double x:Key="BpDesktop">1024</x:Double>
+
+</ResourceDictionary>

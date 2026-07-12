@@ -115,6 +115,7 @@
     <Style Selector="RadioButton.ProviderTypeOption">
       <Setter Property="HorizontalAlignment" Value="Stretch" />
       <Setter Property="VerticalAlignment" Value="Center" />
+      <Setter Property="FontSize" Value="{DynamicResource FOverline}" />
       <Setter Property="MinHeight" Value="44" />
     </Style>
 
@@ -157,7 +158,6 @@
         <TextBlock Grid.Column="1"
                    FontSize="17"
                    FontWeight="SemiBold"
-                   Margin="-35,0,0,0"
                    Foreground="{DynamicResource TextPrimaryBrush}"
                    HorizontalAlignment="Center"
                    VerticalAlignment="Center">
@@ -266,9 +266,9 @@
                            FontWeight="Medium"
                            Foreground="{DynamicResource TextPrimaryBrush}" />
                 <TextBlock Text="{loc:Translate Profiles.Add.IsChildTooltip}"
-                           FontSize="12"
+                           FontSize="{DynamicResource FOverline}"
                            Foreground="{DynamicResource TextMutedBrush}"
-                         TextWrapping="Wrap" />
+                           TextWrapping="Wrap" />
             </StackPanel>
             <ToggleSwitch Grid.Column="1"
                           IsChecked="{Binding IsChild}"
@@ -559,7 +559,7 @@
                       </Border>
                     </StackPanel>
                     <TextBlock Text="{loc:Translate Profiles.Add.PinLockDescription}"
-                               FontSize="12"
+                               FontSize="{DynamicResource FOverline}"
                                Foreground="{DynamicResource TextMutedBrush}"
                                TextWrapping="Wrap" />
                   </StackPanel>
@@ -718,7 +718,6 @@
             <TextBlock Grid.Column="1"
                        Text="{loc:Translate AvatarPicker.Title}"
                        FontSize="17"
-                       Margin="-100,0,0,0"
                        FontWeight="SemiBold"
                        Foreground="{DynamicResource TextPrimaryBrush}"
                        HorizontalAlignment="Center"

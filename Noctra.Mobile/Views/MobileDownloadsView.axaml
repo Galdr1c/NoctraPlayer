@@ -61,11 +61,11 @@
               <TextBlock Text="{loc:Translate Downloads.Storage.Title}"
                          Foreground="{DynamicResource TextPrimaryBrush}"
                          FontWeight="SemiBold"
-                         FontSize="14" />
+                         FontSize="{DynamicResource FHeadline}" />
               <TextBlock Grid.Column="1"
                          Text="{Binding StorageUsageDetailText}"
                          Foreground="{DynamicResource TextMutedBrush}"
-                         FontSize="12" />
+                         FontSize="{DynamicResource FOverline}" />
             </Grid>
             <!-- Progress Bar -->
             <Border Height="8"
@@ -88,19 +88,19 @@
             <WrapPanel HorizontalAlignment="Center">
               <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,12,0">
                 <Border Width="10" Height="10" CornerRadius="2" Background="{DynamicResource AccentLightBrush}" />
-                <TextBlock Text="{loc:Translate Downloads.Storage.Other}" Foreground="{DynamicResource TextMutedBrush}" FontSize="11" />
+                <TextBlock Text="{loc:Translate Downloads.Storage.Other}" Foreground="{DynamicResource TextMutedBrush}" FontSize="{DynamicResource FOverline}" />
               </StackPanel>
               <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,12,0">
                 <Border Width="10" Height="10" CornerRadius="2" Background="{DynamicResource AccentBrush}" />
-                <TextBlock Text="{loc:Translate Downloads.Storage.Noctra}" Foreground="{DynamicResource TextMutedBrush}" FontSize="11" />
+                <TextBlock Text="{loc:Translate Downloads.Storage.Noctra}" Foreground="{DynamicResource TextMutedBrush}" FontSize="{DynamicResource FOverline}" />
               </StackPanel>
               <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,12,0">
                 <Border Width="10" Height="10" CornerRadius="2" Background="{DynamicResource AccentBrush}" Opacity="0.5" />
-                <TextBlock Text="{loc:Translate Downloads.Storage.Pending}" Foreground="{DynamicResource TextMutedBrush}" FontSize="11" />
+                <TextBlock Text="{loc:Translate Downloads.Storage.Pending}" Foreground="{DynamicResource TextMutedBrush}" FontSize="{DynamicResource FOverline}" />
               </StackPanel>
               <StackPanel Orientation="Horizontal" Spacing="6">
                 <Border Width="10" Height="10" CornerRadius="2" BorderThickness="1" BorderBrush="{DynamicResource TextMutedBrush}" Opacity="0.3" />
-                <TextBlock Text="{loc:Translate Downloads.Storage.Free}" Foreground="{DynamicResource TextMutedBrush}" FontSize="11" />
+                <TextBlock Text="{loc:Translate Downloads.Storage.Free}" Foreground="{DynamicResource TextMutedBrush}" FontSize="{DynamicResource FOverline}" />
               </StackPanel>
             </WrapPanel>
           </StackPanel>
@@ -117,7 +117,7 @@
                     BorderThickness="1"
                     BorderBrush="{DynamicResource ErrorBrush}"
                     CornerRadius="8"
-                    FontSize="12"
+                    FontSize="{DynamicResource FCaption}"
                     IsVisible="{Binding HasDownloadedItems}">
               <StackPanel Orientation="Horizontal" Spacing="8">
                 <icons:MaterialIcon Kind="TrashCanOutline" Width="16" Height="16" />
@@ -131,7 +131,7 @@
                     Foreground="{DynamicResource TextPrimaryBrush}"
                     BorderThickness="0"
                     CornerRadius="8"
-                    FontSize="12"
+                    FontSize="{DynamicResource FCaption}"
                     IsVisible="{Binding HasDownloadedItems}">
               <StackPanel Orientation="Horizontal" Spacing="6">
                 <icons:MaterialIcon Kind="FolderOpenOutline" Width="16" Height="16" />
@@ -154,7 +154,7 @@
                               Foreground="{DynamicResource ErrorBrush}" />
           <TextBlock Text="{loc:Translate Downloads.Storage.Warning}"
                      Foreground="{DynamicResource ErrorBrush}"
-                     FontSize="12"
+                     FontSize="{DynamicResource FCaption}"
                      FontWeight="SemiBold"
                      TextWrapping="Wrap" />
         </StackPanel>
@@ -233,7 +233,7 @@
                                        TextTrimming="CharacterEllipsis" />
                             <TextBlock Text="{Binding LocalSizeText}"
                                        Foreground="{DynamicResource TextMutedBrush}"
-                                       FontSize="12"
+                                       FontSize="{DynamicResource FCaption}"
                                        TextTrimming="CharacterEllipsis" />
                           </StackPanel>
                         </Button>
@@ -247,7 +247,7 @@
                                 BorderThickness="1"
                                 BorderBrush="{DynamicResource ErrorBrush}"
                                 CornerRadius="8"
-                                FontSize="12">
+                                FontSize="{DynamicResource FCaption}">
                           <StackPanel Orientation="Horizontal" Spacing="6">
                             <icons:MaterialIcon Kind="TrashCanOutline" Width="16" Height="16" />
                             <TextBlock Text="{loc:Translate Downloads.Action.Delete}" />
@@ -314,7 +314,7 @@
                                        TextTrimming="CharacterEllipsis" />
                             <TextBlock Text="{Binding LocalSizeText}"
                                        Foreground="{DynamicResource TextMutedBrush}"
-                                       FontSize="12"
+                                       FontSize="{DynamicResource FCaption}"
                                        TextTrimming="CharacterEllipsis" />
                           </StackPanel>
                         </Button>
@@ -328,7 +328,7 @@
                                 BorderThickness="1"
                                 BorderBrush="{DynamicResource ErrorBrush}"
                                 CornerRadius="8"
-                                FontSize="12">
+                                FontSize="{DynamicResource FCaption}">
                           <StackPanel Orientation="Horizontal" Spacing="6">
                             <icons:MaterialIcon Kind="TrashCanOutline" Width="16" Height="16" />
                             <TextBlock Text="{loc:Translate Downloads.Action.Delete}" />
@@ -366,7 +366,7 @@
                       IsVisible="{Binding ActiveDownloadCount, Converter={StaticResource CountToVisibility}}">
                 <TextBlock Text="{Binding ActiveDownloadCount}"
                            Foreground="{DynamicResource TextPrimaryBrush}"
-                           FontSize="10"
+                           FontSize="{DynamicResource FOverline}"
                            FontWeight="Bold" />
               </Border>
             </StackPanel>
@@ -394,13 +394,13 @@
                 <TextBlock Grid.Column="2"
                            Text="{Binding ActiveDownloadCount, Converter={StaticResource StringFormatConverter}, ConverterParameter='Downloads.Stats.Active.Format'}"
                            Foreground="{DynamicResource TextMutedBrush}"
-                           FontSize="12" />
+                           FontSize="{DynamicResource FCaption}" />
                 <TextBlock Grid.Row="1"
                            Grid.Column="1"
                            Grid.ColumnSpan="2"
                            Text="{Binding ActiveDownloadsTotalSpeedText}"
                            Foreground="{DynamicResource TextMutedBrush}"
-                           FontSize="12" />
+                           FontSize="{DynamicResource FCaption}" />
               </Grid>
             </Border>
 
@@ -417,7 +417,7 @@
                         IsVisible="{Binding ActiveDownloadingItems.Count, Converter={StaticResource CountToVisibility}}">
                   <TextBlock Text="{Binding ActiveDownloadingItems.Count, Converter={StaticResource StringFormatConverter}, ConverterParameter='Downloads.Ongoing.Count.Format'}"
                              Foreground="{DynamicResource TextMutedBrush}"
-                             FontSize="12" />
+                             FontSize="{DynamicResource FCaption}" />
                 </Border>
               </StackPanel>
               <Button Grid.Column="1"
@@ -428,7 +428,7 @@
                       Foreground="{DynamicResource TextPrimaryBrush}"
                       BorderThickness="0"
                       CornerRadius="6"
-                      FontSize="12">
+                      FontSize="{DynamicResource FCaption}">
                 <StackPanel Orientation="Horizontal" Spacing="6">
                   <icons:MaterialIcon Kind="Close" Width="16" Height="16" />
                   <TextBlock Text="{loc:Translate Downloads.Action.StopAll}" />
@@ -469,7 +469,7 @@
                                      TextTrimming="CharacterEllipsis" />
                           <TextBlock Text="{Binding StatusText}"
                                      Foreground="{DynamicResource TextMutedBrush}"
-                                     FontSize="12"
+                                     FontSize="{DynamicResource FCaption}"
                                      TextTrimming="CharacterEllipsis" />
                         </StackPanel>
                         <TextBlock Grid.Column="2"
@@ -489,10 +489,10 @@
                         <StackPanel Spacing="2">
                           <TextBlock Text="{Binding SizeText}"
                                      Foreground="{DynamicResource TextMutedBrush}"
-                                     FontSize="12" />
+                                     FontSize="{DynamicResource FCaption}" />
                           <TextBlock Text="{Binding SpeedText}"
                                      Foreground="{DynamicResource TextMutedBrush}"
-                                     FontSize="12" />
+                                     FontSize="{DynamicResource FCaption}" />
                         </StackPanel>
                         <StackPanel Grid.Column="1"
                                     Orientation="Horizontal"
@@ -505,7 +505,7 @@
                                   Foreground="{DynamicResource TextPrimaryBrush}"
                                   BorderThickness="0"
                                   CornerRadius="8"
-                                   FontSize="12">
+                                  FontSize="{DynamicResource FCaption}">
                             <StackPanel Orientation="Horizontal" Spacing="6">
                               <icons:MaterialIcon Kind="{Binding IsPaused, Converter={StaticResource BoolToMaterialIconKindConverter}, ConverterParameter='Play|Pause'}"
                                                   Width="16"
@@ -522,7 +522,7 @@
                                   BorderThickness="1"
                                   BorderBrush="{DynamicResource ErrorBrush}"
                                   CornerRadius="8"
-                                  FontSize="12">
+                                  FontSize="{DynamicResource FCaption}">
                             <StackPanel Orientation="Horizontal" Spacing="6">
                               <icons:MaterialIcon Kind="Close" Width="16" Height="16" />
                               <TextBlock Text="{loc:Translate Downloads.Action.Cancel}" />
@@ -552,7 +552,7 @@
                       Foreground="{DynamicResource TextPrimaryBrush}"
                       BorderThickness="0"
                       CornerRadius="6"
-                      FontSize="12">
+                      FontSize="{DynamicResource FCaption}">
                 <StackPanel Orientation="Horizontal" Spacing="6">
                   <icons:MaterialIcon Kind="Close" Width="16" Height="16" />
                   <TextBlock Text="{loc:Translate Downloads.Action.ClearQueue}" />
@@ -598,7 +598,7 @@
                                    TextTrimming="CharacterEllipsis" />
                         <TextBlock Text="{Binding StatusText}"
                                    Foreground="{DynamicResource TextMutedBrush}"
-                                   FontSize="12"
+                                   FontSize="{DynamicResource FCaption}"
                                    TextTrimming="CharacterEllipsis" />
                       </StackPanel>
                       <StackPanel Grid.Column="3"
@@ -607,7 +607,7 @@
                                   VerticalAlignment="Center">
                         <TextBlock Text="{Binding BytesTotal, Converter={StaticResource BytesToHumanConverter}}"
                                    Foreground="{DynamicResource TextMutedBrush}"
-                                   FontSize="12"
+                                   FontSize="{DynamicResource FCaption}"
                                    VerticalAlignment="Center" />
                         <Button
                               Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).CancelDownloadCommand}"
@@ -619,7 +619,7 @@
                               BorderThickness="1"
                               BorderBrush="{DynamicResource ErrorBrush}"
                               CornerRadius="8"
-                                FontSize="11">
+                              FontSize="{DynamicResource FCaption}">
                           <StackPanel Orientation="Horizontal" Spacing="5">
                             <icons:MaterialIcon Kind="Close" Width="14" Height="14" />
                             <TextBlock Text="{loc:Translate Downloads.Action.Cancel}" />

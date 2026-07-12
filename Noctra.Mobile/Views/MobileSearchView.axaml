@@ -10,8 +10,7 @@
              x:Class="Noctra.Mobile.Views.MobileSearchView"
              x:DataType="vm:MainViewModel"
              x:CompileBindings="False"
-             mc:Ignorable="d"
-             d:DesignWidth="390" d:DesignHeight="720">
+             mc:Ignorable="d">
 
   <Grid RowDefinitions="Auto,*">
 
@@ -21,7 +20,7 @@
       <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
 
         <Border Background="{DynamicResource Surface1Brush}"
-                CornerRadius="14">
+                CornerRadius="6">
           <Grid ColumnDefinitions="Auto,*,Auto">
             <icons:MaterialIcon Kind="Magnify" Width="18" Height="18"
                                 Foreground="{DynamicResource TextMutedBrush}"
@@ -55,8 +54,11 @@
                 MinHeight="46" Padding="16,0"
                 Background="{DynamicResource AccentBrush}"
                 Foreground="{DynamicResource TextPrimaryBrush}"
-                BorderThickness="0" CornerRadius="14"
+                BorderThickness="0"
                 FontWeight="Medium" FontSize="14"
+                CornerRadius="6"
+                HorizontalAlignment="Stretch"
+                VerticalContentAlignment="Center"
                 Content="{loc:Translate Search.Button}" />
       </Grid>
     </Border>

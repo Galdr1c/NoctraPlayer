@@ -14,6 +14,7 @@ using Noctra.Mobile.Views;
 using Noctra.Services;
 using Noctra.Services.Interfaces;
 
+using Noctra.Mobile.Services;
 namespace Noctra.Mobile;
 
 public partial class App : Application
@@ -53,6 +54,10 @@ public partial class App : Application
                 DataContext = CreateMainViewModel()
             };
         }
+
+        // Device sınıfını başlat (responsive layout kararları için).
+        // MainView.SizeChanged ile runtime'da güncellenir.
+        DeviceMetricsService.Instance.InitializeFromTopLevel();
 
         base.OnFrameworkInitializationCompleted();
     }

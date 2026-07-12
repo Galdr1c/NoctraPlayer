@@ -11,7 +11,7 @@
              x:DataType="vm:MainViewModel"
              x:CompileBindings="False"
              mc:Ignorable="d"
-             d:DesignWidth="390" d:DesignHeight="720">
+             d:DesignWidth="390" d:DesignHeight="844">
 
   <ScrollViewer x:Name="HistoryScrollViewer"
                 ScrollChanged="HistoryScrollViewer_ScrollChanged" VerticalScrollBarVisibility="Visible" HorizontalScrollBarVisibility="Disabled">

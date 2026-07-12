@@ -63,8 +63,8 @@
               <Button Classes="AvatarItemBtn"
                       Command="{Binding #AvatarPickerRoot.DataContext.SelectAvatarCommand}"
                       CommandParameter="{Binding}"
-                      Width="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=profileWidth}"
-                      Height="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=profileWidth}">
+                      Width="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=avatarTile}"
+                      Height="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=avatarTile}">
                 <Border BorderBrush="Transparent"
                         BorderThickness="2"
                         Background="Transparent"

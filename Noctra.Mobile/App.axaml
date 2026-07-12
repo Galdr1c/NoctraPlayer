@@ -27,6 +27,7 @@
         </ResourceDictionary.ThemeDictionaries>
         <ResourceDictionary.MergedDictionaries>
           <ResourceInclude Source="avares://Noctra.Mobile/Resources/Colors.axaml" />
+          <ResourceInclude Source="avares://Noctra.Mobile/Resources/Tokens.axaml" />
           <ResourceInclude Source="avares://Noctra.Mobile/Resources/Styles.axaml" />
         </ResourceDictionary.MergedDictionaries>
         <converters:AvatarPathConverter x:Key="AvatarPathConverter" />

@@ -81,9 +81,9 @@
                       VerticalAlignment="Center">
             <TextBlock Text="{Binding SelectedSeries.Name}"
                        Foreground="{DynamicResource TextPrimaryBrush}"
-                       FontSize="32"
+                       FontSize="{DynamicResource FDisplaySmall}"
                        FontWeight="Black"
-                       LetterSpacing="-1"
+                       LetterSpacing="0"
                        TextWrapping="Wrap"
                        MaxLines="2" />
             <TextBlock Text="{loc:Translate Series.Detail.DownloadedEpisodes}"

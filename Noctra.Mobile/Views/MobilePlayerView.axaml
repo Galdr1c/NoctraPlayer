@@ -12,9 +12,7 @@
              x:Name="PlayerRoot"
              x:DataType="vm:PlayerViewModel"
              x:CompileBindings="False"
-             mc:Ignorable="d"
-             d:DesignWidth="390"
-             d:DesignHeight="260">
+             mc:Ignorable="d">
   <UserControl.Styles>
     <Style Selector="Button.compactPlayerAction">
       <Setter Property="MinHeight" Value="44" />

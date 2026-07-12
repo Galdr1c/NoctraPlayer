@@ -213,7 +213,7 @@
                      FontSize="18"
                      FontWeight="Bold"
                      Foreground="{DynamicResource AccentBrush}"
-                     LetterSpacing="3.5"
+                     LetterSpacing="1.5"
                      VerticalAlignment="Center" />
         </StackPanel>
         <Button x:Name="HeaderProfileButton"
@@ -242,7 +242,7 @@
     <Border x:Name="NavigationRail"
             Grid.Row="1"
             Grid.Column="0"
-            Width="128"
+            Width="{DynamicResource NavRailWidth}"
             Padding="12,20"
             Background="{DynamicResource Bg1Brush}"
             IsVisible="False">
@@ -356,11 +356,11 @@
                     Spacing="22">
           <StackPanel Spacing="4">
             <TextBlock Text="{loc:Translate Mobile.Nav.More}"
-                       FontSize="28"
+                       FontSize="{DynamicResource FHeadline}"
                        FontWeight="Bold"
                        Foreground="{DynamicResource TextPrimaryBrush}" />
             <TextBlock Text="{Binding PageDescription}"
-                       FontSize="14"
+                       FontSize="{DynamicResource FBodyL}"
                        Foreground="{DynamicResource TextMutedBrush}"
                        TextWrapping="Wrap" />
           </StackPanel>
@@ -397,12 +397,12 @@
                             Spacing="3"
                             VerticalAlignment="Center">
                   <TextBlock Text="{Binding CurrentProfile.Name}"
-                             FontSize="17"
+                             FontSize="{DynamicResource FTitleM}"
                              FontWeight="SemiBold"
                              Foreground="{DynamicResource TextPrimaryBrush}"
                              TextTrimming="CharacterEllipsis" />
                   <TextBlock Text="{loc:Translate Settings.Profile.ManagementDetail}"
-                             FontSize="12"
+                             FontSize="{DynamicResource FOverline}"
                              Foreground="{DynamicResource TextMutedBrush}"
                              TextWrapping="Wrap" />
                 </StackPanel>
@@ -539,7 +539,7 @@
             Background="{DynamicResource Bg0Brush}"
             IsVisible="False">
 
-      <Grid ColumnDefinitions="*,*,*,*,*" Height="62">
+      <Grid ColumnDefinitions="*,*,*,*,*" Height="{DynamicResource BottomNavHeight}">
 
         <!-- HOME -->
         <Button Grid.Column="0" Classes="navBottom" Tag="Home" Click="OnDestinationClick"

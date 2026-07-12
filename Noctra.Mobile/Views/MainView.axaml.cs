@@ -462,6 +462,8 @@ public partial class MainView : UserControl
 
     private void OnSizeChanged(object? sender, SizeChangedEventArgs e)
     {
+        // DeviceMetricsService: cihaz sınıfını güncelle (responsive token'lar için)
+        DeviceMetricsService.Instance.ApplySize(e.NewSize.Width, e.NewSize.Height);
         UpdateNavigationMode(e.NewSize.Width);
     }
 

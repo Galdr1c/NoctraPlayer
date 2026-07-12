@@ -2,7 +2,7 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net10.0-android36.0</TargetFramework>
-    <SupportedOSPlatformVersion>31</SupportedOSPlatformVersion>
+    <SupportedOSPlatformVersion>28</SupportedOSPlatformVersion>
     <Nullable>enable</Nullable>
     <ApplicationId>studio.kynora.noctra</ApplicationId>
     <ApplicationVersion>1</ApplicationVersion>

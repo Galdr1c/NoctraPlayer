@@ -11,9 +11,7 @@
              x:Class="Noctra.Mobile.Views.MobileHomeView"
              x:DataType="vm:MainViewModel"
              x:CompileBindings="False"
-             mc:Ignorable="d"
-             d:DesignWidth="390"
-             d:DesignHeight="720">
+             mc:Ignorable="d">
   <UserControl.Resources>
     <converters:CountToVisibilityConverter x:Key="CountToVisibility" />
     <converters:InverseBoolConverter x:Key="InverseBool" />
@@ -52,7 +50,7 @@
 
       <!-- Empty State (shown when no Continue Watching) -->
       <StackPanel Spacing="12"
-                  Margin="0,150,0,0"
+                  Margin="0,80,0,0"
                   VerticalAlignment="Center"
                   HorizontalAlignment="Center"
                   IsVisible="{Binding ContinueWatching.Count, Converter={StaticResource CountToVisibility}, ConverterParameter=invert}">
@@ -92,17 +90,17 @@
           </Image.Styles>
         </Image>
         <TextBlock Text="{loc:Translate Home.Welcome}"
-                   FontSize="24"
+                   FontSize="{DynamicResource FHeadline}"
                    FontWeight="Bold"
                    HorizontalAlignment="Center"
                    Foreground="{DynamicResource TextPrimaryBrush}" />
         <TextBlock Text="{loc:Translate Home.EmptyState.Title}"
-                   FontSize="16"
+                   FontSize="{DynamicResource FBody}"
                    Opacity="0.7"
                    HorizontalAlignment="Center"
                    Foreground="{DynamicResource TextPrimaryBrush}" />
         <TextBlock Text="{loc:Translate Home.EmptyState.Description}"
-                   FontSize="14"
+                   FontSize="{DynamicResource FOverline}"
                    Opacity="0.5"
                    HorizontalAlignment="Center"
                    TextWrapping="Wrap"

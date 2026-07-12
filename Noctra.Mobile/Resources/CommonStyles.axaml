@@ -64,7 +64,7 @@
 
   <Style Selector="TextBlock.NoctraPageTitle">
     <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
-    <Setter Property="FontSize" Value="28" />
+    <Setter Property="FontSize" Value="{DynamicResource FHeadline}" />
     <Setter Property="FontWeight" Value="Bold" />
   </Style>
 

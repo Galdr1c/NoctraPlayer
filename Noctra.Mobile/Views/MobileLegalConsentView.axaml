@@ -29,7 +29,7 @@
             <TextBlock Grid.Column="1"
                        Text="{loc:Translate LegalConsent.Title}"
                        Foreground="{DynamicResource TextPrimaryBrush}"
-                       FontSize="26"
+                       FontSize="{DynamicResource FTitleM}"
                        FontWeight="Bold"
                        VerticalAlignment="Center"
                        TextWrapping="Wrap"/>
@@ -37,8 +37,8 @@
 
           <TextBlock Text="{loc:Translate LegalConsent.Message}"
                      Foreground="{DynamicResource TextSecondaryBrush}"
-                     FontSize="14"
-                     LineHeight="21"
+                     FontSize="{DynamicResource FOverline}"
+                     LineHeight="15"
                      TextWrapping="Wrap"/>
 
           <!-- Checkboxes -->
@@ -50,17 +50,22 @@
             <StackPanel Spacing="10">
               <CheckBox x:Name="TermsAcceptedCheckBox"
                         Content="{loc:Translate LegalConsent.Check.Terms}"
+                        FontSize="{DynamicResource FCaption}"
                         IsCheckedChanged="RequiredCheckBox_Changed"/>
               <CheckBox x:Name="NoContentCheckBox"
                         Content="{loc:Translate LegalConsent.Check.NoContent}"
+                        FontSize="{DynamicResource FCaption}"
                         IsCheckedChanged="RequiredCheckBox_Changed"/>
               <CheckBox x:Name="LawfulSourcesCheckBox"
                         Content="{loc:Translate LegalConsent.Check.LawfulSources}"
+                        FontSize="{DynamicResource FCaption}"
                         IsCheckedChanged="RequiredCheckBox_Changed"/>
               <CheckBox x:Name="PrivacyAcceptedCheckBox"
                         Content="{loc:Translate LegalConsent.Check.Privacy}"
+                        FontSize="{DynamicResource FCaption}"
                         IsCheckedChanged="RequiredCheckBox_Changed"/>
               <CheckBox x:Name="DiagnosticDataCheckBox"
+                        FontSize="{DynamicResource FCaption}"
                         Content="{loc:Translate LegalConsent.Check.Diagnostics}"/>
             </StackPanel>
           </Border>

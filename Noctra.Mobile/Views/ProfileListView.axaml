@@ -115,7 +115,7 @@
                      FontSize="18"
                      FontWeight="Bold"
                      Foreground="{DynamicResource AccentBrush}"
-                     LetterSpacing="3.5"
+                     LetterSpacing="1.5"
                      VerticalAlignment="Center" />
         </StackPanel>
 
@@ -149,7 +149,7 @@
                      FontSize="18"
                      FontWeight="Bold"
                      Foreground="{DynamicResource AccentBrush}"
-                     LetterSpacing="3.5"
+                     LetterSpacing="1.5"
                      VerticalAlignment="Center" />
         </StackPanel>
 
@@ -160,7 +160,8 @@
                    FontWeight="SemiBold"
                    Foreground="{DynamicResource TextPrimaryBrush}"
                    HorizontalAlignment="Center"
-                   Margin="-100,0,0,0"
+                   TextTrimming="CharacterEllipsis"
+                   MaxLines="1"
                    VerticalAlignment="Center" />
 
         <!-- Sağ: Bitti -->
@@ -182,16 +183,18 @@
 
         <!-- ── "Kimin izlediğini seç?" büyük başlık (sadece normal modda) ── -->
         <TextBlock Text="{loc:Translate Profiles.Title}"
-                   FontSize="64"
+                   FontSize="{DynamicResource FDisplay}"
                    FontWeight="Bold"
                    Foreground="{DynamicResource TextPrimaryBrush}"
                    HorizontalAlignment="Center"
                    TextAlignment="Center"
-                   Margin="24,28,24,4"
+                   TextWrapping="Wrap"
+                   MaxLines="2"
+                   Margin="16,24,16,4"
                    IsVisible="{Binding !IsManageMode}" />
 
         <TextBlock Text="{loc:Translate Profiles.SelectProfile}"
-                   FontSize="18"
+                   FontSize="{DynamicResource S4}"
                    Foreground="{DynamicResource TextMutedBrush}"
                    HorizontalAlignment="Center"
                    TextAlignment="Center"
@@ -241,12 +244,14 @@
                     150×150 sabit boyut telefonda 2 kart yan yana sığar,
                     tablette converter daha geniş genişlik döndürünce otomatik uyum sağlar.
                   -->
-                  <Grid Width="150" Height="150"
+                  <Grid Width="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=profileWidth}"
+                        Height="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=profileHeight}"
                         HorizontalAlignment="Center"
                         ClipToBounds="False">
 
                     <!-- Çocuk profili çerçevesi (gradyan kenarlık) -->
-                    <Border Width="148" Height="148"
+                    <Border HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                            Margin="1"
                             CornerRadius="14"
                             BorderThickness="3.5"
                             IsVisible="{Binding IsChild}"
@@ -361,7 +366,10 @@
                 <StackPanel Spacing="10">
 
                   <!-- Artı kutusu: noktalı kenarlıklı (StrokeDashArray="3,2") -->
-                  <Grid Width="140" Height="140" HorizontalAlignment="Center">
+                  <Grid Width="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=profileWidth}"
+                        Height="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=profileHeight}"
+                        HorizontalAlignment="Center"
+                        Margin="5">
                     <Rectangle RadiusX="12" RadiusY="12"
                                Stroke="{DynamicResource BorderBrush}"
                                StrokeThickness="2"

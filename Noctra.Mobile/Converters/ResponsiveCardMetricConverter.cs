@@ -1,5 +1,8 @@
 using System;
 using System.Globalization;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Data.Converters;
 
 namespace Noctra.Mobile.Converters;
@@ -35,6 +38,15 @@ public sealed class ResponsiveCardMetricConverter : IValueConverter
         var mode = parameter?.ToString() ?? "posterWidth";
 
         var profile = CardMetricProfile.For(mode);
+
+        // KRİTİK: ItemsControl.Bounds.Width ilk measure pass'ta NaN/0 gelebilir.
+        // Bu durumda converter DefaultWidth döner, WrapPanel bunu content olarak
+        // ölçer, ItemsControl content'e göre küçülür → KİLİTLENME (1 kart kalır).
+        // Çözüm: NaN/0 ise TopLevel (main window) genişliğini oku, margin düşür.
+        if (double.IsNaN(availableWidth) || availableWidth <= 0)
+        {
+            availableWidth = GetTopLevelWidth();
+        }
 
         // Aynı mode ve yaklaşık aynı genişlik: cache'lenen değeri döndür (shimmer önler).
         // 8px hysteresis bandı: scrollbar/aşırı render titreşimlerini filtreler.
@@ -114,6 +126,33 @@ public sealed class ResponsiveCardMetricConverter : IValueConverter
         };
     }
 
+    /// <summary>
+    /// ItemsControl.Bounds.Width ilk measure pass'ta NaN/0 geldiğinde fallback.
+    /// TopLevel (main window) genişliğini okur, mobil StackPanel margin (48px) düşer.
+    /// Phone ~390, tablet portrait ~768, tablet landscape ~1024.
+    /// Mobilde TopLevel erişimi her zaman mümkün değil; bu yüzden 768 güvenli default.
+    /// </summary>
+    private static double GetTopLevelWidth()
+    {
+        try
+        {
+            var app = Application.Current;
+            if (app?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop
+                && desktop.MainWindow is { Bounds.Width: > 0 } window)
+            {
+                return Math.Max(0, window.Bounds.Width - 48);
+            }
+        }
+        catch
+        {
+            // fallback aşağıda
+        }
+
+        // Mobil (Android/iOS) lifetime: TopLevel static bulunamaz.
+        // 720px (768-48) tablet portrait için en güvenli orta yol.
+        return 720;
+    }
+
     private readonly record struct CardMetricProfile(
         double MinWidth,
         double MaxWidth,
@@ -139,11 +178,18 @@ public sealed class ResponsiveCardMetricConverter : IValueConverter
                 return new CardMetricProfile(220, 410, 270, 0.30, 16, 4);
             }
 
+            if (mode.StartsWith("avatarTile", StringComparison.OrdinalIgnoreCase))
+            {
+                // Avatar picker için ayrı mod (K-3 çözümü): daha küçük kareler,
+                // telefonda 4-6 sütun sığar. Eski profileWidth paylaşımı kalktı.
+                return new CardMetricProfile(64, 96, 80, 1.0, 8, 6);
+            }
+
             if (mode.StartsWith("profile", StringComparison.OrdinalIgnoreCase))
             {
-                // Profile cards keep the avatar-heavy shape used in the desktop profile window.
-                // MinWidth 150 ensures the 150x150 avatar Grid never overflows the card.
-                return new CardMetricProfile(150, 200, 170, 1.18, 16, 5);
+                // Profile cards: MinWidth 110 → telefonda 2 sütun garanti (K-2/Y-8).
+                // MaxWidth 180: büyük ekranda kart çok büyümesin.
+                return new CardMetricProfile(110, 180, 140, 1.0, 12, 5);
             }
 
             if (mode.StartsWith("moreShortcut", StringComparison.OrdinalIgnoreCase))

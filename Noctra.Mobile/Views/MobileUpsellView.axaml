@@ -32,7 +32,7 @@
             BoxShadow="{DynamicResource OverlaySheetShadow}">
       <Grid RowDefinitions="Auto,*">
         <ScrollViewer Grid.Row="0"
-                      MaxHeight="620">
+                      MaxHeight="{DynamicResource SheetMaxHeight}">
           <StackPanel Spacing="16">
             <StackPanel Spacing="6"
                         HorizontalAlignment="Center"
@@ -55,13 +55,13 @@
 
               <TextBlock Text="{loc:Translate Upsell.Headline}"
                          Foreground="{DynamicResource TextPrimaryBrush}"
-                         FontSize="28"
+                         FontSize="{DynamicResource FHeadline}"
                          FontWeight="Bold"
                          TextAlignment="Center"
                          TextWrapping="Wrap" />
               <TextBlock Text="{loc:Translate Upsell.Subheadline}"
                          Foreground="{DynamicResource TextMutedBrush}"
-                         FontSize="13"
+                         FontSize="{DynamicResource FCaption}"
                          TextAlignment="Center"
                          TextWrapping="Wrap"  Margin="0,4,0,0"/>
             </StackPanel>
@@ -76,11 +76,11 @@
                   <StackPanel>
                     <TextBlock Text="{loc:Translate Upsell.Premium.Title}"
                                Foreground="{DynamicResource PremiumCardForegroundBrush}"
-                               FontSize="20"
+                               FontSize="{DynamicResource FBodyL}"
                                FontWeight="Bold" />
                     <TextBlock Text="{loc:Translate Upsell.Premium.Subtitle}"
                                Foreground="{DynamicResource TextMutedBrush}"
-                               FontSize="12" Margin="0,1,0,12"/>
+                               FontSize="{DynamicResource FOverline}"/>
                   </StackPanel>
                   <Border Grid.Column="1"
                           Background="{DynamicResource PremiumBadgeBrush}"
@@ -89,7 +89,7 @@
                           VerticalAlignment="Top">
                     <TextBlock Text="{loc:Translate Upsell.Premium.Recommended}"
                                Foreground="{DynamicResource PremiumBadgeTextBrush}"
-                               FontSize="10"
+                               FontSize="{DynamicResource S2}"
                                FontWeight="Bold" />
                   </Border>
                 </Grid>
@@ -97,35 +97,35 @@
                 <UniformGrid Columns="1" RowSpacing="8">
                   <StackPanel Orientation="Horizontal" Spacing="8">
                     <icons:MaterialIcon Kind="CheckCircle" Width="17" Height="17" Foreground="{DynamicResource AccentLightBrush}" />
-                    <TextBlock Text="{loc:Translate Upsell.Premium.Feature1}" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                    <TextBlock Text="{loc:Translate Upsell.Premium.Feature1}" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold" TextWrapping="Wrap" FontSize="{DynamicResource FCaption}" />
                   </StackPanel>
                   <StackPanel Orientation="Horizontal" Spacing="8">
                     <icons:MaterialIcon Kind="CheckCircle" Width="17" Height="17" Foreground="{DynamicResource AccentLightBrush}" />
-                    <TextBlock Text="{loc:Translate Upsell.Premium.Feature2}" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                    <TextBlock Text="{loc:Translate Upsell.Premium.Feature2}" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold" TextWrapping="Wrap" FontSize="{DynamicResource FCaption}" />
                   </StackPanel>
                   <StackPanel Orientation="Horizontal" Spacing="8">
                     <icons:MaterialIcon Kind="CheckCircle" Width="17" Height="17" Foreground="{DynamicResource AccentLightBrush}" />
-                    <TextBlock Text="{loc:Translate Upsell.Premium.Feature3}" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                    <TextBlock Text="{loc:Translate Upsell.Premium.Feature3}" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold" TextWrapping="Wrap" FontSize="{DynamicResource FCaption}" />
                   </StackPanel>
                   <StackPanel Orientation="Horizontal" Spacing="8">
                     <icons:MaterialIcon Kind="CheckCircle" Width="17" Height="17" Foreground="{DynamicResource AccentLightBrush}" />
-                    <TextBlock Text="{loc:Translate Upsell.Premium.Feature4}" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                    <TextBlock Text="{loc:Translate Upsell.Premium.Feature4}" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold" TextWrapping="Wrap" FontSize="{DynamicResource FCaption}" />
                   </StackPanel>
                   <StackPanel Orientation="Horizontal" Spacing="8">
                     <icons:MaterialIcon Kind="CheckCircle" Width="17" Height="17" Foreground="{DynamicResource AccentLightBrush}" />
-                    <TextBlock Text="{loc:Translate Upsell.Premium.Feature5}" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                    <TextBlock Text="{loc:Translate Upsell.Premium.Feature5}" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold" TextWrapping="Wrap" FontSize="{DynamicResource FCaption}" />
                   </StackPanel>
                   <StackPanel Orientation="Horizontal" Spacing="8">
                     <icons:MaterialIcon Kind="CheckCircle" Width="17" Height="17" Foreground="{DynamicResource AccentLightBrush}" />
-                    <TextBlock Text="{loc:Translate Upsell.Premium.Feature6}" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                    <TextBlock Text="{loc:Translate Upsell.Premium.Feature6}" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold" TextWrapping="Wrap" FontSize="{DynamicResource FCaption}" />
                   </StackPanel>
                   <StackPanel Orientation="Horizontal" Spacing="8">
                     <icons:MaterialIcon Kind="CheckCircle" Width="17" Height="17" Foreground="{DynamicResource AccentLightBrush}" />
-                    <TextBlock Text="{loc:Translate Upsell.Premium.Feature7}" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                    <TextBlock Text="{loc:Translate Upsell.Premium.Feature7}" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold" TextWrapping="Wrap" FontSize="{DynamicResource FCaption}" />
                   </StackPanel>
                   <StackPanel Orientation="Horizontal" Spacing="8">
                     <icons:MaterialIcon Kind="CheckCircle" Width="17" Height="17" Foreground="{DynamicResource AccentLightBrush}" />
-                    <TextBlock Text="{loc:Translate Upsell.Premium.Feature8}" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                    <TextBlock Text="{loc:Translate Upsell.Premium.Feature8}" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold" TextWrapping="Wrap" FontSize="{DynamicResource FCaption}" />
                   </StackPanel>
                 </UniformGrid>
               </StackPanel>

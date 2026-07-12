@@ -26,7 +26,7 @@
 
     <!-- Title -->
     <TextBlock x:Name="TitleBlock"
-               FontSize="20"
+               FontSize="{DynamicResource FTitleL}"
                FontWeight="Bold"
                Foreground="{DynamicResource TextPrimaryBrush}"
                TextAlignment="Center"
@@ -34,7 +34,7 @@
 
     <!-- Description -->
     <TextBlock x:Name="DescriptionBlock"
-               FontSize="14"
+               FontSize="{DynamicResource FBody}"
                LineHeight="20"
                Foreground="{DynamicResource TextMutedBrush}"
                TextAlignment="Center"
@@ -58,7 +58,7 @@
                             IsVisible="False" />
         <TextBlock x:Name="PrimaryActionTextBlock"
                    Foreground="{DynamicResource PlayerOverlayTextBrush}"
-                   FontSize="14"
+                   FontSize="{DynamicResource FBody}"
                    FontWeight="SemiBold" />
       </StackPanel>
     </Button>
@@ -71,7 +71,7 @@
             IsVisible="False">
       <TextBlock x:Name="SecondaryActionTextBlock"
                  Foreground="{DynamicResource AccentBrush}"
-                 FontSize="13"
+                 FontSize="{DynamicResource FBody}"
                  FontWeight="SemiBold" />
     </Button>
 

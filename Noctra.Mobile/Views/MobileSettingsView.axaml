@@ -40,16 +40,16 @@
                       VerticalAlignment="Center">
             <TextBlock Text="{loc:Translate Settings.Profile.ActiveProfile}"
                        Foreground="{DynamicResource AccentBrush}"
-                       FontSize="11"
+                       FontSize="{DynamicResource FTitleM}"
                        FontWeight="SemiBold" />
             <TextBlock Text="{Binding CurrentProfileName}"
                        Foreground="{DynamicResource TextPrimaryBrush}"
-                       FontSize="22"
+                       FontSize="{DynamicResource FBody}"
                        FontWeight="Bold"
                        TextTrimming="CharacterEllipsis" />
             <TextBlock Text="{Binding ProfileCreatedAt, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Profile.CreatedAtFormat'}"
                        Foreground="{DynamicResource TextMutedBrush}"
-                       FontSize="12" />
+                       FontSize="{DynamicResource FCaption}"/>
           </StackPanel>
         </Grid>
       </Border>
@@ -60,13 +60,13 @@
             <icons:MaterialIcon Kind="AccountSwitchOutline" Width="20" Height="20" Foreground="{DynamicResource AccentBrush}" />
             <TextBlock Text="{loc:Translate Settings.Profile.Management}"
                        Foreground="{DynamicResource TextPrimaryBrush}"
-                       FontSize="18"
+                       FontSize="{DynamicResource FTitleL}"
                        Padding="2"
                        FontWeight="SemiBold" />
           </StackPanel>
           <TextBlock Text="{loc:Translate Settings.Profile.ManagementDetail}"
                      Foreground="{DynamicResource TextMutedBrush}"
-                     FontSize="12"
+                     FontSize="{DynamicResource FCaption}"
                      TextWrapping="Wrap" />
           <Button Classes="SettingsActionButton"
                   Click="BackToProfiles_Click">
@@ -80,6 +80,7 @@
                          Text="{loc:Translate Settings.Profile.BackToProfiles}"
                          Foreground="{DynamicResource TextPrimaryBrush}"
                          FontWeight="SemiBold"
+                         FontSize="{DynamicResource FCaption}"
                          VerticalAlignment="Center" />
               <icons:MaterialIcon Grid.Column="2"
                                   Kind="ChevronRight"
@@ -108,6 +109,7 @@
                        FontSize="14" />
             <TextBlock Grid.Column="1"
                        Text="{Binding ProviderUrl}"
+                       FontSize="{DynamicResource FCaption}"
                        Foreground="{DynamicResource TextPrimaryBrush}"
                        TextWrapping="Wrap" />
           </Grid>
@@ -190,18 +192,16 @@
                         <StackPanel Margin="10,8">
                           <Rectangle Fill="{DynamicResource ThemePreviewDarkLabelBrush}"
                                      Height="8"
-                                     Width="86"
-                                     HorizontalAlignment="Left"
-                                     Margin="0,0,0,6" />
+                                     HorizontalAlignment="Stretch"
+                                     Margin="0,0,26,6" />
                           <Rectangle Fill="{DynamicResource ThemePreviewDarkText}"
                                      Height="3"
-                                     Width="112"
-                                     HorizontalAlignment="Left"
-                                     Margin="0,0,0,4" />
+                                     HorizontalAlignment="Stretch"
+                                     Margin="0,0,10,4" />
                           <Rectangle Fill="{DynamicResource ThemePreviewDarkText}"
                                      Height="3"
-                                     Width="88"
-                                     HorizontalAlignment="Left" />
+                                     HorizontalAlignment="Stretch"
+                                     Margin="0,0,32,0" />
                         </StackPanel>
                       </Border>
                       <Border x:Name="DarkCheckmark"
@@ -250,18 +250,16 @@
                         <StackPanel Margin="10,8">
                           <Rectangle Fill="{DynamicResource ThemePreviewDarkBg}"
                                      Height="8"
-                                     Width="86"
-                                     HorizontalAlignment="Left"
-                                     Margin="0,0,0,6" />
+                                     HorizontalAlignment="Stretch"
+                                     Margin="0,0,26,6" />
                           <Rectangle Fill="{DynamicResource ThemePreviewLightText}"
                                      Height="3"
-                                     Width="112"
-                                     HorizontalAlignment="Left"
-                                     Margin="0,0,0,4" />
+                                     HorizontalAlignment="Stretch"
+                                     Margin="0,0,10,4" />
                           <Rectangle Fill="{DynamicResource ThemePreviewLightText}"
                                      Height="3"
-                                     Width="88"
-                                     HorizontalAlignment="Left" />
+                                     HorizontalAlignment="Stretch"
+                                     Margin="0,0,32,0" />
                         </StackPanel>
                       </Border>
                       <Border x:Name="LightCheckmark"
@@ -824,7 +822,7 @@
                              FontWeight="SemiBold" />
                   <TextBlock Text="{Binding CustomEpgUrls.Count, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.SourcesCountFormat'}"
                              Foreground="{DynamicResource TextMutedBrush}"
-                             FontSize="12" />
+                             FontSize="{DynamicResource FOverline}" />
                 </StackPanel>
                 <Button Grid.Column="1"
                         Command="{Binding AddCustomEpgCommand}"
@@ -849,7 +847,7 @@
                            Grid.Column="1"
                            Foreground="{DynamicResource WarningBrush}"
                            Padding="2"
-                           FontSize="12"
+                           FontSize="{DynamicResource FOverline}"
                            TextWrapping="Wrap"/>
               </Grid>
 
@@ -868,7 +866,6 @@
                               Theme="{StaticResource FilterButtonStyle}">
                         <StackPanel Orientation="Horizontal" Spacing="6">
                           <icons:MaterialIcon Kind="DeleteOutline" Width="18" Height="18" Foreground="{DynamicResource ErrorBrush}" />
-                          <TextBlock Text="{loc:Translate Settings.Epg.RemoveSource.Tooltip}" />
                         </StackPanel>
                       </Button>
                     </Grid>
@@ -913,7 +910,7 @@
               <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="6">
                 <icons:MaterialIcon Kind="ShieldCheckOutline" Width="16" Height="16"
                                     Foreground="{DynamicResource AccentBrush}" />
-                <TextBlock Text="{loc:Translate LegalConsent.Action.Privacy}" FontWeight="SemiBold" />
+                <TextBlock Text="{loc:Translate LegalConsent.Action.Privacy}" FontWeight="SemiBold" FontSize="{DynamicResource FOverline}" />
               </StackPanel>
             </Button>
             <Button Classes="SettingsActionButton"
@@ -922,7 +919,7 @@
               <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="6">
                 <icons:MaterialIcon Kind="FileDocumentOutline" Width="16" Height="16"
                                     Foreground="{DynamicResource AccentBrush}" />
-                <TextBlock Text="{loc:Translate GlobalSettings.Terms.Title}" FontWeight="SemiBold" />
+                <TextBlock Text="{loc:Translate GlobalSettings.Terms.Title}" FontWeight="SemiBold" FontSize="{DynamicResource FOverline}" />
               </StackPanel>
             </Button>
           </Grid>
@@ -1164,9 +1161,10 @@
           <StackPanel VerticalAlignment="Center" Spacing="4">
             <TextBlock Text="{loc:Translate GlobalSettings.Support.Question}"
                        FontWeight="SemiBold"
+                       FontSize="{DynamicResource FCaption}"
                        Foreground="{DynamicResource TextPrimaryBrush}" />
             <TextBlock Text="{loc:Translate GlobalSettings.Support.Description}"
-                       FontSize="12"
+                       FontSize="{DynamicResource FOverline}"
                        Foreground="{DynamicResource TextMutedBrush}"
                        TextWrapping="Wrap" />
           </StackPanel>
@@ -1188,10 +1186,12 @@
             Margin="0,0,0,24">
         <Button Classes="SettingsActionButton"
                 Content="{loc:Translate Settings.Action.ResetDefaults}"
+                FontSize="{DynamicResource FCaption}"
                 Command="{Binding ResetToDefaultsCommand}"/>
         <Button Classes="SettingsPrimaryActionButton"
                 Grid.Column="1"
                 Content="{loc:Translate Settings.Action.SaveSettings}"
+                FontSize="{DynamicResource FCaption}"
                 Command="{Binding SaveSettingsCommand}"/>
       </Grid>
       </StackPanel>

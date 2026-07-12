@@ -23,12 +23,12 @@
       <Grid ColumnDefinitions="*,Auto">
         <!-- Desktop-inspired title styling: bold weight and subtle letter spacing -->
         <TextBlock Text="{loc:Translate Movies.Title}"
-                   FontSize="24"
+                   FontSize="{DynamicResource FHeadline}"
                    FontWeight="Bold"
                    LetterSpacing="1"
                    Foreground="{DynamicResource TextPrimaryBrush}" />
         <ComboBox Grid.Column="1"
-                  Width="250"
+                  Width="{DynamicResource TouchTarget}"
                   ItemsSource="{Binding SortOptions}"
                   SelectedValue="{Binding SelectedSortOrder}"
                   SelectedValueBinding="{Binding Key}"

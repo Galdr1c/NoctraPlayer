@@ -29,7 +29,7 @@
           <TextBlock x:Name="TitleTextBlock"
                      Grid.Column="1"
                      Foreground="{DynamicResource TextPrimaryBrush}"
-                     FontSize="22"
+                     FontSize="{DynamicResource FTitleM}"
                      FontWeight="Bold"
                      TextWrapping="Wrap"
                      VerticalAlignment="Center" />
@@ -57,8 +57,8 @@
                         HorizontalScrollBarVisibility="Disabled">
             <TextBlock x:Name="BodyTextBlock"
                        Foreground="{DynamicResource TextSecondaryBrush}"
-                       FontSize="14"
-                       LineHeight="21"
+                       FontSize="{DynamicResource FCaption}"
+                       LineHeight="15"
                        TextWrapping="Wrap" />
           </ScrollViewer>
         </Border>
