@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="clr-namespace:Noctra.ViewModels;assembly=Noctra.Core"
              xmlns:loc="using:Noctra.Mobile.Localization"
@@ -75,19 +75,19 @@
               </Ellipse.Styles>
             </Ellipse>
             <TextBlock Text="{loc:Translate Player.Overlay.Live}"
-                       FontSize="11" FontWeight="Black" Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                       FontSize="{DynamicResource FOverline}" FontWeight="Black" Foreground="{DynamicResource PlayerOverlayTextBrush}"
                        VerticalAlignment="Center" LetterSpacing="1" />
           </StackPanel>
         </Border>
         <StackPanel VerticalAlignment="Center" Spacing="1">
           <TextBlock Text="{Binding CurrentProgram.Title}"
                      Foreground="{DynamicResource TextPrimaryBrush}"
-                     FontSize="14" FontWeight="Bold"
+                     FontSize="{DynamicResource FBody}" FontWeight="Bold"
                      TextTrimming="CharacterEllipsis" MaxLines="1"
                      IsVisible="{Binding CurrentProgram.Title, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
           <TextBlock Text="{Binding CurrentProgram.TimeRange}"
                      Foreground="{DynamicResource TextMutedBrush}"
-                     FontSize="11" FontWeight="Medium"
+                     FontSize="{DynamicResource FOverline}" FontWeight="Medium"
                      IsVisible="{Binding HasCurrentProgramInfo}" />
         </StackPanel>
       </StackPanel>
@@ -101,11 +101,11 @@
         <Grid ColumnDefinitions="Auto,1*,Auto" ColumnSpacing="8">
           <TextBlock Text="{Binding PositionText}"
                      Foreground="{DynamicResource PlayerOverlaySecondaryTextBrush}"
-                     FontSize="11" FontWeight="SemiBold" />
+                     FontSize="{DynamicResource FOverline}" FontWeight="SemiBold" />
           <TextBlock Grid.Column="1"
                      Text="{Binding StreamInfo}"
                      Foreground="{DynamicResource PlayerOverlaySecondaryTextBrush}"
-                     FontSize="10"
+                     FontSize="{DynamicResource FOverline}"
                      TextAlignment="Center"
                      TextTrimming="CharacterEllipsis"
                      MaxLines="1"
@@ -113,13 +113,13 @@
           <TextBlock Grid.Column="2"
                      Text="{Binding DurationText}"
                      Foreground="{DynamicResource PlayerOverlaySecondaryTextBrush}"
-                     FontSize="11" FontWeight="SemiBold" />
+                     FontSize="{DynamicResource FOverline}" FontWeight="SemiBold" />
         </Grid>
       </StackPanel>
 
       <TextBlock Text="{Binding RemainingTime}"
                  Foreground="{DynamicResource PlayerOverlaySecondaryTextBrush}"
-                 FontSize="11"
+                 FontSize="{DynamicResource FOverline}"
                  HorizontalAlignment="Right"
                  Opacity="0.7"
                  IsVisible="{Binding IsLiveContent}" />
@@ -289,7 +289,7 @@
 
       <TextBlock Text="{Binding DownloadStatusMessage}"
                  Foreground="{DynamicResource TextMutedBrush}"
-                 FontSize="12"
+                 FontSize="{DynamicResource FCaption}"
                  TextWrapping="Wrap"
                  IsVisible="{Binding DownloadStatusMessage, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
 

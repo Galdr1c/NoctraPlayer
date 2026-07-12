@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -80,12 +80,12 @@
       </Border>
 
       <TextBlock Text="{Binding ProfileName}"
-                 FontSize="18"
+                 FontSize="{DynamicResource FTitleL}"
                  FontWeight="Bold"
                  Foreground="{DynamicResource TextPrimaryBrush}"
                  HorizontalAlignment="Center" />
       <TextBlock Text="{Binding Purpose}"
-                 FontSize="12"
+                 FontSize="{DynamicResource FCaption}"
                  Foreground="{DynamicResource TextMutedBrush}"
                  TextAlignment="Center"
                  TextWrapping="Wrap" />
@@ -111,7 +111,7 @@
 
       <TextBlock Text="{Binding ErrorMessage}"
                  Foreground="{DynamicResource ErrorBrush}"
-                 FontSize="12"
+                 FontSize="{DynamicResource FCaption}"
                  MinHeight="18"
                  TextAlignment="Center"
                  TextWrapping="Wrap"
@@ -123,13 +123,13 @@
                   IsVisible="{Binding IsLocked}">
         <TextBlock Text="{loc:Translate PinEntry.LockoutCountdown}"
                    Foreground="{DynamicResource WarningBrush}"
-                   FontSize="12" />
+                   FontSize="{DynamicResource FCaption}" />
         <TextBlock Text="{Binding LockSecondsRemaining}"
                    Foreground="{DynamicResource WarningBrush}"
-                   FontSize="12" />
+                   FontSize="{DynamicResource FCaption}" />
         <TextBlock Text="s"
                    Foreground="{DynamicResource WarningBrush}"
-                   FontSize="12" />
+                   FontSize="{DynamicResource FCaption}" />
       </StackPanel>
 
       <UniformGrid Rows="4"

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using Avalonia;
@@ -15,12 +16,11 @@ namespace Noctra.Mobile.Services;
 ///   Compact  : < 360 dp  (iPhone SE 1st, eski telefonlar)
 ///   Phone    : < 600 dp  (standart telefonlar, 5.5" - 6.7")
 ///   Tablet   : < 900 dp  (7-10" tablet portrait)
-///   Desktop  : >= 900 dp (büyük tablet landscape, desktop)
+///   Desktop  : >= 900 dp (büyük tablet landscape, desktop, Android TV)
 ///
 /// Kullanım:
 ///   MainView.OnSizeChanged → DeviceMetricsService.Instance.ApplySize(w, h)
-///   View'lar: {Binding (DeviceMetricsService.Instance.IsTablet)} veya
-///             DeviceMetricsService.Instance.Current ile kod-tarafı karar.
+///   View'lar: {DynamicResource FBody} gibi token'lar otomatik ölçeklenir.
 /// </summary>
 public sealed class DeviceMetricsService : INotifyPropertyChanged
 {
@@ -58,7 +58,7 @@ public sealed class DeviceMetricsService : INotifyPropertyChanged
     /// <summary>
     /// 360 dp referans genişliğine göre density scale.
     /// Compact'ta 0.85'e kadar düşer (ama touch target'lar korunur),
-    /// tablette 1.4'e kadar çıkar. Clamp erişilebilirlik için.
+    /// tablette 1.4, desktop/TV'de 1.6'ya kadar çıkar.
     /// </summary>
     public double DensityScale
     {
@@ -109,9 +109,11 @@ public sealed class DeviceMetricsService : INotifyPropertyChanged
             _ => DeviceClass.Desktop
         };
 
-        // 360 dp referans. Compact'ta 0.85, tablette 1.4'e kadar.
-        // Clamp çok önemli: çok küçük olursa dokunma hedefleri ezilir.
-        DensityScale = Math.Clamp(shortSide / 360.0, 0.85, 1.4);
+        // 360 dp referans. Compact'ta 0.85, tablette 1.4, TV/desktop'ta 1.6.
+        DensityScale = Math.Clamp(shortSide / 360.0, 0.85, 1.6);
+
+        // Tüm DynamicResource token'larını güncelle
+        UpdateResourceTokens();
     }
 
     /// <summary>
@@ -145,6 +147,110 @@ public sealed class DeviceMetricsService : INotifyPropertyChanged
         // Mobil default: telefon portrait
         ApplySize(360, 640);
     }
+
+    // ─── Dinamik Token Güncelleme ─────────────────────────────────────────
+
+    // Baz değerler (360dp telefon referansı, Tokens.axaml ile eşleşir)
+    // Font token'larının baz değerleri
+    private static readonly Dictionary<string, double> BaseFontTokens = new()
+    {
+        ["FDisplayLarge"] = 36,
+        ["FDisplay"]      = 32,
+        ["FDisplaySmall"] = 28,
+        ["FHeadline"]     = 22,
+        ["FTitleL"]       = 18,
+        ["FTitleM"]       = 16,
+        ["FBodyL"]        = 15,
+        ["FBody"]         = 14,
+        ["FCaption"]      = 12,
+        ["FOverline"]     = 10,
+    };
+
+    // Spacing token'larının baz değerleri
+    private static readonly Dictionary<string, double> BaseSpacingTokens = new()
+    {
+        ["S1"] = 4,
+        ["S2"] = 8,
+        ["S3"] = 12,
+        ["S4"] = 16,
+        ["S5"] = 20,
+        ["S6"] = 24,
+        ["S7"] = 32,
+        ["S8"] = 40,
+    };
+
+    // Dimension token'larının baz değerleri
+    private static readonly Dictionary<string, double> BaseDimensionTokens = new()
+    {
+        ["BottomNavHeight"]   = 62,
+        ["HeaderHeight"]      = 56,
+        ["NavRailWidth"]      = 72,
+        ["AvatarSizeS"]       = 40,
+        ["AvatarSizeM"]       = 56,
+        ["AvatarSizeL"]       = 80,
+        ["TouchTarget"]       = 44,
+        ["CardMinHeight"]     = 120,
+        ["ThumbnailWidth"]    = 48,
+        ["ThumbnailHeight"]   = 64,
+        ["SheetMaxHeight"]    = 560,
+        ["SheetMaxHeightLarge"]       = 620,
+        ["SheetScrollMaxHeight"]      = 220,
+        ["SheetScrollMaxHeightMedium"] = 330,
+    };
+
+    /// <summary>
+    /// DensityScale'e göre tüm token'ları yeniden hesaplar ve
+    /// Application.Current.Resources'a yazar. DynamicResource binding'leri
+    /// otomatik olarak güncellenir.
+    /// </summary>
+    private void UpdateResourceTokens()
+    {
+        var app = Application.Current;
+        if (app is null) return;
+
+        var resources = app.Resources;
+        var scale = DensityScale;
+
+        // Font token'ları — ölçekle ama minimum okunabilirlik için alt sınır koy
+        foreach (var (key, baseValue) in BaseFontTokens)
+        {
+            var scaled = Math.Round(baseValue * scale);
+            // Font minimum 9dp altına düşmesin (erişilebilirlik)
+            scaled = Math.Max(scaled, 9);
+            resources[key] = scaled;
+        }
+
+        // Spacing token'ları — ölçekle ama 2dp'den küçük olmasın
+        foreach (var (key, baseValue) in BaseSpacingTokens)
+        {
+            var scaled = Math.Round(baseValue * scale);
+            scaled = Math.Max(scaled, 2);
+            resources[key] = scaled;
+        }
+
+        // Dimension token'ları — ölçekle ama touch target minimum 40dp
+        foreach (var (key, baseValue) in BaseDimensionTokens)
+        {
+            var scaled = Math.Round(baseValue * scale);
+            if (key == "TouchTarget")
+                scaled = Math.Max(scaled, 40);
+            resources[key] = scaled;
+        }
+
+        // Thickness token'ları — yeniden hesapla
+        var ps = Math.Round(16 * scale);
+        var ps2 = Math.Round(12 * scale);
+        var ps3 = Math.Round(24 * scale);
+        var ps4 = Math.Round(18 * scale);
+        var ps5 = Math.Round(28 * scale);
+        resources["PagePadding"] = new Avalonia.Thickness(ps, ps2, ps, ps);
+        resources["PagePaddingLarge"] = new Avalonia.Thickness(ps3, ps4, ps3, ps5);
+        resources["CardPadding"] = new Avalonia.Thickness(Math.Round(14 * scale));
+        resources["CardPaddingLarge"] = new Avalonia.Thickness(Math.Round(20 * scale));
+        resources["SheetPadding"] = new Avalonia.Thickness(ps, ps2);
+    }
+
+    // ─── INotifyPropertyChanged ───────────────────────────────────────────
 
     public event PropertyChangedEventHandler? PropertyChanged;
 

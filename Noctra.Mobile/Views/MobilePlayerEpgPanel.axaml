@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:models="using:Noctra.Models"
              xmlns:vm="clr-namespace:Noctra.ViewModels;assembly=Noctra.Core"
@@ -22,11 +22,11 @@
           <Grid ColumnDefinitions="*,Auto">
             <StackPanel VerticalAlignment="Center" Spacing="1">
               <TextBlock Text="{Binding CurrentChannel.Name}"
-                         FontSize="13" FontWeight="SemiBold"
+                         FontSize="{DynamicResource FCaption}" FontWeight="SemiBold"
                          Foreground="{DynamicResource PlayerOverlayTextBrush}"
                          TextTrimming="CharacterEllipsis" MaxLines="1" />
               <TextBlock Text="{Binding ConnectionStatus}"
-                         FontSize="10"
+                         FontSize="{DynamicResource FOverline}"
                          Foreground="{DynamicResource PlayerOverlaySecondaryTextBrush}"
                          TextTrimming="CharacterEllipsis" MaxLines="1" />
             </StackPanel>
@@ -73,7 +73,7 @@
                 <icons:MaterialIcon Kind="CalendarClock" Width="18" Height="18"
                                     Foreground="{DynamicResource AccentBrush}" />
                 <TextBlock Text="{loc:Translate Player.Epg.GuideTitle}"
-                           FontSize="11" FontWeight="Black"
+                           FontSize="{DynamicResource FOverline}" FontWeight="Black"
                            Foreground="{DynamicResource AccentBrush}" LetterSpacing="2"
                            VerticalAlignment="Center" />
                 <Border Background="#267B2FBE"
@@ -81,14 +81,14 @@
                         Padding="7,3"
                         VerticalAlignment="Center">
                   <TextBlock x:Name="EpgTimeWindowLabel"
-                             FontSize="10" FontWeight="SemiBold"
+                             FontSize="{DynamicResource FOverline}" FontWeight="SemiBold"
                              Foreground="#B3FFFFFF" />
                 </Border>
                 <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center"
                             IsVisible="{Binding IsEpgLoading}">
                   <ProgressBar IsIndeterminate="True" Width="50" Height="3"
                                Foreground="{DynamicResource AccentBrush}" Background="#1AFFFFFF" />
-                  <TextBlock Text="{loc:Translate Common.Loading}" FontSize="10"
+                  <TextBlock Text="{loc:Translate Common.Loading}" FontSize="{DynamicResource FOverline}"
                              Foreground="{DynamicResource TextMutedBrush}" />
                 </StackPanel>
               </StackPanel>
@@ -98,7 +98,7 @@
                 <StackPanel Orientation="Horizontal" Spacing="4">
                   <icons:MaterialIcon Kind="AlertCircle" Width="12" Height="12"
                                       Foreground="#FBBF24" VerticalAlignment="Center" />
-                  <TextBlock Text="{Binding EpgStatusMessage}" FontSize="10" FontWeight="SemiBold"
+                  <TextBlock Text="{Binding EpgStatusMessage}" FontSize="{DynamicResource FOverline}" FontWeight="SemiBold"
                              Foreground="#FDE68A" TextTrimming="CharacterEllipsis" MaxWidth="120" />
                 </StackPanel>
               </Border>
@@ -119,7 +119,7 @@
               <Border Grid.Row="0" Background="#131313"
                       BorderBrush="#1AFFFFFF" BorderThickness="0,0,1,1">
                 <TextBlock Text="{loc:Translate Player.Epg.ChannelHeader}"
-                           FontSize="9" FontWeight="Black" LetterSpacing="1.2"
+                           FontSize="{DynamicResource FOverline}" FontWeight="Black" LetterSpacing="1.2"
                            Foreground="{DynamicResource TextMutedBrush}"
                            HorizontalAlignment="Center" VerticalAlignment="Center" />
               </Border>
@@ -149,7 +149,7 @@
                             </Grid>
                           </Border>
                           <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
-                            <TextBlock Text="{Binding Channel.Name}" FontSize="10" FontWeight="SemiBold"
+                            <TextBlock Text="{Binding Channel.Name}" FontSize="{DynamicResource FOverline}" FontWeight="SemiBold"
                                        Foreground="{DynamicResource TextPrimaryBrush}"
                                        TextTrimming="CharacterEllipsis" MaxLines="2" />
                             <TextBlock Text="{Binding Channel.GroupTitle}" FontSize="7"
@@ -194,7 +194,7 @@
                                   BorderBrush="#0DFFFFFF"
                                   BorderThickness="0,0,0,1" />
 
-                          <TextBlock Text="{loc:Translate Player.Epg.NoInfo}" FontSize="10"
+                          <TextBlock Text="{loc:Translate Player.Epg.NoInfo}" FontSize="{DynamicResource FOverline}"
                                      Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center"
                                      Margin="10,0,0,0"
                                      IsVisible="{Binding HasEpgData, Converter={StaticResource InverseBoolConverter}}" />
@@ -233,7 +233,7 @@
                                             IsHitTestVisible="False" />
                                     <StackPanel Margin="7,0" VerticalAlignment="Center" Spacing="1"
                                                 IsVisible="{Binding HasReadableText}">
-                                      <TextBlock Text="{Binding Program.Title}" FontSize="10" FontWeight="SemiBold"
+                                      <TextBlock Text="{Binding Program.Title}" FontSize="{DynamicResource FOverline}" FontWeight="SemiBold"
                                                  Foreground="{DynamicResource PlayerOverlayTextBrush}" TextTrimming="CharacterEllipsis"
                                                  MaxLines="1" />
                                       <TextBlock Text="{Binding Program.TimeRange}" FontSize="7"

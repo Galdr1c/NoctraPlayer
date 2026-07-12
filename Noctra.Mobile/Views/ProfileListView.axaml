@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -112,7 +112,7 @@
                  Stretch="Uniform"
                  VerticalAlignment="Center" />
           <TextBlock Text="NOCTRA"
-                     FontSize="18"
+                     FontSize="{DynamicResource FTitleL}"
                      FontWeight="Bold"
                      Foreground="{DynamicResource AccentBrush}"
                      LetterSpacing="1.5"
@@ -146,7 +146,7 @@
                  Stretch="Uniform"
                  VerticalAlignment="Center" />
           <TextBlock Text="NOCTRA"
-                     FontSize="18"
+                     FontSize="{DynamicResource FTitleL}"
                      FontWeight="Bold"
                      Foreground="{DynamicResource AccentBrush}"
                      LetterSpacing="1.5"
@@ -156,7 +156,7 @@
         <!-- Orta: "Profilleri Yönet" -->
         <TextBlock Grid.Column="1"
                    Text="{loc:Translate Profiles.ManageMode.Title}"
-                   FontSize="17"
+                   FontSize="{DynamicResource FTitleM}"
                    FontWeight="SemiBold"
                    Foreground="{DynamicResource TextPrimaryBrush}"
                    HorizontalAlignment="Center"
@@ -316,7 +316,7 @@
                                                 Foreground="{Binding DeletionUrgency, Converter={StaticResource UrgencyToColorConverter}}"
                                                 HorizontalAlignment="Center" />
                             <TextBlock Text="{Binding TimeUntilDeletion, Converter={StaticResource TimeSpanToCountdownConverter}}"
-                                       FontSize="11" FontWeight="Bold"
+                                       FontSize="{DynamicResource FOverline}" FontWeight="Bold"
                                        Foreground="{Binding DeletionUrgency, Converter={StaticResource UrgencyToColorConverter}}"
                                        TextAlignment="Center"
                                        HorizontalAlignment="Center" />
@@ -338,7 +338,7 @@
                   <!-- Profil adı etiketi -->
                   <TextBlock Text="{Binding Name}"
                              Foreground="{DynamicResource TextMutedBrush}"
-                             FontSize="15"
+                             FontSize="{DynamicResource FBodyL}"
                              FontWeight="Medium"
                              TextAlignment="Center"
                              TextTrimming="CharacterEllipsis"
@@ -385,7 +385,7 @@
                   <!-- "Profil Ekle" etiketi -->
                   <TextBlock Text="{loc:Translate Profiles.AddProfile}"
                              Foreground="{DynamicResource TextMutedBrush}"
-                             FontSize="14"
+                             FontSize="{DynamicResource FBody}"
                              FontWeight="Medium"
                              TextAlignment="Center"
                              MaxWidth="150"
@@ -423,7 +423,7 @@
             </Grid>
             <TextBlock Text="{loc:Translate Profiles.AddProfile}"
                        Foreground="{DynamicResource TextMutedBrush}"
-                       FontSize="14" FontWeight="Medium"
+                       FontSize="{DynamicResource FBody}" FontWeight="Medium"
                        TextAlignment="Center" />
           </StackPanel>
         </Button>

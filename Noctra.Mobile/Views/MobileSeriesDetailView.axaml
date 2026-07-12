@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -88,7 +88,7 @@
                        MaxLines="2" />
             <TextBlock Text="{loc:Translate Series.Detail.DownloadedEpisodes}"
                        Foreground="{DynamicResource AccentBrush}"
-                       FontSize="18"
+                       FontSize="{DynamicResource FTitleL}"
                        FontWeight="SemiBold"
                        IsVisible="{Binding IsDownloadedSeriesDetailMode}" />
             <StackPanel Orientation="Horizontal"
@@ -96,10 +96,10 @@
                         IsVisible="{Binding !IsDownloadedSeriesDetailMode}">
               <TextBlock Text="{Binding SelectedSeriesYears}"
                          Foreground="{DynamicResource TextMutedBrush}"
-                         FontSize="15"
+                         FontSize="{DynamicResource FBodyL}"
                          FontWeight="SemiBold"
                          IsVisible="{Binding SelectedSeriesYears, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
-              <TextBlock Text=" • " Foreground="{DynamicResource TextMutedBrush}" FontSize="15" VerticalAlignment="Center" Margin="8,0">
+              <TextBlock Text=" • " Foreground="{DynamicResource TextMutedBrush}" FontSize="{DynamicResource FBodyL}" VerticalAlignment="Center" Margin="8,0">
                 <TextBlock.IsVisible>
                   <MultiBinding Converter="{x:Static BoolConverters.And}">
                     <Binding Path="SelectedSeriesYears" Converter="{StaticResource StringNotEmptyToBoolConverter}"/>
@@ -112,13 +112,13 @@
               </TextBlock>
               <TextBlock Text="{Binding SelectedSeriesGenres}"
                          Foreground="{DynamicResource TextMutedBrush}"
-                         FontSize="15"
+                         FontSize="{DynamicResource FBodyL}"
                          Margin="8,0"
                          FontWeight="Medium"
                          TextTrimming="CharacterEllipsis"
                          MaxWidth="120"
                          IsVisible="{Binding SelectedSeriesGenres, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
-              <TextBlock Text=" • " Foreground="{DynamicResource TextMutedBrush}" FontSize="15" VerticalAlignment="Center" Margin="8,0">
+              <TextBlock Text=" • " Foreground="{DynamicResource TextMutedBrush}" FontSize="{DynamicResource FBodyL}" VerticalAlignment="Center" Margin="8,0">
                 <TextBlock.IsVisible>
                   <MultiBinding Converter="{x:Static BoolConverters.And}">
                     <Binding Path="SelectedSeriesGenres" Converter="{StaticResource StringNotEmptyToBoolConverter}"/>
@@ -134,7 +134,7 @@
                       IsVisible="{Binding SelectedSeriesAgeRating, Converter={StaticResource StringNotEmptyToVisibilityConverter}}">
                 <TextBlock Text="{Binding SelectedSeriesAgeRating}"
                            Foreground="{DynamicResource TextMutedBrush}"
-                           FontSize="10"
+                           FontSize="{DynamicResource FOverline}"
                            FontWeight="Bold" />
               </Border>
             </StackPanel>
@@ -167,14 +167,14 @@
             <TextBlock Text="{Binding SelectedSeriesOverview}"
                        Foreground="{DynamicResource TextPrimaryBrush}"
                        Opacity="0.4"
-                       FontSize="16"
+                       FontSize="{DynamicResource FTitleM}"
                        LineHeight="22"
                        TextWrapping="Wrap"
                        MaxLines="7"
                        IsVisible="{Binding SelectedSeriesOverview, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
             <TextBlock Text="{Binding SelectedSeriesCast, Converter={StaticResource StringFormatConverter}, ConverterParameter='Series.Detail.Cast'}"
                        Foreground="{DynamicResource TextMutedBrush}"
-                       FontSize="14"
+                       FontSize="{DynamicResource FBody}"
                        TextWrapping="Wrap"
                        MaxLines="3"
                        Margin="0,16,0,0"
@@ -187,11 +187,11 @@
                     IsVisible="{Binding !IsDownloadedSeriesDetailMode}">
           <TextBlock Text="{Binding SelectedSeries.SeasonCountSafe, Converter={StaticResource StringFormatConverter}, ConverterParameter='Series.Seasons.Format'}"
                      Foreground="{DynamicResource TextMutedBrush}"
-                     FontSize="15"
+                     FontSize="{DynamicResource FBodyL}"
                      FontWeight="Medium" />
           <TextBlock Text="{Binding SelectedSeries.TotalEpisodesCount, Converter={StaticResource StringFormatConverter}, ConverterParameter='Series.Episodes.Format'}"
                      Foreground="{DynamicResource TextMutedBrush}"
-                     FontSize="15"
+                     FontSize="{DynamicResource FBodyL}"
                      FontWeight="Medium" />
         </StackPanel>
 
@@ -208,7 +208,7 @@
                   CornerRadius="8">
             <StackPanel Orientation="Horizontal" Spacing="7">
               <icons:MaterialIcon Kind="Play" Width="18" Height="18"  Foreground="{DynamicResource TextPrimaryBrush}"/>
-              <TextBlock Text="{loc:Translate Series.Play}"  FontSize="14" FontWeight="Bold" VerticalAlignment="Center"/>
+              <TextBlock Text="{loc:Translate Series.Play}"  FontSize="{DynamicResource FBody}" FontWeight="Bold" VerticalAlignment="Center"/>
             </StackPanel>
           </Button>
           <Button Classes="detailAction"
@@ -222,7 +222,7 @@
                   CornerRadius="8">
             <StackPanel Orientation="Horizontal" Spacing="7">
               <icons:MaterialIcon Kind="History" Width="16" Height="16"  Foreground="{DynamicResource AccentBrush}"/>
-              <TextBlock Text="{Binding SelectedSeriesContinueText}" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"/>
+              <TextBlock Text="{Binding SelectedSeriesContinueText}" FontSize="{DynamicResource FCaption}" FontWeight="SemiBold" VerticalAlignment="Center"/>
             </StackPanel>
           </Button>
           <Button Classes="detailAction"
@@ -238,7 +238,7 @@
                   CornerRadius="8">
             <StackPanel Orientation="Horizontal" Spacing="7">
               <icons:MaterialIcon Kind="Youtube" Width="18" Height="18" Foreground="{DynamicResource AccentBrush}"/>
-              <TextBlock Text="{loc:Translate Series.WatchTrailer}" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"/>
+              <TextBlock Text="{loc:Translate Series.WatchTrailer}" FontSize="{DynamicResource FCaption}" FontWeight="SemiBold" VerticalAlignment="Center"/>
             </StackPanel>
           </Button>
           <Button Classes="iconBtn"
@@ -296,12 +296,12 @@
                                    HorizontalAlignment="Center" />
           <TextBlock Text="{loc:Translate Series.Episodes.Loading}"
                      Foreground="{DynamicResource TextMutedBrush}"
-                     FontSize="15"
+                     FontSize="{DynamicResource FBodyL}"
                      FontWeight="SemiBold"
                      TextAlignment="Center" />
           <TextBlock Text="{loc:Translate Series.Episodes.LoadingDetail}"
                      Foreground="{DynamicResource TextMutedBrush}"
-                     FontSize="12"
+                     FontSize="{DynamicResource FCaption}"
                      Opacity="0.6"
                      TextAlignment="Center" />
         </StackPanel>
@@ -312,13 +312,13 @@
                     IsVisible="{Binding ShowSelectedSeriesNoEpisodes}">
           <TextBlock Text="{loc:Translate Series.Episodes.Empty}"
                      Foreground="{DynamicResource TextPrimaryBrush}"
-                     FontSize="20"
+                     FontSize="{DynamicResource FTitleL}"
                      LetterSpacing="1"
                      FontWeight="Bold"
                      TextAlignment="Center" />
           <TextBlock Text="{loc:Translate Series.Episodes.EmptyDetail}"
                      Foreground="{DynamicResource TextMutedBrush}"
-                     FontSize="14"
+                     FontSize="{DynamicResource FBody}"
                      TextWrapping="Wrap"
                      TextAlignment="Center" />
         </StackPanel>
@@ -339,7 +339,7 @@
             <DataTemplate x:DataType="models:Season">
               <TextBlock Text="{Binding SeasonNumber, Converter={StaticResource StringFormatConverter}, ConverterParameter='Series.Seasons.Format'}"
                          Foreground="{DynamicResource TextPrimaryBrush}"
-                         FontSize="18"
+                         FontSize="{DynamicResource FTitleL}"
                          FontWeight="SemiBold"
                          Margin="0,0,24,0" />
             </DataTemplate>
@@ -386,7 +386,7 @@
                               Padding="6,3,8,3">
                         <TextBlock Text="{Binding EpisodeNumber}"
                                    Foreground="{DynamicResource PlayerOverlayTextBrush}"
-                                   FontSize="11"
+                                   FontSize="{DynamicResource FOverline}"
                                    FontWeight="Bold"
                                    LineHeight="13" />
                       </Border>
@@ -418,7 +418,7 @@
                                  MaxLines="2" />
                       <TextBlock Text="{Binding EpisodeMetaText}"
                                  Foreground="{DynamicResource TextMutedBrush}"
-                                 FontSize="11"
+                                 FontSize="{DynamicResource FOverline}"
                                  VerticalAlignment="Center"
                                  IsVisible="{Binding EpisodeMetaText, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
                       <Border Background="{DynamicResource AccentHoverBrush}"
@@ -434,7 +434,7 @@
                                               VerticalAlignment="Center" />
                           <TextBlock Text="{loc:Translate Player.Overlay.Watched}"
                                      Foreground="{DynamicResource AccentBrush}"
-                                     FontSize="9"
+                                     FontSize="{DynamicResource FOverline}"
                                      FontWeight="Bold" />
                         </StackPanel>
                       </Border>
@@ -456,14 +456,14 @@
                     </StackPanel>
                     <TextBlock Text="{Binding TmdbEpisodeName}"
                                Foreground="{DynamicResource AccentBrush}"
-                               FontSize="12"
+                               FontSize="{DynamicResource FCaption}"
                                FontStyle="Italic"
                                Opacity="0.85"
                                TextWrapping="Wrap"
                                IsVisible="{Binding TmdbEpisodeName, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
                     <TextBlock Text="{Binding Plot}"
                                Foreground="{DynamicResource TextMutedBrush}"
-                               FontSize="12"
+                               FontSize="{DynamicResource FCaption}"
                                TextWrapping="Wrap"
                                MaxLines="2"
                                IsVisible="{Binding Plot, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />

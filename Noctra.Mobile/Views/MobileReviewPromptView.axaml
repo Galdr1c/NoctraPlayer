@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:loc="using:Noctra.Mobile.Localization"
              xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
@@ -58,7 +58,7 @@
           </Border>
           <TextBlock Text="{loc:Translate ReviewPrompt.Title}"
                      Foreground="{DynamicResource TextPrimaryBrush}"
-                     FontSize="20"
+                     FontSize="{DynamicResource FTitleL}"
                      FontWeight="Bold"
                      VerticalAlignment="Center" />
         </StackPanel>
@@ -66,7 +66,7 @@
         <!-- Message body -->
         <TextBlock Text="{loc:Translate ReviewPrompt.Message.Android}"
                    Foreground="{DynamicResource TextSecondaryBrush}"
-                   FontSize="14"
+                   FontSize="{DynamicResource FBody}"
                    LineHeight="21"
                    TextWrapping="Wrap"
                    TextAlignment="Center"
@@ -88,7 +88,7 @@
                                   Foreground="{DynamicResource PlayerOverlayTextBrush}" />
               <TextBlock Text="{loc:Translate ReviewPrompt.Action.Rate}"
                         Foreground="{DynamicResource PlayerOverlayTextBrush}"
-                        FontSize="15"
+                        FontSize="{DynamicResource FBodyL}"
                         FontWeight="Bold" />
             </StackPanel>
           </Button>
@@ -108,7 +108,7 @@
                   HorizontalAlignment="Center">
             <TextBlock Text="{loc:Translate ReviewPrompt.Action.Never}"
                       Foreground="{DynamicResource TextMutedBrush}"
-                      FontSize="13"
+                      FontSize="{DynamicResource FCaption}"
                       FontWeight="SemiBold" />
           </Button>
       </Grid>

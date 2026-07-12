@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -15,12 +15,12 @@
       <StackPanel Margin="24,18,24,28" Spacing="20">
       <StackPanel Spacing="6">
         <TextBlock Text="{loc:Translate Settings.Title}"
-                   FontSize="28"
+                   FontSize="{DynamicResource FDisplaySmall}"
                    FontWeight="Bold"
                    Foreground="{DynamicResource TextPrimaryBrush}" />
         <TextBlock Text="{Binding StatusMessage}"
                    Foreground="{DynamicResource TextMutedBrush}"
-                   FontSize="13"
+                   FontSize="{DynamicResource FCaption}"
                    TextWrapping="Wrap" />
       </StackPanel>
 
@@ -106,7 +106,7 @@
                 ColumnSpacing="8">
             <TextBlock Text="{Binding ProviderUrlLabel}"
                        Foreground="{DynamicResource TextMutedBrush}"
-                       FontSize="14" />
+                       FontSize="{DynamicResource FBody}" />
             <TextBlock Grid.Column="1"
                        Text="{Binding ProviderUrl}"
                        FontSize="{DynamicResource FCaption}"
@@ -118,7 +118,7 @@
                 IsVisible="{Binding ShowProviderIdentity}">
             <TextBlock Text="{Binding ProviderIdentityLabel}"
                        Foreground="{DynamicResource TextMutedBrush}"
-                       FontSize="12" />
+                       FontSize="{DynamicResource FCaption}" />
             <TextBlock Grid.Column="1"
                        Text="{Binding ProviderUsername}"
                        Foreground="{DynamicResource TextPrimaryBrush}"
@@ -129,7 +129,7 @@
                 IsVisible="{Binding ShowProviderPassword}">
             <TextBlock Text="{loc:Translate Settings.Account.Password}"
                        Foreground="{DynamicResource TextMutedBrush}"
-                       FontSize="12" />
+                       FontSize="{DynamicResource FCaption}" />
             <TextBlock Grid.Column="1"
                        Text="{Binding ProviderPassword}"
                        Foreground="{DynamicResource TextPrimaryBrush}"
@@ -139,13 +139,13 @@
                       IsVisible="{Binding ShowProviderExpiration}">
             <TextBlock Text="{loc:Translate Settings.Account.Expiry}"
                        Foreground="{DynamicResource TextMutedBrush}"
-                       FontSize="12" />
+                       FontSize="{DynamicResource FCaption}" />
             <TextBlock Text="{Binding ExpirationDate, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Account.ExpiryFormat'}"
                        Foreground="{DynamicResource TextPrimaryBrush}"
                        FontWeight="SemiBold" />
             <TextBlock Text="{Binding ExpirationStatus}"
                        Foreground="{DynamicResource AccentBrush}"
-                       FontSize="12" />
+                       FontSize="{DynamicResource FCaption}" />
           </StackPanel>
         </StackPanel>
       </Border>
@@ -168,7 +168,7 @@
                          FontWeight="Medium" />
               <TextBlock Text="{loc:Translate GlobalSettings.Theme.Description}"
                          Foreground="{DynamicResource TextMutedBrush}"
-                         FontSize="12"
+                         FontSize="{DynamicResource FCaption}"
                          TextWrapping="Wrap" />
             </StackPanel>
 
@@ -222,7 +222,7 @@
                     </Grid>
                   </Border>
                   <TextBlock Text="{loc:Translate Settings.Theme.Dark}"
-                             FontSize="12"
+                             FontSize="{DynamicResource FCaption}"
                              Foreground="{DynamicResource ThemePreviewDarkLabelBrush}"
                              HorizontalAlignment="Center"
                              FontWeight="SemiBold"
@@ -281,7 +281,7 @@
                     </Grid>
                   </Border>
                   <TextBlock Text="{loc:Translate Settings.Theme.Light}"
-                             FontSize="12"
+                             FontSize="{DynamicResource FCaption}"
                              Foreground="{DynamicResource ThemePreviewLightLabelBrush}"
                              HorizontalAlignment="Center"
                              VerticalAlignment="Bottom"
@@ -294,7 +294,7 @@
 
           <TextBlock Text="{loc:Translate Settings.Language.Title}"
                      Foreground="{DynamicResource TextMutedBrush}"
-                     FontSize="12" />
+                     FontSize="{DynamicResource FCaption}" />
           <ComboBox SelectedValue="{Binding AppLanguage, Mode=TwoWay}"
                    x:CompileBindings="False"
                     SelectedValueBinding="{Binding Tag}"
@@ -319,7 +319,7 @@
           </StackPanel>
           <TextBlock Text="{loc:Translate Settings.Playback.UserAgent}"
                      Foreground="{DynamicResource TextMutedBrush}"
-                     FontSize="12" />
+                     FontSize="{DynamicResource FCaption}" />
           <TextBox Text="{Binding UserAgent, Mode=TwoWay}"
                    PlaceholderText="VLC/3.0.x LibVLC/3.0.x"
                    MinHeight="44" />
@@ -333,7 +333,7 @@
           </Grid>
           <TextBlock Text="{loc:Translate Settings.Playback.Quality}"
                      Foreground="{DynamicResource TextMutedBrush}"
-                     FontSize="12" />
+                     FontSize="{DynamicResource FCaption}" />
           <ComboBox SelectedIndex="{Binding SelectedDataUsage, Mode=TwoWay}"
                    
                     MinHeight="44">
@@ -344,7 +344,7 @@
           </ComboBox>
           <TextBlock Text="{loc:Translate Settings.Playback.Buffer}"
                      Foreground="{DynamicResource TextMutedBrush}"
-                     FontSize="12" />
+                     FontSize="{DynamicResource FCaption}" />
           <StackPanel Spacing="4">
             <Grid VerticalAlignment="Center">
               <RadioButton Content="{loc:Translate Settings.Playback.Buffer.Small}"
@@ -420,7 +420,7 @@
           </Grid>
           <TextBlock Text="{loc:Translate Settings.Playback.PreferredSubtitle}"
                      Foreground="{DynamicResource TextMutedBrush}"
-                     FontSize="12" />
+                     FontSize="{DynamicResource FCaption}" />
           <ComboBox SelectedValue="{Binding SubtitleLanguage, Mode=TwoWay}"
                    x:CompileBindings="False"
                     SelectedValueBinding="{Binding Tag}"
@@ -438,7 +438,7 @@
           </ComboBox>
           <TextBlock Text="{loc:Translate Settings.Playback.PreferredAudio}"
                      Foreground="{DynamicResource TextMutedBrush}"
-                     FontSize="12" />
+                     FontSize="{DynamicResource FCaption}" />
           <ComboBox SelectedValue="{Binding PreferredAudioLanguage, Mode=TwoWay}"
                    x:CompileBindings="False"
                     SelectedValueBinding="{Binding Tag}"
@@ -476,7 +476,7 @@
           </Grid>
           <TextBlock Text="{loc:Translate Settings.Download.Quality}"
                      Foreground="{DynamicResource TextMutedBrush}"
-                     FontSize="12" />
+                     FontSize="{DynamicResource FCaption}" />
           <ComboBox SelectedIndex="{Binding SelectedDownloadQuality, Mode=TwoWay}"
                    
                     MinHeight="44">
@@ -485,14 +485,14 @@
           </ComboBox>
           <TextBlock Text="{loc:Translate Settings.Download.Path}"
                      Foreground="{DynamicResource TextMutedBrush}"
-                     FontSize="12" />
+                     FontSize="{DynamicResource FCaption}" />
           <TextBox Text="{Binding DownloadPath}"
                    IsReadOnly="True"
                    TextWrapping="Wrap"
                    MinHeight="44" />
           <TextBlock Text="{loc:Translate Mobile.Settings.Download.AndroidStorage}"
                      Foreground="{DynamicResource TextMutedBrush}"
-                     FontSize="12"
+                     FontSize="{DynamicResource FCaption}"
                      TextWrapping="Wrap" />
           <Grid ColumnDefinitions="*,Auto">
             <TextBlock Text="{loc:Translate Settings.Notifications.Download}"
@@ -523,7 +523,7 @@
           <Grid ColumnDefinitions="*,Auto">
             <TextBlock Text="{loc:Translate Settings.Channels.Count}"
                        Foreground="{DynamicResource TextMutedBrush}"
-                       FontSize="12" />
+                       FontSize="{DynamicResource FCaption}" />
             <TextBlock Grid.Column="1"
                        Text="{Binding TotalChannels}"
                        Foreground="{DynamicResource TextPrimaryBrush}"
@@ -532,18 +532,18 @@
           <Grid ColumnDefinitions="*,Auto">
             <TextBlock Text="{loc:Translate Settings.Channels.LastUpdate}"
                        Foreground="{DynamicResource TextMutedBrush}"
-                       FontSize="12" />
+                       FontSize="{DynamicResource FCaption}" />
             <TextBlock Grid.Column="1"
                        Text="{Binding ChannelListLastUpdated, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Channels.DateFormat'}"
                        Foreground="{DynamicResource TextPrimaryBrush}"
-                       FontSize="12" />
+                       FontSize="{DynamicResource FCaption}" />
           </Grid>
           <TextBlock Text="{Binding ChannelListLastError}"
                      Foreground="{DynamicResource ErrorBrush}"
                      TextWrapping="Wrap" />
           <TextBlock Text="{loc:Translate Settings.Channels.Frequency}"
                      Foreground="{DynamicResource TextMutedBrush}"
-                     FontSize="12" />
+                     FontSize="{DynamicResource FCaption}" />
           <ComboBox SelectedIndex="{Binding ChannelListRefreshFrequencyIndex, Mode=TwoWay}"
                    
                     MinHeight="44">
@@ -571,11 +571,11 @@
           <Grid ColumnDefinitions="*,Auto">
             <TextBlock Text="{loc:Translate Settings.Channels.Hidden.Live}"
                        Foreground="{DynamicResource TextMutedBrush}"
-                       FontSize="12" />
+                       FontSize="{DynamicResource FCaption}" />
             <TextBlock Grid.Column="1"
                        Text="{Binding HiddenLiveGroups.Count}"
                        Foreground="{DynamicResource TextPrimaryBrush}"
-                       FontSize="12"
+                       FontSize="{DynamicResource FCaption}"
                        FontWeight="SemiBold" />
           </Grid>
           <ItemsControl ItemsSource="{Binding HiddenLiveGroups}">
@@ -607,17 +607,17 @@
           </ItemsControl>
           <TextBlock Text="{loc:Translate Settings.Channels.Hidden.Empty.Live}"
                      Foreground="{DynamicResource TextMutedBrush}"
-                     FontSize="12"
+                     FontSize="{DynamicResource FCaption}"
                      IsVisible="{Binding !HiddenLiveGroups.Count}" />
 
           <Grid ColumnDefinitions="*,Auto">
             <TextBlock Text="{loc:Translate Settings.Channels.Hidden.Movies}"
                        Foreground="{DynamicResource TextMutedBrush}"
-                       FontSize="12" />
+                       FontSize="{DynamicResource FCaption}" />
             <TextBlock Grid.Column="1"
                        Text="{Binding HiddenMovieGroups.Count}"
                        Foreground="{DynamicResource TextPrimaryBrush}"
-                       FontSize="12"
+                       FontSize="{DynamicResource FCaption}"
                        FontWeight="SemiBold" />
           </Grid>
           <ItemsControl ItemsSource="{Binding HiddenMovieGroups}">
@@ -649,17 +649,17 @@
           </ItemsControl>
           <TextBlock Text="{loc:Translate Settings.Channels.Hidden.Empty.Movies}"
                      Foreground="{DynamicResource TextMutedBrush}"
-                     FontSize="12"
+                     FontSize="{DynamicResource FCaption}"
                      IsVisible="{Binding !HiddenMovieGroups.Count}" />
 
           <Grid ColumnDefinitions="*,Auto">
             <TextBlock Text="{loc:Translate Settings.Channels.Hidden.Series}"
                        Foreground="{DynamicResource TextMutedBrush}"
-                       FontSize="12" />
+                       FontSize="{DynamicResource FCaption}" />
             <TextBlock Grid.Column="1"
                        Text="{Binding HiddenSeriesGroups.Count}"
                        Foreground="{DynamicResource TextPrimaryBrush}"
-                       FontSize="12"
+                       FontSize="{DynamicResource FCaption}"
                        FontWeight="SemiBold" />
           </Grid>
           <ItemsControl ItemsSource="{Binding HiddenSeriesGroups}">
@@ -691,7 +691,7 @@
           </ItemsControl>
           <TextBlock Text="{loc:Translate Settings.Channels.Hidden.Empty.Series}"
                      Foreground="{DynamicResource TextMutedBrush}"
-                     FontSize="12"
+                     FontSize="{DynamicResource FCaption}"
                      IsVisible="{Binding !HiddenSeriesGroups.Count}" />
         </StackPanel>
       </Border>
@@ -716,7 +716,7 @@
           <Grid ColumnDefinitions="*,Auto">
             <TextBlock Text="{loc:Translate Settings.Epg.Count}"
                        Foreground="{DynamicResource TextMutedBrush}"
-                       FontSize="12" />
+                       FontSize="{DynamicResource FCaption}" />
             <TextBlock Grid.Column="1"
                        Text="{Binding TotalEpgPrograms}"
                        Foreground="{DynamicResource TextPrimaryBrush}"
@@ -725,7 +725,7 @@
           <Grid ColumnDefinitions="*,Auto">
             <TextBlock Text="{loc:Translate Mobile.Settings.Epg.Channels}"
                        Foreground="{DynamicResource TextMutedBrush}"
-                       FontSize="12" />
+                       FontSize="{DynamicResource FCaption}" />
             <TextBlock Grid.Column="1"
                        Text="{Binding TotalEpgChannels}"
                        Foreground="{DynamicResource TextPrimaryBrush}"
@@ -734,11 +734,11 @@
           <Grid ColumnDefinitions="*,Auto">
             <TextBlock Text="{loc:Translate Mobile.Settings.Epg.LastUpdate}"
                        Foreground="{DynamicResource TextMutedBrush}"
-                       FontSize="12" />
+                       FontSize="{DynamicResource FCaption}" />
             <TextBlock Grid.Column="1"
                        Text="{Binding LastEpgUpdate, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Channels.DateFormat'}"
                        Foreground="{DynamicResource TextPrimaryBrush}"
-                       FontSize="12" />
+                       FontSize="{DynamicResource FCaption}" />
           </Grid>
           <Button Classes="SettingsActionButton"
                   Command="{Binding RefreshEpgNowCommand}"
@@ -753,7 +753,7 @@
                      TextWrapping="Wrap" />
           <TextBlock Text="{loc:Translate Settings.Epg.Refresh}"
                      Foreground="{DynamicResource TextMutedBrush}"
-                     FontSize="12" />
+                     FontSize="{DynamicResource FCaption}" />
           <ComboBox SelectedIndex="{Binding EpgRefreshFrequencyIndex, Mode=TwoWay}"
                    
                     MinHeight="44">
@@ -779,7 +779,7 @@
           </ComboBox>
           <TextBlock Text="{loc:Translate Settings.Epg.Timezone}"
                      Foreground="{DynamicResource TextMutedBrush}"
-                     FontSize="12" />
+                     FontSize="{DynamicResource FCaption}" />
           <ComboBox SelectedIndex="{Binding EpgTimeOffsetIndex, Mode=TwoWay}"
                    
                     MinHeight="44">
@@ -888,7 +888,7 @@
           </StackPanel>
           <TextBlock Text="{loc:Translate Settings.Privacy.Retention}"
                      Foreground="{DynamicResource TextMutedBrush}"
-                     FontSize="12" />
+                     FontSize="{DynamicResource FCaption}" />
           <ComboBox SelectedIndex="{Binding WatchHistoryRetentionIndex, Mode=TwoWay}"
                    
                     MinHeight="44">
@@ -948,10 +948,10 @@
             <TextBlock Text="{loc:Translate GlobalSettings.About.Upgrade}"
                        Foreground="{DynamicResource PremiumBadgeTextBrush}"
                        FontWeight="SemiBold"
-                       FontSize="14" />
+                       FontSize="{DynamicResource FBody}" />
             <TextBlock Text="{loc:Translate Upsell.Headline}"
                        Foreground="{DynamicResource PremiumBadgeTextBrush}"
-                       FontSize="12" />
+                       FontSize="{DynamicResource FCaption}" />
           </StackPanel>
         </Grid>
       </Button>
@@ -986,7 +986,7 @@
                           Spacing="8">
                 <TextBlock Text="Noctra"
                            Foreground="{DynamicResource TextPrimaryBrush}"
-                           FontSize="18"
+                           FontSize="{DynamicResource FTitleL}"
                            FontWeight="SemiBold" />
                 <Border Background="{DynamicResource PremiumBadgeBrush}"
                         CornerRadius="6"
@@ -994,18 +994,18 @@
                         IsVisible="{Binding IsPremium}">
                   <TextBlock Text="PREMIUM"
                              Foreground="{DynamicResource PremiumBadgeTextBrush}"
-                             FontSize="10"
+                             FontSize="{DynamicResource FOverline}"
                              FontWeight="Bold" />
                 </Border>
               </StackPanel>
               <TextBlock Text="{Binding CurrentVersion, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.About.PremiumVersionFormat'}"
                          IsVisible="{Binding IsPremium}"
                          Foreground="{DynamicResource TextMutedBrush}"
-                         FontSize="12" />
+                         FontSize="{DynamicResource FCaption}" />
               <TextBlock Text="{Binding CurrentVersion, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.About.VersionFormat'}"
                          IsVisible="{Binding !IsPremium}"
                          Foreground="{DynamicResource TextMutedBrush}"
-                         FontSize="12" />
+                         FontSize="{DynamicResource FCaption}" />
             </StackPanel>
           </Grid>
         </StackPanel>
@@ -1023,11 +1023,11 @@
           </StackPanel>
           <TextBlock Text="{Binding UpdateStatusText}"
                      Foreground="{DynamicResource TextMutedBrush}"
-                     FontSize="12"
+                     FontSize="{DynamicResource FCaption}"
                      TextWrapping="Wrap" />
           <TextBlock Text="{loc:Translate GlobalSettings.Update.Checking}"
                      Foreground="{DynamicResource AccentBrush}"
-                     FontSize="12"
+                     FontSize="{DynamicResource FCaption}"
                      IsVisible="{Binding IsCheckingUpdates}" />
           <Button Classes="SettingsActionButton"
                   Command="{Binding CheckForUpdatesCommand}"
@@ -1067,7 +1067,7 @@
           </StackPanel>
           <TextBlock Text="{loc:Translate GlobalSettings.Promo.Description}"
                      Foreground="{DynamicResource TextMutedBrush}"
-                     FontSize="13"
+                     FontSize="{DynamicResource FCaption}"
                      TextWrapping="Wrap" />
           <StackPanel Spacing="8">
             <TextBox Text="{Binding PromoCodeInput, Mode=TwoWay}"
@@ -1078,7 +1078,7 @@
                      BorderBrush="{DynamicResource BorderBrush}"
                      Background="{DynamicResource Surface1Brush}"
                      VerticalContentAlignment="Center"
-                     FontSize="15"
+                     FontSize="{DynamicResource FBodyL}"
                      LetterSpacing="1" />
             <Button VerticalAlignment="Stretch"
                     HorizontalAlignment="Stretch"
@@ -1103,13 +1103,13 @@
                     IsVisible="{Binding PromoCodeStatus, Converter={StaticResource StringNotEmptyToVisibilityConverter}}">
               <TextBlock Text="{Binding PromoCodeStatus}"
                          Foreground="{Binding IsPromoCodeStatusSuccess, Converter={StaticResource BooleanToSuccessWarningBrushConverter}}"
-                         FontSize="13"
+                         FontSize="{DynamicResource FCaption}"
                          FontWeight="Bold" 
                          TextWrapping="Wrap" />
             </Border>
             <TextBlock Text="{Binding PremiumStatusText}"
                        Foreground="{DynamicResource SuccessBrush}"
-                       FontSize="13"
+                       FontSize="{DynamicResource FCaption}"
                        TextWrapping="Wrap"
                        FontWeight="Bold" 
                        IsVisible="{Binding PremiumStatusText, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
@@ -1130,7 +1130,7 @@
           <Grid ColumnDefinitions="*,Auto">
             <TextBlock Text="{loc:Translate GlobalSettings.Cache.Size}"
                        Foreground="{DynamicResource TextMutedBrush}"
-                       FontSize="12" />
+                       FontSize="{DynamicResource FCaption}" />
             <TextBlock Grid.Column="1"
                        Text="{Binding CacheSizeString}"
                        Foreground="{DynamicResource TextPrimaryBrush}"
@@ -1138,7 +1138,7 @@
           </Grid>
           <TextBlock Text="{loc:Translate GlobalSettings.Cache.Description}"
                      Foreground="{DynamicResource TextMutedBrush}"
-                     FontSize="12"
+                     FontSize="{DynamicResource FCaption}"
                      TextWrapping="Wrap" />
           <Button Classes="SettingsDangerActionButton"
                   Command="{Binding ClearCacheCommand}">
@@ -1208,7 +1208,7 @@
         <StackPanel Spacing="14">
           <TextBlock Text="{loc:Translate Common.Loading}"
                      Foreground="{DynamicResource TextPrimaryBrush}"
-                     FontSize="20"
+                     FontSize="{DynamicResource FTitleL}"
                      FontWeight="SemiBold"
                      HorizontalAlignment="Center" />
           <TextBlock Text="{Binding GlobalLoadingMessage}"

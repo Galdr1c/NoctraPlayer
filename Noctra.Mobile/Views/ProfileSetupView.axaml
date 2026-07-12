@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -156,7 +156,7 @@
 
         <!-- Orta: Başlık -->
         <TextBlock Grid.Column="1"
-                   FontSize="17"
+                   FontSize="{DynamicResource FTitleM}"
                    FontWeight="SemiBold"
                    Foreground="{DynamicResource TextPrimaryBrush}"
                    HorizontalAlignment="Center"
@@ -178,7 +178,7 @@
           <TextBlock Text="{loc:Translate Profiles.Add.Save}"
                      Foreground="{DynamicResource AccentBrush}"
                      FontWeight="SemiBold"
-                     FontSize="16" />
+                     FontSize="{DynamicResource FTitleM}" />
         </Button>
       </Grid>
     </Border>
@@ -235,7 +235,7 @@
 
           <!-- Düzenleme yardımı etiketi -->
           <TextBlock Text="{loc:Translate AvatarPicker.Title}"
-                     FontSize="13"
+                     FontSize="{DynamicResource FCaption}"
                      Foreground="{DynamicResource TextMutedBrush}"
                      HorizontalAlignment="Center" />
         </StackPanel>
@@ -248,7 +248,7 @@
                    PlaceholderText="{loc:Translate Profiles.Add.ProfileNamePlaceholder}" />
           <TextBlock Text="{Binding ProfileNameError}"
                      Foreground="{DynamicResource ErrorBrush}"
-                     FontSize="13"
+                     FontSize="{DynamicResource FCaption}"
                      TextWrapping="Wrap"
                      IsVisible="{Binding ProfileNameError, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
         </StackPanel>
@@ -262,7 +262,7 @@
             <Grid ColumnDefinitions="*,Auto">
               <StackPanel Grid.Column="0" Spacing="3" Margin="0,0,16,0">
                 <TextBlock Text="{loc:Translate Profiles.Add.IsChild}"
-                           FontSize="15"
+                           FontSize="{DynamicResource FBodyL}"
                            FontWeight="Medium"
                            Foreground="{DynamicResource TextPrimaryBrush}" />
                 <TextBlock Text="{loc:Translate Profiles.Add.IsChildTooltip}"
@@ -285,7 +285,7 @@
         ──────────────────────────────────────────────────────── -->
         <StackPanel Spacing="8">
           <TextBlock Text="{loc:Translate Profiles.Account.Settings}"
-                     FontSize="13"
+                     FontSize="{DynamicResource FCaption}"
                      FontWeight="SemiBold"
                      Foreground="{DynamicResource TextMutedBrush}"
                      Margin="4,0,0,2" />
@@ -340,11 +340,11 @@
                     </Border>
                     <StackPanel Grid.Column="1" Spacing="3">
                       <TextBlock Text="{loc:Translate Profiles.Account.LocalM3uFile}"
-                                 FontSize="14"
+                                 FontSize="{DynamicResource FBody}"
                                  FontWeight="SemiBold"
                                  Foreground="{DynamicResource TextPrimaryBrush}" />
                       <TextBlock Text="{loc:Translate Profiles.Account.LocalM3uDescription}"
-                                 FontSize="12"
+                                 FontSize="{DynamicResource FCaption}"
                                  Foreground="{DynamicResource TextMutedBrush}"
                                  TextWrapping="Wrap" />
                     </StackPanel>
@@ -355,10 +355,10 @@
                           Background="{DynamicResource Surface0Brush}">
                     <StackPanel Spacing="4">
                       <TextBlock Text="{loc:Translate Profiles.Account.SelectedFile}"
-                                 FontSize="11"
+                                 FontSize="{DynamicResource FOverline}"
                                  Foreground="{DynamicResource TextMutedBrush}" />
                       <TextBlock Text="{Binding Url}"
-                                 FontSize="13"
+                                 FontSize="{DynamicResource FCaption}"
                                  Foreground="{DynamicResource TextPrimaryBrush}"
                                  TextWrapping="Wrap"
                                  MaxLines="3" />
@@ -398,7 +398,7 @@
                                           VerticalAlignment="Center" />
                       <TextBlock Text="{Binding DetailedStatus}"
                                  Foreground="{Binding ConnectionHealth, Converter={StaticResource ConnectionHealthToBrushConverter}}"
-                                 FontSize="13"
+                                 FontSize="{DynamicResource FCaption}"
                                  FontWeight="SemiBold"
                                  TextWrapping="Wrap"
                                  VerticalAlignment="Center" />
@@ -477,7 +477,7 @@
               <!-- Hata mesajı -->
               <TextBlock Text="{Binding UrlError}"
                          Foreground="{DynamicResource ErrorBrush}"
-                         FontSize="13"
+                         FontSize="{DynamicResource FCaption}"
                          TextWrapping="Wrap"
                          Margin="16,0,16,12"
                          IsVisible="{Binding UrlError, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
@@ -513,7 +513,7 @@
                                       VerticalAlignment="Center" />
                   <TextBlock Text="{Binding DetailedStatus}"
                              Foreground="{Binding ConnectionHealth, Converter={StaticResource ConnectionHealthToBrushConverter}}"
-                             FontSize="13"
+                             FontSize="{DynamicResource FCaption}"
                              FontWeight="SemiBold"
                              TextWrapping="Wrap"
                              VerticalAlignment="Center" />
@@ -526,7 +526,7 @@
         <!-- ── PIN Kilidi bölümü ──────────────────────────────── -->
         <StackPanel Spacing="8">
           <TextBlock Text="{loc:Translate Profiles.Add.PinLock}"
-                     FontSize="13"
+                     FontSize="{DynamicResource FCaption}"
                      FontWeight="SemiBold"
                      Foreground="{DynamicResource TextMutedBrush}"
                      Margin="4,0,0,2" />
@@ -543,7 +543,7 @@
                                                     Foreground="{DynamicResource AccentBrush}"
                                                     VerticalAlignment="Center"/>
                       <TextBlock Text="{loc:Translate Profiles.Add.PinLock}"
-                                 FontSize="15"
+                                 FontSize="{DynamicResource FBodyL}"
                                  FontWeight="Medium"
                                  Foreground="{DynamicResource TextPrimaryBrush}" />
                       <!-- Premium rozeti -->
@@ -553,7 +553,7 @@
                               VerticalAlignment="Center"
                               IsVisible="{Binding !IsPinAvailable}">
                         <TextBlock Text="PREMIUM"
-                                   FontSize="10"
+                                   FontSize="{DynamicResource FOverline}"
                                    FontWeight="Bold"
                                    Foreground="{DynamicResource PremiumBadgeTextBrush}" />
                       </Border>
@@ -587,13 +587,13 @@
                                           VerticalAlignment="Center" />
                       <TextBlock Text="{loc:Translate Profiles.Add.PinActive}"
                                  Foreground="{DynamicResource SuccessBrush}"
-                                 FontSize="13"
+                                 FontSize="{DynamicResource FCaption}"
                                  FontWeight="SemiBold"
                                  VerticalAlignment="Center" />
                     </StackPanel>
                     <TextBlock Text="{loc:Translate Profiles.Add.PinChangeInfo}"
                                Foreground="{DynamicResource TextMutedBrush}"
-                               FontSize="12"
+                               FontSize="{DynamicResource FCaption}"
                                TextWrapping="Wrap" />
                   </StackPanel>
 
@@ -636,14 +636,14 @@
                   <!-- PIN hata mesajı -->
                   <TextBlock Text="{Binding PinError}"
                              Foreground="{DynamicResource ErrorBrush}"
-                             FontSize="13"
+                             FontSize="{DynamicResource FCaption}"
                              TextWrapping="Wrap"
                              IsVisible="{Binding PinError, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
 
                   <!-- PIN uyarısı -->
                   <TextBlock Text="{loc:Translate Profiles.Add.PinWarning}"
                              Foreground="{DynamicResource TextMutedBrush}"
-                             FontSize="11"
+                             FontSize="{DynamicResource FOverline}"
                              TextWrapping="Wrap" />
                 </StackPanel>
               </StackPanel>
@@ -654,7 +654,7 @@
         <!-- ── Durum mesajı ── -->
         <TextBlock Text="{Binding StatusMessage}"
                    Foreground="{DynamicResource TextMutedBrush}"
-                   FontSize="13"
+                   FontSize="{DynamicResource FCaption}"
                    TextWrapping="Wrap"
                    HorizontalAlignment="Center"
                    TextAlignment="Center"
@@ -680,7 +680,7 @@
                                 VerticalAlignment="Center" />
             <TextBlock Text="{loc:Translate Profiles.Add.DeleteProfile}"
                        Foreground="{DynamicResource ErrorBrush}"
-                       FontSize="16"
+                       FontSize="{DynamicResource FTitleM}"
                        FontWeight="Medium"
                        VerticalAlignment="Center" />
           </StackPanel>
@@ -717,7 +717,7 @@
             </Button>
             <TextBlock Grid.Column="1"
                        Text="{loc:Translate AvatarPicker.Title}"
-                       FontSize="17"
+                       FontSize="{DynamicResource FTitleM}"
                        FontWeight="SemiBold"
                        Foreground="{DynamicResource TextPrimaryBrush}"
                        HorizontalAlignment="Center"

@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:models="using:Noctra.Models"
              xmlns:vm="clr-namespace:Noctra.ViewModels;assembly=Noctra.Core"
@@ -88,13 +88,13 @@
             <StackPanel Spacing="2">
               <TextBlock Text="{Binding Name}"
                          Foreground="{DynamicResource PlayerOverlayTextBrush}"
-                         FontSize="12"
+                         FontSize="{DynamicResource FCaption}"
                          FontWeight="Bold"
                          TextTrimming="CharacterEllipsis"/>
               <StackPanel Orientation="Horizontal" Spacing="6">
                 <TextBlock Text="{Binding ReleaseYear}"
                            Foreground="{DynamicResource PlayerOverlaySecondaryTextBrush}"
-                           FontSize="10"
+                           FontSize="{DynamicResource FOverline}"
                            IsVisible="{Binding ReleaseYear, Converter={x:Static ObjectConverters.IsNotNull}}" />
                 <Ellipse Width="3"
                          Height="3"
@@ -103,7 +103,7 @@
                          IsVisible="{Binding ReleaseYear, Converter={x:Static ObjectConverters.IsNotNull}}" />
                 <TextBlock Text="{Binding GroupTitle}"
                            Foreground="{DynamicResource PlayerOverlaySecondaryTextBrush}"
-                           FontSize="10"
+                           FontSize="{DynamicResource FOverline}"
                            TextTrimming="CharacterEllipsis" />
               </StackPanel>
             </StackPanel>

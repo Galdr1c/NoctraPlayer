@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -28,7 +28,7 @@
       <StackPanel IsVisible="{Binding ContinueWatching.Count, Converter={StaticResource CountToVisibility}}"
                   Margin="0,0,0,40">
         <TextBlock Text="{loc:Translate Home.ContinueWatching}"
-                   FontSize="22"
+                   FontSize="{DynamicResource FHeadline}"
                    FontWeight="Bold"
                    Foreground="{DynamicResource TextPrimaryBrush}"
                    Margin="0,0,0,20" />

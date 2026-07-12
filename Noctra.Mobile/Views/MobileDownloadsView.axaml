@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -24,12 +24,12 @@
       <!-- Title -->
       <StackPanel Spacing="4">
         <TextBlock Text="{loc:Translate Downloads.Title}"
-                   FontSize="28"
+                   FontSize="{DynamicResource FDisplaySmall}"
                    FontWeight="Bold"
                    Foreground="{DynamicResource TextPrimaryBrush}" />
         <TextBlock Text="{Binding TotalDownloadsInfoText}"
                    Foreground="{DynamicResource TextMutedBrush}"
-                   FontSize="13"
+                   FontSize="{DynamicResource FCaption}"
                    TextWrapping="Wrap"
                    IsVisible="{Binding HasDownloadedItems}" />
       </StackPanel>
@@ -192,7 +192,7 @@
                         IsVisible="{Binding DownloadedSeriesItems.Count, Converter={StaticResource CountToVisibility}}">
               <TextBlock Text="{loc:Translate History.Series}"
                          Foreground="{DynamicResource TextPrimaryBrush}"
-                         FontSize="18"
+                         FontSize="{DynamicResource FTitleL}"
                          FontWeight="SemiBold" />
               <ItemsControl ItemsSource="{Binding DownloadedSeriesItems}">
                 <ItemsControl.ItemTemplate>
@@ -273,7 +273,7 @@
                         IsVisible="{Binding DownloadedVodChannels.Count, Converter={StaticResource CountToVisibility}}">
               <TextBlock Text="{loc:Translate History.Movies}"
                          Foreground="{DynamicResource TextPrimaryBrush}"
-                         FontSize="18"
+                         FontSize="{DynamicResource FTitleL}"
                          FontWeight="SemiBold" />
               <ItemsControl ItemsSource="{Binding DownloadedVodChannels}">
                 <ItemsControl.ItemTemplate>
@@ -410,7 +410,7 @@
               <StackPanel Orientation="Horizontal" Spacing="12">
                 <TextBlock Text="{loc:Translate Downloads.Ongoing.Title}"
                            Foreground="{DynamicResource TextPrimaryBrush}"
-                           FontSize="20"
+                           FontSize="{DynamicResource FTitleL}"
                            FontWeight="Bold" />
                 <Border Classes="Badge"
                         VerticalAlignment="Center"
@@ -542,7 +542,7 @@
                   IsVisible="{Binding QueuedDownloadItems.Count, Converter={StaticResource CountToVisibility}}">
               <TextBlock Text="{loc:Translate Downloads.Queue.Title}"
                          Foreground="{DynamicResource TextPrimaryBrush}"
-                         FontSize="20"
+                         FontSize="{DynamicResource FTitleL}"
                          FontWeight="SemiBold" />
               <Button Grid.Column="1"
                       Command="{Binding ClearQueueCommand}"

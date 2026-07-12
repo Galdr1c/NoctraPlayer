@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -19,7 +19,7 @@
       <!-- Title -->
       <Grid ColumnDefinitions="*,Auto">
         <TextBlock Text="{loc:Translate MyList.Title}"
-                   FontSize="28" FontWeight="Bold"
+                   FontSize="{DynamicResource FDisplaySmall}" FontWeight="Bold"
                    Foreground="{DynamicResource TextPrimaryBrush}"
                    VerticalAlignment="Center" />
         <Border Grid.Column="1"
@@ -29,7 +29,7 @@
                 IsVisible="{Binding MyList.Count,
                                     Converter={StaticResource CountToVisibilityConverter}}">
           <TextBlock Foreground="{DynamicResource TextMutedBrush}"
-                     FontSize="13" FontWeight="Medium">
+                     FontSize="{DynamicResource FCaption}" FontWeight="Medium">
             <Run Text="{Binding MyList.Count}" /><Run Text=" items" />
           </TextBlock>
         </Border>
@@ -44,7 +44,7 @@
                   Background="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
           <TextBlock Grid.Column="1"
                      Text="{loc:Translate History.LiveTv}"
-                     FontSize="18" FontWeight="SemiBold"
+                     FontSize="{DynamicResource FTitleL}" FontWeight="SemiBold"
                      Foreground="{DynamicResource TextPrimaryBrush}" />
         </Grid>
         <ItemsControl ItemsSource="{Binding MyListLiveChannels}" HorizontalAlignment="Stretch">
@@ -74,7 +74,7 @@
                   Background="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
           <TextBlock Grid.Column="1"
                      Text="{loc:Translate History.Series}"
-                     FontSize="18" FontWeight="SemiBold"
+                     FontSize="{DynamicResource FTitleL}" FontWeight="SemiBold"
                      Foreground="{DynamicResource TextPrimaryBrush}" />
         </Grid>
         <ItemsControl ItemsSource="{Binding MyListSeriesItems}" HorizontalAlignment="Stretch">
@@ -101,7 +101,7 @@
                   Background="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
           <TextBlock Grid.Column="1"
                      Text="{loc:Translate History.Movies}"
-                     FontSize="18" FontWeight="SemiBold"
+                     FontSize="{DynamicResource FTitleL}" FontWeight="SemiBold"
                      Foreground="{DynamicResource TextPrimaryBrush}" />
         </Grid>
         <ItemsControl ItemsSource="{Binding MyListVodChannels}" HorizontalAlignment="Stretch">

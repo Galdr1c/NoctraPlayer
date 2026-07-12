@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -166,7 +166,7 @@
         </Grid>
         <TextBlock Text="{Binding PlayerLoadingWarningMessage}"
                    Foreground="{DynamicResource WarningBrush}"
-                   FontSize="13"
+                   FontSize="{DynamicResource FCaption}"
                    TextWrapping="Wrap"
                    TextAlignment="Center"
                    MaxWidth="300"
@@ -192,7 +192,7 @@
                             VerticalAlignment="Center" />
         <TextBlock Text="{Binding OverlayMessage}"
                    Foreground="{DynamicResource PlayerOverlayTextBrush}"
-                   FontSize="14"
+                   FontSize="{DynamicResource FBody}"
                    FontWeight="SemiBold"
                    TextWrapping="Wrap"
                    VerticalAlignment="Center" />
@@ -221,13 +221,13 @@
                             IsVisible="{Binding IsMuted, Converter={StaticResource InverseBoolConverter}}" />
         <TextBlock Text="{loc:Translate Player.Muted}"
                    Foreground="{DynamicResource PlayerOverlayTextBrush}"
-                   FontSize="16"
+                   FontSize="{DynamicResource FTitleM}"
                    FontWeight="Bold"
                    VerticalAlignment="Center"
                    IsVisible="{Binding IsMuted}" />
         <TextBlock Text="{Binding Volume, StringFormat='{}{0}%'}"
                    Foreground="{DynamicResource PlayerOverlayTextBrush}"
-                   FontSize="16"
+                   FontSize="{DynamicResource FTitleM}"
                    FontWeight="Bold"
                    VerticalAlignment="Center"
                    IsVisible="{Binding IsMuted, Converter={StaticResource InverseBoolConverter}}" />
@@ -251,7 +251,7 @@
                             VerticalAlignment="Center" />
         <TextBlock Text="{Binding #PlayerRoot.SeekToastText}"
                    Foreground="{DynamicResource PlayerOverlayTextBrush}"
-                   FontSize="20"
+                   FontSize="{DynamicResource FTitleL}"
                    FontWeight="Black"
                    VerticalAlignment="Center" />
       </StackPanel>
@@ -275,7 +275,7 @@
                             VerticalAlignment="Center" />
         <TextBlock Text="{Binding DownloadStatusMessage}"
                    Foreground="{DynamicResource PlayerOverlayTextBrush}"
-                   FontSize="14"
+                   FontSize="{DynamicResource FBody}"
                    FontWeight="SemiBold"
                    TextWrapping="Wrap"
                    MaxWidth="280"
@@ -296,7 +296,7 @@
             IsVisible="{Binding #PlayerRoot.IsGestureToastVisible}">
       <TextBlock Text="{Binding #PlayerRoot.GestureToastText}"
                  Foreground="{DynamicResource PlayerOverlayTextBrush}"
-                 FontSize="15"
+                 FontSize="{DynamicResource FBodyL}"
                  FontWeight="Bold"
                  TextAlignment="Center"
                  TextWrapping="Wrap"
@@ -318,7 +318,7 @@
       <StackPanel Orientation="Horizontal" Spacing="8">
         <icons:MaterialIcon Kind="Lock" Width="18" Height="18" Foreground="{DynamicResource PlayerOverlayTextBrush}" />
         <TextBlock Text="{loc:Translate Player.Mobile.Locked}"
-                   Foreground="{DynamicResource PlayerOverlayTextBrush}" FontSize="13" FontWeight="SemiBold" />
+                   Foreground="{DynamicResource PlayerOverlayTextBrush}" FontSize="{DynamicResource FCaption}" FontWeight="SemiBold" />
       </StackPanel>
     </Button>
 

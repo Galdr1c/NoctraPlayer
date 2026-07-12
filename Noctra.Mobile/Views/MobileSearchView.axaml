@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -33,7 +33,7 @@
                      BorderThickness="0"
                      MinHeight="46"
                      Padding="10,0,10,0"
-                     FontSize="15"
+                     FontSize="{DynamicResource FBodyL}"
                      VerticalContentAlignment="Center"
                      KeyDown="SearchInput_KeyDown" />
               <!-- Clear button, visible when text exists -->
@@ -55,7 +55,7 @@
                 Background="{DynamicResource AccentBrush}"
                 Foreground="{DynamicResource TextPrimaryBrush}"
                 BorderThickness="0"
-                FontWeight="Medium" FontSize="14"
+                FontWeight="Medium" FontSize="{DynamicResource FBody}"
                 CornerRadius="6"
                 HorizontalAlignment="Stretch"
                 VerticalContentAlignment="Center"
@@ -76,14 +76,14 @@
                                     Converter={StaticResource StringNotEmptyToVisibilityConverter}}">
           <StackPanel Spacing="8">
             <TextBlock Text="{loc:Translate Search.DidYouMean}"
-                       Foreground="{DynamicResource TextMutedBrush}" FontSize="12" />
+                       Foreground="{DynamicResource TextMutedBrush}" FontSize="{DynamicResource FCaption}" />
             <Button Content="{Binding SearchSuggestion}"
                     Command="{Binding ApplySearchSuggestionCommand}"
                     MinHeight="42"
                     Background="{DynamicResource Surface1Brush}"
                     Foreground="{DynamicResource AccentBrush}"
                     BorderThickness="0" CornerRadius="10"
-                    FontWeight="Medium" FontSize="14" />
+                    FontWeight="Medium" FontSize="{DynamicResource FBody}" />
           </StackPanel>
         </Border>
 
@@ -94,7 +94,7 @@
                     IsVisible="{Binding SearchLiveChannels.Count,
                                         Converter={StaticResource CountToVisibilityConverter}}">
           <TextBlock Text="{loc:Translate History.LiveTv}"
-                     FontSize="18" FontWeight="SemiBold"
+                     FontSize="{DynamicResource FTitleL}" FontWeight="SemiBold"
                      Foreground="{DynamicResource TextPrimaryBrush}" />
           <ItemsControl ItemsSource="{Binding SearchLiveChannels}" HorizontalAlignment="Stretch">
             <ItemsControl.ItemsPanel>
@@ -117,7 +117,7 @@
                     IsVisible="{Binding SearchSeriesChannels.Count,
                                         Converter={StaticResource CountToVisibilityConverter}}">
           <TextBlock Text="{loc:Translate History.Series}"
-                     FontSize="18" FontWeight="SemiBold"
+                     FontSize="{DynamicResource FTitleL}" FontWeight="SemiBold"
                      Foreground="{DynamicResource TextPrimaryBrush}" />
           <ItemsControl ItemsSource="{Binding SearchSeriesChannels}" HorizontalAlignment="Stretch">
             <ItemsControl.ItemsPanel>
@@ -138,7 +138,7 @@
                     IsVisible="{Binding SearchVodChannels.Count,
                                         Converter={StaticResource CountToVisibilityConverter}}">
           <TextBlock Text="{loc:Translate History.Movies}"
-                     FontSize="18" FontWeight="SemiBold"
+                     FontSize="{DynamicResource FTitleL}" FontWeight="SemiBold"
                      Foreground="{DynamicResource TextPrimaryBrush}" />
           <ItemsControl ItemsSource="{Binding SearchVodChannels}" HorizontalAlignment="Stretch">
             <ItemsControl.ItemsPanel>
@@ -160,13 +160,13 @@
           <Border Height="1" Background="{DynamicResource BorderBrush}" />
 
           <TextBlock Text="{loc:Translate Search.SimilarResults}"
-                     FontSize="18" FontWeight="SemiBold"
+                     FontSize="{DynamicResource FTitleL}" FontWeight="SemiBold"
                      Foreground="{DynamicResource TextPrimaryBrush}" />
 
           <StackPanel Spacing="12"
                       IsVisible="{Binding SearchSimilarLiveChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
             <TextBlock Text="{loc:Translate History.LiveTv}"
-                       FontSize="15" FontWeight="Medium"
+                       FontSize="{DynamicResource FBodyL}" FontWeight="Medium"
                        Foreground="{DynamicResource TextMutedBrush}" />
             <ItemsControl ItemsSource="{Binding SearchSimilarLiveChannels}" HorizontalAlignment="Stretch">
               <ItemsControl.ItemsPanel>
@@ -184,7 +184,7 @@
           <StackPanel Spacing="12"
                       IsVisible="{Binding SearchSimilarSeriesChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
             <TextBlock Text="{loc:Translate History.Series}"
-                       FontSize="15" FontWeight="Medium"
+                       FontSize="{DynamicResource FBodyL}" FontWeight="Medium"
                        Foreground="{DynamicResource TextMutedBrush}" />
             <ItemsControl ItemsSource="{Binding SearchSimilarSeriesChannels}" HorizontalAlignment="Stretch">
               <ItemsControl.ItemsPanel>
@@ -203,7 +203,7 @@
           <StackPanel Spacing="12"
                       IsVisible="{Binding SearchSimilarVodChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
             <TextBlock Text="{loc:Translate History.Movies}"
-                       FontSize="15" FontWeight="Medium"
+                       FontSize="{DynamicResource FBodyL}" FontWeight="Medium"
                        Foreground="{DynamicResource TextMutedBrush}" />
             <ItemsControl ItemsSource="{Binding SearchSimilarVodChannels}" HorizontalAlignment="Stretch">
               <ItemsControl.ItemsPanel>

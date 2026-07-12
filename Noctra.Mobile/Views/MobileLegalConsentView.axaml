@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -94,7 +94,7 @@
                   HorizontalContentAlignment="Center"
                   VerticalContentAlignment="Center"
                   FontWeight="SemiBold"
-                  FontSize="15"
+                  FontSize="{DynamicResource FBodyL}"
                   Click="Continue_Click">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
               <icons:MaterialIcon Kind="Check" Width="18" Height="18" Foreground="{DynamicResource PlayerOverlayTextBrush}"/>

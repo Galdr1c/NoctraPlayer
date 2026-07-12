@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -38,12 +38,12 @@
       <!-- Header: matches desktop avatar picker typography, adapted for mobile -->
       <StackPanel Spacing="6">
         <TextBlock Text="{loc:Translate AvatarPicker.SelectProfilePicture}"
-                   FontSize="24"
+                   FontSize="{DynamicResource FHeadline}"
                    FontWeight="Bold"
                    LetterSpacing="1"
                    Foreground="{DynamicResource TextPrimaryBrush}" />
         <TextBlock Text="{loc:Translate AvatarPicker.Hint}"
-                   FontSize="13"
+                   FontSize="{DynamicResource FCaption}"
                    Foreground="{DynamicResource TextMutedBrush}"
                    TextWrapping="Wrap" />
       </StackPanel>

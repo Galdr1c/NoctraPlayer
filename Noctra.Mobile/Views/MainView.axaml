@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -210,7 +210,7 @@
                  Stretch="Uniform"
                  VerticalAlignment="Center" />
           <TextBlock Text="NOCTRA"
-                     FontSize="18"
+                     FontSize="{DynamicResource FTitleL}"
                      FontWeight="Bold"
                      Foreground="{DynamicResource AccentBrush}"
                      LetterSpacing="1.5"
@@ -523,7 +523,7 @@
                        TextWrapping="Wrap" />
             <TextBlock x:Name="SelectedMediaSubtitle"
                        Foreground="{DynamicResource TextMutedBrush}"
-                       FontSize="12"
+                       FontSize="{DynamicResource FCaption}"
                        TextWrapping="Wrap" />
           </StackPanel>
         </Border>
@@ -635,7 +635,7 @@
                             VerticalAlignment="Center" />
         <TextBlock Text="{loc:Translate Shell.Mobile.BackToExit}"
                    Foreground="{DynamicResource PlayerOverlayTextBrush}"
-                   FontSize="14"
+                   FontSize="{DynamicResource FBody}"
                    FontWeight="SemiBold"
                    TextWrapping="Wrap"
                    VerticalAlignment="Center" />

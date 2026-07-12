@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -52,7 +52,7 @@
 
         <!-- Profil adı -->
         <TextBlock Text="{Binding ProfileName}"
-                   FontSize="22"
+                   FontSize="{DynamicResource FHeadline}"
                    FontWeight="Bold"
                    Foreground="{DynamicResource TextPrimaryBrush}"
                    TextAlignment="Center"
@@ -69,7 +69,7 @@
 
       <!-- Durum metni (normal / hata) -->
       <TextBlock Text="{Binding StatusMessage}"
-                 FontSize="14"
+                 FontSize="{DynamicResource FBody}"
                  TextAlignment="Center"
                  TextWrapping="Wrap"
                  HorizontalAlignment="Center"
@@ -95,12 +95,12 @@
                                   Converter={StaticResource StringNotEmptyToVisibilityConverter}}">
         <StackPanel Orientation="Horizontal" Spacing="10">
           <TextBlock Text="⚠"
-                     FontSize="15"
+                     FontSize="{DynamicResource FBodyL}"
                      Foreground="#FFA500"
                      VerticalAlignment="Center" />
           <TextBlock Text="{Binding LoadingWarningMessage}"
                      Foreground="#FFA500"
-                     FontSize="13"
+                     FontSize="{DynamicResource FCaption}"
                      TextAlignment="Left"
                      TextWrapping="Wrap"
                      VerticalAlignment="Center" />
@@ -116,7 +116,7 @@
               IsVisible="{Binding HasActiveImportJob}">
         <StackPanel Spacing="10">
           <TextBlock Text="{Binding ActiveImportJobStage}"
-                     FontSize="13"
+                     FontSize="{DynamicResource FCaption}"
                      FontWeight="SemiBold"
                      Foreground="{DynamicResource TextPrimaryBrush}"
                      TextWrapping="Wrap"
@@ -125,36 +125,36 @@
           <UniformGrid Columns="4" HorizontalAlignment="Stretch">
             <StackPanel Spacing="2" HorizontalAlignment="Center">
               <TextBlock Text="{Binding ActiveImportJobLiveCount}"
-                         FontSize="15"
+                         FontSize="{DynamicResource FBodyL}"
                          FontWeight="Bold"
                          Foreground="{DynamicResource AccentBrush}"
                          HorizontalAlignment="Center" />
               <TextBlock Text="Live"
-                         FontSize="10"
+                         FontSize="{DynamicResource FOverline}"
                          Foreground="{DynamicResource TextMutedBrush}"
                          HorizontalAlignment="Center" />
             </StackPanel>
 
             <StackPanel Spacing="2" HorizontalAlignment="Center">
               <TextBlock Text="{Binding ActiveImportJobVodCount}"
-                         FontSize="15"
+                         FontSize="{DynamicResource FBodyL}"
                          FontWeight="Bold"
                          Foreground="{DynamicResource AccentBrush}"
                          HorizontalAlignment="Center" />
               <TextBlock Text="VOD"
-                         FontSize="10"
+                         FontSize="{DynamicResource FOverline}"
                          Foreground="{DynamicResource TextMutedBrush}"
                          HorizontalAlignment="Center" />
             </StackPanel>
 
             <StackPanel Spacing="2" HorizontalAlignment="Center">
               <TextBlock Text="{Binding ActiveImportJobSeriesCount}"
-                         FontSize="15"
+                         FontSize="{DynamicResource FBodyL}"
                          FontWeight="Bold"
                          Foreground="{DynamicResource AccentBrush}"
                          HorizontalAlignment="Center" />
               <TextBlock Text="Series"
-                         FontSize="10"
+                         FontSize="{DynamicResource FOverline}"
                          Foreground="{DynamicResource TextMutedBrush}"
                          HorizontalAlignment="Center" />
             </StackPanel>
@@ -163,12 +163,12 @@
                         IsVisible="{Binding ActiveImportJobFailedCategoryCount,
                                             Converter={StaticResource CountToVisibilityConverter}}">
               <TextBlock Text="{Binding ActiveImportJobFailedCategoryCount}"
-                         FontSize="15"
+                         FontSize="{DynamicResource FBodyL}"
                          FontWeight="Bold"
                          Foreground="{DynamicResource WarningBrush}"
                          HorizontalAlignment="Center" />
               <TextBlock Text="Failed"
-                         FontSize="10"
+                         FontSize="{DynamicResource FOverline}"
                          Foreground="{DynamicResource TextMutedBrush}"
                          HorizontalAlignment="Center" />
             </StackPanel>

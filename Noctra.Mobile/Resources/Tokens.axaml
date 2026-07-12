@@ -20,6 +20,7 @@
 
   <!-- ── Font sizes (Material Design 3 tabanlı, 5.5" telefon optimize) ── -->
   <x:Double x:Key="FDisplaySmall">28</x:Double>
+  <x:Double x:Key="FDisplayLarge">36</x:Double>
   <x:Double x:Key="FDisplay">32</x:Double>
   <x:Double x:Key="FHeadline">22</x:Double>
   <x:Double x:Key="FTitleL">18</x:Double>

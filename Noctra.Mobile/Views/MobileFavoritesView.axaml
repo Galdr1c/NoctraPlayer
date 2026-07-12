@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -20,7 +20,7 @@
       <!-- Title and total count -->
       <Grid ColumnDefinitions="*,Auto">
         <TextBlock Text="{loc:Translate Favorites.Title}"
-                   FontSize="28" FontWeight="Bold"
+                   FontSize="{DynamicResource FDisplaySmall}" FontWeight="Bold"
                    Foreground="{DynamicResource TextPrimaryBrush}"
                    VerticalAlignment="Center" />
         <Border Grid.Column="1"
@@ -30,7 +30,7 @@
                 IsVisible="{Binding FavoriteChannels.Count,
                                     Converter={StaticResource CountToVisibilityConverter}}">
           <TextBlock Foreground="{DynamicResource TextMutedBrush}"
-                     FontSize="13" FontWeight="Medium">
+                     FontSize="{DynamicResource FCaption}" FontWeight="Medium">
             <Run Text="{Binding FavoriteChannels.Count}" />
             <Run Text=" items" />
           </TextBlock>
@@ -46,7 +46,7 @@
                   Background="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
           <TextBlock Grid.Column="1"
                      Text="{loc:Translate History.LiveTv}"
-                     FontSize="18" FontWeight="SemiBold"
+                     FontSize="{DynamicResource FTitleL}" FontWeight="SemiBold"
                      Foreground="{DynamicResource TextPrimaryBrush}" />
         </Grid>
         <ItemsControl ItemsSource="{Binding FavoriteLiveChannels}" HorizontalAlignment="Stretch">
@@ -75,7 +75,7 @@
                   Background="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
           <TextBlock Grid.Column="1"
                      Text="{loc:Translate History.Series}"
-                     FontSize="18" FontWeight="SemiBold"
+                     FontSize="{DynamicResource FTitleL}" FontWeight="SemiBold"
                      Foreground="{DynamicResource TextPrimaryBrush}" />
         </Grid>
         <ItemsControl ItemsSource="{Binding FavoriteSeriesItems}" HorizontalAlignment="Stretch">
@@ -102,7 +102,7 @@
                   Background="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
           <TextBlock Grid.Column="1"
                      Text="{loc:Translate History.Movies}"
-                     FontSize="18" FontWeight="SemiBold"
+                     FontSize="{DynamicResource FTitleL}" FontWeight="SemiBold"
                      Foreground="{DynamicResource TextPrimaryBrush}" />
         </Grid>
         <ItemsControl ItemsSource="{Binding FavoriteVodChannels}" HorizontalAlignment="Stretch">

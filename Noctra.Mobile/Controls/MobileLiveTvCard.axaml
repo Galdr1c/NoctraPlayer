@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:models="using:Noctra.Models"
              xmlns:vm="clr-namespace:Noctra.ViewModels;assembly=Noctra.Core"
@@ -113,12 +113,12 @@
                       VerticalAlignment="Center">
             <TextBlock Text="{Binding Name}"
                        Foreground="{DynamicResource TextPrimaryBrush}"
-                       FontSize="14"
+                       FontSize="{DynamicResource FBody}"
                        FontWeight="SemiBold"
                        TextTrimming="CharacterEllipsis" />
             <TextBlock Text="{Binding GroupTitle}"
                        Foreground="{DynamicResource TextMutedBrush}"
-                       FontSize="11"
+                       FontSize="{DynamicResource FOverline}"
                        TextTrimming="CharacterEllipsis" Opacity="0.8" />
           </StackPanel>
           
@@ -156,7 +156,7 @@
         <TextBlock Grid.Row="1"
                    Text="{Binding CurrentProgramTitle}"
                    Foreground="{DynamicResource TextMutedBrush}"
-                   FontSize="12"
+                   FontSize="{DynamicResource FCaption}"
                    FontWeight="Medium"
                    TextTrimming="CharacterEllipsis"
                    Opacity="0.85"

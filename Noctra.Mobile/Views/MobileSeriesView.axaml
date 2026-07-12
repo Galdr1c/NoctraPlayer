@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -83,12 +83,12 @@
                   IsVisible="{Binding IsContentLoading}">
         <controls:PremiumSpinner Width="56" Height="56" HorizontalAlignment="Center" />
         <TextBlock Text="{loc:Translate Series.Loading}"
-                   FontSize="15"
+                   FontSize="{DynamicResource FBodyL}"
                    FontWeight="SemiBold"
                    Foreground="{DynamicResource TextMutedBrush}"
                    TextAlignment="Center" />
         <TextBlock Text="{loc:Translate Live.LoadingDetail}"
-                   FontSize="12"
+                   FontSize="{DynamicResource FCaption}"
                    Foreground="{DynamicResource TextMutedBrush}"
                    Opacity="0.6"
                    TextAlignment="Center" />
