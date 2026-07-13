@@ -1,12 +1,8 @@
 using System;
 using System.ComponentModel;
-using System.Threading;
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Input;
 using Avalonia.Interactivity;
-using Avalonia.Threading;
-using Material.Icons;
 using Noctra.Mobile.Localization;
 using Noctra.Models;
 using Noctra.ViewModels;
@@ -15,20 +11,14 @@ namespace Noctra.Mobile.Views;
 
 public partial class MobileMoviesView : UserControl
 {
-    private const long LongPressThresholdMs = 500;
-    private CancellationTokenSource? _longPressCts;
     private MainViewModel? _sortViewModel;
 
     public MobileMoviesView()
     {
         InitializeComponent();
-
-        if (GroupFilterComboBox is not null)
-        {
-            GroupFilterComboBox.PointerPressed += OnGroupComboBoxPointerPressed;
-            GroupFilterComboBox.PointerReleased += OnGroupComboBoxPointerReleased;
-        }
     }
+
+    public event EventHandler<MobileCategorySelectionRequestedEventArgs>? CategorySelectionRequested;
 
     private MainViewModel? ViewModel => DataContext as MainViewModel;
 
@@ -48,6 +38,7 @@ public partial class MobileMoviesView : UserControl
         {
             _sortViewModel.PropertyChanged += ViewModel_PropertyChanged;
             UpdateSortSelection();
+            UpdateCategorySelection();
         }
     }
 
@@ -80,6 +71,11 @@ public partial class MobileMoviesView : UserControl
         {
             UpdateSortSelection();
         }
+
+        if (e.PropertyName == nameof(MainViewModel.SelectedGroup))
+        {
+            UpdateCategorySelection();
+        }
     }
 
     private void UpdateSortSelection()
@@ -93,55 +89,22 @@ public partial class MobileMoviesView : UserControl
         }
     }
 
-    private void OnGroupComboBoxPointerPressed(object? sender, PointerPressedEventArgs e)
+    private void OpenCategorySelection_Click(object? sender, RoutedEventArgs e)
     {
-        _longPressCts?.Cancel();
-        _longPressCts = new CancellationTokenSource();
-
-        var token = _longPressCts.Token;
-        DispatcherTimer.RunOnce(() =>
-        {
-            if (token.IsCancellationRequested) return;
-            ShowGroupHideFlyout();
-        }, TimeSpan.FromMilliseconds(LongPressThresholdMs));
+        CategorySelectionRequested?.Invoke(
+            this,
+            new MobileCategorySelectionRequestedEventArgs("Mobile.Categories.MoviesTitle"));
     }
 
-    private void OnGroupComboBoxPointerReleased(object? sender, PointerReleasedEventArgs e)
+    private void UpdateCategorySelection()
     {
-        _longPressCts?.Cancel();
-    }
-
-    private void ShowGroupHideFlyout()
-    {
-        if (ViewModel?.SelectedGroup is not string selectedGroup || string.IsNullOrEmpty(selectedGroup))
-            return;
-
-        var flyout = new MenuFlyout
-        {
-            Placement = PlacementMode.Bottom
-        };
-
-        var hideItem = new MenuItem
-        {
-            Header = LocalizationSource.Instance["Live.HideCategory.Tooltip"],
-            Command = ViewModel.HideGroupCommand,
-            CommandParameter = selectedGroup
-        };
-        hideItem.Icon = new Material.Icons.Avalonia.MaterialIcon
-        {
-            Kind = MaterialIconKind.EyeOffOutline
-        };
-
-        flyout.Items.Add(hideItem);
-        flyout.ShowAt(GroupFilterComboBox);
-    }
-
-    private void ClearGroupSelection_Click(object? sender, RoutedEventArgs e)
-    {
-        if (ViewModel is not null)
-        {
-            ViewModel.SelectedGroup = null;
-        }
+        var selectedGroup = ViewModel?.SelectedGroup;
+        var label = string.IsNullOrWhiteSpace(selectedGroup)
+            ? LocalizationSource.Instance["Common.All"]
+            : selectedGroup;
+        CategorySelectionValue.Text = label;
+        ToolTip.SetTip(CategorySelectionButton, label);
+        Avalonia.Automation.AutomationProperties.SetName(CategorySelectionButton, label);
     }
 
     private async void MoviesScrollViewer_ScrollChanged(object? sender, ScrollChangedEventArgs e)
@@ -160,11 +123,5 @@ public partial class MobileMoviesView : UserControl
 
         SelectionSheetHost.TryClose();
         base.OnDetachedFromVisualTree(e);
-        _longPressCts?.Cancel();
-        if (GroupFilterComboBox is not null)
-        {
-            GroupFilterComboBox.PointerPressed -= OnGroupComboBoxPointerPressed;
-            GroupFilterComboBox.PointerReleased -= OnGroupComboBoxPointerReleased;
-        }
     }
 }

@@ -123,18 +123,28 @@ public class MobileReleaseGuardTests
     }
 
     [Fact]
-    public void MobileContentGroupFilters_RemainComboBoxes()
+    public void MobileContentGroupFilters_OpenSharedFullScreenCategoryPage()
     {
+        var mainView = ReadProjectFile("Noctra.Mobile", "Views", "MainView.axaml");
+        var mainViewCodeBehind = ReadProjectFile("Noctra.Mobile", "Views", "MainView.axaml.cs");
+
         foreach (var viewName in new[] { "MobileLiveView.axaml", "MobileMoviesView.axaml", "MobileSeriesView.axaml" })
         {
             var view = ReadProjectFile("Noctra.Mobile", "Views", viewName);
-            Assert.Contains("x:Name=\"GroupFilterComboBox\"", view);
-            Assert.Contains("<ComboBox", view);
+            Assert.DoesNotContain("x:Name=\"GroupFilterComboBox\"", view);
+            Assert.DoesNotContain("<ComboBox", view);
+            Assert.Contains("x:Name=\"CategorySelectionButton\"", view);
+            Assert.Contains("Click=\"OpenCategorySelection_Click\"", view);
         }
+
+        Assert.Contains("<views:MobileCategorySelectionView", mainView);
+        Assert.Contains("x:Name=\"CategorySelectionOverlay\"", mainView);
+        Assert.Contains("CategorySelectionRequested", mainViewCodeBehind);
+        Assert.Contains("CategorySelectionOverlay.TryClose()", mainViewCodeBehind);
     }
 
     [Fact]
-    public void MobileContentSorts_UseSelectionSheetsWhileKeepingGroupFilters()
+    public void MobileContentSorts_UseSelectionSheetsWithoutLegacyGroupComboBoxes()
     {
         var mainView = ReadProjectFile("Noctra.Mobile", "Views", "MainView.axaml.cs");
 
@@ -145,12 +155,52 @@ public class MobileReleaseGuardTests
             Assert.DoesNotContain("ItemsSource=\"{Binding SortOptions}\"", view);
             Assert.Contains("Click=\"OpenSortSelectionSheet_Click\"", view);
             Assert.Contains("<views:MobileSelectionSheet", view);
-            Assert.Equal(1, CountOccurrences(view, "<ComboBox Grid.Column"));
+            Assert.DoesNotContain("<ComboBox", view);
         }
 
         Assert.Contains("MobileLiveContent.IsVisible && MobileLiveContent.TryHandleBack()", mainView);
         Assert.Contains("MobileMoviesContent.IsVisible && MobileMoviesContent.TryHandleBack()", mainView);
         Assert.Contains("MobileSeriesContent.IsVisible && MobileSeriesContent.TryHandleBack()", mainView);
+    }
+
+    [Fact]
+    public void MobileCategorySelectionPage_SeparatesSelectionFromHideAction()
+    {
+        Assert.True(
+            TryFindProjectFile(out var pagePath, "Noctra.Mobile", "Views", "MobileCategorySelectionView.axaml"),
+            "Missing shared mobile category selection page.");
+        Assert.True(
+            TryFindProjectFile(out var codeBehindPath, "Noctra.Mobile", "Views", "MobileCategorySelectionView.axaml.cs"),
+            "Missing shared mobile category selection page code-behind.");
+
+        var page = File.ReadAllText(pagePath!);
+        var codeBehind = File.ReadAllText(codeBehindPath!);
+
+        Assert.Contains("x:Name=\"AllCategoriesButton\"", page);
+        Assert.Contains("Click=\"SelectCategory_Click\"", page);
+        Assert.Contains("Click=\"HideCategory_Click\"", page);
+        Assert.Contains("Kind=\"EyeOffOutline\"", page);
+        Assert.Contains("TextWrapping=\"Wrap\"", page);
+        Assert.Contains("MaxWidth=\"720\"", page);
+        Assert.Contains("HideGroupCommand.ExecuteAsync", codeBehind);
+        Assert.Contains("SelectedGroup = null", codeBehind);
+    }
+
+    [Fact]
+    public void MobileCategorySelectionPage_DoesNotRebuildAfterPremiumPromptCloses()
+    {
+        var codeBehind = ReadProjectFile(
+            "Noctra.Mobile",
+            "Views",
+            "MobileCategorySelectionView.axaml.cs");
+        var normalizedCodeBehind = codeBehind.Replace("\r\n", "\n", StringComparison.Ordinal);
+
+        Assert.Contains("await _viewModel.HideGroupCommand.ExecuteAsync(item.Name);", normalizedCodeBehind);
+        Assert.DoesNotContain(
+            "await _viewModel.HideGroupCommand.ExecuteAsync(item.Name);\n        RefreshCategories();",
+            normalizedCodeBehind);
+        Assert.Contains("Groups_CollectionChanged", normalizedCodeBehind);
+        Assert.Contains("_groupsCollection.CollectionChanged += Groups_CollectionChanged", normalizedCodeBehind);
     }
 
     [Fact]
@@ -237,5 +287,24 @@ public class MobileReleaseGuardTests
         }
 
         throw new FileNotFoundException($"Could not find project file: {Path.Combine(relativeParts)}");
+    }
+
+    private static bool TryFindProjectFile(out string? path, params string[] relativeParts)
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null)
+        {
+            var candidate = Path.Combine(new[] { directory.FullName }.Concat(relativeParts).ToArray());
+            if (File.Exists(candidate))
+            {
+                path = candidate;
+                return true;
+            }
+
+            directory = directory.Parent;
+        }
+
+        path = null;
+        return false;
     }
 }

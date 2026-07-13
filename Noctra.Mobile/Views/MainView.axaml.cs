@@ -67,6 +67,7 @@ public partial class MainView : UserControl
         // Event aboneliklerini yeniden kur (XAML reload sırasında kaybolabilir)
         OverlayProfileList.ProfileLoaded -= OverlayProfileList_ProfileLoaded;
         OverlayProfileList.ProfileLoaded += OverlayProfileList_ProfileLoaded;
+        WireCategorySelectionEvents();
 
         UpdateNavigationMode(Bounds.Width);
         UpdateContentVisibility(_currentDestination);
@@ -76,6 +77,7 @@ public partial class MainView : UserControl
     public MainView()
     {
         InitializeComponent();
+        WireCategorySelectionEvents();
         MobileSettingsContent.BackToProfilesRequested += (_, _) => ShowProfileSelection();
         SizeChanged += OnSizeChanged;
         Loaded += OnLoaded;
@@ -269,6 +271,7 @@ public partial class MainView : UserControl
 
         OverlayProfileList.ProfileLoaded -= OverlayProfileList_ProfileLoaded;
         _backExitToastTimer.Stop();
+        CategorySelectionOverlay.TryClose();
 
         _fallbackHandler?.Unregister();
 
@@ -308,6 +311,7 @@ public partial class MainView : UserControl
         LegalConsentOverlay.Padding = new Thickness(safe.Left, safe.Top, safe.Right, safe.Bottom);
         ReviewPromptOverlay.Padding = new Thickness(safe.Left, 0, safe.Right, safe.Bottom);
         ProfilesOverlay.Padding = new Thickness(safe.Left, safe.Top, safe.Right, safe.Bottom);
+        CategorySelectionOverlay.ApplySafeArea(safe);
         _lastSafeArea = safe;
         UpdatePlayerWatermarkInsets();
     }
@@ -361,6 +365,12 @@ public partial class MainView : UserControl
 
             _lastBackExitPromptUtc = nowUtc;
             ShowBackExitToast();
+            return true;
+        }
+
+        if (CategorySelectionOverlay.TryClose())
+        {
+            RestoreChromeAfterCategorySelection();
             return true;
         }
 
@@ -504,6 +514,7 @@ public partial class MainView : UserControl
     private bool CanShowNavigationChrome()
         => !PlayerHost.IsVisible &&
            !_isPlayerFullScreen &&
+           !CategorySelectionOverlay.IsVisible &&
            HeaderBar.IsVisible &&
            !ProfilesOverlay.IsVisible &&
            !LegalConsentOverlay.IsVisible;
@@ -518,6 +529,8 @@ public partial class MainView : UserControl
 
     private void UpdateContentVisibility(string destination)
     {
+        CloseCategorySelection();
+
         if (destination != "Live")
         {
             MobileLiveContent.TryHandleBack();
@@ -586,6 +599,8 @@ public partial class MainView : UserControl
 
     private void ShowProfileSelection()
     {
+        CloseCategorySelection();
+
         // Profil seçiminde oynatmayı durdur — profil değişimi playback context'ini sıfırlar.
         if (PlayerHost.IsVisible)
         {
@@ -1124,5 +1139,73 @@ public partial class MainView : UserControl
             _lastSafeArea,
             PlayerHost.IsVisible && _playerViewModel?.IsFullScreen == true,
             _playerViewModel?.IsPiPMode == true);
+    }
+
+    private void WireCategorySelectionEvents()
+    {
+        MobileLiveContent.CategorySelectionRequested -= Content_CategorySelectionRequested;
+        MobileMoviesContent.CategorySelectionRequested -= Content_CategorySelectionRequested;
+        MobileSeriesContent.CategorySelectionRequested -= Content_CategorySelectionRequested;
+        CategorySelectionOverlay.CloseRequested -= CategorySelectionOverlay_CloseRequested;
+
+        MobileLiveContent.CategorySelectionRequested += Content_CategorySelectionRequested;
+        MobileMoviesContent.CategorySelectionRequested += Content_CategorySelectionRequested;
+        MobileSeriesContent.CategorySelectionRequested += Content_CategorySelectionRequested;
+        CategorySelectionOverlay.CloseRequested += CategorySelectionOverlay_CloseRequested;
+    }
+
+    private void Content_CategorySelectionRequested(
+        object? sender,
+        MobileCategorySelectionRequestedEventArgs e)
+    {
+        if (sender is not Control { DataContext: CoreMainViewModel viewModel })
+        {
+            return;
+        }
+
+        if (sender is MobileLiveView liveView)
+        {
+            liveView.TryHandleBack();
+        }
+        else if (sender is MobileMoviesView moviesView)
+        {
+            moviesView.TryHandleBack();
+        }
+        else if (sender is MobileSeriesView seriesView)
+        {
+            seriesView.TryHandleBack();
+        }
+
+        CategorySelectionOverlay.Show(viewModel, LocalizationSource.Instance[e.TitleKey]);
+        HeaderBar.IsVisible = false;
+        NavigationRail.IsVisible = false;
+        BottomNavigation.IsVisible = false;
+        MobileSlideTransitionBehavior.SetTriggerValue(
+            CategorySelectionOverlay,
+            $"Category:{e.TitleKey}:{DateTime.UtcNow.Ticks}");
+    }
+
+    private void CategorySelectionOverlay_CloseRequested(object? sender, EventArgs e)
+        => CloseCategorySelection();
+
+    private bool CloseCategorySelection()
+    {
+        if (!CategorySelectionOverlay.TryClose())
+        {
+            return false;
+        }
+
+        MobileSlideTransitionBehavior.SetTriggerValue(CategorySelectionOverlay, null);
+        RestoreChromeAfterCategorySelection();
+        return true;
+    }
+
+    private void RestoreChromeAfterCategorySelection()
+    {
+        HeaderBar.IsVisible = !PlayerHost.IsVisible &&
+                              !ProfilesOverlay.IsVisible &&
+                              !LegalConsentOverlay.IsVisible &&
+                              !ReviewPromptOverlay.IsVisible;
+        UpdateNavigationMode(Bounds.Width);
     }
 }

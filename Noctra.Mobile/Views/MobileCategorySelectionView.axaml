@@ -1,0 +1,154 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:loc="using:Noctra.Mobile.Localization"
+             xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             x:Class="Noctra.Mobile.Views.MobileCategorySelectionView"
+             x:Name="CategorySelectionRoot"
+             x:CompileBindings="False"
+             Background="{DynamicResource Bg0Brush}"
+             IsVisible="False">
+  <UserControl.Styles>
+    <Style Selector="Button.CategorySelectionRow">
+      <Setter Property="MinHeight" Value="56" />
+      <Setter Property="Padding" Value="16,12" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    </Style>
+    <Style Selector="Button.CategorySelectionRow:pressed">
+      <Setter Property="Background" Value="{DynamicResource AccentSubtleBrush}" />
+    </Style>
+    <Style Selector="Button.CategoryHideButton">
+      <Setter Property="Width" Value="48" />
+      <Setter Property="Height" Value="48" />
+      <Setter Property="MinWidth" Value="48" />
+      <Setter Property="MinHeight" Value="48" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="CornerRadius" Value="24" />
+    </Style>
+    <Style Selector="Button.CategoryHideButton:pressed">
+      <Setter Property="Background" Value="{DynamicResource AccentSubtleBrush}" />
+    </Style>
+  </UserControl.Styles>
+
+  <Grid RowDefinitions="Auto,*"
+        Background="{DynamicResource Bg0Brush}"
+        ClipToBounds="True">
+    <Border Grid.Row="0"
+            Background="{DynamicResource Surface0Brush}"
+            BorderBrush="{DynamicResource BorderBrush}"
+            BorderThickness="0,0,0,1"
+            Padding="12,8">
+      <Grid x:Name="HeaderContent"
+            ColumnDefinitions="48,*"
+            ColumnSpacing="8">
+        <Button Width="48"
+                Height="48"
+                Padding="0"
+                Background="Transparent"
+                BorderThickness="0"
+                Click="Back_Click"
+                ToolTip.Tip="{loc:Translate Player.Overlay.Back}">
+          <icons:MaterialIcon Kind="ArrowLeft"
+                              Width="26"
+                              Height="26"
+                              Foreground="{DynamicResource TextPrimaryBrush}" />
+        </Button>
+        <TextBlock x:Name="TitleTextBlock"
+                   Grid.Column="1"
+                   FontSize="{DynamicResource FTitleL}"
+                   FontWeight="Bold"
+                   Foreground="{DynamicResource TextPrimaryBrush}"
+                   TextTrimming="CharacterEllipsis"
+                   VerticalAlignment="Center" />
+      </Grid>
+    </Border>
+
+    <ScrollViewer x:Name="CategoryScrollViewer"
+                  Grid.Row="1"
+                  HorizontalScrollBarVisibility="Disabled"
+                  VerticalScrollBarVisibility="Auto"
+                  ScrollViewer.IsScrollChainingEnabled="False">
+      <StackPanel MaxWidth="720"
+                  Margin="16,18,16,24"
+                  Spacing="8"
+                  HorizontalAlignment="Stretch">
+        <Border Background="{DynamicResource Surface1Brush}"
+                BorderBrush="{DynamicResource BorderBrush}"
+                BorderThickness="1"
+                CornerRadius="8">
+          <Button x:Name="AllCategoriesButton"
+                  Classes="CategorySelectionRow"
+                  Click="SelectCategory_Click">
+            <Grid ColumnDefinitions="*,Auto"
+                  ColumnSpacing="12">
+              <TextBlock Text="{loc:Translate Common.All}"
+                         FontSize="{DynamicResource FBodyL}"
+                         FontWeight="SemiBold"
+                         Foreground="{DynamicResource TextPrimaryBrush}"
+                         VerticalAlignment="Center" />
+              <icons:MaterialIcon x:Name="AllCategoriesCheck"
+                                  Grid.Column="1"
+                                  Kind="Check"
+                                  Width="22"
+                                  Height="22"
+                                  Foreground="{DynamicResource AccentBrush}"
+                                  VerticalAlignment="Center" />
+            </Grid>
+          </Button>
+        </Border>
+
+        <ItemsControl ItemsSource="{Binding Categories}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <Border Margin="0,0,0,8"
+                      Background="{DynamicResource Surface1Brush}"
+                      BorderBrush="{DynamicResource BorderBrush}"
+                      BorderThickness="1"
+                      CornerRadius="8">
+                <Grid ColumnDefinitions="*,Auto">
+                  <Button Grid.Column="0"
+                          Classes="CategorySelectionRow"
+                          Tag="{Binding}"
+                          Click="SelectCategory_Click">
+                    <Grid ColumnDefinitions="*,Auto"
+                          ColumnSpacing="12">
+                      <TextBlock Text="{Binding Name}"
+                                 FontSize="{DynamicResource FBodyL}"
+                                 FontWeight="SemiBold"
+                                 Foreground="{DynamicResource TextPrimaryBrush}"
+                                 TextWrapping="Wrap"
+                                 VerticalAlignment="Center" />
+                      <icons:MaterialIcon Grid.Column="1"
+                                          Kind="Check"
+                                          Width="22"
+                                          Height="22"
+                                          Foreground="{DynamicResource AccentBrush}"
+                                          IsVisible="{Binding IsSelected}"
+                                          VerticalAlignment="Center" />
+                    </Grid>
+                  </Button>
+                  <Button Grid.Column="1"
+                          Classes="CategoryHideButton"
+                          Tag="{Binding}"
+                          Click="HideCategory_Click"
+                          ToolTip.Tip="{loc:Translate Mobile.Categories.Hide}">
+                    <icons:MaterialIcon Kind="EyeOffOutline"
+                                        Width="22"
+                                        Height="22"
+                                        Foreground="{DynamicResource TextMutedBrush}" />
+                  </Button>
+                </Grid>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+    </ScrollViewer>
+  </Grid>
+</UserControl>

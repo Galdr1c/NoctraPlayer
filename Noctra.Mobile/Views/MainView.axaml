@@ -606,6 +606,12 @@
       </Grid>
     </Border>
 
+    <views:MobileCategorySelectionView x:Name="CategorySelectionOverlay"
+                                       Grid.RowSpan="3"
+                                       Grid.ColumnSpan="2"
+                                       ZIndex="47000"
+                                       IsVisible="False" />
+
     <Border x:Name="PlayerHost"
             Grid.RowSpan="3"
             Grid.ColumnSpan="2"

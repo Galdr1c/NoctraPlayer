@@ -41,27 +41,24 @@
                               Foreground="{DynamicResource TextPrimaryBrush}" />
         </Button>
       </Grid>
-      <Grid ColumnDefinitions="*,Auto"
-            ColumnSpacing="8"
-            IsVisible="{Binding ShowGroupFilter}">
-        <ComboBox Grid.Column="0"
-                  x:Name="GroupFilterComboBox"
-                  ItemsSource="{Binding Groups}"
-                  SelectedItem="{Binding SelectedGroup}"
-                  PlaceholderText="{loc:Translate Common.All}">
-          <ComboBox.ItemTemplate>
-            <DataTemplate>
-              <TextBlock Text="{Binding}"
-                         VerticalAlignment="Center"
-                         Padding="12,8" />
-            </DataTemplate>
-          </ComboBox.ItemTemplate>
-        </ComboBox>
-        <Button Grid.Column="1"
-                Content="{loc:Translate Common.All}"
-                Theme="{StaticResource FilterButtonStyle}"
-                Click="ClearGroupSelection_Click" />
-      </Grid>
+      <Button x:Name="CategorySelectionButton"
+              Classes="SettingsSelectionButton"
+              IsVisible="{Binding ShowGroupFilter}"
+              Click="OpenCategorySelection_Click">
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+          <TextBlock x:Name="CategorySelectionValue"
+                     Foreground="{DynamicResource TextPrimaryBrush}"
+                     FontWeight="SemiBold"
+                     TextTrimming="CharacterEllipsis"
+                     VerticalAlignment="Center" />
+          <icons:MaterialIcon Grid.Column="1"
+                              Kind="ChevronRight"
+                              Width="22"
+                              Height="22"
+                              Foreground="{DynamicResource TextMutedBrush}"
+                              VerticalAlignment="Center" />
+        </Grid>
+      </Button>
 
       <Border HorizontalAlignment="Stretch" MaxWidth="1400">
         <ItemsControl ItemsSource="{Binding FilteredChannels}"
