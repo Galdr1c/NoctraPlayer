@@ -56,9 +56,11 @@ public sealed class DeviceMetricsService : INotifyPropertyChanged
     }
 
     /// <summary>
-    /// 360 dp referans genişliğine göre density scale.
-    /// Compact'ta 0.85'e kadar düşer (ama touch target'lar korunur),
-    /// tablette 1.4, desktop/TV'de 1.6'ya kadar çıkar.
+    /// 360 dp referans genişliğine göre, sadece FONT token'larına uygulanan ölçek.
+    /// Spacing/padding/dimension artık bu değerden etkilenmiyor (bkz. UpdateResourceTokens).
+    /// Piecewise-linear: 306dp'de 0.85 taban, 360dp'de 1.0, 600dp'de 1.08,
+    /// 900dp'de 1.25, 1600dp+'da 1.4 tavan — eskisi gibi 576dp'de aniden
+    /// tavana zıplamaz, Tablet ve Desktop/TV aralığının tamamına kademeli yayılır.
     /// </summary>
     public double DensityScale
     {
@@ -109,11 +111,44 @@ public sealed class DeviceMetricsService : INotifyPropertyChanged
             _ => DeviceClass.Desktop
         };
 
-        // 360 dp referans. Compact'ta 0.85, tablette 1.4, TV/desktop'ta 1.6.
-        DensityScale = Math.Clamp(shortSide / 360.0, 0.85, 1.6);
+        // 360 dp referans, kademeli eğri (bkz. ComputeFontScale).
+        DensityScale = ComputeFontScale(shortSide);
 
-        // Tüm DynamicResource token'larını güncelle
+        // Sadece font token'larını güncelle (spacing/padding/dimension sabit).
         UpdateResourceTokens();
+    }
+
+    /// <summary>
+    /// Sadece font ölçeklemesi için kullanılan piecewise-linear eğri.
+    /// Sabit breakpoint'ler arasında lineer interpolasyon yapar, böylece
+    /// Tablet (600-900dp) ve Desktop/TV (900dp+) aralıklarının tamamında
+    /// kademeli bir artış olur; tek bir noktada tavana zıplama olmaz.
+    /// </summary>
+    private static double ComputeFontScale(double shortSide)
+    {
+        Span<(double Side, double Scale)> anchors =
+        [
+            (306, 0.85),   // Compact taban (360 * 0.85)
+            (360, 1.00),   // Telefon referansı
+            (600, 1.08),   // Phone sınıfının üst ucu — hafif büyüme
+            (900, 1.25),   // Tablet sınıfının üst ucu
+            (1600, 1.40),  // Desktop/TV — geniş ekranlarda kademeli tavan
+        ];
+
+        if (shortSide <= anchors[0].Side) return anchors[0].Scale;
+        if (shortSide >= anchors[^1].Side) return anchors[^1].Scale;
+
+        for (var i = 0; i < anchors.Length - 1; i++)
+        {
+            var (s0, v0) = anchors[i];
+            var (s1, v1) = anchors[i + 1];
+            if (shortSide > s1) continue;
+
+            var t = (shortSide - s0) / (s1 - s0);
+            return v0 + t * (v1 - v0);
+        }
+
+        return anchors[^1].Scale;
     }
 
     /// <summary>
@@ -166,42 +201,21 @@ public sealed class DeviceMetricsService : INotifyPropertyChanged
         ["FOverline"]     = 10,
     };
 
-    // Spacing token'larının baz değerleri
-    private static readonly Dictionary<string, double> BaseSpacingTokens = new()
-    {
-        ["S1"] = 4,
-        ["S2"] = 8,
-        ["S3"] = 12,
-        ["S4"] = 16,
-        ["S5"] = 20,
-        ["S6"] = 24,
-        ["S7"] = 32,
-        ["S8"] = 40,
-    };
-
-    // Dimension token'larının baz değerleri
-    private static readonly Dictionary<string, double> BaseDimensionTokens = new()
-    {
-        ["BottomNavHeight"]   = 62,
-        ["HeaderHeight"]      = 56,
-        ["NavRailWidth"]      = 72,
-        ["AvatarSizeS"]       = 40,
-        ["AvatarSizeM"]       = 56,
-        ["AvatarSizeL"]       = 80,
-        ["TouchTarget"]       = 44,
-        ["CardMinHeight"]     = 120,
-        ["ThumbnailWidth"]    = 48,
-        ["ThumbnailHeight"]   = 64,
-        ["SheetMaxHeight"]    = 560,
-        ["SheetMaxHeightLarge"]       = 620,
-        ["SheetScrollMaxHeight"]      = 220,
-        ["SheetScrollMaxHeightMedium"] = 330,
-    };
+    // NOT: Spacing (S1-S8) ve dimension (BottomNavHeight, HeaderHeight, AvatarSizeS/M/L,
+    // TouchTarget, ThumbnailWidth/Height, SheetMaxHeight*, PagePadding, CardPadding,
+    // SheetPadding vb.) token'ları artık DEVICE SCALE'DEN ETKİLENMİYOR — bilinçli karar:
+    // margin/padding/chrome ölçeklemesi kademeli olmayan bir tavana çok erken ulaşıyordu
+    // (ör. Tablet sınıfının tamamı ve Desktop/TV aynı maksimum değeri paylaşıyordu) ve
+    // layout'u bozuyordu. Bu token'lar artık sadece Tokens.axaml'daki statik (telefon
+    // referanslı) değerlerini kullanır. Kart genişliği ve satır başına öğe sayısı gibi
+    // gerçekten responsive olması gereken ölçüler zaten ayrı ve bağımsız bir mekanizma
+    // olan Converters/ResponsiveCardMetricConverter.cs üzerinden, sabit bir gap ile
+    // hesaplanıyor — o dosyaya bu değişiklikle dokunulmadı.
 
     /// <summary>
-    /// DensityScale'e göre tüm token'ları yeniden hesaplar ve
+    /// DensityScale'e göre SADECE font token'larını yeniden hesaplar ve
     /// Application.Current.Resources'a yazar. DynamicResource binding'leri
-    /// otomatik olarak güncellenir.
+    /// otomatik olarak güncellenir. Spacing/dimension/padding artık burada yok.
     /// </summary>
     private void UpdateResourceTokens()
     {
@@ -219,35 +233,6 @@ public sealed class DeviceMetricsService : INotifyPropertyChanged
             scaled = Math.Max(scaled, 9);
             resources[key] = scaled;
         }
-
-        // Spacing token'ları — ölçekle ama 2dp'den küçük olmasın
-        foreach (var (key, baseValue) in BaseSpacingTokens)
-        {
-            var scaled = Math.Round(baseValue * scale);
-            scaled = Math.Max(scaled, 2);
-            resources[key] = scaled;
-        }
-
-        // Dimension token'ları — ölçekle ama touch target minimum 40dp
-        foreach (var (key, baseValue) in BaseDimensionTokens)
-        {
-            var scaled = Math.Round(baseValue * scale);
-            if (key == "TouchTarget")
-                scaled = Math.Max(scaled, 40);
-            resources[key] = scaled;
-        }
-
-        // Thickness token'ları — yeniden hesapla
-        var ps = Math.Round(16 * scale);
-        var ps2 = Math.Round(12 * scale);
-        var ps3 = Math.Round(24 * scale);
-        var ps4 = Math.Round(18 * scale);
-        var ps5 = Math.Round(28 * scale);
-        resources["PagePadding"] = new Avalonia.Thickness(ps, ps2, ps, ps);
-        resources["PagePaddingLarge"] = new Avalonia.Thickness(ps3, ps4, ps3, ps5);
-        resources["CardPadding"] = new Avalonia.Thickness(Math.Round(14 * scale));
-        resources["CardPaddingLarge"] = new Avalonia.Thickness(Math.Round(20 * scale));
-        resources["SheetPadding"] = new Avalonia.Thickness(ps, ps2);
     }
 
     // ─── INotifyPropertyChanged ───────────────────────────────────────────

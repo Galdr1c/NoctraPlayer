@@ -187,9 +187,9 @@ public sealed class ResponsiveCardMetricConverter : IValueConverter
 
             if (mode.StartsWith("profile", StringComparison.OrdinalIgnoreCase))
             {
-                // Profile cards: MinWidth 110 → telefonda 2 sütun garanti (K-2/Y-8).
-                // MaxWidth 180: büyük ekranda kart çok büyümesin.
-                return new CardMetricProfile(110, 180, 140, 1.0, 12, 5);
+                // Profile cards keep the avatar-heavy shape used in the desktop profile window.
+                // MinWidth 150 ensures the 150x150 avatar Grid never overflows the card.
+                return new CardMetricProfile(150, 200, 170, 1.18, 16, 5);
             }
 
             if (mode.StartsWith("moreShortcut", StringComparison.OrdinalIgnoreCase))
