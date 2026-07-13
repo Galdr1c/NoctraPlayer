@@ -1,12 +1,15 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <resources>
 
-  <style name="MyTheme">
+  <style name="MyTheme.Splash" parent="Theme.SplashScreen">
+    <item name="windowSplashScreenBackground">@color/splash_background</item>
+    <item name="windowSplashScreenAnimatedIcon">@drawable/ic_noctra_splash</item>
+    <item name="postSplashScreenTheme">@style/MyTheme.Main</item>
   </style>
 
-  <style name="MyTheme.NoActionBar" parent="@style/Theme.AppCompat.DayNight.NoActionBar">
+  <style name="MyTheme.Main" parent="@style/Theme.AppCompat.DayNight.NoActionBar">
     <item name="android:windowActionBar">false</item>
-    <item name="android:windowBackground">@drawable/splash_screen</item>
+    <item name="android:windowBackground">@color/splash_background</item>
     <item name="android:windowNoTitle">true</item>
   </style>
 </resources>

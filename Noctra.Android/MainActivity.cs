@@ -17,7 +17,7 @@ namespace Noctra.Android;
 
 [Activity(
     Label = "Noctra",
-    Theme = "@style/MyTheme.NoActionBar",
+    Theme = "@style/MyTheme.Splash",
     Icon = "@drawable/icon",
     MainLauncher = true,
     SupportsPictureInPicture = true,
@@ -31,6 +31,8 @@ public class MainActivity : AvaloniaMainActivity
 
     protected override void OnCreate(Bundle? savedInstanceState)
     {
+        AndroidX.Core.SplashScreen.SplashScreen.InstallSplashScreen(this);
+
         var applicationContext = ApplicationContext
             ?? throw new InvalidOperationException("Android application context is unavailable.");
         Noctra.Mobile.App.ServiceProviderFactory ??=

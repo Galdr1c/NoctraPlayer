@@ -29,6 +29,107 @@ public class MobileReleaseGuardTests
     }
 
     [Fact]
+    public void AndroidLaunch_UsesOneSplashScreenThemeAndNoActivityIconOverride()
+    {
+        var activity = ReadProjectFile("Noctra.Android", "MainActivity.cs");
+        var project = ReadProjectFile("Noctra.Android", "Noctra.Android.csproj");
+        var styles = ReadProjectFile("Noctra.Android", "Resources", "values", "styles.xml");
+
+        Assert.Contains("Theme = \"@style/MyTheme.Splash\"", activity);
+        Assert.DoesNotContain("Icon =", activity);
+        Assert.DoesNotContain("<AndroidResource Include=\"Icon.png\">", project);
+        Assert.Contains("SplashScreen.InstallSplashScreen(this);", activity);
+        Assert.True(
+            activity.IndexOf("SplashScreen.InstallSplashScreen(this);", StringComparison.Ordinal) <
+            activity.IndexOf("base.OnCreate(savedInstanceState);", StringComparison.Ordinal),
+            "InstallSplashScreen must run before base.OnCreate().");
+
+        Assert.Contains("style name=\"MyTheme.Splash\" parent=\"Theme.SplashScreen\"", styles);
+        Assert.Contains("name=\"postSplashScreenTheme\">@style/MyTheme.Main", styles);
+        Assert.Contains(
+            "style name=\"MyTheme.Main\" parent=\"@style/Theme.AppCompat.DayNight.NoActionBar\"",
+            styles);
+        Assert.Contains("name=\"android:windowBackground\">@color/splash_background", styles);
+        Assert.DoesNotContain("windowIsTranslucent", styles);
+        Assert.False(
+            TryFindProjectFile(out _, "Noctra.Android", "Resources", "values-v31", "styles.xml"));
+    }
+
+    [Fact]
+    public void AndroidBranding_UsesVectorAdaptiveAndThemedIcons()
+    {
+        var launcher = ReadProjectFile(
+            "Noctra.Android", "Resources", "mipmap-anydpi-v26", "ic_launcher.xml");
+        var launcherRound = ReadProjectFile(
+            "Noctra.Android", "Resources", "mipmap-anydpi-v26", "ic_launcher_round.xml");
+        var themedLauncher = ReadProjectFile(
+            "Noctra.Android", "Resources", "mipmap-anydpi-v33", "ic_launcher.xml");
+        var themedLauncherRound = ReadProjectFile(
+            "Noctra.Android", "Resources", "mipmap-anydpi-v33", "ic_launcher_round.xml");
+        var foreground = ReadProjectFile(
+            "Noctra.Android", "Resources", "drawable", "ic_noctra_foreground.xml");
+        var monochrome = ReadProjectFile(
+            "Noctra.Android", "Resources", "drawable", "ic_noctra_monochrome.xml");
+        var splash = ReadProjectFile(
+            "Noctra.Android", "Resources", "drawable", "ic_noctra_splash.xml");
+
+        Assert.Contains("@drawable/ic_noctra_foreground", launcher);
+        Assert.DoesNotContain("@mipmap/ic_launcher_foreground", launcher);
+        Assert.Contains("@drawable/ic_noctra_foreground", launcherRound);
+        Assert.DoesNotContain("@mipmap/ic_launcher_foreground", launcherRound);
+        Assert.Contains("@drawable/ic_noctra_foreground", themedLauncher);
+        Assert.DoesNotContain("@mipmap/ic_launcher_foreground", themedLauncher);
+        Assert.Contains("<monochrome android:drawable=\"@drawable/ic_noctra_monochrome\"", themedLauncher);
+        Assert.Contains("@drawable/ic_noctra_foreground", themedLauncherRound);
+        Assert.DoesNotContain("@mipmap/ic_launcher_foreground", themedLauncherRound);
+        Assert.Contains("<monochrome android:drawable=\"@drawable/ic_noctra_monochrome\"", themedLauncherRound);
+
+        Assert.Contains("<vector", foreground);
+        Assert.Contains("android:viewportWidth=\"108\"", foreground);
+        Assert.Contains("<vector", monochrome);
+        Assert.Contains("android:fillColor=\"#FFFFFFFF\"", monochrome);
+        Assert.Contains("<vector", splash);
+
+        AssertVectorSafeZone(foreground, expectedCenter: 54, sourceMaxRadius: 221, safeRadius: 33);
+        AssertVectorSafeZone(monochrome, expectedCenter: 54, sourceMaxRadius: 221, safeRadius: 33);
+        AssertVectorSafeZone(splash, expectedCenter: 144, sourceMaxRadius: 221, safeRadius: 96);
+    }
+
+    [Fact]
+    public void AndroidSplash_MatchesTheFirstMobileFrameAndHasNoTemplateResources()
+    {
+        var colors = ReadProjectFile("Noctra.Android", "Resources", "values", "colors.xml");
+
+        Assert.Contains("<color name=\"splash_background\">#0A0A0A</color>", colors);
+        Assert.False(
+            TryFindProjectFile(out _, "Noctra.Android", "Resources", "drawable-v31", "avalonia_anim.xml"));
+        Assert.False(
+            TryFindProjectFile(out _, "Noctra.Android", "Resources", "drawable-night-v31", "avalonia_anim.xml"));
+
+        foreach (var obsoleteResource in new[]
+                 {
+                     new[] { "Noctra.Android", "Icon.png" },
+                     new[] { "Noctra.Android", "Resources", "drawable", "splash_logo.png" },
+                     new[] { "Noctra.Android", "Resources", "drawable", "splash_screen.xml" },
+                     new[] { "Noctra.Android", "Resources", "drawable", "ic_launcher_background.xml" },
+                     new[] { "Noctra.Android", "Resources", "AboutResources.txt" }
+                 })
+        {
+            Assert.False(TryFindProjectFile(out _, obsoleteResource));
+        }
+
+        foreach (var density in new[] { "mdpi", "hdpi", "xhdpi", "xxhdpi", "xxxhdpi" })
+        {
+            Assert.False(TryFindProjectFile(
+                out _, "Noctra.Android", "Resources", $"mipmap-{density}", "ic_launcher.png"));
+            Assert.False(TryFindProjectFile(
+                out _, "Noctra.Android", "Resources", $"mipmap-{density}", "ic_launcher_round.png"));
+            Assert.False(TryFindProjectFile(
+                out _, "Noctra.Android", "Resources", $"mipmap-{density}", "ic_launcher_foreground.png"));
+        }
+    }
+
+    [Fact]
     public void DesktopApplicationIconAsset_Exists()
     {
         var iconPath = FindProjectFile("Noctra.Avalonia", "Assets", "Noctra.ico");
@@ -270,6 +371,49 @@ public class MobileReleaseGuardTests
         }
 
         return count;
+    }
+
+    private static void AssertVectorSafeZone(
+        string vectorXml,
+        double expectedCenter,
+        double sourceMaxRadius,
+        double safeRadius)
+    {
+        var document = System.Xml.Linq.XDocument.Parse(vectorXml);
+        var android = System.Xml.Linq.XNamespace.Get("http://schemas.android.com/apk/res/android");
+        var group = document.Root?.Elements("group").Single();
+        Assert.NotNull(group);
+
+        var scaleX = double.Parse(
+            group.Attribute(android + "scaleX")!.Value,
+            System.Globalization.CultureInfo.InvariantCulture);
+        var scaleY = double.Parse(
+            group.Attribute(android + "scaleY")!.Value,
+            System.Globalization.CultureInfo.InvariantCulture);
+        var translateX = double.Parse(
+            group.Attribute(android + "translateX")!.Value,
+            System.Globalization.CultureInfo.InvariantCulture);
+        var translateY = double.Parse(
+            group.Attribute(android + "translateY")!.Value,
+            System.Globalization.CultureInfo.InvariantCulture);
+
+        Assert.Equal(scaleX, scaleY, precision: 6);
+        Assert.True(scaleX > 0 && scaleY > 0, "Brand vector scale must remain positive.");
+        Assert.InRange(Math.Abs(translateX + (180 * scaleX) - expectedCenter), 0, 0.01);
+        Assert.InRange(Math.Abs(translateY + (180 * scaleY) - expectedCenter), 0, 0.01);
+        Assert.True(
+            sourceMaxRadius * Math.Abs(scaleX) <= safeRadius,
+            $"Scaled mark radius {sourceMaxRadius * Math.Abs(scaleX):F2} exceeds safe radius {safeRadius:F2}.");
+
+        var pathData = string.Join(
+            "\n",
+            document.Descendants("path")
+                .Select(path => path.Attribute(android + "pathData")?.Value ?? string.Empty));
+        var pathHash = Convert.ToHexString(
+            System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(pathData)));
+        Assert.Equal(
+            "75F86A3EDDE547D3589AE4DB512595312DFD38F04E92A566D2D80423767E2A16",
+            pathHash);
     }
 
     private static string FindProjectFile(params string[] relativeParts)
