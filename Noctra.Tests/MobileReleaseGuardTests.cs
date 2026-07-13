@@ -53,7 +53,7 @@ public class MobileReleaseGuardTests
             var view = ReadProjectFile("Noctra.Mobile", "Views", viewName);
             Assert.DoesNotContain("<controls:VirtualizedResponsiveGrid", view);
             Assert.Contains("<ScrollViewer", view);
-            Assert.Contains("<WrapPanel HorizontalAlignment=\"Center\"", view);
+            Assert.Contains("<WrapPanel HorizontalAlignment=\"Stretch\"", view);
         }
     }
 
@@ -74,6 +74,109 @@ public class MobileReleaseGuardTests
 
         Assert.Contains("MaxDropDownHeight\" Value=\"320\"", styles);
         Assert.Contains("ScrollViewer.IsScrollChainingEnabled=\"False\"", styles);
+    }
+
+    [Fact]
+    public void MobileSettings_UsesOneSelectionSheetInsteadOfComboBoxes()
+    {
+        var settings = ReadProjectFile("Noctra.Mobile", "Views", "MobileSettingsView.axaml");
+        var settingsCodeBehind = ReadProjectFile("Noctra.Mobile", "Views", "MobileSettingsView.axaml.cs");
+        var selectionSheet = ReadProjectFile("Noctra.Mobile", "Views", "MobileSelectionSheet.axaml");
+
+        Assert.DoesNotContain("<ComboBox", settings);
+        Assert.Contains("<views:MobileSelectionSheet", settings);
+        Assert.Equal(9, CountOccurrences(settings, "Click=\"OpenSelectionSheet_Click\""));
+        Assert.Contains("Background=\"{DynamicResource AccentSubtleBrush}\"", selectionSheet);
+        Assert.Contains("IsVisible=\"{Binding IsSelected}\"", selectionSheet);
+        Assert.Equal(2, CountOccurrences(settingsCodeBehind, "SelectionSheetHost.TryClose();"));
+    }
+
+    [Fact]
+    public void MobileSelectionSheet_UsesDragHandleToDismiss()
+    {
+        var sheet = ReadProjectFile("Noctra.Mobile", "Views", "MobileSelectionSheet.axaml");
+        var codeBehind = ReadProjectFile("Noctra.Mobile", "Views", "MobileSelectionSheet.axaml.cs");
+
+        Assert.Contains("x:Name=\"DragHandle\"", sheet);
+        Assert.Contains("PointerPressed=\"DragHandle_PointerPressed\"", sheet);
+        Assert.Contains("PointerMoved=\"DragHandle_PointerMoved\"", sheet);
+        Assert.Contains("PointerReleased=\"DragHandle_PointerReleased\"", sheet);
+        Assert.Contains("DismissDragThresholdRatio", codeBehind);
+        Assert.Contains("SetSheetDragProgress", codeBehind);
+        Assert.DoesNotContain("SheetSurface.Opacity", codeBehind);
+    }
+
+    [Fact]
+    public void MobileDownloads_UsesSelectionSheetForSortOrder()
+    {
+        var downloads = ReadProjectFile("Noctra.Mobile", "Views", "MobileDownloadsView.axaml");
+        var codeBehind = ReadProjectFile("Noctra.Mobile", "Views", "MobileDownloadsView.axaml.cs");
+        var mainView = ReadProjectFile("Noctra.Mobile", "Views", "MainView.axaml.cs");
+
+        Assert.DoesNotContain("<ComboBox", downloads);
+        Assert.Contains("<views:MobileSelectionSheet", downloads);
+        Assert.Contains("Click=\"OpenDownloadSortSheet_Click\"", downloads);
+        Assert.Contains("DownloadSortOrder.Latest", codeBehind);
+        Assert.Contains("SelectionSheetHost.TryClose()", codeBehind);
+        Assert.Contains("MobileDownloadsContent.IsVisible && MobileDownloadsContent.TryHandleBack()", mainView);
+        Assert.Contains("destination != \"Downloads\"", mainView);
+    }
+
+    [Fact]
+    public void MobileContentGroupFilters_RemainComboBoxes()
+    {
+        foreach (var viewName in new[] { "MobileLiveView.axaml", "MobileMoviesView.axaml", "MobileSeriesView.axaml" })
+        {
+            var view = ReadProjectFile("Noctra.Mobile", "Views", viewName);
+            Assert.Contains("x:Name=\"GroupFilterComboBox\"", view);
+            Assert.Contains("<ComboBox", view);
+        }
+    }
+
+    [Fact]
+    public void MobileContentSorts_UseSelectionSheetsWhileKeepingGroupFilters()
+    {
+        var mainView = ReadProjectFile("Noctra.Mobile", "Views", "MainView.axaml.cs");
+
+        foreach (var viewName in new[] { "MobileLiveView.axaml", "MobileMoviesView.axaml", "MobileSeriesView.axaml" })
+        {
+            var view = ReadProjectFile("Noctra.Mobile", "Views", viewName);
+
+            Assert.DoesNotContain("ItemsSource=\"{Binding SortOptions}\"", view);
+            Assert.Contains("Click=\"OpenSortSelectionSheet_Click\"", view);
+            Assert.Contains("<views:MobileSelectionSheet", view);
+            Assert.Equal(1, CountOccurrences(view, "<ComboBox Grid.Column"));
+        }
+
+        Assert.Contains("MobileLiveContent.IsVisible && MobileLiveContent.TryHandleBack()", mainView);
+        Assert.Contains("MobileMoviesContent.IsVisible && MobileMoviesContent.TryHandleBack()", mainView);
+        Assert.Contains("MobileSeriesContent.IsVisible && MobileSeriesContent.TryHandleBack()", mainView);
+    }
+
+    [Fact]
+    public void MobileSortTriggers_ShowOnlyTheSelectedSortIcon()
+    {
+        foreach (var viewName in new[] { "MobileLiveView.axaml", "MobileMoviesView.axaml", "MobileSeriesView.axaml" })
+        {
+            var view = ReadProjectFile("Noctra.Mobile", "Views", viewName);
+
+            Assert.Contains("x:Name=\"SortSelectionIcon\"", view);
+            Assert.DoesNotContain("x:Name=\"SortSelectionValue\"", view);
+            Assert.DoesNotContain("Kind=\"ChevronDown\"", view);
+        }
+
+        var downloads = ReadProjectFile("Noctra.Mobile", "Views", "MobileDownloadsView.axaml");
+        Assert.Contains("x:Name=\"DownloadSortSelectionIcon\"", downloads);
+        Assert.DoesNotContain("x:Name=\"DownloadSortSelectionValue\"", downloads);
+
+        var mapper = ReadProjectFile("Noctra.Mobile", "Views", "MobileContentSortSelection.cs");
+        Assert.Contains("ChannelSortOrder.NewestFirst => MaterialIconKind.SortCalendarDescending", mapper);
+        Assert.Contains("ChannelSortOrder.OldestFirst => MaterialIconKind.SortCalendarAscending", mapper);
+        Assert.Contains("ChannelSortOrder.NameAsc => MaterialIconKind.SortAlphabeticalAscending", mapper);
+        Assert.Contains("ChannelSortOrder.NameDesc => MaterialIconKind.SortAlphabeticalDescending", mapper);
+        Assert.Contains("DownloadSortOrder.Latest => MaterialIconKind.SortCalendarDescending", mapper);
+        Assert.Contains("DownloadSortOrder.NameAZ => MaterialIconKind.SortAlphabeticalAscending", mapper);
+        Assert.Contains("DownloadSortOrder.SizeLarge => MaterialIconKind.SortNumericDescending", mapper);
     }
 
     [Fact]
@@ -105,6 +208,19 @@ public class MobileReleaseGuardTests
 
     private static string ReadProjectFile(params string[] relativeParts)
         => File.ReadAllText(FindProjectFile(relativeParts));
+
+    private static int CountOccurrences(string source, string value)
+    {
+        var count = 0;
+        var offset = 0;
+        while ((offset = source.IndexOf(value, offset, StringComparison.Ordinal)) >= 0)
+        {
+            count++;
+            offset += value.Length;
+        }
+
+        return count;
+    }
 
     private static string FindProjectFile(params string[] relativeParts)
     {

@@ -364,6 +364,32 @@ public partial class MainView : UserControl
             return true;
         }
 
+        if (MobileLiveContent.IsVisible && MobileLiveContent.TryHandleBack())
+        {
+            return true;
+        }
+
+        if (MobileMoviesContent.IsVisible && MobileMoviesContent.TryHandleBack())
+        {
+            return true;
+        }
+
+        if (MobileSeriesContent.IsVisible && MobileSeriesContent.TryHandleBack())
+        {
+            return true;
+        }
+
+        if (MobileDownloadsContent.IsVisible && MobileDownloadsContent.TryHandleBack())
+        {
+            return true;
+        }
+
+        // Settings alt katmanlari (selection, upsell ve legal document) once kapanir.
+        if (MobileSettingsContent.IsVisible && MobileSettingsContent.TryHandleBack())
+        {
+            return true;
+        }
+
         if (PlayerHost.IsVisible && _playerViewModel is { IsFullScreen: true })
         {
             _playerViewModel.IsFullScreen = false;
@@ -492,6 +518,26 @@ public partial class MainView : UserControl
 
     private void UpdateContentVisibility(string destination)
     {
+        if (destination != "Live")
+        {
+            MobileLiveContent.TryHandleBack();
+        }
+
+        if (destination != "Movies")
+        {
+            MobileMoviesContent.TryHandleBack();
+        }
+
+        if (destination != "Series")
+        {
+            MobileSeriesContent.TryHandleBack();
+        }
+
+        if (destination != "Downloads")
+        {
+            MobileDownloadsContent.TryHandleBack();
+        }
+
         _currentDestination = destination;
         var showCoreContent = destination is "Home" or "Live" or "Movies" or "Series" or "Search" or "Favorites" or "MyList" or "History" or "Downloads" or "Settings";
         ShellContent.IsVisible = !showCoreContent;

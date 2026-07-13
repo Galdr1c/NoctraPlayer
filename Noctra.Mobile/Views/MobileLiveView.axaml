@@ -7,6 +7,7 @@
              xmlns:loc="using:Noctra.Mobile.Localization"
              xmlns:controls="using:Noctra.Mobile.Controls"
              xmlns:converters="using:Noctra.Mobile.Converters"
+             xmlns:views="using:Noctra.Mobile.Views"
              xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="Noctra.Mobile.Views.MobileLiveView"
              x:DataType="vm:MainViewModel"
@@ -16,6 +17,7 @@
     <converters:StringNotEmptyToVisibilityConverter x:Key="StringNotEmptyToVisibilityConverter" />
   </UserControl.Resources>
 
+  <Grid>
   <ScrollViewer x:Name="LiveScrollViewer"
                 ScrollChanged="LiveScrollViewer_ScrollChanged" VerticalScrollBarVisibility="Visible" HorizontalScrollBarVisibility="Disabled">
     <!-- Increase margins and spacing to better emulate the desktop layout -->
@@ -27,13 +29,17 @@
                    FontWeight="Bold"
                    LetterSpacing="1"
                    Foreground="{DynamicResource TextPrimaryBrush}" />
-        <ComboBox Grid.Column="1"
-                  ItemsSource="{Binding SortOptions}"
-                  Width="{DynamicResource TouchTarget}"
-                  SelectedValue="{Binding SelectedSortOrder}"
-                  SelectedValueBinding="{Binding Key}"
-                  DisplayMemberBinding="{Binding Value}"
-                  IsVisible="{Binding ShowContentFilters}" />
+        <Button x:Name="SortSelectionButton"
+                Grid.Column="1"
+                Classes="SortIconButton"
+                IsVisible="{Binding ShowContentFilters}"
+                Click="OpenSortSelectionSheet_Click">
+          <icons:MaterialIcon x:Name="SortSelectionIcon"
+                              Kind="Sort"
+                              Width="24"
+                              Height="24"
+                              Foreground="{DynamicResource TextPrimaryBrush}" />
+        </Button>
       </Grid>
       <Grid ColumnDefinitions="*,Auto"
             ColumnSpacing="8"
@@ -99,4 +105,8 @@
                   Description="{loc:Translate Live.Empty.Description}" />
     </StackPanel>
   </ScrollViewer>
+  <views:MobileSelectionSheet x:Name="SelectionSheetHost"
+                              ZIndex="1000"
+                              IsVisible="False" />
+  </Grid>
 </UserControl>

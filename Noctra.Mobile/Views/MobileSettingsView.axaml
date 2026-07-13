@@ -295,16 +295,18 @@
           <TextBlock Text="{loc:Translate Settings.Language.Title}"
                      Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="{DynamicResource FCaption}" />
-          <ComboBox SelectedValue="{Binding AppLanguage, Mode=TwoWay}"
-                   x:CompileBindings="False"
-                    SelectedValueBinding="{Binding Tag}"
-                    MinHeight="44">
-            <ComboBoxItem Content="{loc:Translate Language.English}" Tag="en" DataContext="{Binding RelativeSource={RelativeSource Self}}" />
-            <ComboBoxItem Content="{loc:Translate Language.Turkish}" Tag="tr" DataContext="{Binding RelativeSource={RelativeSource Self}}" />
-            <ComboBoxItem Content="{loc:Translate Language.German}" Tag="de" DataContext="{Binding RelativeSource={RelativeSource Self}}" />
-            <ComboBoxItem Content="{loc:Translate Language.French}" Tag="fr" DataContext="{Binding RelativeSource={RelativeSource Self}}" />
-            <ComboBoxItem Content="{loc:Translate Language.Spanish}" Tag="es" DataContext="{Binding RelativeSource={RelativeSource Self}}" />
-          </ComboBox>
+          <Button Classes="SettingsSelectionButton"
+                  Tag="AppLanguage"
+                  Click="OpenSelectionSheet_Click">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+              <TextBlock x:Name="AppLanguageSelectionValue"
+                         Foreground="{DynamicResource TextPrimaryBrush}"
+                         TextTrimming="CharacterEllipsis"
+                         VerticalAlignment="Center" />
+              <icons:MaterialIcon Grid.Column="1" Kind="ChevronDown" Width="20" Height="20"
+                                  Foreground="{DynamicResource TextMutedBrush}" />
+            </Grid>
+          </Button>
         </StackPanel>
       </Border>
 
@@ -334,14 +336,18 @@
           <TextBlock Text="{loc:Translate Settings.Playback.Quality}"
                      Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="{DynamicResource FCaption}" />
-          <ComboBox SelectedIndex="{Binding SelectedDataUsage, Mode=TwoWay}"
-                   
-                    MinHeight="44">
-            <ComboBoxItem Content="{loc:Translate Settings.Playback.Quality.Low}" />
-            <ComboBoxItem Content="{loc:Translate Settings.Playback.Quality.Medium}" />
-            <ComboBoxItem Content="{loc:Translate Settings.Playback.Quality.High}" />
-            <ComboBoxItem Content="{loc:Translate Settings.Playback.Quality.Auto}" />
-          </ComboBox>
+          <Button Classes="SettingsSelectionButton"
+                  Tag="DataUsage"
+                  Click="OpenSelectionSheet_Click">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+              <TextBlock x:Name="DataUsageSelectionValue"
+                         Foreground="{DynamicResource TextPrimaryBrush}"
+                         TextTrimming="CharacterEllipsis"
+                         VerticalAlignment="Center" />
+              <icons:MaterialIcon Grid.Column="1" Kind="ChevronDown" Width="20" Height="20"
+                                  Foreground="{DynamicResource TextMutedBrush}" />
+            </Grid>
+          </Button>
           <TextBlock Text="{loc:Translate Settings.Playback.Buffer}"
                      Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="{DynamicResource FCaption}" />
@@ -421,39 +427,33 @@
           <TextBlock Text="{loc:Translate Settings.Playback.PreferredSubtitle}"
                      Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="{DynamicResource FCaption}" />
-          <ComboBox SelectedValue="{Binding SubtitleLanguage, Mode=TwoWay}"
-                   x:CompileBindings="False"
-                    SelectedValueBinding="{Binding Tag}"
-                    MinHeight="44">
-            <ComboBoxItem Content="{loc:Translate Language.Turkish}" Tag="tr" DataContext="{Binding RelativeSource={RelativeSource Self}}" />
-            <ComboBoxItem Content="{loc:Translate Language.English}" Tag="en" DataContext="{Binding RelativeSource={RelativeSource Self}}" />
-            <ComboBoxItem Content="{loc:Translate Language.German}" Tag="de" DataContext="{Binding RelativeSource={RelativeSource Self}}" />
-            <ComboBoxItem Content="{loc:Translate Language.French}" Tag="fr" DataContext="{Binding RelativeSource={RelativeSource Self}}" />
-            <ComboBoxItem Content="{loc:Translate Language.Spanish}" Tag="es" DataContext="{Binding RelativeSource={RelativeSource Self}}" />
-            <ComboBoxItem Content="{loc:Translate Language.Italian}" Tag="it" DataContext="{Binding RelativeSource={RelativeSource Self}}" />
-            <ComboBoxItem Content="{loc:Translate Language.Portuguese}" Tag="pt" DataContext="{Binding RelativeSource={RelativeSource Self}}" />
-            <ComboBoxItem Content="{loc:Translate Language.Russian}" Tag="ru" DataContext="{Binding RelativeSource={RelativeSource Self}}" />
-            <ComboBoxItem Content="{loc:Translate Language.Arabic}" Tag="ar" DataContext="{Binding RelativeSource={RelativeSource Self}}" />
-            <ComboBoxItem Content="{loc:Translate Language.Dutch}" Tag="nl" DataContext="{Binding RelativeSource={RelativeSource Self}}" />
-          </ComboBox>
+          <Button Classes="SettingsSelectionButton"
+                  Tag="SubtitleLanguage"
+                  Click="OpenSelectionSheet_Click">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+              <TextBlock x:Name="SubtitleLanguageSelectionValue"
+                         Foreground="{DynamicResource TextPrimaryBrush}"
+                         TextTrimming="CharacterEllipsis"
+                         VerticalAlignment="Center" />
+              <icons:MaterialIcon Grid.Column="1" Kind="ChevronDown" Width="20" Height="20"
+                                  Foreground="{DynamicResource TextMutedBrush}" />
+            </Grid>
+          </Button>
           <TextBlock Text="{loc:Translate Settings.Playback.PreferredAudio}"
                      Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="{DynamicResource FCaption}" />
-          <ComboBox SelectedValue="{Binding PreferredAudioLanguage, Mode=TwoWay}"
-                   x:CompileBindings="False"
-                    SelectedValueBinding="{Binding Tag}"
-                    MinHeight="44">
-            <ComboBoxItem Content="{loc:Translate Language.Turkish}" Tag="tr" DataContext="{Binding RelativeSource={RelativeSource Self}}" />
-            <ComboBoxItem Content="{loc:Translate Language.English}" Tag="en" DataContext="{Binding RelativeSource={RelativeSource Self}}" />
-            <ComboBoxItem Content="{loc:Translate Language.German}" Tag="de" DataContext="{Binding RelativeSource={RelativeSource Self}}" />
-            <ComboBoxItem Content="{loc:Translate Language.French}" Tag="fr" DataContext="{Binding RelativeSource={RelativeSource Self}}" />
-            <ComboBoxItem Content="{loc:Translate Language.Spanish}" Tag="es" DataContext="{Binding RelativeSource={RelativeSource Self}}" />
-            <ComboBoxItem Content="{loc:Translate Language.Italian}" Tag="it" DataContext="{Binding RelativeSource={RelativeSource Self}}" />
-            <ComboBoxItem Content="{loc:Translate Language.Portuguese}" Tag="pt" DataContext="{Binding RelativeSource={RelativeSource Self}}" />
-            <ComboBoxItem Content="{loc:Translate Language.Russian}" Tag="ru" DataContext="{Binding RelativeSource={RelativeSource Self}}" />
-            <ComboBoxItem Content="{loc:Translate Language.Arabic}" Tag="ar" DataContext="{Binding RelativeSource={RelativeSource Self}}" />
-            <ComboBoxItem Content="{loc:Translate Language.Dutch}" Tag="nl" DataContext="{Binding RelativeSource={RelativeSource Self}}" />
-          </ComboBox>
+          <Button Classes="SettingsSelectionButton"
+                  Tag="PreferredAudioLanguage"
+                  Click="OpenSelectionSheet_Click">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+              <TextBlock x:Name="PreferredAudioLanguageSelectionValue"
+                         Foreground="{DynamicResource TextPrimaryBrush}"
+                         TextTrimming="CharacterEllipsis"
+                         VerticalAlignment="Center" />
+              <icons:MaterialIcon Grid.Column="1" Kind="ChevronDown" Width="20" Height="20"
+                                  Foreground="{DynamicResource TextMutedBrush}" />
+            </Grid>
+          </Button>
         </StackPanel>
       </Border>
 
@@ -477,12 +477,18 @@
           <TextBlock Text="{loc:Translate Settings.Download.Quality}"
                      Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="{DynamicResource FCaption}" />
-          <ComboBox SelectedIndex="{Binding SelectedDownloadQuality, Mode=TwoWay}"
-                   
-                    MinHeight="44">
-            <ComboBoxItem Content="{loc:Translate Settings.Download.Quality.Standard}" />
-            <ComboBoxItem Content="{loc:Translate Settings.Download.Quality.High}" />
-          </ComboBox>
+          <Button Classes="SettingsSelectionButton"
+                  Tag="DownloadQuality"
+                  Click="OpenSelectionSheet_Click">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+              <TextBlock x:Name="DownloadQualitySelectionValue"
+                         Foreground="{DynamicResource TextPrimaryBrush}"
+                         TextTrimming="CharacterEllipsis"
+                         VerticalAlignment="Center" />
+              <icons:MaterialIcon Grid.Column="1" Kind="ChevronDown" Width="20" Height="20"
+                                  Foreground="{DynamicResource TextMutedBrush}" />
+            </Grid>
+          </Button>
           <TextBlock Text="{loc:Translate Settings.Download.Path}"
                      Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="{DynamicResource FCaption}" />
@@ -544,29 +550,18 @@
           <TextBlock Text="{loc:Translate Settings.Channels.Frequency}"
                      Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="{DynamicResource FCaption}" />
-          <ComboBox SelectedIndex="{Binding ChannelListRefreshFrequencyIndex, Mode=TwoWay}"
-                   
-                    MinHeight="44">
-            <ComboBoxItem Content="{loc:Translate Settings.Channels.Frequency.Off}" />
-            <ComboBoxItem IsEnabled="{Binding IsPremium}">
-              <Grid ColumnDefinitions="*,Auto">
-                <TextBlock Text="{loc:Translate Settings.Channels.Frequency.1h}" />
-                <icons:MaterialIcon Grid.Column="1" Kind="Lock" Width="18" Height="18" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding !IsPremium}" />
-              </Grid>
-            </ComboBoxItem>
-            <ComboBoxItem Content="{loc:Translate Settings.Channels.Frequency.3h}"
-                          IsEnabled="{Binding IsPremium}" />
-            <ComboBoxItem Content="{loc:Translate Settings.Channels.Frequency.12h}"
-                          IsEnabled="{Binding IsPremium}" />
-            <ComboBoxItem Content="{loc:Translate Settings.Channels.Frequency.24h}"
-                          IsEnabled="{Binding IsPremium}" />
-            <ComboBoxItem Content="{loc:Translate Settings.Channels.Frequency.2d}"
-                          IsEnabled="{Binding IsPremium}" />
-            <ComboBoxItem Content="{loc:Translate Settings.Channels.Frequency.3d}"
-                          IsEnabled="{Binding IsPremium}" />
-            <ComboBoxItem Content="{loc:Translate Settings.Channels.Frequency.7d}"
-                          IsEnabled="{Binding IsPremium}" />
-          </ComboBox>
+          <Button Classes="SettingsSelectionButton"
+                  Tag="ChannelRefreshFrequency"
+                  Click="OpenSelectionSheet_Click">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+              <TextBlock x:Name="ChannelRefreshFrequencySelectionValue"
+                         Foreground="{DynamicResource TextPrimaryBrush}"
+                         TextTrimming="CharacterEllipsis"
+                         VerticalAlignment="Center" />
+              <icons:MaterialIcon Grid.Column="1" Kind="ChevronDown" Width="20" Height="20"
+                                  Foreground="{DynamicResource TextMutedBrush}" />
+            </Grid>
+          </Button>
 
           <Grid ColumnDefinitions="*,Auto">
             <TextBlock Text="{loc:Translate Settings.Channels.Hidden.Live}"
@@ -754,61 +749,33 @@
           <TextBlock Text="{loc:Translate Settings.Epg.Refresh}"
                      Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="{DynamicResource FCaption}" />
-          <ComboBox SelectedIndex="{Binding EpgRefreshFrequencyIndex, Mode=TwoWay}"
-                   
-                    MinHeight="44">
-            <ComboBoxItem Content="{loc:Translate Settings.Channels.Frequency.Off}" />
-            <ComboBoxItem IsEnabled="{Binding IsPremium}">
-              <Grid ColumnDefinitions="*,Auto">
-                <TextBlock Text="{loc:Translate Settings.Channels.Frequency.1h}" />
-                <icons:MaterialIcon Grid.Column="1" Kind="Lock" Width="18" Height="18" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding !IsPremium}" />
-              </Grid>
-            </ComboBoxItem>
-            <ComboBoxItem Content="{loc:Translate Settings.Channels.Frequency.3h}"
-                          IsEnabled="{Binding IsPremium}" />
-            <ComboBoxItem Content="{loc:Translate Settings.Channels.Frequency.12h}"
-                          IsEnabled="{Binding IsPremium}" />
-            <ComboBoxItem Content="{loc:Translate Settings.Channels.Frequency.24h}"
-                          IsEnabled="{Binding IsPremium}" />
-            <ComboBoxItem Content="{loc:Translate Settings.Channels.Frequency.2d}"
-                          IsEnabled="{Binding IsPremium}" />
-            <ComboBoxItem Content="{loc:Translate Settings.Channels.Frequency.3d}"
-                          IsEnabled="{Binding IsPremium}" />
-            <ComboBoxItem Content="{loc:Translate Settings.Channels.Frequency.7d}"
-                          IsEnabled="{Binding IsPremium}" />
-          </ComboBox>
+          <Button Classes="SettingsSelectionButton"
+                  Tag="EpgRefreshFrequency"
+                  Click="OpenSelectionSheet_Click">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+              <TextBlock x:Name="EpgRefreshFrequencySelectionValue"
+                         Foreground="{DynamicResource TextPrimaryBrush}"
+                         TextTrimming="CharacterEllipsis"
+                         VerticalAlignment="Center" />
+              <icons:MaterialIcon Grid.Column="1" Kind="ChevronDown" Width="20" Height="20"
+                                  Foreground="{DynamicResource TextMutedBrush}" />
+            </Grid>
+          </Button>
           <TextBlock Text="{loc:Translate Settings.Epg.Timezone}"
                      Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="{DynamicResource FCaption}" />
-          <ComboBox SelectedIndex="{Binding EpgTimeOffsetIndex, Mode=TwoWay}"
-                   
-                    MinHeight="44">
-            <ComboBoxItem Content="{Binding Source=-12, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Negative'}" />
-            <ComboBoxItem Content="{Binding Source=-11, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Negative'}" />
-            <ComboBoxItem Content="{Binding Source=-10, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Negative'}" />
-            <ComboBoxItem Content="{Binding Source=-9, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Negative'}" />
-            <ComboBoxItem Content="{Binding Source=-8, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Negative'}" />
-            <ComboBoxItem Content="{Binding Source=-7, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Negative'}" />
-            <ComboBoxItem Content="{Binding Source=-6, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Negative'}" />
-            <ComboBoxItem Content="{Binding Source=-5, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Negative'}" />
-            <ComboBoxItem Content="{Binding Source=-4, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Negative'}" />
-            <ComboBoxItem Content="{Binding Source=-3, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Negative'}" />
-            <ComboBoxItem Content="{Binding Source=-2, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Negative'}" />
-            <ComboBoxItem Content="{Binding Source=-1, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Negative'}" />
-            <ComboBoxItem Content="{loc:Translate Settings.Epg.Timezone.Auto}" />
-            <ComboBoxItem Content="{Binding Source=1, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Positive'}" />
-            <ComboBoxItem Content="{Binding Source=2, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Positive'}" />
-            <ComboBoxItem Content="{Binding Source=3, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Positive'}" />
-            <ComboBoxItem Content="{Binding Source=4, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Positive'}" />
-            <ComboBoxItem Content="{Binding Source=5, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Positive'}" />
-            <ComboBoxItem Content="{Binding Source=6, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Positive'}" />
-            <ComboBoxItem Content="{Binding Source=7, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Positive'}" />
-            <ComboBoxItem Content="{Binding Source=8, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Positive'}" />
-            <ComboBoxItem Content="{Binding Source=9, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Positive'}" />
-            <ComboBoxItem Content="{Binding Source=10, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Positive'}" />
-            <ComboBoxItem Content="{Binding Source=11, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Positive'}" />
-            <ComboBoxItem Content="{Binding Source=12, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Positive'}" />
-          </ComboBox>
+          <Button Classes="SettingsSelectionButton"
+                  Tag="EpgTimeOffset"
+                  Click="OpenSelectionSheet_Click">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+              <TextBlock x:Name="EpgTimeOffsetSelectionValue"
+                         Foreground="{DynamicResource TextPrimaryBrush}"
+                         TextTrimming="CharacterEllipsis"
+                         VerticalAlignment="Center" />
+              <icons:MaterialIcon Grid.Column="1" Kind="ChevronDown" Width="20" Height="20"
+                                  Foreground="{DynamicResource TextMutedBrush}" />
+            </Grid>
+          </Button>
 
           <Border Background="{DynamicResource Surface1Brush}"
                   CornerRadius="8"
@@ -889,15 +856,18 @@
           <TextBlock Text="{loc:Translate Settings.Privacy.Retention}"
                      Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="{DynamicResource FCaption}" />
-          <ComboBox SelectedIndex="{Binding WatchHistoryRetentionIndex, Mode=TwoWay}"
-                   
-                    MinHeight="44">
-            <ComboBoxItem Content="{loc:Translate Settings.Privacy.Retention.Forever}" />
-            <ComboBoxItem Content="{loc:Translate Settings.Privacy.Retention.3d}" />
-            <ComboBoxItem Content="{loc:Translate Settings.Privacy.Retention.7d}" />
-            <ComboBoxItem Content="{loc:Translate Settings.Privacy.Retention.14d}" />
-            <ComboBoxItem Content="{loc:Translate Settings.Privacy.Retention.30d}" />
-          </ComboBox>
+          <Button Classes="SettingsSelectionButton"
+                  Tag="WatchHistoryRetention"
+                  Click="OpenSelectionSheet_Click">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+              <TextBlock x:Name="WatchHistoryRetentionSelectionValue"
+                         Foreground="{DynamicResource TextPrimaryBrush}"
+                         TextTrimming="CharacterEllipsis"
+                         VerticalAlignment="Center" />
+              <icons:MaterialIcon Grid.Column="1" Kind="ChevronDown" Width="20" Height="20"
+                                  Foreground="{DynamicResource TextMutedBrush}" />
+            </Grid>
+          </Button>
           <Button Classes="SettingsDangerActionButton"
                   Content="{loc:Translate Settings.Privacy.ClearAllNow}"
                   Command="{Binding ClearHistoryCommand}"/>
@@ -1230,5 +1200,8 @@
                                    IsVisible="False" />
     <views:MobileUpsellView x:Name="UpsellHost"
                             IsVisible="False" />
+    <views:MobileSelectionSheet x:Name="SelectionSheetHost"
+                                ZIndex="100"
+                                IsVisible="False" />
   </Grid>
 </UserControl>

@@ -9,6 +9,7 @@
              xmlns:loc="using:Noctra.Mobile.Localization"
              xmlns:controls="using:Noctra.Mobile.Controls"
              xmlns:behaviors="using:Noctra.Mobile.Behaviors"
+             xmlns:views="using:Noctra.Mobile.Views"
              xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="Noctra.Mobile.Views.MobileDownloadsView"
              x:DataType="vm:MainViewModel"
@@ -18,6 +19,7 @@
     <converters:CountToVisibilityConverter x:Key="CountToVisibility" />
   </UserControl.Resources>
 
+  <Grid>
   <ScrollViewer>
     <StackPanel Margin="24" Spacing="20">
 
@@ -178,14 +180,15 @@
                       Margin="0,14,0,0">
 
             <!-- Sort -->
-            <ComboBox SelectedIndex="{Binding SelectedDownloadSortOrder}"
-                     
-                      MinHeight="44"
-                      PlaceholderText="{loc:Translate Downloads.Sort.Recent}">
-              <ComboBoxItem Content="{loc:Translate Downloads.Sort.Recent}" />
-              <ComboBoxItem Content="{loc:Translate Downloads.Sort.Name}" />
-              <ComboBoxItem Content="{loc:Translate Downloads.Sort.Size}" />
-            </ComboBox>
+            <Button x:Name="DownloadSortSelectionButton"
+                    Classes="SortIconButton"
+                    Click="OpenDownloadSortSheet_Click">
+              <icons:MaterialIcon x:Name="DownloadSortSelectionIcon"
+                                  Kind="Sort"
+                                  Width="24"
+                                  Height="24"
+                                  Foreground="{DynamicResource TextPrimaryBrush}" />
+            </Button>
 
             <!-- Series Section -->
             <StackPanel Spacing="12"
@@ -636,4 +639,8 @@
       </TabControl>
     </StackPanel>
   </ScrollViewer>
+  <views:MobileSelectionSheet x:Name="SelectionSheetHost"
+                              ZIndex="1000"
+                              IsVisible="False" />
+  </Grid>
 </UserControl>

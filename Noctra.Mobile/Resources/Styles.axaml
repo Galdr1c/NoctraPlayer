@@ -348,7 +348,7 @@
         <Setter Property="FontSize" Value="14"/>
         <Setter Property="MinHeight" Value="44"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
-        <Setter Property="MaxDropDownHeight" Value="600"/>
+        <Setter Property="MaxDropDownHeight" Value="320"/>
         <Setter Property="CornerRadius" Value="6,6,0,0"/>
         <Setter Property="ItemContainerTheme" Value="{StaticResource {x:Type ComboBoxItem}}"/>
         <Setter Property="Template">
@@ -388,7 +388,9 @@
                                     CornerRadius="0,0,6,6"
                                     Padding="4"
                                     MaxHeight="{TemplateBinding MaxDropDownHeight}">
-                                <ScrollViewer>
+                                <ScrollViewer ScrollViewer.IsScrollChainingEnabled="False"
+                                              VerticalScrollBarVisibility="Auto"
+                                              HorizontalScrollBarVisibility="Disabled">
                                     <ItemsPresenter ItemsPanel="{TemplateBinding ItemsPanel}"/>
                                 </ScrollViewer>
                             </Border>

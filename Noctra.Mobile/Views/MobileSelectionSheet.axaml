@@ -1,0 +1,122 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             x:Class="Noctra.Mobile.Views.MobileSelectionSheet"
+             x:CompileBindings="False">
+  <UserControl.Styles>
+    <Style Selector="Button.SelectionSheetOption">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+      <Setter Property="BorderThickness" Value="0,0,0,1" />
+      <Setter Property="Padding" Value="16,14" />
+      <Setter Property="MinHeight" Value="52" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+    </Style>
+    <Style Selector="Button.SelectionSheetOption:pressed">
+      <Setter Property="Background" Value="{DynamicResource AccentSubtleBrush}" />
+    </Style>
+  </UserControl.Styles>
+
+  <Grid>
+    <Border x:Name="ScrimLayer"
+            Background="{DynamicResource OverlayDimBrush}"
+            PointerPressed="Scrim_PointerPressed" />
+    <Border x:Name="SheetSurface"
+            Background="{DynamicResource BackgroundGradientBrush}"
+            BorderBrush="{DynamicResource BorderBrush}"
+            BorderThickness="0,1,0,0"
+            CornerRadius="0"
+            Padding="12"
+            VerticalAlignment="Bottom"
+            BoxShadow="{DynamicResource OverlaySheetShadow}">
+      <Border.RenderTransform>
+        <TranslateTransform />
+      </Border.RenderTransform>
+      <Grid RowDefinitions="Auto,*">
+        <Grid RowDefinitions="Auto,Auto"
+              Margin="0,0,0,8">
+          <Border x:Name="DragHandle"
+                  Grid.Row="0"
+                  Height="28"
+                  Background="Transparent"
+                  PointerPressed="DragHandle_PointerPressed"
+                  PointerMoved="DragHandle_PointerMoved"
+                  PointerReleased="DragHandle_PointerReleased"
+                  PointerCaptureLost="DragHandle_PointerCaptureLost">
+            <Border Width="36"
+                    Height="4"
+                    Background="{DynamicResource BorderBrush}"
+                    CornerRadius="2"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center" />
+          </Border>
+          <Grid Grid.Row="1" ColumnDefinitions="*,Auto">
+            <TextBlock x:Name="TitleTextBlock"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
+                       FontSize="{DynamicResource FTitleL}"
+                       FontWeight="Bold"
+                       TextTrimming="CharacterEllipsis"
+                       VerticalAlignment="Center" />
+            <Button Grid.Column="1"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    Width="44"
+                    Height="44"
+                    Click="Close_Click"
+                    ToolTip.Tip="Close">
+              <icons:MaterialIcon Kind="Close"
+                                  Width="22"
+                                  Height="22"
+                                  Foreground="{DynamicResource TextMutedBrush}" />
+            </Button>
+          </Grid>
+        </Grid>
+
+        <ScrollViewer Grid.Row="1"
+                      MaxHeight="{DynamicResource SheetMaxHeight}"
+                      ScrollViewer.IsScrollChainingEnabled="False">
+          <ItemsControl ItemsSource="{Binding Options}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Button Classes="SelectionSheetOption"
+                        Tag="{Binding}"
+                        Click="Option_Click">
+                  <Grid>
+                    <Border Background="{DynamicResource AccentSubtleBrush}"
+                            CornerRadius="8"
+                            IsVisible="{Binding IsSelected}" />
+                    <Grid ColumnDefinitions="*,Auto"
+                          ColumnSpacing="12">
+                      <TextBlock Text="{Binding Label}"
+                                 Foreground="{DynamicResource TextPrimaryBrush}"
+                                 FontSize="{DynamicResource FBodyL}"
+                                 FontWeight="SemiBold"
+                                 TextWrapping="Wrap"
+                                 VerticalAlignment="Center" />
+                      <Grid Grid.Column="1"
+                            Width="24"
+                            Height="24"
+                            VerticalAlignment="Center">
+                        <icons:MaterialIcon Kind="Check"
+                                            Width="22"
+                                            Height="22"
+                                            Foreground="{DynamicResource AccentBrush}"
+                                            IsVisible="{Binding ShowSelectionMark}" />
+                        <icons:MaterialIcon Kind="LockOutline"
+                                            Width="20"
+                                            Height="20"
+                                            Foreground="{DynamicResource TextMutedBrush}"
+                                            IsVisible="{Binding IsLocked}" />
+                      </Grid>
+                    </Grid>
+                  </Grid>
+                </Button>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+      </Grid>
+    </Border>
+  </Grid>
+</UserControl>
