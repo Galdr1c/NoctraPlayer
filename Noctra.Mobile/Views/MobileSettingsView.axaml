@@ -1138,7 +1138,7 @@
                        Foreground="{DynamicResource TextMutedBrush}"
                        TextWrapping="Wrap" />
           </StackPanel>
-          <Button Classes="SettingsDangerActionButton"
+          <Button Theme="{StaticResource DangerButtonStyle}"
                   Grid.Column="1"
                   Background="{DynamicResource ErrorBrush}"
                   Foreground="White"

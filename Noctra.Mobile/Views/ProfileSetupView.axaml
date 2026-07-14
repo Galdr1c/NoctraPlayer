@@ -97,21 +97,6 @@
       <Setter Property="Margin" Value="4,0,0,6" />
     </Style>
 
-    <Style Selector="Button.DeleteBtn">
-      <Setter Property="Background" Value="Transparent"/>
-      <Setter Property="BorderThickness" Value="1"/>
-      <Setter Property="BorderBrush" Value="{DynamicResource ErrorBrush}"/>
-      <Setter Property="CornerRadius" Value="6"/>
-      <Setter Property="Padding" Value="12,8"/>
-    </Style>
-    <Style Selector="Button.DeleteBtn:pressed">
-        <Setter Property="Background" Value="#33FF3333"/>
-    </Style>
-    <Style Selector="Button.DeleteBtn:pressed /template/ ContentPresenter">
-        <Setter Property="BorderBrush" Value="{DynamicResource ErrorBrush}"/>
-        <Setter Property="Background" Value="Transparent"/>
-    </Style>
-
     <Style Selector="RadioButton.ProviderTypeOption">
       <Setter Property="HorizontalAlignment" Value="Stretch" />
       <Setter Property="VerticalAlignment" Value="Center" />
@@ -670,7 +655,7 @@
                 IsVisible="{Binding EditingProfile, Converter={x:Static ObjectConverters.IsNotNull}}"
                 HorizontalAlignment="Stretch"
                 HorizontalContentAlignment="Center"
-                Classes="DeleteBtn">
+                Theme="{StaticResource DangerButtonStyle}">
           <StackPanel Orientation="Horizontal"
                       HorizontalAlignment="Center"
                       Spacing="10">

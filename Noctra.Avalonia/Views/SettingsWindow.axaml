@@ -1020,16 +1020,12 @@
                                         <ComboBoxItem Content="{loc:Translate Settings.Privacy.Retention.30d}"/>
                                     </ComboBox>
 
-                                    <Separator Height="1" Background="{DynamicResource ErrorBrush}" Margin="0,10,0,20"/>
+                                    <Separator Height="1" Background="{DynamicResource ErrorBrush}" Margin="0,10,0,10"/>
 
-                                    <TextBlock Text="{loc:Translate Settings.Privacy.DangerZone}" FontSize="16" FontWeight="SemiBold" LetterSpacing="3.5" Foreground="{DynamicResource ErrorBrush}" Margin="0,0,0,12"/>
+                                    <TextBlock Text="{loc:Translate Settings.Privacy.DangerZone}" HorizontalAlignment="Center" FontSize="16" FontWeight="SemiBold" LetterSpacing="3.5" Foreground="{DynamicResource ErrorBrush}" Margin="0,0,0,24"/>
                                     <Button Content="{loc:Translate Settings.Privacy.ClearAllNow}" 
                                             Command="{Binding ClearHistoryCommand}"
-                                            Foreground="{DynamicResource ErrorBrush}"
-                                            BorderBrush="{DynamicResource ErrorBrush}"
-                                            BorderThickness="1"
-                                            Classes="ErrorButton"
-                                            Padding="16,10"/>
+                                            Theme="{StaticResource ErrorButton}"/>
                                 </StackPanel>
                             </Border>
                         </StackPanel>
@@ -1311,11 +1307,10 @@
                                 HorizontalAlignment="Left" Padding="12,8"/>
                         
                         <Button Command="{Binding ReportBugCommand}" 
-                                Background="Transparent" BorderBrush="#E50914" BorderThickness="1" 
-                                Padding="12,8" CornerRadius="2">
+                                Theme="{StaticResource ErrorButton}">
                             <StackPanel Orientation="Horizontal" Spacing="8">
-                                <materialIcons:MaterialIcon Kind="BugOutline" Width="18" Height="18" Foreground="#E50914"/>
-                                <TextBlock Text="{loc:Translate Settings.Action.ReportBug}" Foreground="#E50914" VerticalAlignment="Center" FontSize="14"/>
+                                <materialIcons:MaterialIcon Kind="BugOutline" Width="18" Height="18"/>
+                                <TextBlock Text="{loc:Translate Settings.Action.ReportBug}" VerticalAlignment="Center" FontSize="14"/>
                             </StackPanel>
                         </Button>
                     </StackPanel>

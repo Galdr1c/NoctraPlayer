@@ -108,35 +108,6 @@
     <Style Selector="Button.downloadRow:pointerover">
       <Setter Property="Background" Value="{DynamicResource Surface1Brush}"/>
     </Style>
-    <Style Selector="Button.dangerHover">
-      <Setter Property="Background" Value="Transparent"/>
-      <Setter Property="BorderBrush" Value="{DynamicResource ErrorBrush}"/>
-      <Setter Property="Foreground" Value="{DynamicResource ErrorBrush}"/>
-      <Setter Property="BorderThickness" Value="1"/>
-      <Setter Property="Template">
-        <ControlTemplate>
-          <Border Background="{TemplateBinding Background}"
-                  BorderBrush="{TemplateBinding BorderBrush}"
-                  BorderThickness="{TemplateBinding BorderThickness}"
-                  CornerRadius="{TemplateBinding CornerRadius}"
-                  Padding="{TemplateBinding Padding}">
-            <ContentPresenter Content="{TemplateBinding Content}"
-                              HorizontalAlignment="Center"
-                              VerticalAlignment="Center"/>
-          </Border>
-        </ControlTemplate>
-      </Setter>
-    </Style>
-    <Style Selector="Button.dangerHover:pointerover">
-      <Setter Property="Background" Value="{DynamicResource ErrorBrush}"/>
-      <Setter Property="Foreground" Value="White"/>
-      <Setter Property="BorderBrush" Value="{DynamicResource ErrorBrush}"/>
-    </Style>
-
-    <Style Selector="Button.dangerTextHover materialIcons|MaterialIcon">
-      <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
-      <Setter Property="Opacity" Value="0.7"/>
-    </Style>
     <Style Selector="Button.dangerTextHover">
       <Setter Property="Background" Value="Transparent"/>
       <Setter Property="Template">
@@ -259,10 +230,10 @@
             <!-- Actions -->
             <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="12" Margin="24,0,0,0">
               <Button Content="{loc:Translate Downloads.Action.DeleteAll}" Command="{Binding DeleteAllDownloadsCommand}"
-                      Classes="dangerHover"
-                      Padding="16,8" CornerRadius="6" FontSize="12"/>
+                      Theme="{StaticResource ErrorButton}"/>
               <Button Content="{loc:Translate Downloads.Action.OpenFolder}" Command="{Binding OpenDownloadsFolderCommand}"
-                      Padding="16,8" Background="{DynamicResource SurfaceLightBrush}" BorderThickness="0" Foreground="{DynamicResource TextPrimaryBrush}" CornerRadius="6" FontSize="12"/>
+                      Padding="14,21" Background="{DynamicResource SurfaceLightBrush}" BorderThickness="0" Foreground="{DynamicResource TextPrimaryBrush}" CornerRadius="6" FontSize="12"
+                      HorizontalAlignment="Stretch" VerticalContentAlignment="Center"/>
             </StackPanel>
           </Grid>
         </Border>

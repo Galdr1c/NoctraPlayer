@@ -602,7 +602,7 @@
                                                                     
                                         <StackPanel>
                                             <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,0,0,8">
-                                                <Border Background="{DynamicResource PremiumBadgeBrush}" Opacity="0.9" Padding="6" CornerRadius="4">
+                                                <Border Background="{DynamicResource AccentBrush}" Opacity="0.9" Padding="6" CornerRadius="4">
                                                     <materialIcons:MaterialIcon Kind="GiftOutline" Width="20" Height="20" Foreground="White"/>
                                                 </Border>
                                                 <TextBlock Text="{loc:Translate GlobalSettings.Promo.Title}" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>

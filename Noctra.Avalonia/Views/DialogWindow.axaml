@@ -20,14 +20,14 @@
     <Window.Styles>
         <!-- Primary Button (Action) -->
         <Style Selector="Button.DialogPrimary">
-            <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource PremiumBadgeBrush}"/>
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="CornerRadius" Value="6"/>
             <Setter Property="Padding" Value="24,10"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="FontSize" Value="14"/>
             <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Transitions">
                 <Transitions>
                     <BrushTransition Property="Background" Duration="0:0:0.2"/>
@@ -35,12 +35,14 @@
                 </Transitions>
             </Setter>
         </Style>
-        <Style Selector="Button.DialogPrimary:pointerover">
-            <Setter Property="Background" Value="{DynamicResource AccentLightBrush}"/>
-            <Setter Property="RenderTransform" Value="scale(1.02)"/>
+        <Style Selector="Button.DialogPrimary:pointerover /template/ ContentPresenter">
+            <Setter Property="RenderTransform" Value="scale(0.94)"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource PremiumBadgeBrush}"/>
+            
         </Style>
         <Style Selector="Button.DialogPrimary:pressed">
-            <Setter Property="RenderTransform" Value="scale(0.98)"/>
+            <Setter Property="Background" Value="{DynamicResource AccentLightBrush}"/>
         </Style>
 
         <!-- Secondary Button (Cancel/No) -->
@@ -54,17 +56,9 @@
             <Setter Property="FontSize" Value="14"/>
             <Setter Property="FontWeight" Value="Medium"/>
             <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Transitions">
-                <Transitions>
-                    <BrushTransition Property="Foreground" Duration="0:0:0.2"/>
-                    <BrushTransition Property="BorderBrush" Duration="0:0:0.2"/>
-                    <BrushTransition Property="Background" Duration="0:0:0.2"/>
-                </Transitions>
-            </Setter>
         </Style>
-        <Style Selector="Button.DialogSecondary:pointerover">
-            <Setter Property="Background" Value="{DynamicResource Surface1Brush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource TextSecondaryBrush}"/>
+        <Style Selector="Button.DialogSecondary:pointerover /template/ ContentPresenter">
+        <Setter Property="RenderTransform" Value="scale(0.97)"/>
             <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
         </Style>
     </Window.Styles>

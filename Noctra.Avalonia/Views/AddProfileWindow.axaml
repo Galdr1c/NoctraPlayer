@@ -55,28 +55,6 @@
             <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
         </Style>
 
-        <!-- Delete Button Style -->
-        <Style Selector="Button.DeleteBtn">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource ErrorBrush}"/>
-            <Setter Property="CornerRadius" Value="6"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Padding" Value="12,8"/>
-            <Setter Property="HorizontalContentAlignment" Value="Left"/>
-            <Setter Property="Transitions">
-                <Transitions>
-                    <BrushTransition Property="Background" Duration="0:0:0.2"/>
-                </Transitions>
-            </Setter>
-        </Style>
-        <Style Selector="Button.DeleteBtn:pointerover">
-            <Setter Property="Background" Value="#1AFF3333"/> 
-        </Style>
-        <Style Selector="Button.DeleteBtn:pressed">
-            <Setter Property="Background" Value="#33FF3333"/>
-        </Style>
-
         <!-- Avatar Button Style -->
         <Style Selector="Button.AvatarBtn">
             <Setter Property="Background" Value="Transparent"/>
@@ -522,7 +500,7 @@
                                 CommandParameter="{Binding EditingProfile}"
                                 IsVisible="{Binding EditingProfile, Converter={StaticResource NullToVisibilityConverter}}"
                                 HorizontalAlignment="Left"
-                                Classes="DeleteBtn">
+                                Theme="{StaticResource ErrorButton}">
                             <StackPanel Orientation="Horizontal">
                                 <materialIcons:MaterialIcon Kind="TrashCanOutline"
                                                   Foreground="{DynamicResource ErrorBrush}"

@@ -73,7 +73,7 @@
       <Style Selector="Button.navItem">
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BorderThickness" Value="0"/>
-        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="CornerRadius" Value="6"/>
         <Setter Property="Padding" Value="0"/>
         <Setter Property="Margin" Value="8,2"/>
         <Setter Property="HorizontalAlignment" Value="Stretch"/>
@@ -99,9 +99,9 @@
         <Setter Property="Width" Value="0"/>
         <Setter Property="CornerRadius" Value="0,2,2,0"/>
         <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
-        <Setter Property="HorizontalAlignment" Value="Left"/>
+        <Setter Property="HorizontalAlignment" Value="Right"/>
         <Setter Property="VerticalAlignment" Value="Stretch"/>
-        <Setter Property="Height" Value="24"/>
+        <Setter Property="Height" Value="37"/>
         <Setter Property="Transitions">
             <Transitions>
                 <DoubleTransition Property="Width" Duration="0:0:0.25" Easing="CubicEaseOut"/>
@@ -116,7 +116,6 @@
 
       <Style Selector="Button.navItem TextBlock">
         <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
-        <Setter Property="FontWeight" Value="Medium"/>
         <Setter Property="FontSize" Value="14"/>
       </Style>
 
@@ -125,8 +124,9 @@
       </Style>
 
       <Style Selector="Button.navItem.active TextBlock">
-        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="LetterSpacing" Value="2.5" />
       </Style>
 
       <Style Selector="Button.navItem materialIcons|MaterialIcon">
@@ -143,7 +143,7 @@
       </Style>
 
       <Style Selector="Button.navItem.active materialIcons|MaterialIcon">
-        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
         <Setter Property="Opacity" Value="1"/>
       </Style>
   
