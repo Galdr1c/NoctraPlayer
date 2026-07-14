@@ -1,15 +1,22 @@
-﻿<?xml version="1.0" encoding="utf-8" ?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-  <style name="MyTheme.Splash" parent="Theme.SplashScreen">
-    <item name="windowSplashScreenBackground">@color/splash_background</item>
-    <item name="windowSplashScreenAnimatedIcon">@drawable/ic_noctra_splash</item>
-    <item name="postSplashScreenTheme">@style/MyTheme.Main</item>
-  </style>
+    <!-- Uygulama açıldıktan sonra kullanılan ana tema -->
+    <style name="MyTheme.Main" parent="@style/Theme.AppCompat.DayNight.NoActionBar">
 
-  <style name="MyTheme.Main" parent="@style/Theme.AppCompat.DayNight.NoActionBar">
-    <item name="android:windowActionBar">false</item>
-    <item name="android:windowBackground">@color/splash_background</item>
-    <item name="android:windowNoTitle">true</item>
-  </style>
+        <item name="android:windowActionModeOverlay">true</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:statusBarColor">@color/splash_background</item>
+        <item name="android:navigationBarColor">@color/splash_background</item>
+        <item name="android:windowBackground">@color/splash_background</item>
+    </style>
+
+    <!-- AndroidX SplashScreen tarafından kullanılan başlangıç teması -->
+    <style name="MyTheme.Splash" parent="Theme.SplashScreen">
+
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <item name="postSplashScreenTheme">@style/MyTheme.Main</item>
+    </style>
+
 </resources>

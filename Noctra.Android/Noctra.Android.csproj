@@ -19,9 +19,6 @@
 
   <ItemGroup>
     <AndroidResource Remove="Resources\PlayStore_Assets\**\*" />
-    <AndroidResource Include="Icon.png">
-      <Link>Resources\drawable\icon.png</Link>
-    </AndroidResource>
   </ItemGroup>
 
   <ItemGroup Condition="'$(Configuration)' == 'Debug'">

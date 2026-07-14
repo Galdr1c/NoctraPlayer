@@ -18,7 +18,6 @@ namespace Noctra.Android;
 [Activity(
     Label = "Noctra",
     Theme = "@style/MyTheme.Splash",
-    Icon = "@drawable/icon",
     MainLauncher = true,
     SupportsPictureInPicture = true,
     ResizeableActivity = true,
