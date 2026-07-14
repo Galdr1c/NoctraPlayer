@@ -48,6 +48,7 @@
     <PackageReference Include="Xamarin.AndroidX.Media3.ExoPlayer.Dash" Version="1.4.1.1" />
     <PackageReference Include="Xamarin.AndroidX.Media3.ExoPlayer.SmoothStreaming" Version="1.4.1.1" />
     <PackageReference Include="Xamarin.AndroidX.Media3.ExoPlayer.Rtsp" Version="1.4.1.1" />
+    <PackageReference Include="Xamarin.AndroidX.Media3.Session" Version="1.4.1.1" />
   </ItemGroup>
 
   <ItemGroup>

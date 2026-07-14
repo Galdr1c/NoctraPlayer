@@ -37,6 +37,8 @@ namespace Noctra.Tests
         public bool IsMuted { get; set; }
         public IReadOnlyList<(int Id, string? Name)> AudioTracks => Array.Empty<(int, string?)>();
         public IReadOnlyList<(int Id, string? Name)> SubtitleTracks => Array.Empty<(int, string?)>();
+        public PlaybackMediaMetadata? LastMetadata { get; private set; }
+        public PlaybackMediaMetadata? MetadataAtPlay { get; private set; }
 
         public event EventHandler? PlayerReady;
         public event EventHandler<bool>? PlayingChanged;
@@ -50,6 +52,7 @@ namespace Noctra.Tests
 
         public Task PlayAsync(string url, double startTimeSeconds = 0)
         {
+            MetadataAtPlay = LastMetadata;
             CurrentUrl = url;
             IsPlaying = true;
             PlayingChanged?.Invoke(this, true);
@@ -57,6 +60,7 @@ namespace Noctra.Tests
         }
 
         public Task ReinitializeAsync() => Task.CompletedTask;
+        public void UpdateMediaMetadata(PlaybackMediaMetadata metadata) => LastMetadata = metadata;
 
         public Task HardSeekAsync(double seconds) { Position = seconds; return Task.CompletedTask; }
         public void Pause() { IsPlaying = false; PlayingChanged?.Invoke(this, false); }
@@ -267,6 +271,27 @@ namespace Noctra.Tests
             var mi = typeof(PlayerViewModel).GetMethod("MergeAdjacentSameTitlePrograms",
                 BindingFlags.NonPublic | BindingFlags.Static)!;
             return (List<EpgProgram>)mi.Invoke(null, new object[] { programs })!;
+        }
+
+        [Fact]
+        public async Task PlayChannelAsync_PublishesMediaMetadataBeforePlayback()
+        {
+            var ctx = new PlayerTestContext();
+            var channel = new Channel
+            {
+                Id = 42,
+                Name = "Noctra News",
+                StreamUrl = "https://example.test/live.m3u8",
+                LogoUrl = "https://example.test/logo.png",
+                GroupTitle = "News",
+                Type = ChannelType.Live
+            };
+
+            await ctx.VM.PlaybackController.PlayChannelAsync(channel);
+
+            Assert.Equal("Noctra News", ctx.VideoService.MetadataAtPlay?.Title);
+            Assert.Equal("News", ctx.VideoService.MetadataAtPlay?.Subtitle);
+            Assert.Equal("https://example.test/logo.png", ctx.VideoService.MetadataAtPlay?.ArtworkUrl);
         }
 
         [Fact]

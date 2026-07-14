@@ -52,7 +52,9 @@ public static class AndroidServiceCollectionExtensions
         services.AddSingleton<IPlayerWindowService>(serviceProvider =>
             serviceProvider.GetRequiredService<AndroidPlayerWindowService>());
         services.AddSingleton<MobileBackNavigationService>();
-        services.AddSingleton<IVideoPlayerService, AndroidVideoPlayerService>();
+        services.AddSingleton<AndroidVideoPlayerService>();
+        services.AddSingleton<IVideoPlayerService>(serviceProvider =>
+            serviceProvider.GetRequiredService<AndroidVideoPlayerService>());
         services.AddSingleton<ILicenseService>(serviceProvider =>
             new LicenseService(
                 serviceProvider.GetRequiredService<IAppEditionService>(),

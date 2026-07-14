@@ -193,6 +193,10 @@ public class PlayerPlaybackController
         _vm.CurrentProgram = _vm.GetFallbackProgram();
         _vm.IsLiveContent = channel.Type == ChannelType.Live;
         _vm.IsSeriesContent = channel.Type == ChannelType.Series;
+        _vm.VideoPlayerService.UpdateMediaMetadata(new PlaybackMediaMetadata(
+            channel.Name,
+            channel.GroupTitle,
+            channel.CoverUrl));
         _vm.UpdateOverlaySecondaryText();
         _vm.PrepareForContentLoading();
         

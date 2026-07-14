@@ -15,6 +15,99 @@ public class MobileReleaseGuardTests
     }
 
     [Fact]
+    public void AndroidPlayer_ReferencesMatchingMedia3SessionPackage()
+    {
+        var project = ReadProjectFile("Noctra.Android", "Noctra.Android.csproj");
+
+        Assert.Contains(
+            "<PackageReference Include=\"Xamarin.AndroidX.Media3.Session\" Version=\"1.4.1.1\" />",
+            project);
+    }
+
+    [Fact]
+    public void AndroidMediaNotification_HasDedicatedSmallIcon()
+    {
+        Assert.True(
+            TryFindProjectFile(
+                out var iconPath,
+                "Noctra.Android", "Resources", "drawable", "ic_notification_noctra.xml"),
+            "Missing dedicated Android media-notification small icon.");
+
+        var icon = File.ReadAllText(iconPath!);
+        Assert.Contains("android:width=\"24dp\"", icon);
+        Assert.Contains("android:height=\"24dp\"", icon);
+        Assert.Contains("android:fillColor=\"#FFFFFFFF\"", icon);
+        Assert.Contains("android:scaleX=\"1.20\"", icon);
+        Assert.DoesNotContain("<gradient", icon);
+    }
+
+    [Fact]
+    public void AndroidPlayback_HostsPlayerInMediaSessionService()
+    {
+        Assert.True(
+            TryFindProjectFile(
+                out var servicePath,
+                "Noctra.Android", "Services", "NoctraPlaybackService.cs"),
+            "Missing Media3 playback service.");
+
+        var service = File.ReadAllText(servicePath!);
+        Assert.Contains("MediaSessionService", service);
+        Assert.Contains("ForegroundServiceType = ForegroundService.TypeMediaPlayback", service);
+        Assert.Contains("Exported = true", service);
+        Assert.Contains("SessionService", service);
+        Assert.Contains("new MediaSession.Builder", service);
+        Assert.Contains("SetSmallIcon(Resource.Drawable.ic_notification_noctra)", service);
+        Assert.Contains("override MediaSession? OnGetSession", service);
+        Assert.Contains("override void OnDestroy", service);
+    }
+
+    [Fact]
+    public void AndroidPlaybackService_UsesSharedApplicationPlayer()
+    {
+        var application = ReadProjectFile("Noctra.Android", "Application.cs");
+        var registrations = ReadProjectFile(
+            "Noctra.Android", "DependencyInjection", "AndroidServiceCollectionExtensions.cs");
+        var service = ReadProjectFile(
+            "Noctra.Android", "Services", "NoctraPlaybackService.cs");
+        var player = ReadProjectFile(
+            "Noctra.Android", "Services", "AndroidVideoPlayerService.cs");
+
+        Assert.Contains("public IServiceProvider Services", application);
+        Assert.Contains("() => Services", application);
+        Assert.Contains("AddSingleton<AndroidVideoPlayerService>()", registrations);
+        Assert.Contains("GetRequiredService<AndroidVideoPlayerService>()", service);
+        Assert.Contains("AttachPlaybackHost", service);
+        Assert.DoesNotContain("new ExoPlayerBuilder(this)", service);
+        Assert.DoesNotContain("Initialize ExoPlayer on the Main Thread", player);
+        Assert.Contains("EnsureStartedAsync", player);
+    }
+
+    [Fact]
+    public void AndroidPlayer_AppliesPlaybackMetadataToMediaItem()
+    {
+        var player = ReadProjectFile(
+            "Noctra.Android", "Services", "AndroidVideoPlayerService.cs");
+
+        Assert.Contains("public void UpdateMediaMetadata", player);
+        Assert.Contains("new MediaMetadata.Builder()", player);
+        Assert.Contains("SetTitle(_mediaMetadata.Title)", player);
+        Assert.Contains("SetArtworkUri", player);
+        Assert.Contains("SetMediaMetadata", player);
+    }
+
+    [Fact]
+    public void AndroidPlaybackService_RespectsBackgroundSettingWhenTaskIsRemoved()
+    {
+        var service = ReadProjectFile(
+            "Noctra.Android", "Services", "NoctraPlaybackService.cs");
+
+        Assert.Contains("override void OnTaskRemoved", service);
+        Assert.Contains("AllowBackgroundPlayback", service);
+        Assert.Contains("PauseAllPlayersAndStopSelf()", service);
+        Assert.Contains("base.OnTaskRemoved(rootIntent)", service);
+    }
+
+    [Fact]
     public void AndroidNotificationPermission_IsNotDeclaredWithoutRuntimeRequestFlow()
     {
         var manifest = ReadProjectFile("Noctra.Android", "Properties", "AndroidManifest.xml");
@@ -67,22 +160,22 @@ public class MobileReleaseGuardTests
         var themedLauncherRound = ReadProjectFile(
             "Noctra.Android", "Resources", "mipmap-anydpi-v33", "ic_launcher_round.xml");
         var foreground = ReadProjectFile(
-            "Noctra.Android", "Resources", "drawable", "ic_noctra_foreground.xml");
+            "Noctra.Android", "Resources", "drawable", "ic_launcher_foreground.xml");
         var monochrome = ReadProjectFile(
-            "Noctra.Android", "Resources", "drawable", "ic_noctra_monochrome.xml");
+            "Noctra.Android", "Resources", "drawable", "ic_launcher_monochrome.xml");
         var splash = ReadProjectFile(
             "Noctra.Android", "Resources", "drawable", "ic_noctra_splash.xml");
 
-        Assert.Contains("@drawable/ic_noctra_foreground", launcher);
+        Assert.Contains("@drawable/ic_launcher_foreground", launcher);
         Assert.DoesNotContain("@mipmap/ic_launcher_foreground", launcher);
-        Assert.Contains("@drawable/ic_noctra_foreground", launcherRound);
+        Assert.Contains("@drawable/ic_launcher_foreground", launcherRound);
         Assert.DoesNotContain("@mipmap/ic_launcher_foreground", launcherRound);
-        Assert.Contains("@drawable/ic_noctra_foreground", themedLauncher);
+        Assert.Contains("@drawable/ic_launcher_foreground", themedLauncher);
         Assert.DoesNotContain("@mipmap/ic_launcher_foreground", themedLauncher);
-        Assert.Contains("<monochrome android:drawable=\"@drawable/ic_noctra_monochrome\"", themedLauncher);
-        Assert.Contains("@drawable/ic_noctra_foreground", themedLauncherRound);
+        Assert.Contains("<monochrome android:drawable=\"@drawable/ic_launcher_monochrome\"", themedLauncher);
+        Assert.Contains("@drawable/ic_launcher_foreground", themedLauncherRound);
         Assert.DoesNotContain("@mipmap/ic_launcher_foreground", themedLauncherRound);
-        Assert.Contains("<monochrome android:drawable=\"@drawable/ic_noctra_monochrome\"", themedLauncherRound);
+        Assert.Contains("<monochrome android:drawable=\"@drawable/ic_launcher_monochrome\"", themedLauncherRound);
 
         Assert.Contains("<vector", foreground);
         Assert.Contains("android:viewportWidth=\"108\"", foreground);
@@ -90,9 +183,12 @@ public class MobileReleaseGuardTests
         Assert.Contains("android:fillColor=\"#FFFFFFFF\"", monochrome);
         Assert.Contains("<vector", splash);
 
-        AssertVectorSafeZone(foreground, expectedCenter: 54, sourceMaxRadius: 221, safeRadius: 33);
-        AssertVectorSafeZone(monochrome, expectedCenter: 54, sourceMaxRadius: 221, safeRadius: 33);
-        AssertVectorSafeZone(splash, expectedCenter: 144, sourceMaxRadius: 221, safeRadius: 96);
+        AssertVectorSafeZone(foreground, expectedCenter: 54, sourceMaxRadius: 33, safeRadius: 33,
+            expectedPathHash: "567F1825552C99988442A08E4112BEFAA7FCF1C1F8E4A1D38D368B8270C8792A");
+        AssertVectorSafeZone(monochrome, expectedCenter: 54, sourceMaxRadius: 33, safeRadius: 33,
+            expectedPathHash: "567F1825552C99988442A08E4112BEFAA7FCF1C1F8E4A1D38D368B8270C8792A");
+        AssertVectorSafeZone(splash, expectedCenter: 144, sourceMaxRadius: 221, safeRadius: 96,
+            expectedPathHash: "75F86A3EDDE547D3589AE4DB512595312DFD38F04E92A566D2D80423767E2A16");
     }
 
     [Fact]
@@ -108,10 +204,8 @@ public class MobileReleaseGuardTests
 
         foreach (var obsoleteResource in new[]
                  {
-                     new[] { "Noctra.Android", "Icon.png" },
                      new[] { "Noctra.Android", "Resources", "drawable", "splash_logo.png" },
                      new[] { "Noctra.Android", "Resources", "drawable", "splash_screen.xml" },
-                     new[] { "Noctra.Android", "Resources", "drawable", "ic_launcher_background.xml" },
                      new[] { "Noctra.Android", "Resources", "AboutResources.txt" }
                  })
         {
@@ -377,7 +471,8 @@ public class MobileReleaseGuardTests
         string vectorXml,
         double expectedCenter,
         double sourceMaxRadius,
-        double safeRadius)
+        double safeRadius,
+        string expectedPathHash)
     {
         var document = System.Xml.Linq.XDocument.Parse(vectorXml);
         var android = System.Xml.Linq.XNamespace.Get("http://schemas.android.com/apk/res/android");
@@ -390,17 +485,28 @@ public class MobileReleaseGuardTests
         var scaleY = double.Parse(
             group.Attribute(android + "scaleY")!.Value,
             System.Globalization.CultureInfo.InvariantCulture);
-        var translateX = double.Parse(
-            group.Attribute(android + "translateX")!.Value,
-            System.Globalization.CultureInfo.InvariantCulture);
-        var translateY = double.Parse(
-            group.Attribute(android + "translateY")!.Value,
-            System.Globalization.CultureInfo.InvariantCulture);
-
         Assert.Equal(scaleX, scaleY, precision: 6);
         Assert.True(scaleX > 0 && scaleY > 0, "Brand vector scale must remain positive.");
-        Assert.InRange(Math.Abs(translateX + (180 * scaleX) - expectedCenter), 0, 0.01);
-        Assert.InRange(Math.Abs(translateY + (180 * scaleY) - expectedCenter), 0, 0.01);
+
+        var pivotX = group.Attribute(android + "pivotX")?.Value;
+        var pivotY = group.Attribute(android + "pivotY")?.Value;
+        if (pivotX is not null && pivotY is not null)
+        {
+            Assert.Equal(expectedCenter, double.Parse(pivotX, System.Globalization.CultureInfo.InvariantCulture), precision: 6);
+            Assert.Equal(expectedCenter, double.Parse(pivotY, System.Globalization.CultureInfo.InvariantCulture), precision: 6);
+        }
+        else
+        {
+            var translateX = double.Parse(
+                group.Attribute(android + "translateX")!.Value,
+                System.Globalization.CultureInfo.InvariantCulture);
+            var translateY = double.Parse(
+                group.Attribute(android + "translateY")!.Value,
+                System.Globalization.CultureInfo.InvariantCulture);
+
+            Assert.InRange(Math.Abs(translateX + (180 * scaleX) - expectedCenter), 0, 0.01);
+            Assert.InRange(Math.Abs(translateY + (180 * scaleY) - expectedCenter), 0, 0.01);
+        }
         Assert.True(
             sourceMaxRadius * Math.Abs(scaleX) <= safeRadius,
             $"Scaled mark radius {sourceMaxRadius * Math.Abs(scaleX):F2} exceeds safe radius {safeRadius:F2}.");
@@ -411,9 +517,7 @@ public class MobileReleaseGuardTests
                 .Select(path => path.Attribute(android + "pathData")?.Value ?? string.Empty));
         var pathHash = Convert.ToHexString(
             System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(pathData)));
-        Assert.Equal(
-            "75F86A3EDDE547D3589AE4DB512595312DFD38F04E92A566D2D80423767E2A16",
-            pathHash);
+        Assert.Equal(expectedPathHash, pathHash);
     }
 
     private static string FindProjectFile(params string[] relativeParts)

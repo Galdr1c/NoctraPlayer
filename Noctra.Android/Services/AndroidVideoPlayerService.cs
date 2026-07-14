@@ -37,6 +37,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
     private IExoPlayer? _exoPlayer;
     private PlayerListener? _playerListener;
     private string? _currentUrl;
+    private PlaybackMediaMetadata _mediaMetadata = new("Noctra");
     private bool _isDisposed;
     private bool _hasLoadedMedia;
     private PlaybackState _state = PlaybackState.Stopped;
@@ -118,6 +119,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
     public event EventHandler<string>? ErrorOccurred;
     public event EventHandler<string?>? SubtitleTextChanged;
     public event EventHandler<StreamQualityInfo>? QualityDetected;
+    internal event Action<IExoPlayer>? PlayerChanged;
 
     private static void LogDebug(string message)
     {
@@ -141,12 +143,29 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
         _settingsService.SettingsChanged += OnSettingsChanged;
         _videoSurfaceService.SurfaceAvailable += VideoSurfaceService_SurfaceAvailable;
         _videoSurfaceService.SurfaceDestroyed += VideoSurfaceService_SurfaceDestroyed;
+    }
 
-        // Initialize ExoPlayer on the Main Thread
-        RunOnMainThread(() =>
+    internal IExoPlayer AttachPlaybackHost()
+    {
+        if (Looper.MyLooper() != Looper.MainLooper)
         {
-            InitializePlayer();
-        });
+            throw new InvalidOperationException("Playback host must attach on the Android main thread.");
+        }
+
+        InitializePlayer();
+        return _exoPlayer
+            ?? throw new InvalidOperationException("ExoPlayer could not be initialized.");
+    }
+
+    internal void DetachPlaybackHost()
+    {
+        if (Looper.MyLooper() == Looper.MainLooper)
+        {
+            ReleasePlayer();
+            return;
+        }
+
+        RunOnMainThread(ReleasePlayer);
     }
 
     private void InitializePlayer()
@@ -167,6 +186,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
         _exoPlayer = builder.Build();
         _playerListener = new PlayerListener(this);
         _exoPlayer.AddListener(_playerListener);
+        PlayerChanged?.Invoke(_exoPlayer);
 
         ApplyVolume();
         ApplyPlaybackRate();
@@ -222,26 +242,17 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
         }
     }
 
+    public void UpdateMediaMetadata(PlaybackMediaMetadata metadata)
+    {
+        ArgumentNullException.ThrowIfNull(metadata);
+        _mediaMetadata = metadata;
+    }
+
     public async Task PlayAsync(string url, double startTimeSeconds = 0)
     {
         ThrowIfDisposed();
+        await NoctraPlaybackService.EnsureStartedAsync(_applicationContext).ConfigureAwait(false);
         RebuildPlayerIfNeeded();
-        
-        // Ensure player is initialized on Main Thread
-        var initTcs = new TaskCompletionSource();
-        RunOnMainThread(() =>
-        {
-            try
-            {
-                InitializePlayer();
-                initTcs.TrySetResult();
-            }
-            catch (Exception ex)
-            {
-                initTcs.TrySetException(ex);
-            }
-        });
-        await initTcs.Task;
 
         _currentUrl = url;
         _selectedAudioTrack = -1;
@@ -288,7 +299,27 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
                     uri = global::Android.Net.Uri.FromFile(new Java.IO.File(playbackSource.Url));
                 }
 
-                var mediaItem = MediaItem.FromUri(uri);
+                var metadataBuilder = new MediaMetadata.Builder()
+                    .SetTitle(_mediaMetadata.Title);
+
+                if (!string.IsNullOrWhiteSpace(_mediaMetadata.Subtitle))
+                {
+                    metadataBuilder.SetArtist(_mediaMetadata.Subtitle);
+                }
+
+                if (!string.IsNullOrWhiteSpace(_mediaMetadata.ArtworkUrl))
+                {
+                    var artworkUri = global::Android.Net.Uri.Parse(_mediaMetadata.ArtworkUrl);
+                    if (artworkUri is not null)
+                    {
+                        metadataBuilder.SetArtworkUri(artworkUri);
+                    }
+                }
+
+                var mediaItem = new MediaItem.Builder()
+                    .SetUri(uri)
+                    .SetMediaMetadata(metadataBuilder.Build())
+                    .Build();
 
                 // Create the appropriate MediaSource using DefaultMediaSourceFactory.
                 // Media3 optional modules (DASH/SmoothStreaming/HLS/RTSP) live in separate
@@ -362,7 +393,6 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
 
         var currentPositionSeconds = CurrentTimeMilliseconds / 1000d;
         var wasPlaying = IsPlaying;
-        RebuildPlayerIfNeeded();
 
         await PlayAsync(url, currentPositionSeconds).ConfigureAwait(false);
 

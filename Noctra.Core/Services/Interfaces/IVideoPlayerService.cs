@@ -6,6 +6,7 @@ public interface IVideoPlayerService : IDisposable
     Task PlayAsync(string url, double startTimeSeconds = 0);
     Task HardSeekAsync(double seconds);
     Task ReinitializeAsync();
+    void UpdateMediaMetadata(Noctra.Models.PlaybackMediaMetadata metadata) { }
     void Pause();
     void Resume();
     void Stop();

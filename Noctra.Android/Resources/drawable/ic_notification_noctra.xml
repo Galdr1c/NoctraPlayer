@@ -1,34 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:aapt="http://schemas.android.com/aapt"
-    android:width="108dp"
-    android:height="108dp"
+    android:width="24dp"
+    android:height="24dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- Logo is scaled to 92% around the exact 54,54 center.
-         Approximate visible bounds after scaling: x=27.4..80.6, y=22.4..85.6. -->
     <group
         android:pivotX="54"
         android:pivotY="54"
-        android:scaleX="0.72"
-        android:scaleY="0.72">
+        android:scaleX="1.20"
+        android:scaleY="1.20">
 
         <path
+            android:fillColor="#FFFFFFFF"
             android:fillType="evenOdd"
-            android:pathData="M53.3336,75.2748L68.0747,85.0336C68.0747,85.0336 73.3978,88.1435 77.4359,86.1248C81.4733,84.1061 81.3534,81.5248 81.4597,79.9102L81.5048,56.3403L53.266,75.2276L53.3336,75.2748Z">
-            <aapt:attr name="android:fillColor">
-                <gradient
-                    android:type="linear"
-                    android:startX="79.7584"
-                    android:startY="74.9"
-                    android:endX="57.0251"
-                    android:endY="73.1584"
-                    android:startColor="#FF8B5CF6"
-                    android:endColor="#FF5814CE"
-                    android:tileMode="clamp" />
-            </aapt:attr>
-        </path>
+            android:pathData="M53.3336,75.2748L68.0747,85.0336C68.0747,85.0336 73.3978,88.1435 77.4359,86.1248C81.4733,84.1061 81.3534,81.5248 81.4597,79.9102L81.5048,56.3403L53.266,75.2276L53.3336,75.2748Z" />
 
         <path
             android:fillColor="#FFFFFFFF"
