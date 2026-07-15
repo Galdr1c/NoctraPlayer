@@ -1274,8 +1274,8 @@
             <StackPanel Spacing="24">
                 <controls:PremiumSpinner Width="80" Height="80">
                     <!-- Pulsing App Logo in Center -->
-                    <Image Source="avares://Noctra/Assets/Square150x150Logo.png"
-                           Width="32" Height="32"
+                    <Image Source="{Binding ActualThemeVariant, RelativeSource={RelativeSource Self}, Converter={StaticResource LogoThemeConverter}}"
+                               Width="32" Height="32"
                            VerticalAlignment="Center" HorizontalAlignment="Center"
                            RenderTransformOrigin="50%,50%">
                         <Image.RenderTransform>

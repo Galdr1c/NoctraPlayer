@@ -1157,11 +1157,11 @@
 
                                             <Grid ColumnDefinitions="Auto,*">
                                                 <!-- App Icon -->
-                                                <Image Source="avares://Noctra/Assets/Square150x150Logo.png"
-                                                       Width="64"
-                                                       Height="64"
-                                                       Stretch="Uniform"
-                                                       Margin="0,0,20,0"/>
+                                            <Image Source="{Binding ActualThemeVariant, RelativeSource={RelativeSource Self}, Converter={StaticResource LogoThemeConverter}}"
+                                                   Width="80"
+                                                   Height="80"
+                                                   Stretch="Uniform"
+                                                   Margin="0,0,20,0"/>
 
                                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                                     <StackPanel Orientation="Horizontal" Spacing="10">
@@ -1205,11 +1205,11 @@
                                     <StackPanel>
                                         <Grid ColumnDefinitions="Auto,*,Auto">
                                             <!-- App Icon -->
-                                            <Image Source="avares://Noctra/Assets/Square150x150Logo.Gray.png"
-                                                   Width="64"
-                                                   Height="64"
-                                                   Stretch="Uniform"
-                                                   Margin="0,0,20,0"/>
+                                    <Image Source="{Binding ActualThemeVariant, RelativeSource={RelativeSource Self}, Converter={StaticResource LogoThemeConverter}, ConverterParameter=Full}"
+                                           Width="80"
+                                           Height="80"
+                                           Stretch="Uniform"
+                                           Margin="0,0,20,0"/>
 
                                             <!-- App Info -->
                                             <StackPanel Grid.Column="1" VerticalAlignment="Center">
@@ -1339,15 +1339,15 @@
             <!-- Global Loading Overlay -->
             <Grid Grid.RowSpan="3" Background="#AA000000" IsVisible="{Binding IsGlobalLoading}" ZIndex="10000">
                 <Border Background="{DynamicResource Bg1Brush}" 
-                        CornerRadius="8" 
-                        Padding="32" 
+                        CornerRadius="6" 
+                        Padding="64,32" 
                         HorizontalAlignment="Center" 
                         VerticalAlignment="Center"
                         BoxShadow="0 10 30 5 #80000000">
                     <StackPanel Spacing="24">
                         <controls:PremiumSpinner Width="80" Height="80">
-                            <Image Source="avares://Noctra/Assets/Square150x150Logo.png"
-                                   Width="45" Height="45"
+                        <Image Source="{Binding ActualThemeVariant, RelativeSource={RelativeSource Self}, Converter={StaticResource LogoThemeConverter}}"
+                               Width="60" Height="60"
                                    Stretch="Uniform"
                                    VerticalAlignment="Center" HorizontalAlignment="Center"
                                    RenderTransformOrigin="50%,50%">

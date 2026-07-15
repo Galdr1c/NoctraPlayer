@@ -8,6 +8,7 @@ using Avalonia.Data.Converters;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
+using Avalonia.Styling;
 using Noctra.Models;
 using Noctra.ViewModels;
 using Material.Icons;
@@ -1213,6 +1214,46 @@ public class ConnectionHealthToIconConverter : IValueConverter
     }
 
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => null;
+}
+
+/// <summary>
+/// Converts ActualThemeVariant to the appropriate theme-aware logo Bitmap.
+/// ConverterParameter="Full" selects the full/transparent variant.
+/// </summary>
+public class LogoThemeConverter : IValueConverter
+{
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        var isDark = value is ThemeVariant variant && variant == ThemeVariant.Dark;
+        var isFull = parameter?.ToString() == "Full";
+
+        var uri = isFull
+            ? (isDark
+                ? "avares://Noctra/Assets/Square150x150LogoTPFullLight.png"
+                : "avares://Noctra/Assets/Square150x150LogoTPFullDark.png")
+            : (isDark
+                ? "avares://Noctra/Assets/Square150x150LogoTPLight.png"
+                : "avares://Noctra/Assets/Square150x150LogoTPDark.png");
+
+        try
+        {
+            var assetUri = new Uri(uri);
+            if (AssetLoader.Exists(assetUri))
+            {
+                using var stream = AssetLoader.Open(assetUri);
+                return new Bitmap(stream);
+            }
+        }
+        catch
+        {
+            // Fall through to fallback
+        }
+
+        return null;
+    }
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => throw new NotSupportedException();
 }
 
 public class ConnectionHealthToVisibilityConverter : IValueConverter

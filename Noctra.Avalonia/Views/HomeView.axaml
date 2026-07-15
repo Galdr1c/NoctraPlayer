@@ -41,8 +41,8 @@
                         HorizontalAlignment="Center" 
                         Spacing="12"
                         Margin="0,200,0,0">
-              <Image Source="/Assets/Square150x150Logo.Gray.png"
-                     Width="80" Height="80"
+              <Image Source="{Binding ActualThemeVariant, RelativeSource={RelativeSource Self}, Converter={StaticResource LogoThemeConverter}, ConverterParameter=Full}"
+                     Width="100" Height="100"
                      Opacity="0.6"
                      Margin="0,0,0,10">
                   <Image.Styles>

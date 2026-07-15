@@ -174,12 +174,32 @@ public partial class App : Application
                             return;
                         }
 
-                        // 4. Update Check (Silent)
-                        StartupLogger.Log("Step 6: Checking for updates...");
+                        // Ensure a minimum splash duration (e.g., 1.5 seconds) for premium feel
+                        var elapsed = startupStopwatch.ElapsedMilliseconds;
+                        StartupLogger.Log($"Warmup completed in {elapsed}ms");
+                        if (elapsed < 1500)
+                        {
+                            var waitTime = 1500 - (int)elapsed;
+                            StartupLogger.Log($"Waiting {waitTime}ms for minimum splash...");
+                            await Task.Delay(waitTime);
+                        }
+
+                        // Transition to Main Window
+                        StartupLogger.Log("Step 7: Transitioning to main window...");
+                        await Dispatcher.UIThread.InvokeAsync(() =>
+                        {
+                            desktop.MainWindow = profilesWindow;
+                            profilesWindow.Show();
+                            splashWindow.Close();
+                            StartupLogger.Log("========= ✅ STARTUP COMPLETE =========");
+                        });
+
+                        // 8. Update Check (after transition — dialog won't auto-close with splash)
+                        StartupLogger.Log("Step 8: Checking for updates...");
                         var packageIdentity = Services.GetRequiredService<IPackageIdentityService>();
                         if (!packageIdentity.IsPackaged && settingsService.Settings.AutoUpdate)
                         {
-                            StartupLogger.Log("Step 6: Update check enabled (background)");
+                            StartupLogger.Log("Step 8: Update check enabled (background)");
                             _ = Task.Run(async () =>
                             {
                                 try
@@ -204,34 +224,14 @@ public partial class App : Application
                                 }
                                 catch (Exception ex)
                                 {
-                                    StartupLogger.LogError("Step 6 (background update check)", ex);
+                                    StartupLogger.LogError("Step 8 (background update check)", ex);
                                 }
                             });
                         }
                         else
                         {
-                            StartupLogger.Log("Step 6: Update check skipped");
+                            StartupLogger.Log("Step 8: Update check skipped");
                         }
-
-                        // Ensure a minimum splash duration (e.g., 1.5 seconds) for premium feel
-                        var elapsed = startupStopwatch.ElapsedMilliseconds;
-                        StartupLogger.Log($"Warmup completed in {elapsed}ms");
-                        if (elapsed < 1500)
-                        {
-                            var waitTime = 1500 - (int)elapsed;
-                            StartupLogger.Log($"Waiting {waitTime}ms for minimum splash...");
-                            await Task.Delay(waitTime);
-                        }
-
-                        // Transition to Main Window
-                        StartupLogger.Log("Step 7: Transitioning to main window...");
-                        await Dispatcher.UIThread.InvokeAsync(() =>
-                        {
-                            desktop.MainWindow = profilesWindow;
-                            profilesWindow.Show();
-                            splashWindow.Close();
-                            StartupLogger.Log("========= ✅ STARTUP COMPLETE =========");
-                        });
                     }
                     catch (Exception ex)
                     {

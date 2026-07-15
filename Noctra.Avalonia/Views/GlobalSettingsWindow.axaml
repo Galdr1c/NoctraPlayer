@@ -468,9 +468,9 @@
                                             </Grid.ColumnDefinitions>
 
                                             <!-- App Icon -->
-                                            <Image Source="avares://Noctra/Assets/Square150x150Logo.png"
-                                                   Width="64"
-                                                   Height="64"
+                                            <Image Source="{Binding ActualThemeVariant, RelativeSource={RelativeSource Self}, Converter={StaticResource LogoThemeConverter}}"
+                                                   Width="80"
+                                                   Height="80"
                                                    Stretch="Uniform"
                                                    Margin="0,0,20,0"/>
 
@@ -536,9 +536,9 @@
                             <StackPanel>
                                 <Grid ColumnDefinitions="Auto,*,Auto">
                                     <!-- App Icon -->
-                                    <Image Source="avares://Noctra/Assets/Square150x150Logo.Gray.png"
-                                           Width="64"
-                                           Height="64"
+                                    <Image Source="{Binding ActualThemeVariant, RelativeSource={RelativeSource Self}, Converter={StaticResource LogoThemeConverter}, ConverterParameter=Full}"
+                                           Width="80"
+                                           Height="80"
                                            Stretch="Uniform"
                                            Margin="0,0,20,0"/>
                                     
