@@ -207,9 +207,9 @@
             IsVisible="False">
       <Grid ColumnDefinitions="*,Auto">
         <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-          <Image Source="avares://Noctra.Mobile/Assets/Square150x150Logo.png"
-                 Width="32" Height="32"
-                 Stretch="Uniform"
+        <Image Source="{Binding ActualThemeVariant, RelativeSource={RelativeSource Self}, Converter={StaticResource LogoThemeConverter}}"
+                               Width="48" Height="48"
+                               Stretch="Uniform"
                  VerticalAlignment="Center" />
           <TextBlock Text="NOCTRA"
                      FontSize="{DynamicResource FTitleL}"

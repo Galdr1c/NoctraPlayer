@@ -70,6 +70,7 @@
         <converters:ConnectionHealthToBrushConverter x:Key="ConnectionHealthToBrushConverter" />
         <converters:BooleanToSuccessWarningBrushConverter x:Key="BooleanToSuccessWarningBrushConverter" />
         <converters:PromoStatusBrushConverter x:Key="PromoStatusBrushConverter" />
+        <converters:LogoThemeConverter x:Key="LogoThemeConverter" />
       </ResourceDictionary>
     </Application.Resources>
 

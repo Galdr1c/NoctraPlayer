@@ -54,9 +54,9 @@
                   VerticalAlignment="Center"
                   HorizontalAlignment="Center"
                   IsVisible="{Binding ContinueWatching.Count, Converter={StaticResource CountToVisibility}, ConverterParameter=invert}">
-        <Image Source="avares://Noctra.Mobile/Assets/Square150x150Logo.Gray.png"
-               Width="80"
-               Height="80"
+        <Image Source="{Binding ActualThemeVariant, RelativeSource={RelativeSource Self}, Converter={StaticResource LogoThemeConverter}, ConverterParameter=Full}"
+               Width="100"
+               Height="100"
                Opacity="0.6"
                RenderTransformOrigin="50%,50%"
                Margin="0,0,0,10">

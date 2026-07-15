@@ -939,15 +939,15 @@
 
           <Grid ColumnDefinitions="Auto,*"
                 ColumnSpacing="12">
-            <Image Source="avares://Noctra.Mobile/Assets/Square150x150Logo.png"
-                   Width="48"
-                   Height="48"
-                   Stretch="Uniform"
+                <Image Source="{Binding ActualThemeVariant, RelativeSource={RelativeSource Self}, Converter={StaticResource LogoThemeConverter}}"
+                                             Width="60"
+                                             Height="60"
+                                             Stretch="Uniform"
                    IsVisible="{Binding IsPremium}" />
-            <Image Source="avares://Noctra.Mobile/Assets/Square150x150Logo.Gray.png"
-                   Width="48"
-                   Height="48"
-                   Stretch="Uniform"
+                   <Image Source="{Binding ActualThemeVariant, RelativeSource={RelativeSource Self}, Converter={StaticResource LogoThemeConverter}, ConverterParameter=Full}"
+                                             Width="60"
+                                             Height="60"
+                                             Stretch="Uniform"
                    IsVisible="{Binding !IsPremium}" />
             <StackPanel Grid.Column="1"
                         Spacing="4"
