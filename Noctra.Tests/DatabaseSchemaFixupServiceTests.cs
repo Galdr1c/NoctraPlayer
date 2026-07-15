@@ -23,6 +23,9 @@ public sealed class DatabaseSchemaFixupServiceTests
             Assert.True(await ColumnExistsAsync(context, "Channels", "CurrentProgramId"));
             Assert.True(await ColumnExistsAsync(context, "SeriesEpisodeProgresses", "TmdbId"));
             Assert.True(await ColumnExistsAsync(context, "DownloadItems", "LocalFilePath"));
+            Assert.True(await IndexExistsAsync(context, "IX_Channels_PlaylistId_StreamUrl"));
+            Assert.True(await IndexExistsAsync(context, "IX_Series_PlaylistId"));
+            Assert.True(await IndexExistsAsync(context, "IX_ImportJobs_OneActivePerProfile"));
         }
         finally
         {
@@ -83,6 +86,54 @@ public sealed class DatabaseSchemaFixupServiceTests
         }
     }
 
+    [Fact]
+    public async Task ApplyAsync_CancelsDuplicateLegacyActiveJobsBeforeCreatingUniqueIndex()
+    {
+        var databasePath = CreateTempDatabasePath();
+        try
+        {
+            await using var context = CreateContext(databasePath);
+            await context.Database.EnsureCreatedAsync();
+            await context.Database.ExecuteSqlRawAsync("DROP INDEX IF EXISTS IX_ImportJobs_OneActivePerProfile;");
+            var now = DateTime.UtcNow;
+            context.ImportJobs.AddRange(
+                new Noctra.Models.ImportJob
+                {
+                    ProfileId = 7,
+                    PlaylistId = 9,
+                    Kind = Noctra.Models.ImportJobKind.Xtream,
+                    Status = Noctra.Models.ImportJobStatus.Running,
+                    SourceName = "Old",
+                    Stage = "Importing",
+                    CreatedAt = now.AddMinutes(-1),
+                    UpdatedAt = now.AddMinutes(-1)
+                },
+                new Noctra.Models.ImportJob
+                {
+                    ProfileId = 7,
+                    PlaylistId = 9,
+                    Kind = Noctra.Models.ImportJobKind.Xtream,
+                    Status = Noctra.Models.ImportJobStatus.Running,
+                    SourceName = "New",
+                    Stage = "Importing",
+                    CreatedAt = now,
+                    UpdatedAt = now
+                });
+            await context.SaveChangesAsync();
+
+            await new DatabaseSchemaFixupService().ApplyAsync(context, DatabaseSchemaFixupProfile.Mobile);
+
+            Assert.Equal(1, await context.ImportJobs.CountAsync(job => job.ProfileId == 7 &&
+                (job.Status == Noctra.Models.ImportJobStatus.Queued || job.Status == Noctra.Models.ImportJobStatus.Running)));
+            Assert.Equal(1, await context.ImportJobs.CountAsync(job => job.ProfileId == 7 && job.Status == Noctra.Models.ImportJobStatus.Canceled));
+            Assert.True(await IndexExistsAsync(context, "IX_ImportJobs_OneActivePerProfile"));
+        }
+        finally
+        {
+            TryDelete(databasePath);
+        }
+    }
+
     private static AppDbContext CreateContext(string databasePath)
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()
@@ -118,6 +169,34 @@ public sealed class DatabaseSchemaFixupServiceTests
             }
 
             return false;
+        }
+        finally
+        {
+            if (shouldClose)
+            {
+                await connection.CloseAsync();
+            }
+        }
+    }
+
+    private static async Task<bool> IndexExistsAsync(AppDbContext context, string indexName)
+    {
+        var connection = context.Database.GetDbConnection();
+        var shouldClose = connection.State != System.Data.ConnectionState.Open;
+        if (shouldClose)
+        {
+            await connection.OpenAsync();
+        }
+
+        try
+        {
+            await using var command = connection.CreateCommand();
+            command.CommandText = "SELECT 1 FROM sqlite_master WHERE type = 'index' AND name = $indexName LIMIT 1;";
+            var parameter = command.CreateParameter();
+            parameter.ParameterName = "$indexName";
+            parameter.Value = indexName;
+            command.Parameters.Add(parameter);
+            return await command.ExecuteScalarAsync() is not null;
         }
         finally
         {

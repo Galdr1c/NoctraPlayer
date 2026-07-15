@@ -3,11 +3,13 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Runtime.ExceptionServices;
 using Microsoft.Extensions.Logging;
 using Noctra.Models;
 using Noctra.Services.Interfaces;
 using Noctra.Core.Services;
 using Microsoft.EntityFrameworkCore;
+using Noctra.Diagnostics;
 
 namespace Noctra.Services;
 
@@ -92,12 +94,12 @@ public class XtreamCodesService : IXtreamCodesService
             password,
             includeVod,
             onCategoriesDiscovered,
-            async (channels, groupName, categoryCompleted) =>
+            async (channels, category, categoryCompleted) =>
             {
-                if (!categoryBuffers.TryGetValue(groupName, out var buffer))
+                if (!categoryBuffers.TryGetValue(category.MarkerStreamUrl, out var buffer))
                 {
                     buffer = new List<Channel>();
-                    categoryBuffers[groupName] = buffer;
+                    categoryBuffers[category.MarkerStreamUrl] = buffer;
                 }
 
                 buffer.AddRange(channels);
@@ -107,8 +109,8 @@ public class XtreamCodesService : IXtreamCodesService
                     return;
                 }
 
-                categoryBuffers.Remove(groupName);
-                await onCategoryLoaded(buffer, groupName).ConfigureAwait(false);
+                categoryBuffers.Remove(category.MarkerStreamUrl);
+                await onCategoryLoaded(buffer, category.Name).ConfigureAwait(false);
             },
             cancellationToken).ConfigureAwait(false);
     }
@@ -119,9 +121,10 @@ public class XtreamCodesService : IXtreamCodesService
         string password,
         bool includeVod,
         Func<List<XtreamCategory>, Action<string>, Task<List<XtreamCategory>>> onCategoriesDiscovered,
-        Func<IReadOnlyList<Channel>, string, bool, Task> onCategoryBatchLoaded,
+        Func<IReadOnlyList<Channel>, XtreamCategory, bool, Task> onCategoryBatchLoaded,
         CancellationToken cancellationToken = default)
     {
+        PerformanceTrace.Mark("xtream.import.start");
         var normalizedBaseUrl = NormalizeBaseUrl(baseUrl);
         if (!await EnsureAuthenticatedAsync(normalizedBaseUrl, username, password, cancellationToken))
         {
@@ -133,6 +136,7 @@ public class XtreamCodesService : IXtreamCodesService
         var categoriesToLoad = await onCategoriesDiscovered(
             allCategories,
             name => prioritizedCategory = name);
+        PerformanceTrace.Mark("xtream.categories.ready", categoriesToLoad.Count);
 
         var liveMap = BuildCategoryMapFromXtream(allCategories.Where(c => c.Type == "live"));
         var vodMap = BuildCategoryMapFromXtream(allCategories.Where(c => c.Type == "vod"));
@@ -148,10 +152,17 @@ public class XtreamCodesService : IXtreamCodesService
             cancellationToken.ThrowIfCancellationRequested();
             try
             {
-                async Task CountAndForwardAsync(IReadOnlyList<Channel> channels, string group, bool completed)
+                async Task CountAndForwardAsync(IReadOnlyList<Channel> channels, XtreamCategory batchCategory, bool completed)
                 {
-                    emittedChannelCount += channels.Count;
-                    await onCategoryBatchLoaded(channels, group, completed);
+                    try
+                    {
+                        await onCategoryBatchLoaded(channels, batchCategory, completed);
+                        emittedChannelCount += channels.Count;
+                    }
+                    catch (Exception ex) when (ex is not OperationCanceledException)
+                    {
+                        throw new CategoryPersistenceException(ex);
+                    }
                 }
 
                 switch (category.Type)
@@ -159,7 +170,7 @@ public class XtreamCodesService : IXtreamCodesService
                     case "live":
                         await StreamCategoryBatchesAsync<XtreamLiveStreamDto>(
                             BuildCategoryApiUrl(normalizedBaseUrl, username, password, "get_live_streams", category.Id),
-                            category.Name,
+                            category,
                             dtos => MapLiveChannels(dtos, normalizedBaseUrl, username, password, liveMap),
                             CountAndForwardAsync,
                             cancellationToken);
@@ -168,7 +179,7 @@ public class XtreamCodesService : IXtreamCodesService
                     case "vod" when includeVod:
                         await StreamCategoryBatchesAsync<XtreamVodStreamDto>(
                             BuildCategoryApiUrl(normalizedBaseUrl, username, password, "get_vod_streams", category.Id),
-                            category.Name,
+                            category,
                             dtos => MapVodChannels(dtos, normalizedBaseUrl, username, password, vodMap),
                             CountAndForwardAsync,
                             cancellationToken);
@@ -177,12 +188,17 @@ public class XtreamCodesService : IXtreamCodesService
                     case "series" when includeVod:
                         await StreamCategoryBatchesAsync<XtreamSeriesDto>(
                             BuildCategoryApiUrl(normalizedBaseUrl, username, password, "get_series", category.Id),
-                            category.Name,
+                            category,
                             dtos => MapSeriesAsEntries(dtos, seriesMap),
                             CountAndForwardAsync,
                             cancellationToken);
                         break;
                 }
+            }
+            catch (CategoryPersistenceException ex) when (ex.InnerException is not null)
+            {
+                ExceptionDispatchInfo.Capture(ex.InnerException).Throw();
+                throw;
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -214,13 +230,15 @@ public class XtreamCodesService : IXtreamCodesService
                 "Xtream progressive import completed with {FailedCategoryCount} non-fatal category failures.",
                 failedCategories);
         }
+
+        PerformanceTrace.Mark("xtream.import.complete", emittedChannelCount);
     }
 
     private async Task StreamCategoryBatchesAsync<TDto>(
         string url,
-        string categoryName,
+        XtreamCategory category,
         Func<List<TDto>, List<Channel>> mapBatch,
-        Func<IReadOnlyList<Channel>, string, bool, Task> onCategoryBatchLoaded,
+        Func<IReadOnlyList<Channel>, XtreamCategory, bool, Task> onCategoryBatchLoaded,
         CancellationToken cancellationToken)
     {
         const int batchSize = 500;
@@ -244,27 +262,28 @@ public class XtreamCodesService : IXtreamCodesService
 
             if (batch.Count == batchSize)
             {
-                await EmitCategoryBatchAsync(batch, categoryName, false, mapBatch, onCategoryBatchLoaded);
+                await EmitCategoryBatchAsync(batch, category, false, mapBatch, onCategoryBatchLoaded);
                 batch.Clear();
             }
 
             batch.Add(dto);
         }
 
-        await EmitCategoryBatchAsync(batch, categoryName, true, mapBatch, onCategoryBatchLoaded);
+        await EmitCategoryBatchAsync(batch, category, true, mapBatch, onCategoryBatchLoaded);
     }
 
     private static async Task EmitCategoryBatchAsync<TDto>(
         List<TDto> batch,
-        string categoryName,
+        XtreamCategory category,
         bool completed,
         Func<List<TDto>, List<Channel>> mapBatch,
-        Func<IReadOnlyList<Channel>, string, bool, Task> callback)
+        Func<IReadOnlyList<Channel>, XtreamCategory, bool, Task> callback)
     {
         var channels = mapBatch(batch)
-            .Where(c => string.Equals(c.GroupTitle, categoryName, StringComparison.OrdinalIgnoreCase))
+            .Where(c => string.Equals(c.GroupTitle, category.Name, StringComparison.OrdinalIgnoreCase))
             .ToList();
-        await callback(channels, categoryName, completed);
+        PerformanceTrace.Mark("xtream.batch.ready", channels.Count, category.Name);
+        await callback(channels, category, completed);
     }
 
     private static IReadOnlyDictionary<string, string> BuildCategoryMapFromXtream(IEnumerable<XtreamCategory> categories)
@@ -1234,5 +1253,13 @@ public class XtreamCodesService : IXtreamCodesService
         public bool? IsAuthenticated { get; set; }
         public DateTimeOffset ExpiresAt { get; set; }
         public SemaphoreSlim Lock { get; } = new(1, 1);
+    }
+
+    private sealed class CategoryPersistenceException : Exception
+    {
+        public CategoryPersistenceException(Exception innerException)
+            : base("Xtream category persistence failed.", innerException)
+        {
+        }
     }
 }

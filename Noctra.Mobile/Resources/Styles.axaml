@@ -35,7 +35,7 @@
     <Setter Property="Foreground" Value="{DynamicResource ErrorBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource ErrorBrush}" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="6}" />
+    <Setter Property="CornerRadius" Value="6" />
     <Setter Property="Padding" Value="16,0" />
     <Setter Property="MinHeight" Value="44" />
     <Setter Property="Template">

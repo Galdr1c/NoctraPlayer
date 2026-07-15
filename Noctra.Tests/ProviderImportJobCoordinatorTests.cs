@@ -76,4 +76,70 @@ public sealed class ProviderImportJobCoordinatorTests
         Assert.Equal(2, status.Value.SeriesCount);
         Assert.Equal(1, status.Value.FailedCategoryCount);
     }
+
+    [Fact]
+    public async Task ReportProgressAsync_RapidUpdates_ThrottlesDatabaseWritesButReturnsLatestStatus()
+    {
+        var coordinator = new ProviderImportJobCoordinator(_importJobService.Object, logger: null);
+        var importJob = new ImportJob { Id = 23 };
+
+        await coordinator.ReportProgressAsync(importJob, "Batch 1", 100, 0, 0);
+        var latest = await coordinator.ReportProgressAsync(importJob, "Batch 2", 200, 0, 0);
+
+        _importJobService.Verify(service => service.ReportProgressAsync(
+            23,
+            It.IsAny<string>(),
+            It.IsAny<int>(),
+            It.IsAny<int>(),
+            It.IsAny<int>(),
+            It.IsAny<int>(),
+            It.IsAny<CancellationToken>()),
+            Times.Once);
+        Assert.NotNull(latest);
+        Assert.Equal("Batch 2", latest.Value.Stage);
+        Assert.Equal(200, latest.Value.LiveCount);
+    }
+
+    [Fact]
+    public async Task CompleteAsync_FlushesLatestThrottledProgressBeforeCompletion()
+    {
+        var coordinator = new ProviderImportJobCoordinator(_importJobService.Object, logger: null);
+        var importJob = new ImportJob { Id = 24 };
+
+        await coordinator.ReportProgressAsync(importJob, "Batch 1", 100, 0, 0);
+        await coordinator.ReportProgressAsync(importJob, "Batch 2", 200, 30, 4, failedCategoryCount: 2);
+        await coordinator.CompleteAsync(importJob, "Completed");
+
+        _importJobService.Verify(service => service.ReportProgressAsync(
+            24,
+            "Batch 2",
+            200,
+            30,
+            4,
+            2,
+            It.IsAny<CancellationToken>()),
+            Times.Once);
+        _importJobService.Verify(service => service.CompleteAsync(
+            24,
+            "Completed",
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task CompleteActiveAsync_CompletesInterruptedJobWhenRowsAreAlreadyComplete()
+    {
+        var coordinator = new ProviderImportJobCoordinator(_importJobService.Object, logger: null);
+        _importJobService
+            .Setup(service => service.GetActiveForProfileAsync(4, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ImportJob { Id = 31, ProfileId = 4, PlaylistId = 9, Status = ImportJobStatus.Running });
+
+        var status = await coordinator.CompleteActiveAsync(4, 9, "Recovered - rows complete");
+
+        _importJobService.Verify(service => service.CompleteAsync(
+            31,
+            "Recovered - rows complete",
+            It.IsAny<CancellationToken>()), Times.Once);
+        Assert.NotNull(status);
+        Assert.False(status.Value.HasActiveImportJob);
+    }
 }

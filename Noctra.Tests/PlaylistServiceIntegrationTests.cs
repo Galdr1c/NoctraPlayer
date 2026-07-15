@@ -1043,6 +1043,22 @@ namespace Noctra.Tests
         }
 
         [Fact]
+        public async Task CreateRefreshStagingPlaylistAsync_PreCanceledScopeCreatesNoStagingPlaylist()
+        {
+            var service = CreateService();
+            var playlist = await service.CreateEmptyPlaylistAsync("Xtream", "xtream://cancel-staging");
+            using var cancellation = new CancellationTokenSource();
+            cancellation.Cancel();
+
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+                service.CreateRefreshStagingPlaylistAsync(playlist.Id, cancellation.Token));
+
+            using var context = new AppDbContext(_options);
+            Assert.False(await context.Playlists.AnyAsync(item =>
+                item.Id != playlist.Id && item.Name == $"{playlist.Name} refresh staging"));
+        }
+
+        [Fact]
         public async Task AppendChannelsAsync_ReplacesExistingStreamInsteadOfDuplicatingIt()
         {
             var service = CreateService();
@@ -1080,6 +1096,189 @@ namespace Noctra.Tests
 
             var channel = Assert.Single(channels);
             Assert.Equal("Updated", channel.Name);
+        }
+
+        [Fact]
+        public async Task ReplaceDummyWithRealChannelsAsync_MaintainsExactIncrementalChannelCount()
+        {
+            var service = CreateService();
+            var playlist = await service.CreateEmptyPlaylistAsync("Xtream", "xtream://incremental-count");
+            await service.AppendChannelsAsync(
+                playlist.Id,
+                new[]
+                {
+                    new Channel
+                    {
+                        Name = "Loading",
+                        StreamUrl = "xtream-dummy://news",
+                        GroupTitle = "News",
+                        Type = ChannelType.Live
+                    }
+                });
+
+            var batch = new[]
+            {
+                new Channel { Name = "One", StreamUrl = "http://stream/1", GroupTitle = "News", Type = ChannelType.Live },
+                new Channel { Name = "Two", StreamUrl = "http://stream/2", GroupTitle = "News", Type = ChannelType.Live }
+            };
+            await service.ReplaceDummyWithRealChannelsAsync(playlist.Id, "News", batch);
+            await service.ReplaceDummyWithRealChannelsAsync(playlist.Id, "News", batch);
+
+            using var context = new AppDbContext(_options);
+            var persisted = await context.Playlists.SingleAsync(item => item.Id == playlist.Id);
+            Assert.Equal(2, persisted.ChannelCount);
+            Assert.Equal(2, await context.Channels.CountAsync(channel => channel.PlaylistId == playlist.Id));
+        }
+
+        [Fact]
+        public async Task ReplaceDummyWithRealChannelsAsync_KeepsRecoveryMarkerUntilCategoryCompletes()
+        {
+            var service = CreateService();
+            var playlist = await service.CreateEmptyPlaylistAsync("Xtream", "xtream://recovery-marker");
+            await service.AppendChannelsAsync(
+                playlist.Id,
+                new[]
+                {
+                    new Channel
+                    {
+                        Name = "Loading",
+                        StreamUrl = "xtream-dummy://news",
+                        GroupTitle = "News",
+                        Type = ChannelType.Live
+                    }
+                });
+
+            await service.ReplaceDummyWithRealChannelsAsync(
+                playlist.Id,
+                "News",
+                new[] { new Channel { Name = "One", StreamUrl = "http://stream/1", GroupTitle = "News", Type = ChannelType.Live } },
+                categoryCompleted: false);
+
+            Assert.Contains("News", await service.GetPendingDummyGroupsAsync(playlist.Id));
+
+            await service.ReplaceDummyWithRealChannelsAsync(
+                playlist.Id,
+                "News",
+                new[] { new Channel { Name = "Two", StreamUrl = "http://stream/2", GroupTitle = "News", Type = ChannelType.Live } },
+                categoryCompleted: true);
+
+            Assert.DoesNotContain("News", await service.GetPendingDummyGroupsAsync(playlist.Id));
+        }
+
+        [Fact]
+        public async Task ReplaceDummyWithRealChannelsAsync_FailedInsertRollsBackDummyDeletion()
+        {
+            var service = CreateService();
+            var playlist = await service.CreateEmptyPlaylistAsync("Xtream", "xtream://atomic-recovery");
+            await service.AppendChannelsAsync(playlist.Id, new[]
+            {
+                new Channel { Name = "Loading", StreamUrl = "xtream-dummy://news", GroupTitle = "News", Type = ChannelType.Live }
+            });
+
+            using (var setup = new AppDbContext(_options))
+            {
+                await setup.Database.ExecuteSqlRawAsync(
+                    "CREATE TRIGGER fail_channel_insert BEFORE INSERT ON Channels WHEN NEW.StreamUrl = 'http://fail' BEGIN SELECT RAISE(ABORT, 'disk full'); END;");
+            }
+
+            await Assert.ThrowsAnyAsync<Exception>(() => service.ReplaceDummyWithRealChannelsAsync(
+                playlist.Id,
+                "News",
+                new[] { new Channel { Name = "Fail", StreamUrl = "http://fail", GroupTitle = "News", Type = ChannelType.Live } },
+                categoryCompleted: true));
+
+            using var context = new AppDbContext(_options);
+            Assert.Equal(1, await context.Channels.CountAsync(channel =>
+                channel.PlaylistId == playlist.Id && channel.StreamUrl.StartsWith("xtream-dummy://")));
+            Assert.Equal(1, (await context.Playlists.SingleAsync(item => item.Id == playlist.Id)).ChannelCount);
+        }
+
+        [Fact]
+        public async Task ReplaceDummyWithRealChannelsAsync_DoesNotDeleteSameNamedDifferentTypeMarker()
+        {
+            var service = CreateService();
+            var playlist = await service.CreateEmptyPlaylistAsync("Xtream", "xtream://same-name-types");
+            await service.AppendChannelsAsync(playlist.Id, new[]
+            {
+                new Channel { Name = "Loading", StreamUrl = "xtream-dummy://live-action", GroupTitle = "Action", Type = ChannelType.Live },
+                new Channel { Name = "Loading", StreamUrl = "xtream-dummy://vod-action", GroupTitle = "Action", Type = ChannelType.VOD }
+            });
+
+            await service.ReplaceDummyWithRealChannelsAsync(
+                playlist.Id,
+                "Action",
+                new[] { new Channel { Name = "Live", StreamUrl = "http://live", GroupTitle = "Action", Type = ChannelType.Live } },
+                categoryCompleted: true);
+
+            using var context = new AppDbContext(_options);
+            var remainingDummy = await context.Channels.SingleAsync(channel => channel.StreamUrl.StartsWith("xtream-dummy://"));
+            Assert.Equal(ChannelType.VOD, remainingDummy.Type);
+        }
+
+        [Fact]
+        public async Task ReplaceDummyWithRealChannelsAsync_DeletesOnlyExactSameNamedSameTypeMarker()
+        {
+            var service = CreateService();
+            var playlist = await service.CreateEmptyPlaylistAsync("Xtream", "xtream://same-name-same-type");
+            await service.AppendChannelsAsync(playlist.Id, new[]
+            {
+                new Channel { Name = "Loading", StreamUrl = "xtream-dummy://live/10", GroupTitle = "News", Type = ChannelType.Live },
+                new Channel { Name = "Loading", StreamUrl = "xtream-dummy://live/20", GroupTitle = "News", Type = ChannelType.Live }
+            });
+
+            await service.ReplaceDummyWithRealChannelsAsync(
+                playlist.Id,
+                "News",
+                new[] { new Channel { Name = "One", StreamUrl = "http://live/one", GroupTitle = "News", Type = ChannelType.Live } },
+                categoryCompleted: true,
+                categoryMarkerStreamUrl: "xtream-dummy://live/10",
+                categoryType: ChannelType.Live);
+
+            using var context = new AppDbContext(_options);
+            var remainingDummy = await context.Channels.SingleAsync(channel => channel.StreamUrl.StartsWith("xtream-dummy://"));
+            Assert.Equal("xtream-dummy://live/20", remainingDummy.StreamUrl);
+        }
+
+        [Fact]
+        public async Task ReplaceDummyWithRealChannelsAsync_EmptyCompletedCategoryDeletesExactMarker()
+        {
+            var service = CreateService();
+            var playlist = await service.CreateEmptyPlaylistAsync("Xtream", "xtream://empty-category");
+            await service.AppendChannelsAsync(playlist.Id, new[]
+            {
+                new Channel { Name = "Loading", StreamUrl = "xtream-dummy://vod/30", GroupTitle = "Empty", Type = ChannelType.VOD }
+            });
+
+            await service.ReplaceDummyWithRealChannelsAsync(
+                playlist.Id,
+                "Empty",
+                Array.Empty<Channel>(),
+                categoryCompleted: true,
+                categoryMarkerStreamUrl: "xtream-dummy://vod/30",
+                categoryType: ChannelType.VOD);
+
+            using var context = new AppDbContext(_options);
+            Assert.False(await context.Channels.AnyAsync(channel => channel.PlaylistId == playlist.Id));
+        }
+
+        [Fact]
+        public async Task DeleteAllDummiesAsync_PreCanceledScopePreservesRecoveryMarkersAndCount()
+        {
+            var service = CreateService();
+            var playlist = await service.CreateEmptyPlaylistAsync("Xtream", "xtream://cancel-dummy-cleanup");
+            await service.AppendChannelsAsync(playlist.Id, new[]
+            {
+                new Channel { Name = "Loading", StreamUrl = "xtream-dummy://live/40", GroupTitle = "News", Type = ChannelType.Live }
+            });
+            using var cancellation = new CancellationTokenSource();
+            cancellation.Cancel();
+
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+                service.DeleteAllDummiesAsync(playlist.Id, cancellation.Token));
+
+            using var context = new AppDbContext(_options);
+            Assert.True(await context.Channels.AnyAsync(channel => channel.StreamUrl == "xtream-dummy://live/40"));
+            Assert.Equal(1, (await context.Playlists.SingleAsync(item => item.Id == playlist.Id)).ChannelCount);
         }
 
         [Fact]

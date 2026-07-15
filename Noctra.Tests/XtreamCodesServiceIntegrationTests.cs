@@ -1,6 +1,7 @@
 using Moq;
 using Moq.Protected;
 using Noctra.Models;
+using Noctra.Diagnostics;
 using Noctra.Services;
 using Noctra.Services.Interfaces;
 using System;
@@ -206,21 +207,33 @@ namespace Noctra.Tests
                 }).ToArray());
 
             var batches = new List<(int Count, bool Completed)>();
+            var probe = new RecordingPerformanceProbe();
+            PerformanceTrace.Probe = probe;
 
-            await _service.GetChannelsProgressiveBatchedAsync(
-                baseUrl,
-                "user",
-                "pass",
-                includeVod: false,
-                onCategoriesDiscovered: (categories, _) => Task.FromResult(categories),
-                onCategoryBatchLoaded: (channels, _, completed) =>
-                {
-                    batches.Add((channels.Count, completed));
-                    return Task.CompletedTask;
-                });
+            try
+            {
+                await _service.GetChannelsProgressiveBatchedAsync(
+                    baseUrl,
+                    "user",
+                    "pass",
+                    includeVod: false,
+                    onCategoriesDiscovered: (categories, _) => Task.FromResult(categories),
+                    onCategoryBatchLoaded: (channels, _, completed) =>
+                    {
+                        batches.Add((channels.Count, completed));
+                        return Task.CompletedTask;
+                    });
+            }
+            finally
+            {
+                PerformanceTrace.Probe = NullPerformanceProbe.Instance;
+            }
 
             Assert.Equal(new[] { 500, 500, 201 }, batches.Select(batch => batch.Count));
             Assert.Equal(new[] { false, false, true }, batches.Select(batch => batch.Completed));
+            Assert.Contains(probe.Events, item => item.Name == "xtream.categories.ready" && item.Value == 1);
+            Assert.Equal(3, probe.Events.Count(item => item.Name == "xtream.batch.ready"));
+            Assert.Contains(probe.Events, item => item.Name == "xtream.import.complete" && item.Value == 1201);
         }
 
         [Fact]
@@ -273,7 +286,7 @@ namespace Noctra.Tests
                 onCategoriesDiscovered: (categories, _) => Task.FromResult(categories),
                 onCategoryBatchLoaded: (channels, category, completed) =>
                 {
-                    batches.Add((category, channels.Count, completed));
+                    batches.Add((category.Name, channels.Count, completed));
                     return Task.CompletedTask;
                 });
 
@@ -281,6 +294,31 @@ namespace Noctra.Tests
             Assert.Equal("Working", successfulBatch.Category);
             Assert.Equal(1, successfulBatch.Count);
             Assert.True(successfulBatch.Completed);
+        }
+
+        [Fact]
+        public async Task GetChannelsProgressiveBatchedAsync_PersistenceFailure_IsNotSwallowedAsCategoryFailure()
+        {
+            const string baseUrl = "http://persistence-failure-xtream.com";
+            SetupMockByAction(baseUrl, null, new { user_info = new { status = "Active" } });
+            SetupMockByAction(baseUrl, "get_live_categories", new[]
+            {
+                new { category_id = "1", category_name = "Working" }
+            });
+            SetupMockByAction(baseUrl, "get_vod_categories", Array.Empty<object>());
+            SetupMockByAction(baseUrl, "get_series_categories", Array.Empty<object>());
+            SetupMockByAction(baseUrl, "get_live_streams", new[]
+            {
+                new { name = "Working Channel", stream_id = 100, category_id = "1" }
+            });
+
+            await Assert.ThrowsAsync<IOException>(() => _service.GetChannelsProgressiveBatchedAsync(
+                baseUrl,
+                "user",
+                "pass",
+                includeVod: false,
+                onCategoriesDiscovered: (categories, _) => Task.FromResult(categories),
+                onCategoryBatchLoaded: (_, _, _) => throw new IOException("disk full")));
         }
 
         [Fact]
@@ -411,6 +449,15 @@ namespace Noctra.Tests
                     StatusCode = HttpStatusCode.OK,
                     Content = new StringContent(json)
                 }));
+        }
+
+        private sealed class RecordingPerformanceProbe : IPerformanceProbe
+        {
+            public bool IsEnabled => true;
+            public List<(string Name, long Value, string? Scope)> Events { get; } = new();
+
+            public void Mark(string name, long value = 0, string? scope = null)
+                => Events.Add((name, value, scope));
         }
     }
 }

@@ -20,23 +20,30 @@ public interface IPlaylistService
     /// <summary>
     /// Stalker aşamalı yükleme için boş playlist oluşturur.
     /// </summary>
-    Task<Playlist> CreateEmptyPlaylistAsync(string name, string sourceUrl, int? profileId = null, string? epgUrl = null);
+    Task<Playlist> CreateEmptyPlaylistAsync(string name, string sourceUrl, int? profileId = null, string? epgUrl = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Var olan playlist'e kanallar ekler (aşamalı yükleme için).
     /// </summary>
-    Task AppendChannelsAsync(int playlistId, IReadOnlyCollection<Channel> channels);
+    Task AppendChannelsAsync(int playlistId, IReadOnlyCollection<Channel> channels, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Geçici (Dummy) kanalları siler ve yerine gerçek kanalları ekler.
     /// Lazy loading mekanizmasında anlık kategori gösterimi için kullanılır.
     /// </summary>
-    Task ReplaceDummyWithRealChannelsAsync(int playlistId, string groupTitle, IReadOnlyCollection<Channel> realChannels);
+    Task ReplaceDummyWithRealChannelsAsync(
+        int playlistId,
+        string groupTitle,
+        IReadOnlyCollection<Channel> realChannels,
+        bool categoryCompleted = true,
+        CancellationToken cancellationToken = default,
+        string? categoryMarkerStreamUrl = null,
+        ChannelType? categoryType = null);
 
     /// <summary>
     /// Stalker aşamalı yüklemesinde henüz indirilmemiş (geçici kanalı bulunan) kategorileri döndürür.
     /// </summary>
-    Task<List<string>> GetPendingDummyGroupsAsync(int playlistId);
+    Task<List<string>> GetPendingDummyGroupsAsync(int playlistId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Dosyadan playlist ekler
@@ -91,7 +98,7 @@ public interface IPlaylistService
     /// <summary>
     /// Kanal sayısını getirir (tümünü yüklemeden)
     /// </summary>
-    Task<int> GetChannelCountAsync(int playlistId);
+    Task<int> GetChannelCountAsync(int playlistId, CancellationToken cancellationToken = default);
     
     Task UpdateProviderExpirationAsync(int providerId, DateTime expirationDate);
 
@@ -110,19 +117,19 @@ public interface IPlaylistService
     /// WatchHistory kayıtlarındaki ChannelId referanslarını fingerprint eşleştirmesiyle onarır.
     /// Refresh sonrası VOD/Live geçmişinin kaybolmasını engeller.
     /// </summary>
-    Task RepairWatchHistoryChannelIdsAsync(int playlistId);
+    Task RepairWatchHistoryChannelIdsAsync(int playlistId, CancellationToken cancellationToken = default);
 
-    Task<Playlist> CreateRefreshStagingPlaylistAsync(int playlistId);
+    Task<Playlist> CreateRefreshStagingPlaylistAsync(int playlistId, CancellationToken cancellationToken = default);
 
-    Task CommitRefreshStagingPlaylistAsync(int playlistId, int stagingPlaylistId);
+    Task CommitRefreshStagingPlaylistAsync(int playlistId, int stagingPlaylistId, CancellationToken cancellationToken = default);
 
-    Task AbandonRefreshStagingPlaylistAsync(int stagingPlaylistId);
+    Task AbandonRefreshStagingPlaylistAsync(int stagingPlaylistId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Tüm geçici (Dummy) kanalları siler.
     /// Aşamalı yükleme bittiğinde veya iptal edildiğinde temizlik için kullanılır.
     /// </summary>
-    Task DeleteAllDummiesAsync(int playlistId);
+    Task DeleteAllDummiesAsync(int playlistId, CancellationToken cancellationToken = default);
     Task ClearRefreshBackupAsync(int playlistId);
 }
 

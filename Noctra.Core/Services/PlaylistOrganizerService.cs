@@ -17,6 +17,23 @@ public partial class PlaylistOrganizerService : IPlaylistOrganizerService
         if (channels == null || channels.Count == 0)
             return channels ?? new List<Channel>();
 
+        if (trustProviderTypes)
+        {
+            var seenStreamUrls = new HashSet<string>(StringComparer.Ordinal);
+            var providerOrder = new List<Channel>(channels.Count);
+            foreach (var channel in channels)
+            {
+                if (string.IsNullOrWhiteSpace(channel.StreamUrl) ||
+                    seenStreamUrls.Add(channel.StreamUrl))
+                {
+                    providerOrder.Add(channel);
+                }
+            }
+
+            AutoCategorize(providerOrder);
+            return providerOrder;
+        }
+
         var originalCount = channels.Count;
 
         var organized = RemoveDuplicates(channels);

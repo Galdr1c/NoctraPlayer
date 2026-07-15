@@ -18,6 +18,7 @@ using System.Diagnostics;
 using System.Collections.Concurrent;
 using Noctra.Core.Collections;
 using System.Runtime.CompilerServices;
+using Noctra.Diagnostics;
 
 namespace Noctra.ViewModels;
 
@@ -657,6 +658,7 @@ public partial class MainViewModel : ObservableObject
 
         try
         {
+            PerformanceTrace.Mark("profile.scope.cancel", Volatile.Read(ref _profileLoadGeneration), reason);
             cts.Cancel();
         }
         catch (ObjectDisposedException)
@@ -735,6 +737,7 @@ public partial class MainViewModel : ObservableObject
     public async Task LoadProfileAsync(Profile profile)
     {
         if (profile == null) return;
+        PerformanceTrace.Mark("profile.tap", profile.Id, $"profile-{profile.Id}");
         var profileScope = BeginProfileLoadScope(profile.Id);
 
         // Clear UI state from previous profile
@@ -780,6 +783,7 @@ public partial class MainViewModel : ObservableObject
                             {
                                 await LoadPlaylistsAsync();
                             }
+                            PerformanceTrace.Mark("profile.shell.ready", profile.Id, $"profile-{profile.Id}");
                             ThrowIfProfileLoadCancelled(profileScope);
             
                                             if (profile.ProviderAccount.Type == ProfileType.StalkerPortal)
@@ -866,9 +870,10 @@ public partial class MainViewModel : ObservableObject
                                                                         // ── Adım 1: Boş playlist oluştur — UI hemen açılabilir ──────────
                                                                         var sourceUrl = $"{baseUrl}#{username}";
                                                                         var playlist = await _playlistService.CreateEmptyPlaylistAsync(
-                                                                            profile.Name, sourceUrl, profile.Id, epgUrl);
+                                                                            profile.Name, sourceUrl, profile.Id, epgUrl, profileScope.Token);
                                                                         ThrowIfProfileLoadCancelled(profileScope);
                                                                         await LoadPlaylistsAsync();
+                                                                        PerformanceTrace.Mark("profile.shell.ready", profile.Id, $"profile-{profile.Id}");
                                                                         ThrowIfProfileLoadCancelled(profileScope);
                                                     _ = Task.Run(async () =>
                                                     {
@@ -887,6 +892,7 @@ public partial class MainViewModel : ObservableObject
                                                             int importLiveCount = 0;
                                                             int importVodCount = 0;
                                                             int importSeriesCount = 0;
+                                                            PerformanceTrace.Mark("profile.xtream.import.background_start", playlist.Id, $"profile-{profile.Id}");
 
                                                             await _xtreamCodesService.GetChannelsProgressiveBatchedAsync(
                                                                 baseUrl, username, password,
@@ -906,7 +912,7 @@ public partial class MainViewModel : ObservableObject
                                                                     var dummyChannels = categories.Select(c => new Channel
                                                                     {
                                                                         Name = _localizationService.GetString("Main.Status.LoadingContent"),
-                                                                        StreamUrl = $"xtream-dummy://{c.Id}",
+                                                                        StreamUrl = c.MarkerStreamUrl,
                                                                         GroupTitle = c.Name,
                                                                         Type = c.Type == "live" ? ChannelType.Live : (c.Type == "series" ? ChannelType.Series : ChannelType.VOD)
                                                                     }).ToList();
@@ -916,20 +922,28 @@ public partial class MainViewModel : ObservableObject
                                                                         dummyChannels,
                                                                         cancellationToken: profileScope.Token);
                                                             
-                                                                    await _playlistService.AppendChannelsAsync(playlist.Id, dummyChannels);
+                                                                    await _playlistService.AppendChannelsAsync(playlist.Id, dummyChannels, profileScope.Token);
+                                                                    PerformanceTrace.Mark("profile.xtream.categories.persisted", categories.Count, $"playlist-{playlist.Id}");
                                                                     BeginInvokeIfProfileScopeActive(profileScope, () =>
                                                                     {
                                                                         if (SelectedPlaylist?.Id == playlist.Id) _ = LoadChannelsAsync(playlist.Id);
                                                                     });
                                                                     return categories;
                                                                 },
-                                                                onCategoryBatchLoaded: async (channels, groupName, categoryCompleted) =>
+                                                                onCategoryBatchLoaded: async (channels, category, categoryCompleted) =>
                                                                 {
+                                                                    var groupName = category.Name;
                                                                     ThrowIfProfileLoadCancelled(profileScope);
                                                                     await _playlistService.ReplaceDummyWithRealChannelsAsync(
                                                                         playlist.Id,
                                                                         groupName,
-                                                                        channels.ToList());
+                                                                        channels.ToList(),
+                                                                        categoryCompleted,
+                                                                        profileScope.Token,
+                                                                        category.MarkerStreamUrl,
+                                                                        category.Type == "live" ? ChannelType.Live :
+                                                                            category.Type == "series" ? ChannelType.Series : ChannelType.VOD);
+                                                                    PerformanceTrace.Mark("profile.xtream.batch.persisted", channels.Count, $"playlist-{playlist.Id}");
                                                                     ThrowIfProfileLoadCancelled(profileScope);
 
                                                                     foreach (var channel in channels)
@@ -974,37 +988,40 @@ public partial class MainViewModel : ObservableObject
                                                                     },
                                                                     cancellationToken: profileScope.Token);
 
+                                                                    await _playlistService.DeleteAllDummiesAsync(playlist.Id, profileScope.Token);
+                                                                    ThrowIfProfileLoadCancelled(profileScope);
+                                                                    BeginInvokeIfProfileScopeActive(profileScope, () =>
+                                                                    {
+                                                                        StatusMessage = _localizationService.GetString("Main.Status.XtreamLoaded");
+                                                                        IsChannelLoading = false;
+                                                                        ChannelLoadingProgress = 100;
+                                                                        if (SelectedPlaylist?.Id == playlist.Id) _ = LoadChannelsAsync(playlist.Id);
+                                                                    });
+                                                                    PerformanceTrace.Mark("profile.xtream.import.complete", playlist.Id, $"profile-{profile.Id}");
+
                                                                     try
                                                                     {
                                                                         BeginInvokeIfProfileScopeActive(profileScope, () => StatusMessage = _localizationService.GetString("Main.Status.OrganizingMedia"));
+                                                                        PerformanceTrace.Mark("series.aggregate.start", playlist.Id, $"profile-{profile.Id}");
                                                                         await _mediaService.AggregateContentAsync(playlist.Id, profileScope.Token);
                                                                         ThrowIfProfileLoadCancelled(profileScope);
                                                                         _mediaService.RaiseAggregationCompleted(playlist.Id);
+                                                                        PerformanceTrace.Mark("series.aggregate.complete", playlist.Id, $"profile-{profile.Id}");
+                                                                    }
+                                                                    catch (OperationCanceledException) when (profileScope.Token.IsCancellationRequested)
+                                                                    {
+                                                                        throw;
                                                                     }
                                                                     catch (Exception ex)
                                                                     {
                                                                         _logger?.LogError(ex, "[Xtream] AggregateContent failed for playlist {PlaylistId}", playlist.Id);
                                                                     }
-
-                                                                    BeginInvokeIfProfileScopeActiveAsync(profileScope, async () =>
-                                                                    {
-                                                                        StatusMessage = _localizationService.GetString("Main.Status.XtreamLoaded");
-                                                                        
-                                                                        // Temizlik: Yüklenemeyen kategorilerin taslak kanallarını sil
-                                                                        await _playlistService.DeleteAllDummiesAsync(playlist.Id);
-
-                                                                        IsChannelLoading = false;
-                                                                        ChannelLoadingProgress = 100;
-                                                                        
-                                                                        // Başarı durumunda son bir yükleme yaparak 
-                                                                        // dummy kanalların temizlendiğinden emin olalım.
-                                                                        if (SelectedPlaylist?.Id == playlist.Id) _ = LoadChannelsAsync(playlist.Id);
-                                                                    });
                                                                     await CompleteProviderImportJobAsync(importJob, "Completed", profileScope.Token);
                                                                 }
                                                         catch (OperationCanceledException)
                                                         {
                                                             _logger?.LogDebug("[Xtream] Initial load cancelled for profile {ProfileId}", profile.Id);
+                                                            await CancelProviderImportJobAsync(importJob);
                                                         }
                                                         catch (Exception ex)
                                                         {
@@ -1012,7 +1029,7 @@ public partial class MainViewModel : ObservableObject
                                                             BeginInvokeIfProfileScopeActiveAsync(profileScope, async () =>
                                                             {
                                                                 StatusMessage = UserFriendlyErrorMessage.WithPrefix(_localizationService.GetString("Main.Error.XtreamServer"), ex);
-                                                                await _playlistService.DeleteAllDummiesAsync(playlist.Id);
+                                                                await _playlistService.DeleteAllDummiesAsync(playlist.Id, profileScope.Token);
                                                                 IsChannelLoading = false;
                                                             });
                                                             await FailProviderImportJobAsync(importJob, ex);
@@ -1031,7 +1048,7 @@ public partial class MainViewModel : ObservableObject
                         // ── Adım 1: Boş playlist oluştur — UI hemen açılabilir ──────────
                         // Kanallar geldikçe buraya eklenecek
                         var playlist = await _playlistService.CreateEmptyPlaylistAsync(
-                            profile.Name, sourceUrl, profile.Id, epgUrl);
+                            profile.Name, sourceUrl, profile.Id, epgUrl, profileScope.Token);
                         ThrowIfProfileLoadCancelled(profileScope);
                         await LoadPlaylistsAsync();
                         ThrowIfProfileLoadCancelled(profileScope);
@@ -1099,7 +1116,7 @@ public partial class MainViewModel : ObservableObject
                                             dummyChannels,
                                             cancellationToken: profileScope.Token);
 
-                                        await _playlistService.AppendChannelsAsync(playlist.Id, dummyChannels);
+                                        await _playlistService.AppendChannelsAsync(playlist.Id, dummyChannels, profileScope.Token);
 
                                         // UI'yi hemen güncelle — gruplar (sol menü) anında dolacak
                                         BeginInvokeIfProfileScopeActive(profileScope, () =>
@@ -1116,7 +1133,12 @@ public partial class MainViewModel : ObservableObject
                                     {
                                         ThrowIfProfileLoadCancelled(profileScope);
                                         // Kategori dolduğunda sahte kanalı silip gerçekleriyle değiştir
-                                        await _playlistService.ReplaceDummyWithRealChannelsAsync(playlist.Id, category.Name, channels);
+                                        await _playlistService.ReplaceDummyWithRealChannelsAsync(
+                                            playlist.Id,
+                                            category.Name,
+                                            channels,
+                                            categoryCompleted: true,
+                                            cancellationToken: profileScope.Token);
                                         ThrowIfProfileLoadCancelled(profileScope);
 
                                         foreach (var channel in channels)
@@ -1173,7 +1195,7 @@ public partial class MainViewModel : ObservableObject
                                     StatusMessage = _localizationService.GetString("Main.Status.AllContentReady");
 
                                     // Temizlik: Yüklenemeyen kategorilerin taslak kanallarını sil
-                                    await _playlistService.DeleteAllDummiesAsync(playlist.Id);
+                                    await _playlistService.DeleteAllDummiesAsync(playlist.Id, profileScope.Token);
 
                                     IsChannelLoading = false;
                                     ChannelLoadingProgress = 100;
@@ -1187,6 +1209,7 @@ public partial class MainViewModel : ObservableObject
                             catch (OperationCanceledException)
                             {
                                 _logger?.LogDebug("[Stalker] Initial load cancelled for profile {ProfileId}", profile.Id);
+                                await CancelProviderImportJobAsync(importJob);
                             }
                             catch (Exception ex)
                             {
@@ -1195,7 +1218,7 @@ public partial class MainViewModel : ObservableObject
                                     StatusMessage = UserFriendlyErrorMessage.WithPrefix(
                                         _localizationService.GetString("Main.Error.ContentLoad"), ex);
                                     
-                                    await _playlistService.DeleteAllDummiesAsync(playlist.Id);
+                                    await _playlistService.DeleteAllDummiesAsync(playlist.Id, profileScope.Token);
                                     IsChannelLoading = false;
                                 });
                                 await FailProviderImportJobAsync(importJob, ex);
@@ -1381,11 +1404,44 @@ public partial class MainViewModel : ObservableObject
             List<string> pendingGroups = new();
             var totalCategories = 0;
             var loadedCategories = 0;
+            var recoverPlaylistWithoutMarkers = false;
             if (!isFullRefresh)
             {
                 ThrowIfProfileLoadCancelled(profileScope);
-                pendingGroups = await _playlistService.GetPendingDummyGroupsAsync(playlist.Id);
-                if (pendingGroups.Count == 0) return;
+                pendingGroups = await _playlistService.GetPendingDummyGroupsAsync(playlist.Id, profileScope.Token);
+                if (pendingGroups.Count == 0)
+                {
+                    var persistedChannelCount = await _playlistService.GetChannelCountAsync(playlist.Id, profileScope.Token);
+                    var activeImport = await _providerImportJobCoordinator.GetActiveAsync(profile.Id, profileScope.Token);
+                    if (persistedChannelCount == 0)
+                    {
+                        // The process can die after the empty playlist is created but before
+                        // category markers are persisted. Rediscover every category in that case.
+                        recoverPlaylistWithoutMarkers = true;
+                    }
+                    else
+                    {
+                        if (activeImport?.PlaylistId == playlist.Id)
+                        {
+                            BeginInvokeIfProfileScopeActive(profileScope, () =>
+                            {
+                                IsChannelLoading = false;
+                                ChannelLoadingProgress = 100;
+                            });
+                            await _mediaService.AggregateContentAsync(playlist.Id, profileScope.Token);
+                            ThrowIfProfileLoadCancelled(profileScope);
+                            _mediaService.RaiseAggregationCompleted(playlist.Id);
+                            await CompleteProviderImportJobAsync(activeImport, "Recovered - aggregation complete", profileScope.Token);
+                        }
+
+                        BeginInvokeIfProfileScopeActive(profileScope, () =>
+                        {
+                            IsChannelLoading = false;
+                            ChannelLoadingProgress = 100;
+                        });
+                        return;
+                    }
+                }
             }
 
             importJob = await StartProviderImportJobAsync(
@@ -1395,7 +1451,7 @@ public partial class MainViewModel : ObservableObject
                 isFullRefresh ? "Refreshing categories" : "Resuming categories",
                 profileScope.Token);
             refreshStagingPlaylist = isFullRefresh
-                ? await _playlistService.CreateRefreshStagingPlaylistAsync(playlist.Id)
+                ? await _playlistService.CreateRefreshStagingPlaylistAsync(playlist.Id, profileScope.Token)
                 : null;
             var writePlaylist = refreshStagingPlaylist ?? playlist;
 
@@ -1413,7 +1469,7 @@ public partial class MainViewModel : ObservableObject
                 onCategoriesDiscovered: async (categories, prioritizeAction) =>
                 {
                     ThrowIfProfileLoadCancelled(profileScope);
-                    if (isFullRefresh) 
+                    if (isFullRefresh || recoverPlaylistWithoutMarkers)
                     {
                         totalCategories = categories.Count;
                         loadedCategories = 0;
@@ -1426,7 +1482,7 @@ public partial class MainViewModel : ObservableObject
                         var dummyChannels = categories.Select(c => new Channel
                         {
                             Name = _localizationService.GetString("Main.Status.LoadingContent"),
-                            StreamUrl = $"xtream-dummy://{c.Id}",
+                            StreamUrl = c.MarkerStreamUrl,
                             GroupTitle = c.Name,
                             Type = c.Type == "live" ? ChannelType.Live : (c.Type == "series" ? ChannelType.Series : ChannelType.VOD)
                         }).ToList();
@@ -1437,7 +1493,7 @@ public partial class MainViewModel : ObservableObject
                             dummyChannels,
                             cancellationToken: profileScope.Token);
 
-                        await _playlistService.AppendChannelsAsync(writePlaylist.Id, dummyChannels);
+                        await _playlistService.AppendChannelsAsync(writePlaylist.Id, dummyChannels, profileScope.Token);
                         BeginInvokeIfProfileScopeActive(profileScope, () =>
                         {
                             var stats = string.Format(CultureInfo.CurrentCulture,
@@ -1462,13 +1518,19 @@ public partial class MainViewModel : ObservableObject
                         cancellationToken: profileScope.Token);
                     return toLoad;
                 },
-                onCategoryBatchLoaded: async (channels, groupName, categoryCompleted) =>
+                onCategoryBatchLoaded: async (channels, category, categoryCompleted) =>
                 {
+                    var groupName = category.Name;
                     ThrowIfProfileLoadCancelled(profileScope);
                     await _playlistService.ReplaceDummyWithRealChannelsAsync(
                         writePlaylist.Id,
                         groupName,
-                        channels.ToList());
+                        channels.ToList(),
+                        categoryCompleted,
+                        profileScope.Token,
+                        category.MarkerStreamUrl,
+                        category.Type == "live" ? ChannelType.Live :
+                            category.Type == "series" ? ChannelType.Series : ChannelType.VOD);
                     ThrowIfProfileLoadCancelled(profileScope);
 
                     foreach (var channel in channels)
@@ -1517,8 +1579,8 @@ public partial class MainViewModel : ObservableObject
             if (isFullRefresh)
             {
                 ThrowIfProfileLoadCancelled(profileScope);
-                await _playlistService.DeleteAllDummiesAsync(writePlaylist.Id);
-                await _playlistService.CommitRefreshStagingPlaylistAsync(playlist.Id, writePlaylist.Id);
+                await _playlistService.DeleteAllDummiesAsync(writePlaylist.Id, profileScope.Token);
+                await _playlistService.CommitRefreshStagingPlaylistAsync(playlist.Id, writePlaylist.Id, profileScope.Token);
                 ThrowIfProfileLoadCancelled(profileScope);
                 BeginInvokeIfProfileScopeActive(profileScope, () =>
                 {
@@ -1529,9 +1591,17 @@ public partial class MainViewModel : ObservableObject
             {
                 // WatchHistory onarımı: Eski kanal fingerprint'lerini yeni kanal ID'leriyle eşleştir
                 ThrowIfProfileLoadCancelled(profileScope);
-                await _playlistService.RepairWatchHistoryChannelIdsAsync(playlist.Id);
+                await _playlistService.RepairWatchHistoryChannelIdsAsync(playlist.Id, profileScope.Token);
                 ThrowIfProfileLoadCancelled(profileScope);
             }
+
+            BeginInvokeIfProfileScopeActive(profileScope, () =>
+            {
+                IsChannelLoading = false;
+                ChannelLoadingProgress = 100;
+                if (SelectedPlaylist?.Id == playlist.Id) _ = LoadChannelsAsync(playlist.Id);
+            });
+            PerformanceTrace.Mark("profile.xtream.import.complete", playlist.Id, $"profile-{profile.Id}");
 
             BeginInvokeIfProfileScopeActive(profileScope, () =>
                 ReportChannelRefreshProgress(92, _localizationService.GetString("Main.Status.OrganizingMedia")));
@@ -1541,10 +1611,15 @@ public partial class MainViewModel : ObservableObject
                 ThrowIfProfileLoadCancelled(profileScope);
                 _mediaService.RaiseAggregationCompleted(playlist.Id);
             }
+            catch (OperationCanceledException) when (profileScope.Token.IsCancellationRequested)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 _logger?.LogError(ex, "[Xtream] Resume AggregateContent failed for playlist {Id}", playlist.Id);
             }
+            await CompleteProviderImportJobAsync(importJob, "Completed", profileScope.Token);
 
             BeginInvokeIfProfileScopeActive(profileScope, () =>
             {
@@ -1554,7 +1629,6 @@ public partial class MainViewModel : ObservableObject
                     CompleteChannelRefreshProgress(message);
                 }
             });
-            await CompleteProviderImportJobAsync(importJob, "Completed", profileScope.Token);
         }
         catch (OperationCanceledException)
         {
@@ -1621,8 +1695,8 @@ public partial class MainViewModel : ObservableObject
             if (!isFullRefresh)
             {
                 ThrowIfProfileLoadCancelled(profileScope);
-                var totalChannelCount = await _playlistService.GetChannelCountAsync(playlist.Id);
-                pendingGroups = await _playlistService.GetPendingDummyGroupsAsync(playlist.Id);
+                var totalChannelCount = await _playlistService.GetChannelCountAsync(playlist.Id, profileScope.Token);
+                pendingGroups = await _playlistService.GetPendingDummyGroupsAsync(playlist.Id, profileScope.Token);
                 
                 _logger?.LogInformation($"[Stalker] Startup check for playlist {playlist.Id}: Total channels={totalChannelCount}, Pending dummy groups={pendingGroups.Count}");
 
@@ -1656,7 +1730,7 @@ public partial class MainViewModel : ObservableObject
                 isFullRefresh ? "Refreshing categories" : "Resuming categories",
                 profileScope.Token);
             refreshStagingPlaylist = isFullRefresh
-                ? await _playlistService.CreateRefreshStagingPlaylistAsync(playlist.Id)
+                ? await _playlistService.CreateRefreshStagingPlaylistAsync(playlist.Id, profileScope.Token)
                 : null;
             var writePlaylist = refreshStagingPlaylist ?? playlist;
 
@@ -1728,7 +1802,7 @@ public partial class MainViewModel : ObservableObject
                             dummyChannels,
                             cancellationToken: profileScope.Token);
 
-                        await _playlistService.AppendChannelsAsync(writePlaylist.Id, dummyChannels);
+                        await _playlistService.AppendChannelsAsync(writePlaylist.Id, dummyChannels, profileScope.Token);
                         BeginInvokeIfProfileScopeActive(profileScope, () =>
                         {
                             if (!isFullRefresh && SelectedPlaylist?.Id == playlist.Id) _ = LoadChannelsAsync(playlist.Id);
@@ -1768,11 +1842,13 @@ public partial class MainViewModel : ObservableObject
                         await _playlistService.ReplaceDummyWithRealChannelsAsync(
                             writePlaylist.Id,
                             category.Name,
-                            channels);
+                            channels,
+                            categoryCompleted: true,
+                            cancellationToken: profileScope.Token);
                     }
                     else
                     {
-                        await _playlistService.AppendChannelsAsync(writePlaylist.Id, channels);
+                        await _playlistService.AppendChannelsAsync(writePlaylist.Id, channels, profileScope.Token);
                     }
                     ThrowIfProfileLoadCancelled(profileScope);
 
@@ -1812,8 +1888,8 @@ public partial class MainViewModel : ObservableObject
             if (isFullRefresh)
             {
                 ThrowIfProfileLoadCancelled(profileScope);
-                await _playlistService.DeleteAllDummiesAsync(writePlaylist.Id);
-                await _playlistService.CommitRefreshStagingPlaylistAsync(playlist.Id, writePlaylist.Id);
+                await _playlistService.DeleteAllDummiesAsync(writePlaylist.Id, profileScope.Token);
+                await _playlistService.CommitRefreshStagingPlaylistAsync(playlist.Id, writePlaylist.Id, profileScope.Token);
                 ThrowIfProfileLoadCancelled(profileScope);
                 BeginInvokeIfProfileScopeActive(profileScope, () =>
                 {
@@ -1824,7 +1900,7 @@ public partial class MainViewModel : ObservableObject
             {
                 // WatchHistory onarımı: Eski kanal fingerprint'lerini yeni kanal ID'leriyle eşleştir
                 ThrowIfProfileLoadCancelled(profileScope);
-                await _playlistService.RepairWatchHistoryChannelIdsAsync(playlist.Id);
+                await _playlistService.RepairWatchHistoryChannelIdsAsync(playlist.Id, profileScope.Token);
                 ThrowIfProfileLoadCancelled(profileScope);
             }
 
@@ -2125,6 +2201,10 @@ public partial class MainViewModel : ObservableObject
             await Task.WhenAll(
                 LoadMoreChannelsAsync(),
                 LoadHomeContentAsync());
+            PerformanceTrace.Mark(
+                "profile.first_page.data_ready",
+                Math.Min(30, FilteredChannels.Count),
+                $"playlist-{playlistId}");
 
             StatusMessage = string.Format(CultureInfo.CurrentCulture,
                 _localizationService.GetString("Main.Status.ContentsReadyFormat"), meta.TotalCount);

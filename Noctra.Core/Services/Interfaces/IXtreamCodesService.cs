@@ -7,6 +7,8 @@ public class XtreamCategory
     public string Id { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
     public string Type { get; set; } = string.Empty; // "live" | "vod" | "series"
+
+    public string MarkerStreamUrl => $"xtream-dummy://{Type.ToLowerInvariant()}/{Id}";
 }
 
 public interface IXtreamCodesService
@@ -47,7 +49,7 @@ public interface IXtreamCodesService
         string password,
         bool includeVod,
         Func<List<XtreamCategory>, Action<string>, Task<List<XtreamCategory>>> onCategoriesDiscovered,
-        Func<IReadOnlyList<Channel>, string, bool, Task> onCategoryBatchLoaded,
+        Func<IReadOnlyList<Channel>, XtreamCategory, bool, Task> onCategoryBatchLoaded,
         CancellationToken cancellationToken = default);
 
     /// <summary>

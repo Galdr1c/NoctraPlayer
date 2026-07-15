@@ -15,6 +15,21 @@ namespace Noctra.Tests;
 
 public class PlaylistOrganizerServiceTests
 {
+    [Fact]
+    public void Organize_TrustedProviderBatch_PreservesProviderOrderAndDeduplicatesByStreamUrl()
+    {
+        var service = new PlaylistOrganizerService();
+        var channels = new List<Channel>
+        {
+            new() { Name = "Zulu", StreamUrl = "http://provider/2", GroupTitle = "Provider", Type = ChannelType.Live },
+            new() { Name = "Alpha", StreamUrl = "http://provider/1", GroupTitle = "Provider", Type = ChannelType.Live },
+            new() { Name = "Duplicate", StreamUrl = "http://provider/2", GroupTitle = "Provider", Type = ChannelType.Live }
+        };
+
+        var result = service.Organize(channels, trustProviderTypes: true);
+
+        Assert.Equal(new[] { "Zulu", "Alpha" }, result.Select(channel => channel.Name));
+    }
     private readonly PlaylistOrganizerService _sut = new();
 
     // ─── Yardımcı fabrikalar ──────────────────────────────────────────────────

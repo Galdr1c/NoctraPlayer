@@ -1,6 +1,8 @@
 using Microsoft.Extensions.Logging;
 using Noctra.Models;
 using Noctra.Services.Interfaces;
+using System.Collections.Concurrent;
+using System.Diagnostics;
 
 namespace Noctra.ViewModels;
 
@@ -12,6 +14,9 @@ internal sealed class ProviderImportJobCoordinator
 {
     private readonly IImportJobService? _importJobService;
     private readonly ILogger? _logger;
+    private readonly ConcurrentDictionary<int, long> _lastProgressWriteTicks = new();
+    private readonly ConcurrentDictionary<int, ActiveImportJobStatus> _pendingProgressStatuses = new();
+    private static readonly long ProgressWriteIntervalTicks = Stopwatch.Frequency / 2;
 
     public ProviderImportJobCoordinator(IImportJobService? importJobService, ILogger? logger)
     {
@@ -52,6 +57,10 @@ internal sealed class ProviderImportJobCoordinator
             return new(null, null);
         }
     }
+
+    public Task<ImportJob?> GetActiveAsync(int profileId, CancellationToken cancellationToken = default)
+        => _importJobService?.GetActiveForProfileAsync(profileId, cancellationToken)
+           ?? Task.FromResult<ImportJob?>(null);
 
     public async Task<ActiveImportJobStatus?> ReportProgressAsync(
         ImportJob? importJob,
@@ -94,7 +103,32 @@ internal sealed class ProviderImportJobCoordinator
 
         try
         {
+            if (_pendingProgressStatuses.TryRemove(importJob.Id, out var pendingStatus))
+            {
+                try
+                {
+                    await _importJobService.ReportProgressAsync(
+                        importJob.Id,
+                        pendingStatus.Stage,
+                        pendingStatus.LiveCount,
+                        pendingStatus.VodCount,
+                        pendingStatus.SeriesCount,
+                        pendingStatus.FailedCategoryCount,
+                        cancellationToken);
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    _logger?.LogWarning(ex, "Failed to flush final provider import progress for job {ImportJobId}.", importJob.Id);
+                }
+            }
+
             await _importJobService.CompleteAsync(importJob.Id, stage, cancellationToken);
+            _lastProgressWriteTicks.TryRemove(importJob.Id, out _);
+            _pendingProgressStatuses.TryRemove(importJob.Id, out _);
             return ActiveImportJobStatus.Clear;
         }
         catch (OperationCanceledException)
@@ -104,6 +138,38 @@ internal sealed class ProviderImportJobCoordinator
         catch (Exception ex)
         {
             _logger?.LogWarning(ex, "Failed to complete provider import job {ImportJobId}.", importJob.Id);
+            return null;
+        }
+    }
+
+    public async Task<ActiveImportJobStatus?> CompleteActiveAsync(
+        int profileId,
+        int playlistId,
+        string stage,
+        CancellationToken cancellationToken = default)
+    {
+        if (_importJobService is null)
+        {
+            return null;
+        }
+
+        try
+        {
+            var active = await _importJobService.GetActiveForProfileAsync(profileId, cancellationToken);
+            if (active?.PlaylistId != playlistId)
+            {
+                return null;
+            }
+
+            return await CompleteAsync(active, stage, cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(ex, "Failed to complete recovered provider import for profile {ProfileId}.", profileId);
             return null;
         }
     }
@@ -118,6 +184,8 @@ internal sealed class ProviderImportJobCoordinator
         try
         {
             await _importJobService.FailAsync(importJob.Id, exception.GetBaseException().Message);
+            _lastProgressWriteTicks.TryRemove(importJob.Id, out _);
+            _pendingProgressStatuses.TryRemove(importJob.Id, out _);
             return ActiveImportJobStatus.Clear;
         }
         catch (Exception ex)
@@ -137,6 +205,8 @@ internal sealed class ProviderImportJobCoordinator
         try
         {
             await _importJobService.CancelAsync(importJob.Id, stage, CancellationToken.None);
+            _lastProgressWriteTicks.TryRemove(importJob.Id, out _);
+            _pendingProgressStatuses.TryRemove(importJob.Id, out _);
             return ActiveImportJobStatus.Clear;
         }
         catch (Exception ex)
@@ -156,6 +226,14 @@ internal sealed class ProviderImportJobCoordinator
             return null;
         }
 
+        var now = Stopwatch.GetTimestamp();
+        if (_lastProgressWriteTicks.TryGetValue(importJob.Id, out var lastWrite) &&
+            now - lastWrite < ProgressWriteIntervalTicks)
+        {
+            _pendingProgressStatuses[importJob.Id] = status;
+            return status;
+        }
+
         try
         {
             await _importJobService.ReportProgressAsync(
@@ -167,6 +245,8 @@ internal sealed class ProviderImportJobCoordinator
                 status.FailedCategoryCount,
                 cancellationToken);
 
+            _lastProgressWriteTicks[importJob.Id] = now;
+            _pendingProgressStatuses.TryRemove(importJob.Id, out _);
             return status;
         }
         catch (OperationCanceledException)

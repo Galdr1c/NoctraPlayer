@@ -22,7 +22,27 @@ public sealed class ImportJobService : IImportJobService
         CancellationToken cancellationToken = default)
     {
         await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken).ConfigureAwait(false);
+        await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
         var now = DateTime.UtcNow;
+
+        if (profileId.HasValue)
+        {
+            var abandonedJobs = await context.ImportJobs
+                .Where(existing => existing.ProfileId == profileId &&
+                    (existing.Status == ImportJobStatus.Running || existing.Status == ImportJobStatus.Queued))
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+
+            foreach (var abandoned in abandonedJobs)
+            {
+                abandoned.Status = ImportJobStatus.Canceled;
+                abandoned.Stage = "Recovered after interruption";
+                abandoned.ErrorMessage = null;
+                abandoned.UpdatedAt = now;
+                abandoned.CompletedAt = now;
+            }
+        }
+
         var job = new ImportJob
         {
             Kind = kind,
@@ -37,6 +57,7 @@ public sealed class ImportJobService : IImportJobService
 
         context.ImportJobs.Add(job);
         await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
         return job;
     }
 

@@ -173,6 +173,24 @@ public sealed class ImportJobServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task StartAsync_CancelsAbandonedActiveJobForSameProfile()
+    {
+        var service = new ImportJobService(_contextFactory);
+        var abandoned = await service.StartAsync(ImportJobKind.Xtream, profileId: 9, playlistId: 22, sourceName: "Abandoned");
+
+        var replacement = await service.StartAsync(ImportJobKind.Xtream, profileId: 9, playlistId: 22, sourceName: "Replacement");
+
+        await using var context = new AppDbContext(_options);
+        var oldPersisted = await context.ImportJobs.SingleAsync(job => job.Id == abandoned.Id);
+        Assert.Equal(ImportJobStatus.Canceled, oldPersisted.Status);
+        Assert.Equal("Recovered after interruption", oldPersisted.Stage);
+        Assert.NotNull(oldPersisted.CompletedAt);
+        Assert.Equal(replacement.Id, (await service.GetActiveForProfileAsync(9))?.Id);
+        Assert.Equal(1, await context.ImportJobs.CountAsync(job => job.ProfileId == 9 &&
+            (job.Status == ImportJobStatus.Queued || job.Status == ImportJobStatus.Running)));
+    }
+
+    [Fact]
     public async Task GetRecentForProfileAsync_ReturnsNewestJobsLimitedToProfile()
     {
         var service = new ImportJobService(_contextFactory);

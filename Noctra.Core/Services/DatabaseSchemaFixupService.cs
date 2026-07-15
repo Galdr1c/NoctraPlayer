@@ -52,6 +52,7 @@ public sealed class DatabaseSchemaFixupService : IDatabaseSchemaFixupService
         await TryExecuteAsync(context, "CREATE INDEX IF NOT EXISTS IX_Channels_Playlist_Type_Id ON Channels(PlaylistId, Type, Id DESC);", cancellationToken).ConfigureAwait(false);
         await TryExecuteAsync(context, "CREATE INDEX IF NOT EXISTS IX_Channels_Playlist_Group_Id ON Channels(PlaylistId, GroupTitle, Id DESC);", cancellationToken).ConfigureAwait(false);
         await TryExecuteAsync(context, "CREATE INDEX IF NOT EXISTS IX_Channels_Playlist_Favorite_Id ON Channels(PlaylistId, IsFavorite, Id DESC);", cancellationToken).ConfigureAwait(false);
+        await TryExecuteAsync(context, "CREATE INDEX IF NOT EXISTS IX_Channels_PlaylistId_StreamUrl ON Channels(PlaylistId, StreamUrl);", cancellationToken).ConfigureAwait(false);
 
         await AddColumnIfMissingAsync(context, "Episodes", "IsCompleted", "INTEGER NOT NULL DEFAULT 0", cancellationToken).ConfigureAwait(false);
         await AddColumnIfMissingAsync(context, "Episodes", "IntroStartSec", "REAL", cancellationToken).ConfigureAwait(false);
@@ -79,6 +80,7 @@ public sealed class DatabaseSchemaFixupService : IDatabaseSchemaFixupService
         await AddColumnIfMissingAsync(context, "Series", "GroupTitle", "TEXT", cancellationToken).ConfigureAwait(false);
         await AddColumnIfMissingAsync(context, "Series", "NetworkName", "TEXT", cancellationToken).ConfigureAwait(false);
         await AddColumnIfMissingAsync(context, "Series", "NetworkLogoUrl", "TEXT", cancellationToken).ConfigureAwait(false);
+        await TryExecuteAsync(context, "CREATE INDEX IF NOT EXISTS IX_Series_PlaylistId ON Series(PlaylistId);", cancellationToken).ConfigureAwait(false);
 
         await TryExecuteAsync(
             context,
@@ -177,6 +179,31 @@ public sealed class DatabaseSchemaFixupService : IDatabaseSchemaFixupService
         await TryExecuteAsync(context, "CREATE INDEX IF NOT EXISTS IX_ImportJobs_ProfileId ON ImportJobs(ProfileId);", cancellationToken).ConfigureAwait(false);
         await TryExecuteAsync(context, "CREATE INDEX IF NOT EXISTS IX_ImportJobs_PlaylistId ON ImportJobs(PlaylistId);", cancellationToken).ConfigureAwait(false);
         await TryExecuteAsync(context, "CREATE INDEX IF NOT EXISTS IX_ImportJobs_ProfileStatusCreated ON ImportJobs(ProfileId, Status, CreatedAt);", cancellationToken).ConfigureAwait(false);
+        await using (var recoveryTransaction = await context.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false))
+        {
+            await context.Database.ExecuteSqlRawAsync(
+            """
+            UPDATE ImportJobs
+            SET Status = 4,
+                Stage = 'Recovered after interruption',
+                ErrorMessage = NULL,
+                UpdatedAt = CURRENT_TIMESTAMP,
+                CompletedAt = CURRENT_TIMESTAMP
+            WHERE Status IN (0, 1)
+              AND ProfileId IS NOT NULL
+              AND Id NOT IN (
+                  SELECT MAX(Id)
+                  FROM ImportJobs
+                  WHERE Status IN (0, 1) AND ProfileId IS NOT NULL
+                  GROUP BY ProfileId
+              );
+            """,
+            cancellationToken).ConfigureAwait(false);
+            await context.Database.ExecuteSqlRawAsync(
+                "CREATE UNIQUE INDEX IF NOT EXISTS IX_ImportJobs_OneActivePerProfile ON ImportJobs(ProfileId) WHERE Status IN (0, 1) AND ProfileId IS NOT NULL;",
+                cancellationToken).ConfigureAwait(false);
+            await recoveryTransaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+        }
 
         await TryExecuteAsync(context, "PRAGMA foreign_keys = ON;", cancellationToken).ConfigureAwait(false);
         await TryExecuteAsync(context, "PRAGMA journal_mode=WAL;", cancellationToken).ConfigureAwait(false);
@@ -191,6 +218,10 @@ public sealed class DatabaseSchemaFixupService : IDatabaseSchemaFixupService
         try
         {
             await context.Database.ExecuteSqlRawAsync(sql, cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch
         {

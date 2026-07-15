@@ -10,6 +10,8 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Text.RegularExpressions;
 using Noctra.Core.Services;
+using Noctra.Diagnostics;
+using System.Diagnostics;
 
 namespace Noctra.Services;
 
@@ -383,29 +385,29 @@ public partial class PlaylistService : IPlaylistService
     /// Kanallar sonradan AppendChannelsAsync ile eklenir.
     /// </summary>
     public async Task<Playlist> CreateEmptyPlaylistAsync(
-        string name, string sourceUrl, int? profileId = null, string? epgUrl = null)
+        string name, string sourceUrl, int? profileId = null, string? epgUrl = null, CancellationToken cancellationToken = default)
     {
         var lockKey = $"empty|{profileId?.ToString() ?? "null"}|{sourceUrl}";
         var gate = AddPlaylistLocks.GetOrAdd(lockKey, _ => new SemaphoreSlim(1, 1));
-        await gate.WaitAsync();
+        await gate.WaitAsync(cancellationToken);
 
         try
         {
-            using var context = await _contextFactory.CreateDbContextAsync();
+            using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
 
             // Var olan aktif playlist'i kontrol et
             var existing = await context.Playlists
                 .FirstOrDefaultAsync(p =>
                     p.Url == sourceUrl &&
                     p.IsActive &&
-                    p.ProfileId == profileId);
+                    p.ProfileId == profileId, cancellationToken);
 
             if (existing != null)
             {
                 if (string.IsNullOrWhiteSpace(existing.EpgUrl) && !string.IsNullOrWhiteSpace(epgUrl))
                 {
                     existing.EpgUrl = NormalizeEpgUrl(epgUrl);
-                    await context.SaveChangesAsync();
+                    await context.SaveChangesAsync(cancellationToken);
                 }
                 return existing;
             }
@@ -423,7 +425,7 @@ public partial class PlaylistService : IPlaylistService
             };
 
             context.Playlists.Add(playlist);
-            await context.SaveChangesAsync();
+            await context.SaveChangesAsync(cancellationToken);
 
             return playlist;
         }
@@ -445,7 +447,7 @@ public partial class PlaylistService : IPlaylistService
     /// Aşamalı yükleme sırasında her kategori bittiğinde çağrılır.
     /// </summary>
     public async Task AppendChannelsAsync(
-        int playlistId, IReadOnlyCollection<Channel> channels)
+        int playlistId, IReadOnlyCollection<Channel> channels, CancellationToken cancellationToken = default)
     {
         if (channels.Count == 0) return;
 
@@ -474,7 +476,7 @@ public partial class PlaylistService : IPlaylistService
                 .Where(channel =>
                     channel.PlaylistId == playlistId &&
                     urlBatch.Contains(channel.StreamUrl))
-                .ToListAsync();
+                .ToListAsync(cancellationToken);
 
             foreach (var existing in existingChannels)
                 existingByStreamUrl[existing.StreamUrl] = existing;
@@ -505,11 +507,11 @@ public partial class PlaylistService : IPlaylistService
                 .Where(channel =>
                     channel.PlaylistId == playlistId &&
                     urlBatch.Contains(channel.StreamUrl))
-                .ExecuteDeleteAsync();
+                .ExecuteDeleteAsync(cancellationToken);
         }
 
         // Mevcut FastSqliteBulkInsertAsync metodunu kullan
-        await FastSqliteBulkInsertAsync(context, organized);
+        await FastSqliteBulkInsertAsync(context, organized, cancellationToken: cancellationToken);
         InvalidateLinearStreamRepair(playlistId);
 
         // Kanal sayısını güncelle
@@ -518,7 +520,7 @@ public partial class PlaylistService : IPlaylistService
             .ExecuteUpdateAsync(s => s
                 .SetProperty(p => p.ChannelCount,
                     p => context.Channels.Count(c => c.PlaylistId == p.Id))
-                .SetProperty(p => p.LastUpdated, DateTime.UtcNow));
+                .SetProperty(p => p.LastUpdated, DateTime.UtcNow), cancellationToken);
     }
 
     /// <summary>
@@ -527,17 +529,51 @@ public partial class PlaylistService : IPlaylistService
     /// Idempotent (tekrar edilebilir) olması için gruba ait mevcut tüm kanalları silip yenilerini yazar.
     /// </summary>
     public async Task ReplaceDummyWithRealChannelsAsync(
-        int playlistId, string groupTitle, IReadOnlyCollection<Channel> realChannels)
+        int playlistId,
+        string groupTitle,
+        IReadOnlyCollection<Channel> realChannels,
+        bool categoryCompleted = true,
+        CancellationToken cancellationToken = default,
+        string? categoryMarkerStreamUrl = null,
+        ChannelType? categoryType = null)
     {
-        using var context = await _contextFactory.CreateDbContextAsync();
+        var scope = $"playlist-{playlistId}";
+        PerformanceTrace.Mark("sqlite.replace.start", realChannels.Count, scope);
+        await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
+        await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
 
         // 1. Önce bu gruba ait SADECE geçici (dummy) kanalları temizle
         // Bu sayede aynı isme sahip farklı kategoriler (örn: Live/VOD Action) birbirini silmez, birleşir.
-        await context.Channels
-            .Where(c => c.PlaylistId == playlistId && 
-                        c.GroupTitle == groupTitle && 
-                        (c.StreamUrl.StartsWith("stalker-dummy://") || c.StreamUrl.StartsWith("xtream-dummy://")))
-            .ExecuteDeleteAsync();
+        var phase = Stopwatch.StartNew();
+        var effectiveCategoryType = categoryType ?? (realChannels.Count > 0
+            ? realChannels.First().Type
+            : (ChannelType?)null);
+        var removedChannelCount = 0;
+        if (categoryCompleted && effectiveCategoryType.HasValue)
+        {
+            if (!string.IsNullOrWhiteSpace(categoryMarkerStreamUrl))
+            {
+                var marker = categoryMarkerStreamUrl;
+                var markerId = marker[(marker.LastIndexOf('/') + 1)..];
+                var legacyMarker = $"xtream-dummy://{markerId}";
+                removedChannelCount = await context.Channels
+                    .Where(c => c.PlaylistId == playlistId &&
+                                c.GroupTitle == groupTitle &&
+                                c.Type == effectiveCategoryType.Value &&
+                                (c.StreamUrl == marker || c.StreamUrl == legacyMarker))
+                    .ExecuteDeleteAsync(cancellationToken);
+            }
+            else
+            {
+                removedChannelCount = await context.Channels
+                    .Where(c => c.PlaylistId == playlistId &&
+                                c.GroupTitle == groupTitle &&
+                                c.Type == effectiveCategoryType.Value &&
+                                (c.StreamUrl.StartsWith("stalker-dummy://") || c.StreamUrl.StartsWith("xtream-dummy://")))
+                    .ExecuteDeleteAsync(cancellationToken);
+            }
+        }
+        PerformanceTrace.Mark("sqlite.dummy_delete.ms", phase.ElapsedMilliseconds, scope);
 
         // 2. Eğer eklenecek gerçek kanal varsa ekle
         if (realChannels.Count > 0)
@@ -547,45 +583,63 @@ public partial class PlaylistService : IPlaylistService
             var streamUrls = realChannels.Select(rc => rc.StreamUrl).Where(u => !string.IsNullOrEmpty(u)).ToList();
             if (streamUrls.Any())
             {
-                await context.Channels
+                phase.Restart();
+                removedChannelCount += await context.Channels
                     .Where(c => c.PlaylistId == playlistId && streamUrls.Contains(c.StreamUrl))
-                    .ExecuteDeleteAsync();
+                    .ExecuteDeleteAsync(cancellationToken);
+                PerformanceTrace.Mark("sqlite.existing_delete.ms", phase.ElapsedMilliseconds, scope);
             }
 
             // Otomatik organizasyon: dedup, kategorize, sıralama
             // Xtream/Stalker aşamalı yüklediği için sağlayıcı tiplerine güveniyoruz
+            phase.Restart();
             var organized = _organizer.Organize(realChannels.ToList(), trustProviderTypes: true);
+            PerformanceTrace.Mark("import.organize_batch.ms", phase.ElapsedMilliseconds, scope);
 
             foreach (var channel in organized)
                 channel.PlaylistId = playlistId;
 
             ApplyBackupData(playlistId, organized);
 
-            await FastSqliteBulkInsertAsync(context, organized);
+            phase.Restart();
+            await FastSqliteBulkInsertAsync(
+                context,
+                organized,
+                transaction.GetDbTransaction(),
+                cancellationToken);
+            PerformanceTrace.Mark("sqlite.batch_insert.ms", phase.ElapsedMilliseconds, scope);
             InvalidateLinearStreamRepair(playlistId);
+            removedChannelCount -= organized.Count;
         }
 
-        // Kanal sayısını güncelle
+        var channelCountDelta = -removedChannelCount;
+        phase.Restart();
         await context.Playlists
             .Where(p => p.Id == playlistId)
             .ExecuteUpdateAsync(s => s
                 .SetProperty(p => p.ChannelCount,
-                    p => context.Channels.Count(c => c.PlaylistId == p.Id))
-                .SetProperty(p => p.LastUpdated, DateTime.UtcNow));
+                    p => p.ChannelCount + channelCountDelta < 0
+                        ? 0
+                        : p.ChannelCount + channelCountDelta)
+                .SetProperty(p => p.LastUpdated, DateTime.UtcNow),
+                cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        PerformanceTrace.Mark("sqlite.channel_count_increment.ms", phase.ElapsedMilliseconds, scope);
+        PerformanceTrace.Mark("sqlite.replace.complete", realChannels.Count, scope);
     }
 
     /// <summary>
     /// Stalker aşamalı yüklemesinde henüz indirilmemiş (geçici kanalı bulunan) kategorileri döndürür.
     /// </summary>
-    public async Task<List<string>> GetPendingDummyGroupsAsync(int playlistId)
+    public async Task<List<string>> GetPendingDummyGroupsAsync(int playlistId, CancellationToken cancellationToken = default)
     {
-        using var context = await _contextFactory.CreateDbContextAsync();
+        using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
         var dummies = await context.Channels
             .AsNoTracking()
             .Where(c => c.PlaylistId == playlistId && (c.StreamUrl.StartsWith("stalker-dummy://") || c.StreamUrl.StartsWith("xtream-dummy://")) && c.GroupTitle != null)
             .Select(c => new { c.GroupTitle, c.StreamUrl })
             .Distinct()
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         return dummies
             .SelectMany(c => new[]
@@ -616,18 +670,21 @@ public partial class PlaylistService : IPlaylistService
 
         if (streamUrl.StartsWith(xtreamPrefix, StringComparison.OrdinalIgnoreCase))
         {
-            return streamUrl[xtreamPrefix.Length..].Trim();
+            var markerKey = streamUrl[xtreamPrefix.Length..].Trim();
+            var lastSeparator = markerKey.LastIndexOf('/');
+            return lastSeparator >= 0 ? markerKey[(lastSeparator + 1)..] : markerKey;
         }
 
         return null;
     }
 
-    public async Task DeleteAllDummiesAsync(int playlistId)
+    public async Task DeleteAllDummiesAsync(int playlistId, CancellationToken cancellationToken = default)
     {
-        using var context = await _contextFactory.CreateDbContextAsync();
+        using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
+        await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
         await context.Channels
             .Where(c => c.PlaylistId == playlistId && (c.StreamUrl.StartsWith("stalker-dummy://") || c.StreamUrl.StartsWith("xtream-dummy://")))
-            .ExecuteDeleteAsync();
+            .ExecuteDeleteAsync(cancellationToken);
         InvalidateLinearStreamRepair(playlistId);
             
         // Kanal sayısını güncelle
@@ -636,26 +693,27 @@ public partial class PlaylistService : IPlaylistService
             .ExecuteUpdateAsync(s => s
                 .SetProperty(p => p.ChannelCount,
                     p => context.Channels.Count(c => c.PlaylistId == p.Id))
-                .SetProperty(p => p.LastUpdated, DateTime.UtcNow));
+                .SetProperty(p => p.LastUpdated, DateTime.UtcNow), cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
     }
 
-    public async Task<Playlist> CreateRefreshStagingPlaylistAsync(int playlistId)
+    public async Task<Playlist> CreateRefreshStagingPlaylistAsync(int playlistId, CancellationToken cancellationToken = default)
     {
-        using var context = await _contextFactory.CreateDbContextAsync();
+        using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
         var playlist = await context.Playlists
             .AsNoTracking()
-            .FirstOrDefaultAsync(p => p.Id == playlistId);
+            .FirstOrDefaultAsync(p => p.Id == playlistId, cancellationToken);
 
         if (playlist == null)
             throw new KeyNotFoundException(string.Format(_localizationService.GetString("Playlist.Error.NotFound"), playlistId));
 
-        await CleanupRefreshStagingArtifactsAsync(context, playlist);
+        await CleanupRefreshStagingArtifactsAsync(context, playlist, cancellationToken);
 
         var existingChannelData = await context.Channels
             .AsNoTracking()
             .Where(c => c.PlaylistId == playlistId)
             .Select(c => new { c.Id, c.Name, c.StreamUrl, c.GroupTitle, c.TvgId, c.TvgName, c.Type, c.IsFavorite, c.IsInMyList, c.WatchedPosition, c.Duration, c.IsCompleted, c.LastWatched })
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         var stagingPlaylist = new Playlist
         {
@@ -677,7 +735,7 @@ public partial class PlaylistService : IPlaylistService
         };
 
         context.Playlists.Add(stagingPlaylist);
-        await context.SaveChangesAsync();
+        await context.SaveChangesAsync(cancellationToken);
 
         var userDataMap = new Dictionary<string, ChannelBackupData>(StringComparer.OrdinalIgnoreCase);
         foreach (var c in existingChannelData)
@@ -704,14 +762,14 @@ public partial class PlaylistService : IPlaylistService
         return stagingPlaylist;
     }
 
-    public async Task CommitRefreshStagingPlaylistAsync(int playlistId, int stagingPlaylistId)
+    public async Task CommitRefreshStagingPlaylistAsync(int playlistId, int stagingPlaylistId, CancellationToken cancellationToken = default)
     {
-        using var context = await _contextFactory.CreateDbContextAsync();
-        var playlist = await context.Playlists.FirstOrDefaultAsync(p => p.Id == playlistId);
+        using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
+        var playlist = await context.Playlists.FirstOrDefaultAsync(p => p.Id == playlistId, cancellationToken);
         if (playlist == null)
             throw new KeyNotFoundException(string.Format(_localizationService.GetString("Playlist.Error.NotFound"), playlistId));
 
-        var stagingPlaylist = await context.Playlists.FirstOrDefaultAsync(p => p.Id == stagingPlaylistId);
+        var stagingPlaylist = await context.Playlists.FirstOrDefaultAsync(p => p.Id == stagingPlaylistId, cancellationToken);
         if (stagingPlaylist == null)
             throw new KeyNotFoundException(string.Format(_localizationService.GetString("Playlist.Error.NotFound"), stagingPlaylistId));
 
@@ -721,7 +779,7 @@ public partial class PlaylistService : IPlaylistService
                 c.PlaylistId == stagingPlaylistId &&
                 (c.StreamUrl == null ||
                  (!c.StreamUrl.StartsWith("stalker-dummy://") &&
-                  !c.StreamUrl.StartsWith("xtream-dummy://"))));
+                  !c.StreamUrl.StartsWith("xtream-dummy://"))), cancellationToken);
 
         if (stagedRealChannelCount == 0)
         {
@@ -732,41 +790,44 @@ public partial class PlaylistService : IPlaylistService
             .AsNoTracking()
             .Where(c => c.PlaylistId == playlistId)
             .Select(c => new { c.TvgId, c.TvgName, c.Name })
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
         var existingEpgIds = BuildEpgCleanupIds(existingEpgRows.SelectMany(c => new string?[] { c.TvgId, c.TvgName, c.Name }));
 
-        await using var transaction = await context.Database.BeginTransactionAsync();
+        await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
         try
         {
             await DeletePlaylistContentForReplacementAsync(
                 context,
                 playlistId,
                 existingEpgIds,
-                transaction.GetDbTransaction());
+                transaction.GetDbTransaction(),
+                cancellationToken);
 
             await MoveStagedChannelsToPlaylistAsync(
                 context.Database.GetDbConnection(),
                 transaction.GetDbTransaction(),
                 stagingPlaylistId,
-                playlistId);
+                playlistId,
+                cancellationToken);
 
             await ExecuteNonQueryInTransactionAsync(
                 context.Database.GetDbConnection(),
                 transaction.GetDbTransaction(),
                 "DELETE FROM Playlists WHERE Id = $playlistId",
-                stagingPlaylistId);
+                stagingPlaylistId,
+                cancellationToken);
 
-            var finalCount = await context.Channels.CountAsync(c => c.PlaylistId == playlistId);
+            var finalCount = await context.Channels.CountAsync(c => c.PlaylistId == playlistId, cancellationToken);
             playlist.ChannelCount = finalCount;
             playlist.LastUpdated = DateTime.UtcNow;
             context.Playlists.Update(playlist);
-            await context.SaveChangesAsync();
+            await context.SaveChangesAsync(cancellationToken);
 
-            await transaction.CommitAsync();
+            await transaction.CommitAsync(cancellationToken);
         }
         catch
         {
-            await transaction.RollbackAsync();
+            await transaction.RollbackAsync(CancellationToken.None);
             throw;
         }
         finally
@@ -775,24 +836,24 @@ public partial class PlaylistService : IPlaylistService
         }
 
         InvalidateLinearStreamRepair(playlistId);
-        await RepairWatchHistoryChannelIdsAsync(playlistId);
+        await RepairWatchHistoryChannelIdsAsync(playlistId, cancellationToken);
     }
 
-    public async Task AbandonRefreshStagingPlaylistAsync(int stagingPlaylistId)
+    public async Task AbandonRefreshStagingPlaylistAsync(int stagingPlaylistId, CancellationToken cancellationToken = default)
     {
-        using var context = await _contextFactory.CreateDbContextAsync();
+        using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
 
         await context.Series
             .Where(s => s.PlaylistId == stagingPlaylistId)
-            .ExecuteDeleteAsync();
+            .ExecuteDeleteAsync(cancellationToken);
 
         await context.Channels
             .Where(c => c.PlaylistId == stagingPlaylistId)
-            .ExecuteDeleteAsync();
+            .ExecuteDeleteAsync(cancellationToken);
 
         await context.Playlists
             .Where(p => p.Id == stagingPlaylistId && !p.IsActive)
-            .ExecuteDeleteAsync();
+            .ExecuteDeleteAsync(cancellationToken);
 
         _refreshBackups.TryRemove(stagingPlaylistId, out _);
         InvalidateLinearStreamRepair(stagingPlaylistId);
@@ -1731,7 +1792,8 @@ WHERE PlaylistId = {playlistId}
         AppDbContext context,
         int playlistId,
         IReadOnlyCollection<string> epgChannelIds,
-        System.Data.Common.DbTransaction? transaction = null)
+        System.Data.Common.DbTransaction? transaction = null,
+        CancellationToken cancellationToken = default)
     {
         if (transaction is not null)
         {
@@ -1739,7 +1801,8 @@ WHERE PlaylistId = {playlistId}
                 context.Database.GetDbConnection(),
                 transaction,
                 playlistId,
-                epgChannelIds);
+                epgChannelIds,
+                cancellationToken);
             return;
         }
 
@@ -1752,20 +1815,23 @@ WHERE PlaylistId = {playlistId}
                 var batch = ids.Skip(i).Take(batchSize).ToList();
                 await context.EpgPrograms
                     .Where(e => batch.Contains(e.ChannelId))
-                    .ExecuteDeleteAsync();
+                    .ExecuteDeleteAsync(cancellationToken);
             }
         }
 
         await context.Series
             .Where(s => s.PlaylistId == playlistId)
-            .ExecuteDeleteAsync();
+            .ExecuteDeleteAsync(cancellationToken);
 
         await context.Channels
             .Where(c => c.PlaylistId == playlistId)
-            .ExecuteDeleteAsync();
+            .ExecuteDeleteAsync(cancellationToken);
     }
 
-    private static async Task CleanupRefreshStagingArtifactsAsync(AppDbContext context, Playlist playlist)
+    private static async Task CleanupRefreshStagingArtifactsAsync(
+        AppDbContext context,
+        Playlist playlist,
+        CancellationToken cancellationToken = default)
     {
         var stagingName = $"{playlist.Name} refresh staging";
         var staleStagingPlaylistIds = await context.Playlists
@@ -1777,7 +1843,7 @@ WHERE PlaylistId = {playlistId}
                 p.FilePath == playlist.FilePath &&
                 p.ProfileId == playlist.ProfileId)
             .Select(p => p.Id)
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         if (staleStagingPlaylistIds.Count == 0)
         {
@@ -1786,22 +1852,23 @@ WHERE PlaylistId = {playlistId}
 
         await context.Series
             .Where(s => staleStagingPlaylistIds.Contains(s.PlaylistId))
-            .ExecuteDeleteAsync();
+            .ExecuteDeleteAsync(cancellationToken);
 
         await context.Channels
             .Where(c => staleStagingPlaylistIds.Contains(c.PlaylistId))
-            .ExecuteDeleteAsync();
+            .ExecuteDeleteAsync(cancellationToken);
 
         await context.Playlists
             .Where(p => staleStagingPlaylistIds.Contains(p.Id))
-            .ExecuteDeleteAsync();
+            .ExecuteDeleteAsync(cancellationToken);
     }
 
     private static async Task DeletePlaylistContentForReplacementWithTransactionAsync(
         System.Data.Common.DbConnection connection,
         System.Data.Common.DbTransaction transaction,
         int playlistId,
-        IReadOnlyCollection<string> epgChannelIds)
+        IReadOnlyCollection<string> epgChannelIds,
+        CancellationToken cancellationToken = default)
     {
         if (epgChannelIds.Count > 0)
         {
@@ -1823,7 +1890,7 @@ WHERE PlaylistId = {playlistId}
                     command.Parameters.Add(parameter);
                 }
 
-                await command.ExecuteNonQueryAsync();
+                await command.ExecuteNonQueryAsync(cancellationToken);
             }
         }
 
@@ -1831,20 +1898,23 @@ WHERE PlaylistId = {playlistId}
             connection,
             transaction,
             "DELETE FROM Series WHERE PlaylistId = $playlistId",
-            playlistId);
+            playlistId,
+            cancellationToken);
 
         await ExecuteNonQueryInTransactionAsync(
             connection,
             transaction,
             "DELETE FROM Channels WHERE PlaylistId = $playlistId",
-            playlistId);
+            playlistId,
+            cancellationToken);
     }
 
     private static async Task ExecuteNonQueryInTransactionAsync(
         System.Data.Common.DbConnection connection,
         System.Data.Common.DbTransaction transaction,
         string commandText,
-        int playlistId)
+        int playlistId,
+        CancellationToken cancellationToken = default)
     {
         using var command = connection.CreateCommand();
         command.Transaction = transaction;
@@ -1855,14 +1925,15 @@ WHERE PlaylistId = {playlistId}
         parameter.Value = playlistId;
         command.Parameters.Add(parameter);
 
-        await command.ExecuteNonQueryAsync();
+        await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
     private static async Task MoveStagedChannelsToPlaylistAsync(
         System.Data.Common.DbConnection connection,
         System.Data.Common.DbTransaction transaction,
         int stagingPlaylistId,
-        int targetPlaylistId)
+        int targetPlaylistId,
+        CancellationToken cancellationToken = default)
     {
         using var command = connection.CreateCommand();
         command.Transaction = transaction;
@@ -1878,7 +1949,7 @@ WHERE PlaylistId = {playlistId}
         stagingParameter.Value = stagingPlaylistId;
         command.Parameters.Add(stagingParameter);
 
-        await command.ExecuteNonQueryAsync();
+        await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
     public async Task DeleteAsync(int playlistId)
@@ -2015,12 +2086,12 @@ WHERE PlaylistId = {playlistId}
     /// <summary>
     /// Get channel count without loading all channels
     /// </summary>
-    public async Task<int> GetChannelCountAsync(int playlistId)
+    public async Task<int> GetChannelCountAsync(int playlistId, CancellationToken cancellationToken = default)
     {
-        using var context = await _contextFactory.CreateDbContextAsync();
+        using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
         return await context.Channels
             .Where(c => c.PlaylistId == playlistId)
-            .CountAsync();
+            .CountAsync(cancellationToken);
     }
 
     private static IOrderedQueryable<Channel> ApplySort(IQueryable<Channel> query, ChannelSortOrder sortOrder)
@@ -2570,22 +2641,22 @@ WHERE PlaylistId = {playlistId}
     /// Refresh/DeleteAllChannelsForRefreshAsync öncesinde yakalanan eski kanal fingerprint'lerini
     /// yeni kanalların ID'leriyle eşleştirerek WatchHistory tablosunu günceller.
     /// </summary>
-    public async Task RepairWatchHistoryChannelIdsAsync(int playlistId)
+    public async Task RepairWatchHistoryChannelIdsAsync(int playlistId, CancellationToken cancellationToken = default)
     {
-        if (!_watchHistoryRepairData.TryRemove(playlistId, out var repairMap) || repairMap.Count == 0)
+        if (!_watchHistoryRepairData.TryGetValue(playlistId, out var repairMap) || repairMap.Count == 0)
         {
             return;
         }
 
         try
         {
-            using var context = await _contextFactory.CreateDbContextAsync();
+            using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
 
             // Yeni kanalları fingerprint'leriyle birlikte yükle
             var newChannels = await context.Channels
                 .Where(c => c.PlaylistId == playlistId)
                 .Select(c => new { c.Id, c.Name, c.StreamUrl, c.GroupTitle, c.TvgId, c.TvgName })
-                .ToListAsync();
+                .ToListAsync(cancellationToken);
 
             if (newChannels.Count == 0)
             {
@@ -2661,10 +2732,16 @@ WHERE PlaylistId = {playlistId}
                         await context.WatchHistories
                             .Where(w => w.Id == whId)
                             .ExecuteUpdateAsync(s => s
-                                .SetProperty(w => w.ChannelId, newId));
+                                .SetProperty(w => w.ChannelId, newId), cancellationToken);
                     }
                 }
             }
+
+            _watchHistoryRepairData.TryRemove(playlistId, out _);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -2675,9 +2752,15 @@ WHERE PlaylistId = {playlistId}
     private async Task FastSqliteBulkInsertAsync(
         AppDbContext context,
         IReadOnlyCollection<Channel> channels,
-        System.Data.Common.DbTransaction? existingTransaction = null)
+        System.Data.Common.DbTransaction? existingTransaction = null,
+        CancellationToken cancellationToken = default)
     {
         if (channels.Count == 0) return;
+        var scope = channels.FirstOrDefault() is { } first
+            ? $"playlist-{first.PlaylistId}"
+            : null;
+        var totalStopwatch = Stopwatch.StartNew();
+        PerformanceTrace.Mark("sqlite.bulk_insert.start", channels.Count, scope);
 
         var connection = context.Database.GetDbConnection();
         var wasClosed = connection.State == System.Data.ConnectionState.Closed;
@@ -2738,46 +2821,55 @@ WHERE PlaylistId = {playlistId}
             var pLanguage = command.CreateParameter(); pLanguage.ParameterName = "$language"; command.Parameters.Add(pLanguage);
             var pTmdbId = command.CreateParameter(); pTmdbId.ParameterName = "$tmdbId"; command.Parameters.Add(pTmdbId);
 
-            foreach (var channel in channels)
+            // A prepared SQLite command is intentionally executed synchronously on one
+            // background worker. Awaiting once per row creates hundreds of thousands of
+            // async state machines during large imports and inflates the managed heap.
+            await Task.Run(() =>
             {
-                pName.Value = channel.Name ?? "Bilinmeyen Kanal";
-                pStream.Value = channel.StreamUrl ?? "";
-                pLogo.Value = channel.LogoUrl ?? (object)DBNull.Value;
-                pGroup.Value = channel.GroupTitle ?? (object)DBNull.Value;
-                pTvgId.Value = channel.TvgId ?? (object)DBNull.Value;
-                pTvgName.Value = channel.TvgName ?? (object)DBNull.Value;
-                pType.Value = (int)channel.Type;
-                pPlaylistId.Value = channel.PlaylistId;
-                pIsFavorite.Value = channel.IsFavorite ? 1 : 0;
-                pIsInMyList.Value = channel.IsInMyList ? 1 : 0;
-                pIsCompleted.Value = channel.IsCompleted ? 1 : 0;
-                pWatchedPosition.Value = channel.WatchedPosition?.ToString() ?? (object)DBNull.Value;
-                pDuration.Value = channel.Duration?.ToString() ?? (object)DBNull.Value;
-                pLastWatched.Value = channel.LastWatched?.ToString("O") ?? (object)DBNull.Value;
-                pCountry.Value = channel.Country ?? (object)DBNull.Value;
-                pRating.Value = channel.Rating ?? (object)DBNull.Value;
-                pPlot.Value = channel.Plot ?? (object)DBNull.Value;
-                pReleaseYear.Value = channel.ReleaseYear ?? (object)DBNull.Value;
-                pContentRating.Value = channel.ContentRating ?? (object)DBNull.Value;
-                pBackdrop.Value = channel.BackdropUrl ?? (object)DBNull.Value;
-                pCast.Value = channel.Cast ?? (object)DBNull.Value;
-                pDirector.Value = channel.Director ?? (object)DBNull.Value;
-                pLanguage.Value = channel.Language ?? (object)DBNull.Value;
-                pTmdbId.Value = channel.TmdbId ?? (object)DBNull.Value;
-
-                await command.ExecuteNonQueryAsync();
-                inserted++;
-
-                if (inserted % BulkInsertLogInterval == 0)
+                foreach (var channel in channels)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[PlaylistService] FastSqliteBulkInsertAsync progress: {inserted}/{total} channel(s).");
+                    cancellationToken.ThrowIfCancellationRequested();
+                    pName.Value = channel.Name ?? "Bilinmeyen Kanal";
+                    pStream.Value = channel.StreamUrl ?? "";
+                    pLogo.Value = channel.LogoUrl ?? (object)DBNull.Value;
+                    pGroup.Value = channel.GroupTitle ?? (object)DBNull.Value;
+                    pTvgId.Value = channel.TvgId ?? (object)DBNull.Value;
+                    pTvgName.Value = channel.TvgName ?? (object)DBNull.Value;
+                    pType.Value = (int)channel.Type;
+                    pPlaylistId.Value = channel.PlaylistId;
+                    pIsFavorite.Value = channel.IsFavorite ? 1 : 0;
+                    pIsInMyList.Value = channel.IsInMyList ? 1 : 0;
+                    pIsCompleted.Value = channel.IsCompleted ? 1 : 0;
+                    pWatchedPosition.Value = channel.WatchedPosition?.ToString() ?? (object)DBNull.Value;
+                    pDuration.Value = channel.Duration?.ToString() ?? (object)DBNull.Value;
+                    pLastWatched.Value = channel.LastWatched?.ToString("O") ?? (object)DBNull.Value;
+                    pCountry.Value = channel.Country ?? (object)DBNull.Value;
+                    pRating.Value = channel.Rating ?? (object)DBNull.Value;
+                    pPlot.Value = channel.Plot ?? (object)DBNull.Value;
+                    pReleaseYear.Value = channel.ReleaseYear ?? (object)DBNull.Value;
+                    pContentRating.Value = channel.ContentRating ?? (object)DBNull.Value;
+                    pBackdrop.Value = channel.BackdropUrl ?? (object)DBNull.Value;
+                    pCast.Value = channel.Cast ?? (object)DBNull.Value;
+                    pDirector.Value = channel.Director ?? (object)DBNull.Value;
+                    pLanguage.Value = channel.Language ?? (object)DBNull.Value;
+                    pTmdbId.Value = channel.TmdbId ?? (object)DBNull.Value;
+
+                    command.ExecuteNonQuery();
+                    inserted++;
+
+                    if (inserted % BulkInsertLogInterval == 0)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[PlaylistService] FastSqliteBulkInsertAsync progress: {inserted}/{total} channel(s).");
+                    }
                 }
-            }
+            }, cancellationToken);
 
             if (ownedTransaction is not null)
             {
-                await ownedTransaction.CommitAsync();
+                await ownedTransaction.CommitAsync(cancellationToken);
             }
+            PerformanceTrace.Mark("sqlite.bulk_insert.complete", inserted, scope);
+            PerformanceTrace.Mark("sqlite.bulk_insert.ms", totalStopwatch.ElapsedMilliseconds, scope);
             System.Diagnostics.Debug.WriteLine($"[PlaylistService] FastSqliteBulkInsertAsync completed: {inserted}/{total} channel(s).");
         }
         catch (Exception ex)

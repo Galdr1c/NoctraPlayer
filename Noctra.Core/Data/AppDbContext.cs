@@ -39,6 +39,7 @@ public class AppDbContext : DbContext
             entity.HasIndex(e => e.GroupTitle);
             entity.HasIndex(e => e.IsFavorite);
             entity.HasIndex(e => e.TmdbId);
+            entity.HasIndex(e => new { e.PlaylistId, e.StreamUrl });
             entity.HasIndex(e => new { e.PlaylistId, e.Type, e.GroupTitle, e.Id });
             entity.HasIndex(e => new { e.PlaylistId, e.Type, e.Id });
             entity.HasIndex(e => new { e.PlaylistId, e.GroupTitle, e.Id });
@@ -62,6 +63,7 @@ public class AppDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Name).IsRequired().HasMaxLength(255);
             entity.HasIndex(e => e.TmdbId);
+            entity.HasIndex(e => e.PlaylistId);
             entity.HasMany(e => e.Seasons)
                   .WithOne(e => e.Series)
                   .HasForeignKey(e => e.SeriesId)
@@ -180,6 +182,10 @@ public class AppDbContext : DbContext
             entity.HasIndex(e => e.ProfileId);
             entity.HasIndex(e => e.PlaylistId);
             entity.HasIndex(e => new { e.ProfileId, e.Status, e.CreatedAt });
+            entity.HasIndex(e => e.ProfileId)
+                .HasDatabaseName("IX_ImportJobs_OneActivePerProfile")
+                .IsUnique()
+                .HasFilter("Status IN (0, 1) AND ProfileId IS NOT NULL");
         });
     }
 }
