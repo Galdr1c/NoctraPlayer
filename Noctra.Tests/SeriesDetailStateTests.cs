@@ -3,6 +3,70 @@ namespace Noctra.Tests;
 public class SeriesDetailStateTests
 {
     [Fact]
+    public void SeriesSelection_PublishesDetailShellBeforeBackgroundLoad()
+    {
+        var source = LoadProjectFile("Noctra.Core", "ViewModels", "MainViewModel.cs");
+        var branchStart = source.IndexOf("else if (media is Series series)", StringComparison.Ordinal);
+        var branchEnd = source.IndexOf("private void PublishSeriesDetailShell", branchStart, StringComparison.Ordinal);
+
+        Assert.True(branchStart >= 0);
+        Assert.True(branchEnd > branchStart);
+
+        var branch = source[branchStart..branchEnd];
+        var publishShell = branch.IndexOf("PublishSeriesDetailShell(series, isSyntheticDownloadSeries);", StringComparison.Ordinal);
+        var startBackgroundLoad = branch.IndexOf("CompleteSeriesDetailSelectionAsync(", StringComparison.Ordinal);
+
+        Assert.True(publishShell >= 0, "Series selection must publish its lightweight detail shell synchronously.");
+        Assert.True(startBackgroundLoad > publishShell, "Provider/DB detail work must start only after the shell is published.");
+        Assert.DoesNotContain("await LoadSeriesWithProfileProgressAsync", branch);
+    }
+
+    [Fact]
+    public void SeriesDetailLoad_IsCancelledWhenDetailOrProfileStateCloses()
+    {
+        var source = LoadProjectFile("Noctra.Core", "ViewModels", "MainViewModel.cs");
+
+        AssertMethodContains(source, "private void CloseSeriesDetail()", "CancelSeriesDetailLoad();");
+        AssertMethodContains(source, "private void ClearProfileState()", "CancelSeriesDetailLoad();");
+        AssertMethodContains(source, "private void ResetUIForRefresh()", "CancelSeriesDetailLoad();");
+    }
+
+    [Fact]
+    public void SeriesDetailCancellation_LeavesDisposalToTheRunningLoadOwner()
+    {
+        var source = LoadProjectFile("Noctra.Core", "ViewModels", "MainViewModel.cs");
+        var cancelMethod = MethodSlice(source, "private void CancelSeriesDetailLoad()", "[ObservableProperty]");
+        var completionMethod = MethodSlice(source, "private async Task CompleteSeriesDetailSelectionAsync", "private static string NormalizeSeriesQuery");
+
+        Assert.DoesNotContain("previous.Dispose();", cancelMethod, StringComparison.Ordinal);
+        Assert.Contains("loadCts.Dispose();", completionMethod, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void AggregationRefresh_ReusesCancellableSeriesSelectionPipeline()
+    {
+        var source = LoadProjectFile("Noctra.Core", "ViewModels", "MainViewModel.cs");
+        var handler = MethodSlice(source, "_mediaService.OnAggregationCompleted +=", "public bool IsPremium");
+
+        Assert.Contains("await SelectMedia(SelectedSeries);", handler, StringComparison.Ordinal);
+        Assert.DoesNotContain("await LoadSeriesWithProfileProgressAsync(SelectedSeries)", handler, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void SeriesProviderDetailLoad_PropagatesCancellationToDatabaseAndProviderCalls()
+    {
+        var source = LoadProjectFile("Noctra.Core", "ViewModels", "MainViewModel.cs");
+        var completion = MethodSlice(source, "private async Task CompleteSeriesDetailSelectionAsync", "private static string NormalizeSeriesQuery");
+        var providerLoad = MethodSlice(source, "private async Task<Series> LoadSeriesWithProfileProgressAsync", "private bool ShouldUseProviderOnlySeriesMetadata");
+        var lazyLoad = MethodSlice(source, "private async Task LazyLoadProviderSeriesEpisodesAsync", "private static void SyncSeriesDetailState");
+
+        Assert.Contains("LoadSeriesWithProfileProgressAsync(series, loadCts.Token)", completion, StringComparison.Ordinal);
+        Assert.Contains("CancellationToken cancellationToken", providerLoad, StringComparison.Ordinal);
+        Assert.Contains("FirstOrDefaultAsync", providerLoad, StringComparison.Ordinal);
+        Assert.Contains("cancellationToken", lazyLoad, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void SeriesMetadataLoad_ClearsPreviousEpisodeStateBeforeRecomputing()
     {
         var source = LoadProjectFile("Noctra.Core", "ViewModels", "MainViewModel.cs");
@@ -83,5 +147,28 @@ public class SeriesDetailStateTests
         }
 
         throw new FileNotFoundException($"Could not find project file: {Path.Combine(relativeParts)}");
+    }
+
+    private static void AssertMethodContains(string source, string signature, string expected)
+    {
+        var methodStart = source.IndexOf(signature, StringComparison.Ordinal);
+        Assert.True(methodStart >= 0, $"Could not find {signature}");
+
+        var nextMethod = source.IndexOf("\n    private ", methodStart + signature.Length, StringComparison.Ordinal);
+        if (nextMethod < 0)
+        {
+            nextMethod = source.Length;
+        }
+
+        Assert.Contains(expected, source[methodStart..nextMethod]);
+    }
+
+    private static string MethodSlice(string source, string start, string end)
+    {
+        var startIndex = source.IndexOf(start, StringComparison.Ordinal);
+        Assert.True(startIndex >= 0, $"Could not find {start}");
+        var endIndex = source.IndexOf(end, startIndex + start.Length, StringComparison.Ordinal);
+        Assert.True(endIndex > startIndex, $"Could not find {end}");
+        return source[startIndex..endIndex];
     }
 }

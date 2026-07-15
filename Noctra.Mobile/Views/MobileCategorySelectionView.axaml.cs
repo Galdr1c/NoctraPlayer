@@ -1,11 +1,12 @@
 using System;
-using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
+using Noctra.Core.Collections;
 using Noctra.ViewModels;
 
 namespace Noctra.Mobile.Views;
@@ -44,7 +45,7 @@ public partial class MobileCategorySelectionView : UserControl
         DataContext = this;
     }
 
-    public ObservableCollection<MobileCategorySelectionItem> Categories { get; } = new();
+    public BatchObservableCollection<MobileCategorySelectionItem> Categories { get; } = new();
 
     public event EventHandler? CloseRequested;
 
@@ -57,7 +58,10 @@ public partial class MobileCategorySelectionView : UserControl
 
         TitleTextBlock.Text = title;
         RefreshCategories();
-        CategoryScrollViewer.Offset = default;
+        if (Categories.Count > 0)
+        {
+            CategoryListBox.ScrollIntoView(Categories[0]);
+        }
         IsVisible = true;
     }
 
@@ -76,7 +80,7 @@ public partial class MobileCategorySelectionView : UserControl
     public void ApplySafeArea(Thickness safeArea)
     {
         HeaderContent.Margin = new Thickness(safeArea.Left, safeArea.Top, safeArea.Right, 0);
-        CategoryScrollViewer.Margin = new Thickness(safeArea.Left, 0, safeArea.Right, safeArea.Bottom);
+        CategorySafeAreaHost.Margin = new Thickness(safeArea.Left, 0, safeArea.Right, safeArea.Bottom);
     }
 
     private void SelectCategory_Click(object? sender, RoutedEventArgs e)
@@ -144,18 +148,16 @@ public partial class MobileCategorySelectionView : UserControl
     {
         if (_viewModel is null)
         {
-            Categories.Clear();
+            Categories.ReplaceAll(Array.Empty<MobileCategorySelectionItem>());
             return;
         }
 
         AllCategoriesCheck.IsVisible = string.IsNullOrWhiteSpace(_viewModel.SelectedGroup);
-        Categories.Clear();
-        foreach (var group in _viewModel.Groups)
-        {
-            Categories.Add(new MobileCategorySelectionItem(
+        var items = _viewModel.Groups.Select(group =>
+            new MobileCategorySelectionItem(
                 group,
                 string.Equals(group, _viewModel.SelectedGroup, StringComparison.Ordinal)));
-        }
+        Categories.ReplaceAll(items);
     }
 
     private void AttachGroupsCollection()

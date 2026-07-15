@@ -1346,7 +1346,7 @@
                         BoxShadow="0 10 30 5 #80000000">
                     <StackPanel Spacing="24">
                         <controls:PremiumSpinner Width="80" Height="80">
-                            <Image Source="avares://Noctra/Assets/Square71x71Logo.png"
+                            <Image Source="avares://Noctra/Assets/Square150x150Logo.png"
                                    Width="45" Height="45"
                                    Stretch="Uniform"
                                    VerticalAlignment="Center" HorizontalAlignment="Center"

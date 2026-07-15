@@ -36,7 +36,7 @@
             </Setter>
         </Style>
         <Style Selector="Button.DialogPrimary:pointerover /template/ ContentPresenter">
-            <Setter Property="RenderTransform" Value="scale(0.94)"/>
+            <Setter Property="RenderTransform" Value="scale(0.97)"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="BorderBrush" Value="{DynamicResource PremiumBadgeBrush}"/>
             

@@ -6,7 +6,7 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- Logo is scaled to 92% around the exact 54,54 center.
+    <!-- Logo is scaled to 72% around the exact 54,54 center.
          Approximate visible bounds after scaling: x=27.4..80.6, y=22.4..85.6. -->
     <group
         android:pivotX="54"

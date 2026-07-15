@@ -34,6 +34,12 @@
     <Style Selector="Button.CategoryHideButton:pressed">
       <Setter Property="Background" Value="{DynamicResource AccentSubtleBrush}" />
     </Style>
+    <Style Selector="ListBox#CategoryListBox > ListBoxItem">
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="Margin" Value="0" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    </Style>
   </UserControl.Styles>
 
   <Grid RowDefinitions="Auto,*"
@@ -69,19 +75,17 @@
       </Grid>
     </Border>
 
-    <ScrollViewer x:Name="CategoryScrollViewer"
-                  Grid.Row="1"
-                  HorizontalScrollBarVisibility="Disabled"
-                  VerticalScrollBarVisibility="Auto"
-                  ScrollViewer.IsScrollChainingEnabled="False">
-      <StackPanel MaxWidth="720"
-                  Margin="16,18,16,24"
-                  Spacing="8"
-                  HorizontalAlignment="Stretch">
+    <Grid x:Name="CategorySafeAreaHost"
+          Grid.Row="1">
+      <Grid MaxWidth="720"
+            Margin="16,18,16,24"
+            RowDefinitions="Auto,*"
+            HorizontalAlignment="Stretch">
         <Border Background="{DynamicResource Surface1Brush}"
                 BorderBrush="{DynamicResource BorderBrush}"
                 BorderThickness="1"
-                CornerRadius="8">
+                CornerRadius="8"
+                Margin="0,0,0,8">
           <Button x:Name="AllCategoriesButton"
                   Classes="CategorySelectionRow"
                   Click="SelectCategory_Click">
@@ -103,8 +107,21 @@
           </Button>
         </Border>
 
-        <ItemsControl ItemsSource="{Binding Categories}">
-          <ItemsControl.ItemTemplate>
+        <ListBox x:Name="CategoryListBox"
+                 Grid.Row="1"
+                 ItemsSource="{Binding Categories}"
+                 Background="Transparent"
+                 BorderThickness="0"
+                 Padding="0"
+                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                 ScrollViewer.VerticalScrollBarVisibility="Auto"
+                 ScrollViewer.IsScrollChainingEnabled="False">
+          <ListBox.ItemsPanel>
+            <ItemsPanelTemplate>
+              <VirtualizingStackPanel />
+            </ItemsPanelTemplate>
+          </ListBox.ItemsPanel>
+          <ListBox.ItemTemplate>
             <DataTemplate>
               <Border Margin="0,0,0,8"
                       Background="{DynamicResource Surface1Brush}"
@@ -146,9 +163,9 @@
                 </Grid>
               </Border>
             </DataTemplate>
-          </ItemsControl.ItemTemplate>
-        </ItemsControl>
-      </StackPanel>
-    </ScrollViewer>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </Grid>
+    </Grid>
   </Grid>
 </UserControl>

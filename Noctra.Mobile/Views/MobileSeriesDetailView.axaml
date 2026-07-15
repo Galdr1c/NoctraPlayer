@@ -49,7 +49,9 @@
     <Grid>
       <!-- Backdrop Blur (Netflix Style) -->
       <Grid IsHitTestVisible="False" Opacity="0.3" IsVisible="{Binding !IsDownloadedSeriesDetailMode}">
-        <controls:RemoteImage Stretch="UniformToFill" Url="{Binding SelectedSeriesPosterUrl}">
+        <controls:RemoteImage Stretch="UniformToFill"
+                              DecodePixelWidth="960"
+                              Url="{Binding SelectedSeriesPosterUrl}">
           <controls:RemoteImage.Effect>
             <BlurEffect Radius="60"/>
           </controls:RemoteImage.Effect>
@@ -346,15 +348,34 @@
           </ListBox.ItemTemplate>
         </ListBox>
 
-        <ItemsControl ItemsSource="{Binding SelectedSeason.Episodes}"
-                      behaviors:MobileSlideTransitionBehavior.TriggerValue="{Binding SelectedSeason}">
-          <ItemsControl.Styles>
+        <ListBox x:Name="EpisodeListBox"
+                 ItemsSource="{Binding SelectedSeason.Episodes}"
+                 MaxHeight="760"
+                 Background="Transparent"
+                 BorderThickness="0"
+                 Padding="0"
+                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                 ScrollViewer.VerticalScrollBarVisibility="Auto"
+                 ScrollViewer.IsScrollChainingEnabled="False"
+                 behaviors:MobileSlideTransitionBehavior.TriggerValue="{Binding SelectedSeason}">
+          <ListBox.ItemsPanel>
+            <ItemsPanelTemplate>
+              <VirtualizingStackPanel />
+            </ItemsPanelTemplate>
+          </ListBox.ItemsPanel>
+          <ListBox.Styles>
+            <Style Selector="ListBoxItem">
+              <Setter Property="Padding" Value="0" />
+              <Setter Property="Margin" Value="0" />
+              <Setter Property="Background" Value="Transparent" />
+              <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            </Style>
             <Style Selector="Button:pressed Border#EpBgLayer">
               <Setter Property="Background" Value="{DynamicResource InteractivePressedBrush}" />
               <Setter Property="Opacity" Value="1.0" />
             </Style>
-          </ItemsControl.Styles>
-          <ItemsControl.ItemTemplate>
+          </ListBox.Styles>
+          <ListBox.ItemTemplate>
             <DataTemplate x:DataType="models:Episode">
               <Button Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).PlayEpisodeCommand}"
                       CommandParameter="{Binding}"
@@ -471,8 +492,8 @@
                 </Panel>
               </Button>
             </DataTemplate>
-          </ItemsControl.ItemTemplate>
-        </ItemsControl>
+          </ListBox.ItemTemplate>
+        </ListBox>
       </StackPanel>
     </ScrollViewer>
     </Grid>

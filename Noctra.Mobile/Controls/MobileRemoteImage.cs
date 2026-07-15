@@ -19,8 +19,14 @@ namespace Noctra.Mobile.Controls;
 
 public class RemoteImage : Image
 {
+    private const int DefaultDecodePixelWidth = 384;
+    private const int MaxDecodePixelWidth = 2048;
+
     public static readonly StyledProperty<string?> UrlProperty =
         AvaloniaProperty.Register<RemoteImage, string?>(nameof(Url));
+
+    public static readonly StyledProperty<int> DecodePixelWidthProperty =
+        AvaloniaProperty.Register<RemoteImage, int>(nameof(DecodePixelWidth), DefaultDecodePixelWidth);
 
     public static readonly StyledProperty<bool> IsImageLoadedProperty =
         AvaloniaProperty.Register<RemoteImage, bool>(nameof(IsImageLoaded), false);
@@ -34,7 +40,7 @@ public class RemoteImage : Image
     private static readonly SemaphoreSlim DownloadGate = new(6, 6);
     private static readonly object CacheLock = new();
 
-    private const int MaxCacheEntries = 500;
+    private const int MaxCacheEntries = 128;
     private const int HttpImageMaxAttempts = 2;
     private const int HttpRetryBaseDelayMs = 250;
     private static readonly TimeSpan FailureCooldown = TimeSpan.FromMinutes(2);
@@ -44,6 +50,7 @@ public class RemoteImage : Image
     static RemoteImage()
     {
         UrlProperty.Changed.AddClassHandler<RemoteImage>((control, _) => control.StartImageLoad());
+        DecodePixelWidthProperty.Changed.AddClassHandler<RemoteImage>((control, _) => control.StartImageLoad());
         IsImageLoadedProperty.Changed.AddClassHandler<RemoteImage>((control, e) =>
         {
             if (e.NewValue is bool isLoaded)
@@ -70,6 +77,12 @@ public class RemoteImage : Image
     {
         get => GetValue(UrlProperty);
         set => SetValue(UrlProperty, value);
+    }
+
+    public int DecodePixelWidth
+    {
+        get => GetValue(DecodePixelWidthProperty);
+        set => SetValue(DecodePixelWidthProperty, value);
     }
 
     public bool IsImageLoaded
@@ -101,7 +114,8 @@ public class RemoteImage : Image
             return;
         }
 
-        if (TryApplyCachedSource(normalizedUrl))
+        var decodePixelWidth = NormalizeDecodePixelWidth(DecodePixelWidth);
+        if (TryApplyCachedSource(normalizedUrl, decodePixelWidth))
         {
             return;
         }
@@ -113,14 +127,14 @@ public class RemoteImage : Image
         }
 
         _loadCts = new CancellationTokenSource();
-        _ = LoadAndApplyAsync(normalizedUrl, _loadCts.Token);
+        _ = LoadAndApplyAsync(normalizedUrl, decodePixelWidth, _loadCts.Token);
     }
 
-    private async Task LoadAndApplyAsync(string url, CancellationToken cancellationToken)
+    private async Task LoadAndApplyAsync(string url, int decodePixelWidth, CancellationToken cancellationToken)
     {
         try
         {
-            var bitmap = await GetOrStartBitmapLoadAsync(url, cancellationToken).ConfigureAwait(false);
+            var bitmap = await GetOrStartBitmapLoadAsync(url, decodePixelWidth, cancellationToken).ConfigureAwait(false);
             TrySetSource(url, bitmap, cancellationToken);
         }
         catch (OperationCanceledException)
@@ -132,11 +146,15 @@ public class RemoteImage : Image
         }
     }
 
-    private static async Task<Bitmap?> GetOrStartBitmapLoadAsync(string url, CancellationToken cancellationToken)
+    private static async Task<Bitmap?> GetOrStartBitmapLoadAsync(
+        string url,
+        int decodePixelWidth,
+        CancellationToken cancellationToken)
     {
-        if (Cache.TryGetValue(url, out var cached))
+        var cacheKey = CreateCacheKey(url, decodePixelWidth);
+        if (Cache.TryGetValue(cacheKey, out var cached))
         {
-            TouchCacheEntry(url);
+            TouchCacheEntry(cacheKey);
             return cached;
         }
 
@@ -145,11 +163,13 @@ public class RemoteImage : Image
             return null;
         }
 
-        var loadTask = InFlightLoads.GetOrAdd(url, DownloadBitmapAsync);
+        var loadTask = InFlightLoads.GetOrAdd(
+            cacheKey,
+            _ => DownloadBitmapAsync(url, cacheKey, decodePixelWidth));
         return await loadTask.WaitAsync(cancellationToken).ConfigureAwait(false);
     }
 
-    private static async Task<Bitmap?> DownloadBitmapAsync(string url)
+    private static async Task<Bitmap?> DownloadBitmapAsync(string url, string cacheKey, int decodePixelWidth)
     {
         await DownloadGate.WaitAsync().ConfigureAwait(false);
         try
@@ -162,22 +182,22 @@ public class RemoteImage : Image
             if (uri.Scheme.Equals(Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase) ||
                 uri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
             {
-                return await DownloadHttpBitmapAsync(url, uri).ConfigureAwait(false);
+                return await DownloadHttpBitmapAsync(url, cacheKey, uri, decodePixelWidth).ConfigureAwait(false);
             }
 
             if (uri.Scheme.Equals(Uri.UriSchemeFile, StringComparison.OrdinalIgnoreCase))
             {
-                return LoadFileBitmap(uri);
+                return LoadFileBitmap(uri, decodePixelWidth);
             }
 
             if (uri.Scheme.Equals("avares", StringComparison.OrdinalIgnoreCase))
             {
-                return LoadAssetBitmap(uri);
+                return LoadAssetBitmap(uri, decodePixelWidth);
             }
 
             if (uri.Scheme.Equals("data", StringComparison.OrdinalIgnoreCase))
             {
-                return TryDecodeDataUri(url);
+                return TryDecodeDataUri(url, decodePixelWidth);
             }
 
             return null;
@@ -190,15 +210,24 @@ public class RemoteImage : Image
         finally
         {
             DownloadGate.Release();
-            InFlightLoads.TryRemove(url, out _);
+            InFlightLoads.TryRemove(cacheKey, out _);
         }
     }
 
-    private static async Task<Bitmap?> DownloadHttpBitmapAsync(string normalizedUrl, Uri uri)
+    private static async Task<Bitmap?> DownloadHttpBitmapAsync(
+        string normalizedUrl,
+        string cacheKey,
+        Uri uri,
+        int decodePixelWidth)
     {
         foreach (var requestUri in BuildRequestUriCandidates(uri))
         {
-            var bitmap = await DownloadHttpBitmapWithRetryAsync(normalizedUrl, requestUri).ConfigureAwait(false);
+            var bitmap = await DownloadHttpBitmapWithRetryAsync(
+                    normalizedUrl,
+                    cacheKey,
+                    requestUri,
+                    decodePixelWidth)
+                .ConfigureAwait(false);
             if (bitmap != null)
             {
                 return bitmap;
@@ -208,7 +237,11 @@ public class RemoteImage : Image
         return null;
     }
 
-    private static async Task<Bitmap?> DownloadHttpBitmapWithRetryAsync(string normalizedUrl, Uri uri)
+    private static async Task<Bitmap?> DownloadHttpBitmapWithRetryAsync(
+        string normalizedUrl,
+        string cacheKey,
+        Uri uri,
+        int decodePixelWidth)
     {
         for (var attempt = 0; attempt < HttpImageMaxAttempts; attempt++)
         {
@@ -253,8 +286,8 @@ public class RemoteImage : Image
                     return null;
                 }
 
-                var bitmap = new Bitmap(memory);
-                AddToCache(normalizedUrl, bitmap);
+                var bitmap = DecodeBitmap(memory, decodePixelWidth);
+                AddToCache(cacheKey, bitmap);
                 return bitmap;
             }
             catch when (attempt < HttpImageMaxAttempts - 1)
@@ -291,7 +324,7 @@ public class RemoteImage : Image
         await Task.Delay(HttpRetryBaseDelayMs * (attempt + 1) * (attempt + 1)).ConfigureAwait(false);
     }
 
-    private static Bitmap? LoadFileBitmap(Uri uri)
+    private static Bitmap? LoadFileBitmap(Uri uri, int decodePixelWidth)
     {
         if (!File.Exists(uri.LocalPath))
         {
@@ -299,13 +332,13 @@ public class RemoteImage : Image
         }
 
         using var file = File.OpenRead(uri.LocalPath);
-        return new Bitmap(file);
+        return DecodeBitmap(file, decodePixelWidth);
     }
 
-    private static Bitmap? LoadAssetBitmap(Uri uri)
+    private static Bitmap? LoadAssetBitmap(Uri uri, int decodePixelWidth)
     {
         using var asset = AssetLoader.Open(uri);
-        return new Bitmap(asset);
+        return DecodeBitmap(asset, decodePixelWidth);
     }
 
     private static IReadOnlyList<Uri> BuildRequestUriCandidates(Uri originalUri)
@@ -328,7 +361,7 @@ public class RemoteImage : Image
         }
     }
 
-    private static Bitmap? TryDecodeDataUri(string url)
+    private static Bitmap? TryDecodeDataUri(string url, int decodePixelWidth)
     {
         var commaIndex = url.IndexOf(',');
         if (commaIndex < 0 || commaIndex >= url.Length - 1)
@@ -346,7 +379,7 @@ public class RemoteImage : Image
         {
             var bytes = Convert.FromBase64String(url[(commaIndex + 1)..]);
             using var memory = new MemoryStream(bytes);
-            return new Bitmap(memory);
+            return DecodeBitmap(memory, decodePixelWidth);
         }
         catch
         {
@@ -415,17 +448,30 @@ public class RemoteImage : Image
         }
     }
 
-    private bool TryApplyCachedSource(string normalizedUrl)
+    private bool TryApplyCachedSource(string normalizedUrl, int decodePixelWidth)
     {
-        if (!Cache.TryGetValue(normalizedUrl, out var cached))
+        var cacheKey = CreateCacheKey(normalizedUrl, decodePixelWidth);
+        if (!Cache.TryGetValue(cacheKey, out var cached))
         {
             return false;
         }
 
-        TouchCacheEntry(normalizedUrl);
+        TouchCacheEntry(cacheKey);
         SetSourceOnUiThread(cached, normalizedUrl);
         return true;
     }
+
+    private static Bitmap DecodeBitmap(Stream stream, int decodePixelWidth)
+        => Bitmap.DecodeToWidth(
+            stream,
+            NormalizeDecodePixelWidth(decodePixelWidth),
+            BitmapInterpolationMode.MediumQuality);
+
+    private static int NormalizeDecodePixelWidth(int decodePixelWidth)
+        => Math.Clamp(decodePixelWidth, 64, MaxDecodePixelWidth);
+
+    private static string CreateCacheKey(string normalizedUrl, int decodePixelWidth)
+        => $"{NormalizeDecodePixelWidth(decodePixelWidth)}|{normalizedUrl}";
 
     private void SetSourceOnUiThread(Bitmap? bitmap, string? sourceUrl = null)
     {

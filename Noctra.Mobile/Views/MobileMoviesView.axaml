@@ -61,22 +61,9 @@
       </Button>
 
       <Border HorizontalAlignment="Stretch" MaxWidth="1400">
-        <ItemsControl ItemsSource="{Binding FilteredChannels}"
-                      IsVisible="{Binding !IsContentLoading}" HorizontalAlignment="Stretch">
-          <ItemsControl.ItemsPanel>
-            <ItemsPanelTemplate>
-              <WrapPanel HorizontalAlignment="Stretch" />
-            </ItemsPanelTemplate>
-          </ItemsControl.ItemsPanel>
-          <ItemsControl.ItemTemplate>
-          <DataTemplate x:DataType="models:Channel">
-            <!-- Increase spacing between cards to match desktop -->
-            <controls:MobileVodCard Margin="0,0,16,16"
-                                    Width="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=posterWidth}"
-                                    Height="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=posterHeight}" />
-          </DataTemplate>
-        </ItemsControl.ItemTemplate>
-        </ItemsControl>
+        <controls:MobileVirtualizingCardGrid SourceItems="{Binding FilteredChannels}"
+                                             CardKind="Vod"
+                                             IsVisible="{Binding !IsContentLoading}" />
       </Border>
 
       <!-- Loading state: mirror desktop with two lines of status text -->

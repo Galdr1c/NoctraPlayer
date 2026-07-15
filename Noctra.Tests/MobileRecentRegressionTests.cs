@@ -32,6 +32,59 @@ public sealed class MobileRecentRegressionTests
     }
 
     [Fact]
+    public void MobileCategorySelection_VirtualizesRowsAndRefreshesInOneBatch()
+    {
+        var view = File.ReadAllText(ProjectFile("Noctra.Mobile", "Views", "MobileCategorySelectionView.axaml"));
+        var codeBehind = File.ReadAllText(ProjectFile("Noctra.Mobile", "Views", "MobileCategorySelectionView.axaml.cs"));
+
+        Assert.Contains("<VirtualizingStackPanel", view, StringComparison.Ordinal);
+        Assert.DoesNotContain("<ItemsControl ItemsSource=\"{Binding Categories}\"", view, StringComparison.Ordinal);
+        Assert.Contains("BatchObservableCollection<MobileCategorySelectionItem>", codeBehind, StringComparison.Ordinal);
+        Assert.Contains("Categories.ReplaceAll(", codeBehind, StringComparison.Ordinal);
+        Assert.DoesNotContain("Categories.Add(", codeBehind, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void MobileSeriesDetail_VirtualizesEpisodesInsideBoundedViewport()
+    {
+        var source = File.ReadAllText(ProjectFile("Noctra.Mobile", "Views", "MobileSeriesDetailView.axaml"));
+
+        Assert.DoesNotContain("<ItemsControl ItemsSource=\"{Binding SelectedSeason.Episodes}\"", source, StringComparison.Ordinal);
+        Assert.Contains("x:Name=\"EpisodeListBox\"", source, StringComparison.Ordinal);
+        Assert.Contains("<VirtualizingStackPanel", source, StringComparison.Ordinal);
+        Assert.Contains("MaxHeight=", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void MobileRemoteImage_DecodesBitmapsToBoundedDisplaySize()
+    {
+        var source = File.ReadAllText(ProjectFile("Noctra.Mobile", "Controls", "MobileRemoteImage.cs"));
+
+        Assert.Contains("DecodePixelWidthProperty", source, StringComparison.Ordinal);
+        Assert.Contains("Bitmap.DecodeToWidth", source, StringComparison.Ordinal);
+        Assert.Contains("DefaultDecodePixelWidth", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("var bitmap = new Bitmap(memory);", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("MaxCacheEntries = 500", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void MobilePrimaryCardGrids_VirtualizeRecycledRows()
+    {
+        var control = File.ReadAllText(ProjectFile("Noctra.Mobile", "Controls", "MobileVirtualizingCardGrid.cs"));
+
+        Assert.Contains("VirtualizingStackPanel", control, StringComparison.Ordinal);
+        Assert.Contains("BatchObservableCollection<MobileCardGridRow>", control, StringComparison.Ordinal);
+        Assert.Contains("OnDataContextChanged", control, StringComparison.Ordinal);
+
+        foreach (var viewName in new[] { "MobileLiveView.axaml", "MobileMoviesView.axaml", "MobileSeriesView.axaml" })
+        {
+            var view = File.ReadAllText(ProjectFile("Noctra.Mobile", "Views", viewName));
+            Assert.Contains("<controls:MobileVirtualizingCardGrid", view, StringComparison.Ordinal);
+            Assert.DoesNotContain("<WrapPanel HorizontalAlignment=\"Stretch\" />", view, StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
     public void PlayerPlaybackDebugLog_DoesNotWriteRawStreamUrls()
     {
         var source = File.ReadAllText(ProjectFile("Noctra.Core", "ViewModels", "Player", "PlayerPlaybackController.cs"));

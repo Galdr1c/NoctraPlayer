@@ -89,9 +89,6 @@
         <Style Selector="Slider">
             <Setter Property="Cursor" Value="Hand"/>
         </Style>
-        <Style Selector="ComboBox">
-            <Setter Property="Cursor" Value="Hand"/>
-        </Style>
         <Style Selector="ListBox">
             <Setter Property="Cursor" Value="Hand"/>
         </Style>

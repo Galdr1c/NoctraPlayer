@@ -94,12 +94,34 @@ public partial class MainViewModel : ObservableObject
     // This prevents rapid Live/VOD/Series clicks from completing out of order
     // after an async URL/context lookup and starting an older item.
     private int _mediaSelectionVersion;
+    private CancellationTokenSource? _seriesDetailLoadCts;
 
     private int BeginMediaSelectionIntent()
         => Interlocked.Increment(ref _mediaSelectionVersion);
 
     private bool IsMediaSelectionIntentCurrent(int selectionVersion)
         => selectionVersion == Volatile.Read(ref _mediaSelectionVersion);
+
+    private CancellationTokenSource BeginSeriesDetailLoad()
+    {
+        var cts = new CancellationTokenSource();
+        var previous = Interlocked.Exchange(ref _seriesDetailLoadCts, cts);
+        if (previous != null)
+        {
+            previous.Cancel();
+        }
+
+        return cts;
+    }
+
+    private void CancelSeriesDetailLoad()
+    {
+        var previous = Interlocked.Exchange(ref _seriesDetailLoadCts, null);
+        if (previous != null)
+        {
+            previous.Cancel();
+        }
+    }
 
     [ObservableProperty]
     private AppView _activeView = AppView.Home;
@@ -108,7 +130,11 @@ public partial class MainViewModel : ObservableObject
     private BatchObservableCollection<Channel> _continueWatching = new();
 
     private List<Series> _allSeriesCache = new();
+    private readonly Dictionary<ChannelSortOrder, List<Series>> _allSeriesSortCache = new();
+    private List<Series>? _allSeriesSortSource;
+    private string _allSeriesSortHiddenGroupsKey = string.Empty;
     private int _deferredSeriesRefreshAfterChannelLoad;
+    private int _deferredPostChannelLoadBackgroundTasks;
 
     [ObservableProperty]
     private BatchObservableCollection<Series> _seriesViewItems = new();
@@ -256,6 +282,11 @@ public partial class MainViewModel : ObservableObject
 
     partial void OnIsChannelLoadingChanged(bool value)
     {
+        if (!value)
+        {
+            RunDeferredPostChannelLoadBackgroundTasks();
+        }
+
         NotifyContentStateChanged();
     }
 
@@ -452,21 +483,7 @@ public partial class MainViewModel : ObservableObject
                         // If series detail is open, refresh it with the newly aggregated data
                         if (IsSeriesDetailVisible && SelectedSeries != null)
                         {
-                            try
-                            {
-                                var refreshedSeries = await LoadSeriesWithProfileProgressAsync(SelectedSeries);
-                                if (CurrentProfile?.ProviderAccount?.Type != ProfileType.XtreamCodes)
-                                {
-                                    EnsureSeriesEpisodes(refreshedSeries);
-                                }
-                                SelectedSeries = refreshedSeries;
-                                _ = LoadSelectedSeriesMetadataAsync(refreshedSeries);
-                                System.Diagnostics.Debug.WriteLine($"[MainViewModel] Series detail auto-refreshed after aggregation: {refreshedSeries.Name}");
-                            }
-                            catch (Exception ex)
-                            {
-                                System.Diagnostics.Debug.WriteLine($"[MainViewModel] Series detail auto-refresh failed: {ex.Message}");
-                            }
+                            await SelectMedia(SelectedSeries);
                         }
                     }
                     catch (Exception ex)
@@ -1260,6 +1277,7 @@ public partial class MainViewModel : ObservableObject
 
     private void ClearProfileState()
     {
+        CancelSeriesDetailLoad();
         ClearActiveImportJobStatus();
 
         // Reset selections and filters
@@ -1330,6 +1348,7 @@ public partial class MainViewModel : ObservableObject
 
     private void ResetUIForRefresh()
     {
+        CancelSeriesDetailLoad();
         // Reset selections and filters
         SelectedChannel = null;
         SelectedSeries = null;
@@ -2208,7 +2227,7 @@ public partial class MainViewModel : ObservableObject
 
             StatusMessage = string.Format(CultureInfo.CurrentCulture,
                 _localizationService.GetString("Main.Status.ContentsReadyFormat"), meta.TotalCount);
-            StartPostChannelLoadBackgroundTasks();
+            DeferPostChannelLoadBackgroundTasks();
             EnsureChannelBackgroundRefresh();
         }
         catch (Exception ex)
@@ -2269,6 +2288,26 @@ public partial class MainViewModel : ObservableObject
     private void StartPostChannelLoadBackgroundTasks()
     {
         _ = RunPostChannelLoadBackgroundTasksAsync();
+    }
+
+    private void DeferPostChannelLoadBackgroundTasks()
+    {
+        if (IsChannelLoading)
+        {
+            Interlocked.Exchange(ref _deferredPostChannelLoadBackgroundTasks, 1);
+            return;
+        }
+
+        StartPostChannelLoadBackgroundTasks();
+    }
+
+    private void RunDeferredPostChannelLoadBackgroundTasks()
+    {
+        if (Interlocked.Exchange(ref _deferredPostChannelLoadBackgroundTasks, 0) == 1 &&
+            SelectedPlaylist != null)
+        {
+            StartPostChannelLoadBackgroundTasks();
+        }
     }
 
     private async Task RunPostChannelLoadBackgroundTasksAsync()
@@ -2939,7 +2978,10 @@ public partial class MainViewModel : ObservableObject
             if (page.Count == 0)
             {
                 _hasMoreChannels = false;
-                UpdateSearchBuckets();
+                if (ActiveView == AppView.Search && !string.IsNullOrWhiteSpace(SearchText))
+                {
+                    UpdateSearchBuckets();
+                }
                 return;
             }
 
@@ -2954,26 +2996,20 @@ public partial class MainViewModel : ObservableObject
                     Channels.AddRange(page);
                 }
                 
-                // Fire and forget EPG enrichment for the new page
-                _ = EnrichChannelsWithEpgAsync(page);
+                // Import owns the writer/CPU budget. EPG resumes after the import barrier opens.
+                if (!IsChannelLoading)
+                {
+                    _ = EnrichChannelsWithEpgAsync(page);
+                }
 
                 OnPropertyChanged(nameof(FilteredChannels));
                 NotifyContentStateChanged();
             });
 
-            var isPersonalView = ActiveView == AppView.MyList || ActiveView == AppView.Favorites;
-            if (!isPersonalView)
+            if (ActiveView == AppView.Search && !string.IsNullOrWhiteSpace(SearchText))
             {
-                UpdateMyList();
-                UpdateFavoriteChannels();
+                UpdateSearchBuckets();
             }
-
-            UpdateHistoryChannels();
-            if (ActiveView == AppView.Downloads)
-            {
-                UpdateDownloadedItems();
-            }
-            UpdateSearchBuckets();
 
             QueueVisibleChannelVisualEnrichment(page);
         }
@@ -7391,6 +7427,17 @@ public partial class MainViewModel : ObservableObject
         var hasSearch = !string.IsNullOrWhiteSpace(query);
         var s = _settingsService.Settings;
 
+        if (!hasSearch && string.IsNullOrWhiteSpace(selectedGroup))
+        {
+            _seriesFilteredSource = new List<Series>(GetOrBuildAllSeriesSort(source, SelectedSortOrder, s.HiddenSeriesGroups));
+            _currentSeriesPage = 0;
+            _hasMoreSeriesItems = true;
+            SeriesViewItems.Clear();
+            _ = LoadMoreSeriesAsync();
+            NotifyContentStateChanged();
+            return;
+        }
+
         var filtered = source.Where(series =>
         {
             // Filter out hidden groups
@@ -7403,7 +7450,7 @@ public partial class MainViewModel : ObservableObject
             if (!hasSearch && !string.IsNullOrWhiteSpace(selectedGroup))
             {
                 var category = series.GroupTitle ?? string.Empty;
-                groupOk = category.Contains(selectedGroup, StringComparison.OrdinalIgnoreCase);
+                groupOk = string.Equals(category, selectedGroup, StringComparison.OrdinalIgnoreCase);
             }
 
             if (!groupOk)
@@ -7433,6 +7480,54 @@ public partial class MainViewModel : ObservableObject
         SeriesViewItems.Clear();
         _ = LoadMoreSeriesAsync();
         NotifyContentStateChanged();
+    }
+
+    private List<Series> GetOrBuildAllSeriesSort(
+        List<Series> source,
+        ChannelSortOrder sortOrder,
+        IReadOnlyCollection<string> hiddenGroups)
+    {
+        var hiddenGroupsKey = string.Join(
+            '\u001f',
+            hiddenGroups.OrderBy(group => group, StringComparer.OrdinalIgnoreCase));
+
+        if (!ReferenceEquals(_allSeriesSortSource, source) ||
+            !string.Equals(_allSeriesSortHiddenGroupsKey, hiddenGroupsKey, StringComparison.Ordinal))
+        {
+            _allSeriesSortSource = source;
+            _allSeriesSortHiddenGroupsKey = hiddenGroupsKey;
+            _allSeriesSortCache.Clear();
+        }
+
+        if (_allSeriesSortCache.TryGetValue(sortOrder, out var cached))
+        {
+            return cached;
+        }
+
+        var hiddenGroupSet = hiddenGroups.Count == 0
+            ? null
+            : new HashSet<string>(hiddenGroups, StringComparer.OrdinalIgnoreCase);
+        IEnumerable<Series> visible = hiddenGroupSet == null
+            ? source
+            : source.Where(series =>
+                series.GroupTitle == null || !hiddenGroupSet.Contains(series.GroupTitle));
+
+        cached = sortOrder switch
+        {
+            ChannelSortOrder.NameAsc => visible.OrderBy(series => series.Name).ToList(),
+            ChannelSortOrder.NameDesc => visible.OrderByDescending(series => series.Name).ToList(),
+            ChannelSortOrder.OldestFirst => visible
+                .OrderBy(series => series.ReleaseYear ?? int.MaxValue)
+                .ThenBy(series => series.Name)
+                .ToList(),
+            _ => visible
+                .OrderByDescending(series => series.ReleaseYear ?? 0)
+                .ThenBy(series => series.Name)
+                .ToList()
+        };
+
+        _allSeriesSortCache[sortOrder] = cached;
+        return cached;
     }
 
 
@@ -7955,6 +8050,7 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void CloseSeriesDetail()
     {
+        CancelSeriesDetailLoad();
         IsSeriesDetailVisible = false;
         _seriesDetailDownloadedOnlyMode = false;
         OnPropertyChanged(nameof(IsDownloadedSeriesDetailMode));
@@ -7992,6 +8088,7 @@ public partial class MainViewModel : ObservableObject
         if (media == null) return;
 
         var selectionVersion = BeginMediaSelectionIntent();
+        CancelSeriesDetailLoad();
 
         SearchQuery = string.Empty;
 
@@ -8063,46 +8160,87 @@ public partial class MainViewModel : ObservableObject
         }
         else if (media is Series series)
         {
-            var selectedSeries = series;
-
             // Phase 27: If we're in Downloads view and this is a synthetic series
             // (from filesystem scanner, Id <= 0), do NOT re-fetch from DB — it would
             // overwrite our local file paths with the provider's remote URLs.
             var isSyntheticDownloadSeries = ActiveView == AppView.Downloads && series.Id <= 0;
 
+            PublishSeriesDetailShell(series, isSyntheticDownloadSeries);
+            OnMediaSelected?.Invoke(SelectedSeries ?? series);
+
             if (!isSyntheticDownloadSeries)
             {
-                try
-                {
-                    selectedSeries = await LoadSeriesWithProfileProgressAsync(series);
-                    // Xtream API is authoritative — skip M3U-style fallback that creates bogus Season 0
-                    if (CurrentProfile?.ProviderAccount?.Type != ProfileType.XtreamCodes)
-                    {
-                        EnsureSeriesEpisodes(selectedSeries);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger?.LogDebug($"EnsureSeriesEpisodes failed: {ex.Message}");
-                }
+                var detailLoadCts = BeginSeriesDetailLoad();
+                _ = CompleteSeriesDetailSelectionAsync(
+                    series,
+                    selectionVersion,
+                    isSyntheticDownloadSeries,
+                    detailLoadCts);
+            }
+        }
+    }
+
+    private void PublishSeriesDetailShell(Series series, bool isSyntheticDownloadSeries)
+    {
+        _seriesDetailDownloadedOnlyMode = ActiveView == AppView.Downloads;
+        OnPropertyChanged(nameof(IsDownloadedSeriesDetailMode));
+
+        var shellSeries = _seriesDetailDownloadedOnlyMode && !isSyntheticDownloadSeries
+            ? BuildDownloadedOnlySeries(series)
+            : series;
+
+        SelectedSeries = shellSeries;
+        IsSeriesDetailVisible = true;
+        _ = LoadSelectedSeriesMetadataAsync(shellSeries, keepLoading: !isSyntheticDownloadSeries);
+    }
+
+    private async Task CompleteSeriesDetailSelectionAsync(
+        Series series,
+        int selectionVersion,
+        bool isSyntheticDownloadSeries,
+        CancellationTokenSource loadCts)
+    {
+        try
+        {
+            var selectedSeries = await LoadSeriesWithProfileProgressAsync(series, loadCts.Token);
+            loadCts.Token.ThrowIfCancellationRequested();
+
+            // Xtream API is authoritative — skip M3U-style fallback that creates bogus Season 0
+            if (CurrentProfile?.ProviderAccount?.Type != ProfileType.XtreamCodes)
+            {
+                EnsureSeriesEpisodes(selectedSeries);
             }
 
-            if (!IsMediaSelectionIntentCurrent(selectionVersion))
+            if (!IsMediaSelectionIntentCurrent(selectionVersion) ||
+                loadCts.IsCancellationRequested)
             {
                 return;
             }
 
-            _seriesDetailDownloadedOnlyMode = ActiveView == AppView.Downloads;
-            OnPropertyChanged(nameof(IsDownloadedSeriesDetailMode));
             if (_seriesDetailDownloadedOnlyMode && !isSyntheticDownloadSeries)
             {
                 selectedSeries = BuildDownloadedOnlySeries(selectedSeries);
             }
 
             SelectedSeries = selectedSeries;
-            IsSeriesDetailVisible = true;
-            OnMediaSelected?.Invoke(selectedSeries);
             _ = LoadSelectedSeriesMetadataAsync(selectedSeries);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogDebug($"EnsureSeriesEpisodes failed: {ex.Message}");
+            if (IsMediaSelectionIntentCurrent(selectionVersion) &&
+                !loadCts.IsCancellationRequested)
+            {
+                IsSelectedSeriesMetadataLoading = false;
+            }
+        }
+        finally
+        {
+            Interlocked.CompareExchange(ref _seriesDetailLoadCts, null, loadCts);
+            loadCts.Dispose();
         }
     }
 
@@ -8179,7 +8317,7 @@ public partial class MainViewModel : ObservableObject
         });
     }
 
-    private Task LoadSelectedSeriesMetadataAsync(Series series)
+    private Task LoadSelectedSeriesMetadataAsync(Series series, bool keepLoading = false)
     {
         try
         {
@@ -8278,7 +8416,7 @@ public partial class MainViewModel : ObservableObject
         }
         finally
         {
-            IsSelectedSeriesMetadataLoading = false;
+            IsSelectedSeriesMetadataLoading = keepLoading;
         }
 
         return Task.CompletedTask;
@@ -8350,14 +8488,17 @@ public partial class MainViewModel : ObservableObject
     }
 
 
-    private async Task<Series> LoadSeriesWithProfileProgressAsync(Series series)
+    private async Task<Series> LoadSeriesWithProfileProgressAsync(
+        Series series,
+        CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         if (SelectedPlaylist == null)
         {
             return series;
         }
 
-        using var db = await _contextFactory.CreateDbContextAsync();
+        using var db = await _contextFactory.CreateDbContextAsync(cancellationToken);
 
         var dbSeries = await db.Series
             .Include(s => s.Seasons)
@@ -8365,7 +8506,8 @@ public partial class MainViewModel : ObservableObject
             // Use tracking to save Tmdb changes back to the DB immediately if lazy load occurs
             .FirstOrDefaultAsync(s =>
                 s.PlaylistId == SelectedPlaylist.Id &&
-                (s.Id == series.Id || s.Name == series.Name));
+                (s.Id == series.Id || s.Name == series.Name),
+                cancellationToken);
 
         var source = dbSeries ?? series;
         var providerOnlyFieldsCleared = PrepareProviderOnlySeriesMetadata(source);
@@ -8373,7 +8515,8 @@ public partial class MainViewModel : ObservableObject
         // ── YENİ: Xtream veya Stalker serisi ve hiç bölüm yoksa → lazy load ──
         if (ShouldLazyLoadProviderSeriesEpisodes(source))
         {
-            await LazyLoadProviderSeriesEpisodesAsync(source, db);
+            await LazyLoadProviderSeriesEpisodesAsync(source, db, cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
             NormalizeSeriesDetailForDisplay(source);
 
             // --- UI SENKRONİZASYONU ---
@@ -8399,11 +8542,11 @@ public partial class MainViewModel : ObservableObject
                 if (!source.TmdbId.HasValue)
                 {
                     var cleanName = SeriesInfoParser.CleanSeriesName(source.Name);
-                    var searchMeta = await _metadataService.SearchSeriesAsync(cleanName, languageCode);
+                    var searchMeta = await _metadataService.SearchSeriesAsync(cleanName, languageCode, cancellationToken);
 
                     // Ağ hatası durumunda ikinci deneme farklı dille
                     if (searchMeta?.TmdbId == null && !languageCode.Equals("en-US", StringComparison.OrdinalIgnoreCase))
-                        searchMeta = await _metadataService.SearchSeriesAsync(cleanName, "en-US");
+                        searchMeta = await _metadataService.SearchSeriesAsync(cleanName, "en-US", cancellationToken);
 
                     if (searchMeta?.TmdbId != null)
                     {
@@ -8432,7 +8575,10 @@ public partial class MainViewModel : ObservableObject
                 TmdbDetail? tmdbSeries = null;
                 if (source.TmdbId.HasValue)
                 {
-                    tmdbSeries = await _metadataService.FetchSeriesDetailsAsync(source.TmdbId.Value, languageCode);
+                    tmdbSeries = await _metadataService.FetchSeriesDetailsAsync(
+                        source.TmdbId.Value,
+                        languageCode,
+                        cancellationToken);
                     if (tmdbSeries != null)
                     {
                         if (string.IsNullOrEmpty(source.Cast) && tmdbSeries.Credits?.Cast != null)
@@ -8476,10 +8622,12 @@ public partial class MainViewModel : ObservableObject
                     var seasonsToFetch = source.Seasons.Where(s => s.SeasonNumber > 0).ToList();
                     if (seasonsToFetch.Count > 0)
                     {
-                        var seasonTasks = seasonsToFetch.Select(season =>
-                            _metadataService.FetchSeasonDetailsAsync(source.TmdbId.Value, season.SeasonNumber, languageCode)
-                                .ContinueWith(t => (season, tmdbSeason: t.Result), TaskContinuationOptions.ExecuteSynchronously)
-                        );
+                        var seasonTasks = seasonsToFetch.Select(async season =>
+                            (season, tmdbSeason: await _metadataService.FetchSeasonDetailsAsync(
+                                source.TmdbId.Value,
+                                season.SeasonNumber,
+                                languageCode,
+                                cancellationToken)));
 
                         var seasonResults = await Task.WhenAll(seasonTasks);
 
@@ -8537,8 +8685,12 @@ public partial class MainViewModel : ObservableObject
                     dbSeries.TmdbId = source.TmdbId;
                     dbSeries.LastTmdbSync = DateTime.UtcNow;
                     dbSeries.MetadataFetchedAt = source.MetadataFetchedAt;
-                    await db.SaveChangesAsync();
+                    await db.SaveChangesAsync(cancellationToken);
                 }
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
             }
             catch (Exception ex)
             {
@@ -8549,10 +8701,11 @@ public partial class MainViewModel : ObservableObject
 
         if (providerOnlyFieldsCleared && dbSeries != null)
         {
-            await db.SaveChangesAsync();
+            await db.SaveChangesAsync(cancellationToken);
         }
 
-        await ApplyProfileProgressAsync(source, db);
+        await ApplyProfileProgressCoreAsync(source, db, cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
         NormalizeSeriesDetailForDisplay(source);
 
         // Son kez UI senkronizasyonu — tüm değişiklikler yansısın
@@ -8585,19 +8738,22 @@ public partial class MainViewModel : ObservableObject
         => series.Seasons.All(s => s.Episodes.Count == 0) &&
            (IsCurrentProviderType(ProfileType.XtreamCodes) || IsCurrentProviderType(ProfileType.StalkerPortal));
 
-    private async Task LazyLoadProviderSeriesEpisodesAsync(Series series, AppDbContext db)
+    private async Task LazyLoadProviderSeriesEpisodesAsync(
+        Series series,
+        AppDbContext db,
+        CancellationToken cancellationToken)
     {
         Debug.WriteLine($"[SelectMedia] Series '{series.Name}' has no episodes. Attempting lazy load for {CurrentProfile?.ProviderAccount?.Type}");
 
         if (IsCurrentProviderType(ProfileType.XtreamCodes))
         {
-            await TryLazyLoadXtreamEpisodesAsync(series, db);
+            await TryLazyLoadXtreamEpisodesAsync(series, db, cancellationToken);
             return;
         }
 
         if (IsCurrentProviderType(ProfileType.StalkerPortal))
         {
-            await TryLazyLoadStalkerEpisodesAsync(series, db);
+            await TryLazyLoadStalkerEpisodesAsync(series, db, cancellationToken);
         }
     }
 
@@ -8759,7 +8915,10 @@ public partial class MainViewModel : ObservableObject
         return changed;
     }
 
-    private async Task TryLazyLoadStalkerEpisodesAsync(Series series, AppDbContext db)
+    private async Task TryLazyLoadStalkerEpisodesAsync(
+        Series series,
+        AppDbContext db,
+        CancellationToken cancellationToken)
     {
         if (!IsCurrentProviderType(ProfileType.StalkerPortal)) return;
 
@@ -8770,7 +8929,8 @@ public partial class MainViewModel : ObservableObject
                 c.PlaylistId == series.PlaylistId &&
                 c.Type == ChannelType.Series &&
                 c.StreamUrl.StartsWith("stalker-series://") &&
-                c.Name == series.Name);
+                c.Name == series.Name,
+                cancellationToken);
 
         if (seriesChannel == null)
         {
@@ -8780,7 +8940,7 @@ public partial class MainViewModel : ObservableObject
                 .Where(c => c.PlaylistId == series.PlaylistId &&
                             c.Type == ChannelType.Series &&
                             c.StreamUrl.StartsWith("stalker-series://"))
-                .ToListAsync();
+                .ToListAsync(cancellationToken);
 
             var targetKey = SeriesInfoParser.NormalizeKey(series.Name);
             seriesChannel = allSeriesChannels.FirstOrDefault(c =>
@@ -8801,7 +8961,7 @@ public partial class MainViewModel : ObservableObject
         _logger?.LogDebug("[Stalker] Lazy loading episodes for series {Name} (id={Id})", series.Name, idStr);
 
         var detail = await _stalkerPortalService.GetSeriesInfoAsync(
-            portalUrl, macAddress, idStr);
+            portalUrl, macAddress, idStr, cancellationToken);
 
         if (detail == null) return;
 
@@ -8882,8 +9042,12 @@ public partial class MainViewModel : ObservableObject
             {
                 // Mevcut seriyi de güncelle (CoverUrl, Plot vb. için)
                 db.Series.Update(series);
-                await db.SaveChangesAsync();
+                await db.SaveChangesAsync(cancellationToken);
                 _logger?.LogDebug("[Stalker] Series metadata & episodes saved to DB.");
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
             }
             catch (Exception ex)
             {
@@ -8892,7 +9056,10 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
-    private async Task TryLazyLoadXtreamEpisodesAsync(Series series, AppDbContext db)
+    private async Task TryLazyLoadXtreamEpisodesAsync(
+        Series series,
+        AppDbContext db,
+        CancellationToken cancellationToken)
     {
         if (!IsCurrentProviderType(ProfileType.XtreamCodes)) return;
 
@@ -8905,7 +9072,8 @@ public partial class MainViewModel : ObservableObject
                 c.PlaylistId == series.PlaylistId &&
                 c.Type == ChannelType.Series &&
                 c.StreamUrl.StartsWith("xtream-series://") &&
-                c.Name == series.Name);
+                c.Name == series.Name,
+                cancellationToken);
 
         if (seriesChannel == null)
         {
@@ -8915,7 +9083,7 @@ public partial class MainViewModel : ObservableObject
                 .Where(c => c.PlaylistId == series.PlaylistId &&
                             c.Type == ChannelType.Series &&
                             c.StreamUrl.StartsWith("xtream-series://"))
-                .ToListAsync();
+                .ToListAsync(cancellationToken);
 
             
             var targetKey = SeriesInfoParser.NormalizeKey(series.Name);
@@ -8943,7 +9111,7 @@ public partial class MainViewModel : ObservableObject
         _logger?.LogDebug("[Xtream] Lazy loading episodes for series {Name} (id={Id})", series.Name, xtreamSeriesId);
 
         var detail = await _xtreamCodesService.GetSeriesInfoAsync(
-            baseUrl, username, password, xtreamSeriesId);
+            baseUrl, username, password, xtreamSeriesId, cancellationToken);
 
         if (detail == null)
         {
@@ -9037,7 +9205,11 @@ public partial class MainViewModel : ObservableObject
                 // SERİ meta verisini de güncelle (CoverUrl, Plot vb.)
                 db.Series.Update(series);
                 
-                await db.SaveChangesAsync();
+                await db.SaveChangesAsync(cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
             }
             catch (Exception ex)
             {
@@ -9114,7 +9286,13 @@ public partial class MainViewModel : ObservableObject
         return null;
     }
 
-    private async Task ApplyProfileProgressAsync(Series series, AppDbContext db)
+    private Task ApplyProfileProgressAsync(Series series, AppDbContext db)
+        => ApplyProfileProgressCoreAsync(series, db, CancellationToken.None);
+
+    private async Task ApplyProfileProgressCoreAsync(
+        Series series,
+        AppDbContext db,
+        CancellationToken cancellationToken)
     {
         var episodes = series.Seasons.SelectMany(s => s.Episodes).ToList();
         if (episodes.Count == 0)
@@ -9146,7 +9324,7 @@ public partial class MainViewModel : ObservableObject
                 .Where(h => h.ProfileId == profileId && h.EpisodeId.HasValue && episodeIds.Contains(h.EpisodeId.Value))
                 .GroupBy(h => h.EpisodeId!.Value)
                 .Select(g => g.OrderByDescending(x => x.WatchedAt).First())
-                .ToListAsync();
+                .ToListAsync(cancellationToken);
 
             historyByEpisodeId = latestEpisodeHistories.ToDictionary(h => h.EpisodeId!.Value);
         }
@@ -9167,7 +9345,7 @@ public partial class MainViewModel : ObservableObject
                     p.ProfileId == profileId &&
                     p.SeriesKey == seriesKey &&
                     seasonNumbers.Contains(p.SeasonNumber))
-                .ToListAsync();
+                .ToListAsync(cancellationToken);
 
             foreach (var item in persistedProgress)
             {
@@ -9181,7 +9359,9 @@ public partial class MainViewModel : ObservableObject
 
             if (episodeProgressByKey.Count == 0)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 var legacySnapshots = await LoadLegacySeriesProgressSnapshotsAsync(db, profileId, seriesKey);
+                cancellationToken.ThrowIfCancellationRequested();
                 if (legacySnapshots.Count > 0)
                 {
                     episodeProgressByKey = legacySnapshots;

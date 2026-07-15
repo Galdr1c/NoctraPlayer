@@ -30,7 +30,7 @@
                 <Panel Grid.Row="0" VerticalAlignment="Center" HorizontalAlignment="Center">
                     <controls:PremiumSpinner>
                         <!-- Pulsing App Logo in Center -->
-                        <Image Source="avares://Noctra/Assets/Square71x71Logo.png"
+                        <Image Source="avares://Noctra/Assets/Square150x150Logo.png"
                                Width="50" Height="50"
                                VerticalAlignment="Center" HorizontalAlignment="Center"
                                RenderTransformOrigin="50%,50%">

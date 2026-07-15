@@ -232,13 +232,23 @@ public class MobileReleaseGuardTests
     }
 
     [Fact]
-    public void MobilePrimaryContentGrids_UsePagedWrapPanelLayout()
+    public void MobileContentGrids_VirtualizePrimarySurfacesAndKeepSecondaryWrapLayouts()
     {
         foreach (var viewName in new[]
                  {
                      "MobileLiveView.axaml",
                      "MobileMoviesView.axaml",
-                     "MobileSeriesView.axaml",
+                     "MobileSeriesView.axaml"
+                 })
+        {
+            var view = ReadProjectFile("Noctra.Mobile", "Views", viewName);
+            Assert.Contains("<ScrollViewer", view);
+            Assert.Contains("<controls:MobileVirtualizingCardGrid", view);
+            Assert.DoesNotContain("<WrapPanel HorizontalAlignment=\"Stretch\"", view);
+        }
+
+        foreach (var viewName in new[]
+                 {
                      "MobileFavoritesView.axaml",
                      "MobileMyListView.axaml",
                      "MobileHistoryView.axaml",
@@ -246,7 +256,6 @@ public class MobileReleaseGuardTests
                  })
         {
             var view = ReadProjectFile("Noctra.Mobile", "Views", viewName);
-            Assert.DoesNotContain("<controls:VirtualizedResponsiveGrid", view);
             Assert.Contains("<ScrollViewer", view);
             Assert.Contains("<WrapPanel HorizontalAlignment=\"Stretch\"", view);
         }
