@@ -76,9 +76,9 @@
           </Border.IsVisible>
         </Border>
         <controls:RemoteImage x:Name="SeriesPoster"
-                                        Url="{Binding CoverUrl}"
-                                        Stretch="UniformToFill"
-                                        RenderOptions.BitmapInterpolationMode="MediumQuality" />
+                              Url="{Binding CoverUrl}"
+                              Stretch="UniformToFill"
+                              RenderOptions.BitmapInterpolationMode="MediumQuality" />
 
         <Border VerticalAlignment="Bottom" Background="{DynamicResource OverlayScrimBrush}" Padding="8">
           <StackPanel Spacing="2">

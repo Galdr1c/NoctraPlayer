@@ -43,6 +43,18 @@
     <Style Selector="Button.detailAction:pressed">
       <Setter Property="Opacity" Value="0.65" />
     </Style>
+    <Style Selector="ListBox#SeasonListBox > ListBoxItem">
+      <Setter Property="Padding" Value="12,8" />
+      <Setter Property="Margin" Value="0,0,8,0" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="8" />
+    </Style>
+    <Style Selector="ListBox#SeasonListBox > ListBoxItem:selected">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+    </Style>
   </UserControl.Styles>
 
   <Border Background="{DynamicResource BackgroundGradientBrush}">
@@ -325,8 +337,10 @@
                      TextAlignment="Center" />
         </StackPanel>
 
-        <ListBox ItemsSource="{Binding SelectedSeries.Seasons}"
+        <ListBox x:Name="SeasonListBox"
+                 ItemsSource="{Binding SelectedSeries.Seasons}"
                  SelectedItem="{Binding SelectedSeason}"
+                 ItemContainerTheme="{StaticResource TransparentListBoxItemTheme}"
                  Background="Transparent"
                  BorderThickness="0"
                  Padding="0"
@@ -350,10 +364,12 @@
 
         <ListBox x:Name="EpisodeListBox"
                  ItemsSource="{Binding SelectedSeason.Episodes}"
+                 ItemContainerTheme="{StaticResource TransparentListBoxItemTheme}"
                  MaxHeight="760"
                  Background="Transparent"
                  BorderThickness="0"
                  Padding="0"
+                 SelectionChanged="ClearTransientSelection"
                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                  ScrollViewer.VerticalScrollBarVisibility="Auto"
                  ScrollViewer.IsScrollChainingEnabled="False"
@@ -369,6 +385,12 @@
               <Setter Property="Margin" Value="0" />
               <Setter Property="Background" Value="Transparent" />
               <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+              <Setter Property="Focusable" Value="False" />
+            </Style>
+            <Style Selector="ListBoxItem:selected">
+              <Setter Property="Background" Value="Transparent" />
+              <Setter Property="BorderBrush" Value="Transparent" />
+              <Setter Property="BorderThickness" Value="0" />
             </Style>
             <Style Selector="Button:pressed Border#EpBgLayer">
               <Setter Property="Background" Value="{DynamicResource InteractivePressedBrush}" />

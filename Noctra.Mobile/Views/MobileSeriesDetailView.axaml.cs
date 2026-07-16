@@ -8,4 +8,12 @@ public partial class MobileSeriesDetailView : UserControl
     {
         InitializeComponent();
     }
+
+    private static void ClearTransientSelection(object? sender, SelectionChangedEventArgs e)
+    {
+        if (sender is ListBox { SelectedIndex: >= 0 } listBox)
+        {
+            listBox.SelectedIndex = -1;
+        }
+    }
 }

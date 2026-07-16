@@ -77,9 +77,9 @@
           </Border.IsVisible>
         </Border>
         <controls:RemoteImage x:Name="PosterImage"
-                                    Url="{Binding CoverUrl}"
-                                    Stretch="UniformToFill"
-                                    RenderOptions.BitmapInterpolationMode="MediumQuality" />
+                              Url="{Binding CoverUrl}"
+                              Stretch="UniformToFill"
+                              RenderOptions.BitmapInterpolationMode="MediumQuality" />
         
         <!-- Bottom Section: Info + Progress -->
         <StackPanel VerticalAlignment="Bottom">

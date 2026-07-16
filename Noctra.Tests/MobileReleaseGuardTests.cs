@@ -242,8 +242,8 @@ public class MobileReleaseGuardTests
                  })
         {
             var view = ReadProjectFile("Noctra.Mobile", "Views", viewName);
-            Assert.Contains("<ScrollViewer", view);
             Assert.Contains("<controls:MobileVirtualizingCardGrid", view);
+            Assert.DoesNotContain("<ScrollViewer x:Name=", view);
             Assert.DoesNotContain("<WrapPanel HorizontalAlignment=\"Stretch\"", view);
         }
 

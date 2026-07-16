@@ -7,6 +7,7 @@ using System.Threading;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Templates;
+using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Threading;
 using Noctra.Core.Collections;
@@ -27,7 +28,7 @@ public sealed record MobileCardGridRow(IReadOnlyList<object> Items);
 /// realizes every child, while VirtualizingStackPanel can recycle rows outside the
 /// effective viewport. Each realized row owns only the small number of cards that fit.
 /// </summary>
-public sealed class MobileVirtualizingCardGrid : ItemsControl
+public sealed class MobileVirtualizingCardGrid : ListBox
 {
     private const double CardGap = 16;
     private const double FallbackAvailableWidth = 720;
@@ -39,22 +40,29 @@ public sealed class MobileVirtualizingCardGrid : ItemsControl
         AvaloniaProperty.Register<MobileVirtualizingCardGrid, MobileCardGridKind>(nameof(CardKind));
 
     private readonly BatchObservableCollection<MobileCardGridRow> _rows = new();
+    private List<object> _sourceSnapshot = new();
     private INotifyCollectionChanged? _observableSource;
     private int _rebuildQueued;
+    private int _fullRebuildRequired;
     private int _columns;
     private double _cardWidth;
+
+    protected override Type StyleKeyOverride => typeof(ListBox);
 
     static MobileVirtualizingCardGrid()
     {
         SourceItemsProperty.Changed.AddClassHandler<MobileVirtualizingCardGrid>(
             (control, args) => control.OnSourceItemsChanged(args.OldValue as IEnumerable, args.NewValue as IEnumerable));
         CardKindProperty.Changed.AddClassHandler<MobileVirtualizingCardGrid>(
-            (control, _) => control.QueueRebuild());
+            (control, _) => control.QueueFullRebuild());
     }
 
     public MobileVirtualizingCardGrid()
     {
         HorizontalAlignment = HorizontalAlignment.Stretch;
+        Background = null;
+        BorderThickness = new Thickness(0);
+        Padding = new Thickness(0);
         ItemsSource = _rows;
         ItemsPanel = new FuncTemplate<Panel?>(() => new VirtualizingStackPanel
         {
@@ -65,8 +73,12 @@ public sealed class MobileVirtualizingCardGrid : ItemsControl
                 ? null
                 : new MobileCardGridRowControl(this) { DataContext = row },
             supportsRecycling: true);
+        SelectionChanged += ClearTransientSelection;
         SizeChanged += (_, _) => QueueRebuildIfMetricsChanged();
+        AddHandler(ScrollViewer.ScrollChangedEvent, OnInnerScrollChanged);
     }
+
+    public event EventHandler<ScrollChangedEventArgs>? ScrollChanged;
 
     public IEnumerable? SourceItems
     {
@@ -93,22 +105,64 @@ public sealed class MobileVirtualizingCardGrid : ItemsControl
             _observableSource.CollectionChanged += Source_CollectionChanged;
         }
 
-        QueueRebuild();
+        QueueFullRebuild();
     }
 
     private void Source_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
-        => QueueRebuild();
+        => QueueRefresh();
+
+    private void OnInnerScrollChanged(object? sender, ScrollChangedEventArgs e)
+    {
+        if (e.Source is ScrollViewer scrollViewer)
+        {
+            ScrollChanged?.Invoke(scrollViewer, e);
+        }
+    }
+
+    private void ClearTransientSelection(object? sender, SelectionChangedEventArgs e)
+    {
+        if (SelectedIndex >= 0)
+        {
+            SelectedIndex = -1;
+        }
+    }
+
+    protected override bool ShouldTriggerSelection(Visual source, PointerEventArgs e)
+        => false;
+
+    protected override bool ShouldTriggerSelection(Visual source, KeyEventArgs e)
+        => false;
+
+    protected override void PrepareContainerForItemOverride(Control element, object? item, int index)
+    {
+        base.PrepareContainerForItemOverride(element, item, index);
+        if (element is ListBoxItem container)
+        {
+            container.Padding = new Thickness(0);
+            container.Margin = new Thickness(0);
+            container.Background = null;
+            container.BorderThickness = new Thickness(0);
+            container.HorizontalContentAlignment = HorizontalAlignment.Stretch;
+            container.Focusable = false;
+        }
+    }
 
     private void QueueRebuildIfMetricsChanged()
     {
         var metrics = CalculateMetrics(GetAvailableWidth(), CardKind);
         if (metrics.Columns != _columns || Math.Abs(metrics.CardWidth - _cardWidth) > 8)
         {
-            QueueRebuild();
+            QueueFullRebuild();
         }
     }
 
-    private void QueueRebuild()
+    private void QueueFullRebuild()
+    {
+        Interlocked.Exchange(ref _fullRebuildRequired, 1);
+        QueueRefresh();
+    }
+
+    private void QueueRefresh()
     {
         if (Interlocked.Exchange(ref _rebuildQueued, 1) == 1)
         {
@@ -118,6 +172,12 @@ public sealed class MobileVirtualizingCardGrid : ItemsControl
         Dispatcher.UIThread.Post(() =>
         {
             Interlocked.Exchange(ref _rebuildQueued, 0);
+            var requiresFullRebuild = Interlocked.Exchange(ref _fullRebuildRequired, 0) == 1;
+            if (!requiresFullRebuild && TryAppendRows())
+            {
+                return;
+            }
+
             RebuildRows();
         }, DispatcherPriority.Loaded);
     }
@@ -128,60 +188,115 @@ public sealed class MobileVirtualizingCardGrid : ItemsControl
         _columns = metrics.Columns;
         _cardWidth = metrics.CardWidth;
 
-        var items = SourceItems?
-            .Cast<object?>()
-            .Where(item => item != null)
-            .Cast<object>()
-            .ToList() ?? new List<object>();
+        var items = SnapshotSourceItems();
         var rows = new List<MobileCardGridRow>((items.Count + _columns - 1) / _columns);
 
         for (var index = 0; index < items.Count; index += _columns)
         {
-            rows.Add(new MobileCardGridRow(
-                items.Skip(index).Take(_columns).ToArray()));
+            rows.Add(BuildRow(items, index));
         }
 
         _rows.ReplaceAll(rows);
+        _sourceSnapshot = items;
     }
 
-    private void PopulateRow(WrapPanel panel, MobileCardGridRow? row)
+    private bool TryAppendRows()
     {
-        panel.Children.Clear();
-        if (row == null)
+        if (_columns <= 0 || _sourceSnapshot.Count == 0)
         {
-            return;
+            return false;
         }
 
-        for (var index = 0; index < row.Items.Count; index++)
+        var items = SnapshotSourceItems();
+        if (items.Count <= _sourceSnapshot.Count)
         {
-            var card = CreateCard(row.Items[index]);
+            return false;
+        }
+
+        for (var index = 0; index < _sourceSnapshot.Count; index++)
+        {
+            if (!ReferenceEquals(items[index], _sourceSnapshot[index]) &&
+                !Equals(items[index], _sourceSnapshot[index]))
+            {
+                return false;
+            }
+        }
+
+        var appendStart = _sourceSnapshot.Count;
+        var incompleteRowItemCount = appendStart % _columns;
+        if (incompleteRowItemCount != 0)
+        {
+            var incompleteRowIndex = appendStart / _columns;
+            var incompleteRowStart = incompleteRowIndex * _columns;
+            _rows[incompleteRowIndex] = BuildRow(items, incompleteRowStart);
+            appendStart = incompleteRowStart + _columns;
+        }
+
+        for (var index = appendStart; index < items.Count; index += _columns)
+        {
+            _rows.Add(BuildRow(items, index));
+        }
+
+        _sourceSnapshot = items;
+        return true;
+    }
+
+    private List<object> SnapshotSourceItems()
+        => SourceItems?
+            .Cast<object?>()
+            .Where(item => item != null)
+            .Cast<object>()
+            .ToList() ?? new List<object>();
+
+    private MobileCardGridRow BuildRow(IReadOnlyList<object> items, int startIndex)
+    {
+        var itemCount = Math.Min(_columns, items.Count - startIndex);
+        var rowItems = new object[itemCount];
+        for (var index = 0; index < itemCount; index++)
+        {
+            rowItems[index] = items[startIndex + index];
+        }
+
+        return new MobileCardGridRow(rowItems);
+    }
+
+    private void PopulateRow(MobileCardGridRowControl panel, MobileCardGridRow? row)
+    {
+        panel.EnsureCardSlots();
+
+        for (var index = 0; index < panel.Cards.Count; index++)
+        {
+            var card = panel.Cards[index];
+            var item = row is not null && index < row.Items.Count
+                ? row.Items[index]
+                : null;
+            card.DataContext = item;
+            card.IsVisible = item != null;
             card.Width = _cardWidth;
             if (CardKind is MobileCardGridKind.Vod or MobileCardGridKind.Series)
             {
                 card.Height = Math.Round(_cardWidth * 1.5);
             }
+            else
+            {
+                card.Height = double.NaN;
+            }
 
             card.Margin = new Thickness(
                 0,
                 0,
-                index < row.Items.Count - 1 ? CardGap : 0,
+                row is not null && index < row.Items.Count - 1 ? CardGap : 0,
                 CardKind == MobileCardGridKind.Live ? 0 : CardGap);
-            panel.Children.Add(card);
         }
     }
 
-    private Control CreateCard(object item)
-    {
-        Control card = CardKind switch
+    private Control CreateCard()
+        => CardKind switch
         {
             MobileCardGridKind.Live => new MobileLiveTvCard(),
             MobileCardGridKind.Vod => new MobileVodCard(),
             _ => new MobileSeriesCard()
         };
-
-        card.DataContext = item;
-        return card;
-    }
 
     private double GetAvailableWidth()
         => double.IsFinite(Bounds.Width) && Bounds.Width > 0
@@ -209,12 +324,37 @@ public sealed class MobileVirtualizingCardGrid : ItemsControl
     private sealed class MobileCardGridRowControl : WrapPanel
     {
         private readonly MobileVirtualizingCardGrid _owner;
+        private readonly List<Control> _cards = new();
+        private MobileCardGridKind _cardKind;
+        private int _slotCount;
 
         public MobileCardGridRowControl(MobileVirtualizingCardGrid owner)
         {
             _owner = owner;
             Orientation = Orientation.Horizontal;
             HorizontalAlignment = HorizontalAlignment.Stretch;
+        }
+
+        public IReadOnlyList<Control> Cards => _cards;
+
+        public void EnsureCardSlots()
+        {
+            if (_slotCount == _owner._columns && _cardKind == _owner.CardKind)
+            {
+                return;
+            }
+
+            Children.Clear();
+            _cards.Clear();
+            _slotCount = _owner._columns;
+            _cardKind = _owner.CardKind;
+
+            for (var index = 0; index < _slotCount; index++)
+            {
+                var card = _owner.CreateCard();
+                _cards.Add(card);
+                Children.Add(card);
+            }
         }
 
         protected override void OnDataContextChanged(EventArgs e)

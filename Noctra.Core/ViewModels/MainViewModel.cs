@@ -2806,6 +2806,7 @@ public partial class MainViewModel : ObservableObject
     private int _currentSeriesPage;
     private bool _hasMoreSeriesItems;
     private bool _isLoadingMoreSeriesItems;
+    private int _incrementalContentGeneration;
     private List<Series> _seriesFilteredSource = new();
     private List<string> _allGroupsCache = new();
     private List<string> _liveGroupsCache = new();
@@ -2898,6 +2899,19 @@ public partial class MainViewModel : ObservableObject
         NotifyContentStateChanged();
     }
 
+    private int BeginIncrementalContentGeneration()
+        => Interlocked.Increment(ref _incrementalContentGeneration);
+
+    private bool IsIncrementalContentRequestCurrent(
+        int generation,
+        AppView view,
+        ChannelType? channelType,
+        int playlistId)
+        => generation == Volatile.Read(ref _incrementalContentGeneration) &&
+           ActiveView == view &&
+           SelectedChannelType == channelType &&
+           SelectedPlaylist?.Id == playlistId;
+
     private void ResetSeriesIncrementalState()
     {
         _currentSeriesPage = 0;
@@ -2908,18 +2922,32 @@ public partial class MainViewModel : ObservableObject
         NotifyContentStateChanged();
     }
 
-    public async Task LoadMoreChannelsAsync(CancellationToken cancellationToken = default)
+    public async Task LoadMoreChannelsAsync(
+        CancellationToken cancellationToken = default,
+        int? contentGeneration = null)
     {
         if (cancellationToken.IsCancellationRequested)
         {
             return;
         }
 
-        if (SelectedPlaylist == null || !_hasMoreChannels || _isLoadingMoreChannels)
+        var requestGeneration = contentGeneration ?? Volatile.Read(ref _incrementalContentGeneration);
+        var requestView = ActiveView;
+        var requestChannelType = SelectedChannelType;
+        var requestPlaylist = SelectedPlaylist;
+        if (requestPlaylist == null ||
+            !_hasMoreChannels ||
+            _isLoadingMoreChannels ||
+            !IsIncrementalContentRequestCurrent(
+                requestGeneration,
+                requestView,
+                requestChannelType,
+                requestPlaylist.Id))
         {
             return;
         }
 
+        var requestedPage = _currentPage;
         _isLoadingMoreChannels = true;
 
         try
@@ -2929,8 +2957,8 @@ public partial class MainViewModel : ObservableObject
             var effectiveType = hasSearch ? null : SelectedChannelType;
 
             var page = await _contentQueryService.GetChannelPageAsync(new ContentPageRequest(
-                PlaylistId: SelectedPlaylist.Id,
-                Skip: _currentPage * IncrementalPageSize,
+                PlaylistId: requestPlaylist.Id,
+                Skip: requestedPage * IncrementalPageSize,
                 Take: IncrementalPageSize,
                 SearchText: SearchText,
                 Group: effectiveGroup,
@@ -2939,13 +2967,13 @@ public partial class MainViewModel : ObservableObject
                 SortOrder: SelectedSortOrder));
 
             // If selected group returns nothing on first page, fallback to "all" to avoid false empty UI.
-            if (_currentPage == 0 &&
+            if (requestedPage == 0 &&
                 page.Count == 0 &&
                 !hasSearch &&
                 !string.IsNullOrWhiteSpace(effectiveGroup))
             {
                 var fallbackPage = await _contentQueryService.GetChannelPageAsync(new ContentPageRequest(
-                    PlaylistId: SelectedPlaylist.Id,
+                    PlaylistId: requestPlaylist.Id,
                     Skip: 0,
                     Take: IncrementalPageSize,
                     SearchText: SearchText,
@@ -2953,6 +2981,16 @@ public partial class MainViewModel : ObservableObject
                     Type: effectiveType,
                     OnlyFavorites: ShowOnlyFavorites,
                     SortOrder: SelectedSortOrder));
+
+                if (cancellationToken.IsCancellationRequested ||
+                    !IsIncrementalContentRequestCurrent(
+                        requestGeneration,
+                        requestView,
+                        requestChannelType,
+                        requestPlaylist.Id))
+                {
+                    return;
+                }
 
                 if (fallbackPage.Count > 0)
                 {
@@ -2970,7 +3008,12 @@ public partial class MainViewModel : ObservableObject
                 }
             }
 
-            if (cancellationToken.IsCancellationRequested)
+            if (cancellationToken.IsCancellationRequested ||
+                !IsIncrementalContentRequestCurrent(
+                    requestGeneration,
+                    requestView,
+                    requestChannelType,
+                    requestPlaylist.Id))
             {
                 return;
             }
@@ -2985,11 +3028,21 @@ public partial class MainViewModel : ObservableObject
                 return;
             }
 
-            _currentPage++;
-            _hasMoreChannels = page.Count == IncrementalPageSize;
-
+            var applied = false;
             _dispatcherService.Invoke(() =>
             {
+                if (cancellationToken.IsCancellationRequested ||
+                    !IsIncrementalContentRequestCurrent(
+                        requestGeneration,
+                        requestView,
+                        requestChannelType,
+                        requestPlaylist.Id))
+                {
+                    return;
+                }
+
+                _currentPage = requestedPage + 1;
+                _hasMoreChannels = page.Count == IncrementalPageSize;
                 FilteredChannels.AddRange(page);
                 if (!ReferenceEquals(Channels, FilteredChannels))
                 {
@@ -3004,7 +3057,13 @@ public partial class MainViewModel : ObservableObject
 
                 OnPropertyChanged(nameof(FilteredChannels));
                 NotifyContentStateChanged();
+                applied = true;
             });
+
+            if (!applied)
+            {
+                return;
+            }
 
             if (ActiveView == AppView.Search && !string.IsNullOrWhiteSpace(SearchText))
             {
@@ -3015,7 +3074,10 @@ public partial class MainViewModel : ObservableObject
         }
         finally
         {
-            _isLoadingMoreChannels = false;
+            if (requestGeneration == Volatile.Read(ref _incrementalContentGeneration))
+            {
+                _isLoadingMoreChannels = false;
+            }
         }
     }
 
@@ -3499,6 +3561,8 @@ public partial class MainViewModel : ObservableObject
 
     private void PrepareContentSurfaceForNavigation(AppView view)
     {
+        BeginIncrementalContentGeneration();
+
         if (view is AppView.Live or AppView.Movies)
         {
             _isNavigationContentResetPending = true;
@@ -3857,6 +3921,7 @@ public partial class MainViewModel : ObservableObject
 
     private async Task<bool> ApplyFiltersAsync(CancellationToken token)
     {
+        var contentGeneration = BeginIncrementalContentGeneration();
         if (SelectedPlaylist == null || token.IsCancellationRequested)
         {
             CompleteNavigationContentReset();
@@ -3902,7 +3967,7 @@ public partial class MainViewModel : ObservableObject
 
             if (needsChannels)
             {
-                await LoadMoreChannelsAsync(token);
+                await LoadMoreChannelsAsync(token, contentGeneration);
             }
             else
             {

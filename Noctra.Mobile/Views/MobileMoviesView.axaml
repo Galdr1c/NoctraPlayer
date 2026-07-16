@@ -18,11 +18,11 @@
   </UserControl.Resources>
 
   <Grid>
-  <ScrollViewer x:Name="MoviesScrollViewer"
-                ScrollChanged="MoviesScrollViewer_ScrollChanged" VerticalScrollBarVisibility="Visible" HorizontalScrollBarVisibility="Disabled">
-    <!-- Increase margins and spacing to better emulate desktop layout -->
-    <StackPanel Margin="24" Spacing="20">
-      <Grid ColumnDefinitions="*,Auto">
+    <Grid Margin="24"
+          RowDefinitions="Auto,Auto,*"
+          RowSpacing="20">
+      <Grid Grid.Row="0"
+            ColumnDefinitions="*,Auto">
         <!-- Desktop-inspired title styling: bold weight and subtle letter spacing -->
         <TextBlock Text="{loc:Translate Movies.Title}"
                    FontSize="{DynamicResource FHeadline}"
@@ -42,6 +42,7 @@
         </Button>
       </Grid>
       <Button x:Name="CategorySelectionButton"
+              Grid.Row="1"
               Classes="SettingsSelectionButton"
               IsVisible="{Binding ShowGroupFilter}"
               Click="OpenCategorySelection_Click">
@@ -60,14 +61,16 @@
         </Grid>
       </Button>
 
-      <Border HorizontalAlignment="Stretch" MaxWidth="1400">
-        <controls:MobileVirtualizingCardGrid SourceItems="{Binding FilteredChannels}"
-                                             CardKind="Vod"
-                                             IsVisible="{Binding !IsContentLoading}" />
-      </Border>
+      <controls:MobileVirtualizingCardGrid Grid.Row="2"
+                                           SourceItems="{Binding FilteredChannels}"
+                                           CardKind="Vod"
+                                           ItemContainerTheme="{StaticResource TransparentListBoxItemTheme}"
+                                           IsVisible="{Binding !IsContentLoading}"
+                                           ScrollChanged="MoviesScrollViewer_ScrollChanged" />
 
       <!-- Loading state: mirror desktop with two lines of status text -->
-      <StackPanel Spacing="16"
+      <StackPanel Grid.Row="2"
+                  Spacing="16"
                   Margin="0,80,0,0"
                   HorizontalAlignment="Center"
                   IsVisible="{Binding IsContentLoading}">
@@ -84,15 +87,14 @@
                    TextAlignment="Center" />
       </StackPanel>
 
-      <controls:MobileEmptyStateView
+      <controls:MobileEmptyStateView Grid.Row="2"
                   IsVisible="{Binding ShowEmptyChannels}"
                   IconKind="Filmstrip"
                   Title="{loc:Translate Movies.Empty.Title}"
                   Description="{loc:Translate Movies.Empty.Description}" />
-    </StackPanel>
-  </ScrollViewer>
-  <views:MobileSelectionSheet x:Name="SelectionSheetHost"
-                              ZIndex="1000"
-                              IsVisible="False" />
+    </Grid>
+    <views:MobileSelectionSheet x:Name="SelectionSheetHost"
+                                ZIndex="1000"
+                                IsVisible="False" />
   </Grid>
 </UserControl>

@@ -16,10 +16,10 @@ namespace Noctra.Mobile.Converters;
 /// </summary>
 public sealed class LogoThemeConverter : IValueConverter
 {
-    private const string RegularDark = "avares://Noctra.Mobile/Assets/Square150x150Logo.png";
-    private const string RegularLight = "avares://Noctra.Mobile/Assets/Square150x150LogoLight.png";
-    private const string FullDark = "avares://Noctra.Mobile/Assets/Square150x150Logo.Gray.png";
-    private const string FullLight = "avares://Noctra.Mobile/Assets/Square150x150Logo.GrayLight.png";
+    private const string RegularDark = "avares://Noctra.Mobile/Assets/Square150x150LogoTPLight.png";
+    private const string RegularLight = "avares://Noctra.Mobile/Assets/Square150x150LogoTPDark.png";
+    private const string FullDark = "avares://Noctra.Mobile/Assets/Square150x150LogoTPFullLight.png";
+    private const string FullLight = "avares://Noctra.Mobile/Assets/Square150x150LogoTPFullDark.png";
 
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {

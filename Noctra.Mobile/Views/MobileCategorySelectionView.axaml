@@ -39,6 +39,12 @@
       <Setter Property="Margin" Value="0" />
       <Setter Property="Background" Value="Transparent" />
       <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+      <Setter Property="Focusable" Value="False" />
+    </Style>
+    <Style Selector="ListBox#CategoryListBox > ListBoxItem:selected">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
     </Style>
   </UserControl.Styles>
 
@@ -110,15 +116,17 @@
         <ListBox x:Name="CategoryListBox"
                  Grid.Row="1"
                  ItemsSource="{Binding Categories}"
+                 ItemContainerTheme="{StaticResource TransparentListBoxItemTheme}"
                  Background="Transparent"
                  BorderThickness="0"
                  Padding="0"
+                 SelectionChanged="ClearTransientSelection"
                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                  ScrollViewer.VerticalScrollBarVisibility="Auto"
                  ScrollViewer.IsScrollChainingEnabled="False">
           <ListBox.ItemsPanel>
             <ItemsPanelTemplate>
-              <VirtualizingStackPanel />
+              <VirtualizingStackPanel CacheLength="1.5" />
             </ItemsPanelTemplate>
           </ListBox.ItemsPanel>
           <ListBox.ItemTemplate>

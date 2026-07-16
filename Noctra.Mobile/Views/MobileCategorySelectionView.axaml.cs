@@ -116,6 +116,14 @@ public partial class MobileCategorySelectionView : UserControl
     private void Back_Click(object? sender, RoutedEventArgs e)
         => CloseRequested?.Invoke(this, EventArgs.Empty);
 
+    private static void ClearTransientSelection(object? sender, SelectionChangedEventArgs e)
+    {
+        if (sender is ListBox { SelectedIndex: >= 0 } listBox)
+        {
+            listBox.SelectedIndex = -1;
+        }
+    }
+
     private void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(MainViewModel.Groups))

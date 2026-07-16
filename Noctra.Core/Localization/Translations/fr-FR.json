@@ -359,6 +359,7 @@
   "History.Movies": "Films",
   "History.Remove": "Supprimer de l'historique",
   "Context.MyList.Toggle": "Ajouter/Supprimer de Ma Liste",
+  "MyList.Remove": "Retirer de Ma Liste",
   "Context.Favorite.Toggle": "Ajouter/Supprimer des Favoris",
   "History.Empty.Title": "L'historique est vide",
   "History.Empty.Description": "Le contenu que vous regardez sera listé ici.",

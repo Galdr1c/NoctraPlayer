@@ -359,6 +359,7 @@
   "History.Movies": "Movies",
   "History.Remove": "Remove from History",
   "Context.MyList.Toggle": "Add/Remove from My List",
+  "MyList.Remove": "Remove from My List",
   "Context.Favorite.Toggle": "Add/Remove from Favorites",
   "History.Empty.Title": "History is empty",
   "History.Empty.Description": "Content you watch will be listed here.",

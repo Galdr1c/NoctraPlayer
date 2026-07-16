@@ -38,6 +38,7 @@ public class RemoteImage : Image
     private static readonly LinkedList<string> CacheLruList = new();
     private static readonly Dictionary<string, LinkedListNode<string>> NodeMap = new(StringComparer.OrdinalIgnoreCase);
     private static readonly SemaphoreSlim DownloadGate = new(6, 6);
+    private static readonly SemaphoreSlim DecodeGate = new(2, 2);
     private static readonly object CacheLock = new();
 
     private const int MaxCacheEntries = 128;
@@ -286,7 +287,7 @@ public class RemoteImage : Image
                     return null;
                 }
 
-                var bitmap = DecodeBitmap(memory, decodePixelWidth);
+                var bitmap = await DecodeHttpBitmapAsync(memory, decodePixelWidth).ConfigureAwait(false);
                 AddToCache(cacheKey, bitmap);
                 return bitmap;
             }
@@ -466,6 +467,19 @@ public class RemoteImage : Image
             stream,
             NormalizeDecodePixelWidth(decodePixelWidth),
             BitmapInterpolationMode.MediumQuality);
+
+    private static async Task<Bitmap> DecodeHttpBitmapAsync(Stream stream, int decodePixelWidth)
+    {
+        await DecodeGate.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            return DecodeBitmap(stream, decodePixelWidth);
+        }
+        finally
+        {
+            DecodeGate.Release();
+        }
+    }
 
     private static int NormalizeDecodePixelWidth(int decodePixelWidth)
         => Math.Clamp(decodePixelWidth, 64, MaxDecodePixelWidth);

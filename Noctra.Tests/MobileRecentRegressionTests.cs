@@ -68,6 +68,40 @@ public sealed class MobileRecentRegressionTests
     }
 
     [Fact]
+    public void MobileRemoteImage_BoundsDecodeWorkWithoutSerializingDownloads()
+    {
+        var source = File.ReadAllText(ProjectFile("Noctra.Mobile", "Controls", "MobileRemoteImage.cs"));
+
+        Assert.Contains("DownloadGate = new(6, 6)", source, StringComparison.Ordinal);
+        Assert.Contains("DecodeGate = new(2, 2)", source, StringComparison.Ordinal);
+        Assert.Contains("DecodeHttpBitmapAsync(memory, decodePixelWidth)", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void MainViewModel_DropsStaleChannelPagesAfterNavigation()
+    {
+        var source = File.ReadAllText(ProjectFile("Noctra.Core", "ViewModels", "MainViewModel.cs"));
+
+        Assert.Contains("_incrementalContentGeneration", source, StringComparison.Ordinal);
+        Assert.Contains("BeginIncrementalContentGeneration()", source, StringComparison.Ordinal);
+        Assert.Contains("IsIncrementalContentRequestCurrent(", source, StringComparison.Ordinal);
+        Assert.Contains("LoadMoreChannelsAsync(token, contentGeneration)", source, StringComparison.Ordinal);
+        Assert.Contains("!IsIncrementalContentRequestCurrent(", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void MobileCardMenus_HaveRemoveFromMyListTranslations()
+    {
+        foreach (var language in new[] { "de-DE", "en-US", "es-ES", "fr-FR", "tr-TR" })
+        {
+            var source = File.ReadAllText(
+                ProjectFile("Noctra.Core", "Localization", "Translations", $"{language}.json"));
+
+            Assert.Contains("\"MyList.Remove\":", source, StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
     public void MobilePrimaryCardGrids_VirtualizeRecycledRows()
     {
         var control = File.ReadAllText(ProjectFile("Noctra.Mobile", "Controls", "MobileVirtualizingCardGrid.cs"));
@@ -82,6 +116,93 @@ public sealed class MobileRecentRegressionTests
             Assert.Contains("<controls:MobileVirtualizingCardGrid", view, StringComparison.Ordinal);
             Assert.DoesNotContain("<WrapPanel HorizontalAlignment=\"Stretch\" />", view, StringComparison.Ordinal);
         }
+    }
+
+    [Fact]
+    public void MobilePrimaryCardGrids_AppendPagingRowsWithoutResettingExistingRows()
+    {
+        var control = File.ReadAllText(ProjectFile("Noctra.Mobile", "Controls", "MobileVirtualizingCardGrid.cs"));
+
+        Assert.Contains("_sourceSnapshot", control, StringComparison.Ordinal);
+        Assert.Contains("TryAppendRows", control, StringComparison.Ordinal);
+        Assert.Contains("_rows.Add(", control, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void MobilePrimaryCardGrids_ReuseCardSlotsWhileRowsAreRecycled()
+    {
+        var control = File.ReadAllText(ProjectFile("Noctra.Mobile", "Controls", "MobileVirtualizingCardGrid.cs"));
+
+        Assert.Contains("EnsureCardSlots", control, StringComparison.Ordinal);
+        Assert.Contains("card.DataContext = item", control, StringComparison.Ordinal);
+        Assert.Contains("card.IsVisible =", control, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void MobileCategorySelection_PreparesRowsAheadOfTheViewport()
+    {
+        var source = File.ReadAllText(ProjectFile("Noctra.Mobile", "Views", "MobileCategorySelectionView.axaml"));
+
+        Assert.Contains("<VirtualizingStackPanel CacheLength=\"1.5\"", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void MobilePrimaryCardGrids_OwnAConstrainedScrollViewport()
+    {
+        var control = File.ReadAllText(ProjectFile("Noctra.Mobile", "Controls", "MobileVirtualizingCardGrid.cs"));
+
+        Assert.Contains("MobileVirtualizingCardGrid : ListBox", control, StringComparison.Ordinal);
+        Assert.Contains("StyleKeyOverride => typeof(ListBox)", control, StringComparison.Ordinal);
+        Assert.Contains("event EventHandler<ScrollChangedEventArgs>? ScrollChanged", control, StringComparison.Ordinal);
+        Assert.Contains("ScrollViewer.ScrollChangedEvent", control, StringComparison.Ordinal);
+
+        foreach (var viewName in new[] { "MobileLiveView.axaml", "MobileMoviesView.axaml", "MobileSeriesView.axaml" })
+        {
+            var view = File.ReadAllText(ProjectFile("Noctra.Mobile", "Views", viewName));
+
+            Assert.Contains("RowDefinitions=\"Auto,Auto,*\"", view, StringComparison.Ordinal);
+            Assert.DoesNotContain("<ScrollViewer x:Name=", view, StringComparison.Ordinal);
+            Assert.Contains("<controls:MobileVirtualizingCardGrid Grid.Row=\"2\"", view, StringComparison.Ordinal);
+            Assert.Contains("ScrollChanged=", view, StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
+    public void MobileVirtualizedActionLists_DoNotRetainDefaultBlueSelection()
+    {
+        var cardGrid = File.ReadAllText(ProjectFile("Noctra.Mobile", "Controls", "MobileVirtualizingCardGrid.cs"));
+        var categories = File.ReadAllText(ProjectFile("Noctra.Mobile", "Views", "MobileCategorySelectionView.axaml"));
+        var categoriesCode = File.ReadAllText(ProjectFile("Noctra.Mobile", "Views", "MobileCategorySelectionView.axaml.cs"));
+        var seriesDetail = File.ReadAllText(ProjectFile("Noctra.Mobile", "Views", "MobileSeriesDetailView.axaml"));
+        var seriesDetailCode = File.ReadAllText(ProjectFile("Noctra.Mobile", "Views", "MobileSeriesDetailView.axaml.cs"));
+        var app = File.ReadAllText(ProjectFile("Noctra.Mobile", "App.axaml"));
+        var live = File.ReadAllText(ProjectFile("Noctra.Mobile", "Views", "MobileLiveView.axaml"));
+        var movies = File.ReadAllText(ProjectFile("Noctra.Mobile", "Views", "MobileMoviesView.axaml"));
+        var series = File.ReadAllText(ProjectFile("Noctra.Mobile", "Views", "MobileSeriesView.axaml"));
+
+        Assert.Contains("SelectionChanged += ClearTransientSelection", cardGrid, StringComparison.Ordinal);
+        Assert.Contains("SelectedIndex = -1", cardGrid, StringComparison.Ordinal);
+        Assert.Contains("ShouldTriggerSelection(Visual source, PointerEventArgs e)", cardGrid, StringComparison.Ordinal);
+        Assert.Contains("ShouldTriggerSelection(Visual source, KeyEventArgs e)", cardGrid, StringComparison.Ordinal);
+        Assert.Contains("=> false", cardGrid, StringComparison.Ordinal);
+        Assert.Contains("x:Key=\"TransparentListBoxItemTheme\"", app, StringComparison.Ordinal);
+        Assert.Contains("ItemContainerTheme=\"{StaticResource TransparentListBoxItemTheme}\"", live, StringComparison.Ordinal);
+        Assert.Contains("ItemContainerTheme=\"{StaticResource TransparentListBoxItemTheme}\"", movies, StringComparison.Ordinal);
+        Assert.Contains("ItemContainerTheme=\"{StaticResource TransparentListBoxItemTheme}\"", series, StringComparison.Ordinal);
+
+        Assert.Contains("SelectionChanged=\"ClearTransientSelection\"", categories, StringComparison.Ordinal);
+        Assert.Contains("Focusable\" Value=\"False", categories, StringComparison.Ordinal);
+        Assert.Contains("ItemContainerTheme=\"{StaticResource TransparentListBoxItemTheme}\"", categories, StringComparison.Ordinal);
+        Assert.Contains("SelectedIndex = -1", categoriesCode, StringComparison.Ordinal);
+
+        Assert.Contains("x:Name=\"SeasonListBox\"", seriesDetail, StringComparison.Ordinal);
+        Assert.Equal(
+            2,
+            seriesDetail.Split(
+                "ItemContainerTheme=\"{StaticResource TransparentListBoxItemTheme}\"",
+                StringSplitOptions.None).Length - 1);
+        Assert.Contains("SelectionChanged=\"ClearTransientSelection\"", seriesDetail, StringComparison.Ordinal);
+        Assert.Contains("SelectedIndex = -1", seriesDetailCode, StringComparison.Ordinal);
     }
 
     [Fact]
