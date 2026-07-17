@@ -16,9 +16,13 @@ public sealed record ContentPageRequest(
 public interface IContentQueryService
 {
     Task<(int TotalCount, List<string> AllGroups, List<string> LiveGroups, List<string> VodGroups, List<string> SeriesGroups)>
-        GetChannelGroupMetadataAsync(int playlistId);
+        GetChannelGroupMetadataAsync(
+            int playlistId,
+            CancellationToken cancellationToken = default);
 
-    Task<List<Channel>> GetChannelPageAsync(ContentPageRequest request);
+    Task<List<Channel>> GetChannelPageAsync(
+        ContentPageRequest request,
+        CancellationToken cancellationToken = default);
 
     Task<List<Series>> GetSeriesListAsync(
         int playlistId,

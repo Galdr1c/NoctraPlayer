@@ -55,6 +55,7 @@ public class BatchObservableCollection<T> : ObservableCollection<T>
         var list = items.ToList();
         if (list.Count == 0) return;
 
+        var startingIndex = Items.Count;
         foreach (var item in list)
         {
             Items.Add(item);
@@ -62,7 +63,10 @@ public class BatchObservableCollection<T> : ObservableCollection<T>
         }
 
         RaiseCountNotifications();
-        OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+        OnCollectionChanged(new NotifyCollectionChangedEventArgs(
+            NotifyCollectionChangedAction.Add,
+            (System.Collections.IList)list,
+            startingIndex));
     }
 
     /// <summary>

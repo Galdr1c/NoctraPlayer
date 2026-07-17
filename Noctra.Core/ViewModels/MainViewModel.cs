@@ -19,6 +19,7 @@ using System.Collections.Concurrent;
 using Noctra.Core.Collections;
 using System.Runtime.CompilerServices;
 using Noctra.Diagnostics;
+using Noctra.Threading;
 
 namespace Noctra.ViewModels;
 
@@ -2193,21 +2194,57 @@ public partial class MainViewModel : ObservableObject
             return;
         }
 
-        if (value != null)
+        if (value == null)
         {
-            _ = LoadChannelsAsync(value.Id);
+            BeginIncrementalContentGeneration();
+            return;
         }
+
+        _ = LoadChannelsAsync(value.Id);
     }
 
-    private async Task LoadChannelsAsync(int playlistId)
+    private async Task LoadChannelsAsync(
+        int playlistId,
+        int? expectedGeneration = null)
     {
+        int contentGeneration;
+        if (expectedGeneration.HasValue)
+        {
+            if (SelectedPlaylist?.Id != playlistId ||
+                !_incrementalContentCancellation.TrySupersede(
+                    expectedGeneration.Value,
+                    out contentGeneration))
+            {
+                return;
+            }
+        }
+        else
+        {
+            contentGeneration = BeginIncrementalContentGeneration();
+        }
+
+        using var linkedCancellation = _incrementalContentCancellation.CreateLinkedTokenSource(
+            CancellationToken.None,
+            out var observedGeneration);
+        if (observedGeneration != contentGeneration)
+        {
+            return;
+        }
+
+        var cancellationToken = linkedCancellation.Token;
         try
         {
             BeginLoading();
             StatusMessage = _localizationService.GetString("Main.Status.OptimizingLayout");
             
             // Single-pass query: Fetch all groups and total count at once (Significantly faster)
-            var meta = await _contentQueryService.GetChannelGroupMetadataAsync(playlistId);
+            var meta = await _contentQueryService.GetChannelGroupMetadataAsync(
+                playlistId,
+                cancellationToken);
+            if (!IsPlaylistLoadCurrent(contentGeneration, playlistId))
+            {
+                return;
+            }
             
             _allGroupsCache = OrderGroupsByLanguagePreference(meta.AllGroups);
             _liveGroupsCache = OrderGroupsByLanguagePreference(meta.LiveGroups);
@@ -2218,8 +2255,13 @@ public partial class MainViewModel : ObservableObject
             ResetIncrementalState();
 
             await Task.WhenAll(
-                LoadMoreChannelsAsync(),
-                LoadHomeContentAsync());
+                LoadMoreChannelsAsync(cancellationToken, contentGeneration),
+                LoadHomeContentAsync(cancellationToken, contentGeneration, playlistId));
+            if (!IsPlaylistLoadCurrent(contentGeneration, playlistId))
+            {
+                return;
+            }
+
             PerformanceTrace.Mark(
                 "profile.first_page.data_ready",
                 Math.Min(30, FilteredChannels.Count),
@@ -2229,6 +2271,10 @@ public partial class MainViewModel : ObservableObject
                 _localizationService.GetString("Main.Status.ContentsReadyFormat"), meta.TotalCount);
             DeferPostChannelLoadBackgroundTasks();
             EnsureChannelBackgroundRefresh();
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            // Expected when a newer playlist, navigation, or filter generation wins.
         }
         catch (Exception ex)
         {
@@ -2331,27 +2377,57 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
-    private async Task LoadHomeContentAsync()
+    private async Task LoadHomeContentAsync(
+        CancellationToken cancellationToken = default,
+        int? contentGeneration = null,
+        int? requestedPlaylistId = null)
     {
         try 
         {
-            var playlistId = SelectedPlaylist?.Id ?? 0;
-            _allSeriesCache = await _contentQueryService.GetSeriesListAsync(playlistId);
-            if (_allSeriesCache.Count == 0 && playlistId > 0)
+            var playlistId = requestedPlaylistId ?? SelectedPlaylist?.Id ?? 0;
+            var series = await _contentQueryService.GetSeriesListAsync(
+                playlistId,
+                cancellationToken);
+            if (!IsHomeContentRequestCurrent(playlistId, contentGeneration))
             {
-                var hasSeriesChannels = await PlaylistHasSeriesChannelsAsync(playlistId);
+                return;
+            }
+
+            if (series.Count == 0 && playlistId > 0)
+            {
+                var hasSeriesChannels = await PlaylistHasSeriesChannelsAsync(
+                    playlistId,
+                    cancellationToken);
+                if (!IsHomeContentRequestCurrent(playlistId, contentGeneration))
+                {
+                    return;
+                }
+
                 if (hasSeriesChannels && IsChannelLoading)
                 {
                     Interlocked.Exchange(ref _deferredSeriesRefreshAfterChannelLoad, 1);
                 }
                 else if (hasSeriesChannels)
                 {
-                    await _mediaService.AggregateContentAsync(playlistId);
+                    await _mediaService.AggregateContentAsync(playlistId, cancellationToken);
+                    if (!IsHomeContentRequestCurrent(playlistId, contentGeneration))
+                    {
+                        return;
+                    }
+
                     _mediaService.RaiseAggregationCompleted(playlistId);
-                    _allSeriesCache = await _contentQueryService.GetSeriesListAsync(playlistId);
+                    series = await _contentQueryService.GetSeriesListAsync(
+                        playlistId,
+                        cancellationToken);
                 }
             }
 
+            if (!IsHomeContentRequestCurrent(playlistId, contentGeneration))
+            {
+                return;
+            }
+
+            _allSeriesCache = series;
 
             _isEpisodeContinueDirty = true;
             _cachedEpisodeContinue = null;
@@ -2374,6 +2450,10 @@ public partial class MainViewModel : ObservableObject
                 await UpdateHistoryBucketsAsync();
             }
             return;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            // Expected when this content generation is superseded.
         }
         catch (Exception ex)
         {
@@ -2604,13 +2684,15 @@ public partial class MainViewModel : ObservableObject
         return result;
     }
 
-    private async Task<bool> PlaylistHasSeriesChannelsAsync(int playlistId)
+    private async Task<bool> PlaylistHasSeriesChannelsAsync(
+        int playlistId,
+        CancellationToken cancellationToken = default)
     {
         var sample = await _contentQueryService.GetChannelPageAsync(new ContentPageRequest(
             PlaylistId: playlistId,
             Skip: 0,
             Take: 1,
-            Type: ChannelType.Series));
+            Type: ChannelType.Series), cancellationToken);
 
         return sample.Count > 0;
     }
@@ -2806,7 +2888,7 @@ public partial class MainViewModel : ObservableObject
     private int _currentSeriesPage;
     private bool _hasMoreSeriesItems;
     private bool _isLoadingMoreSeriesItems;
-    private int _incrementalContentGeneration;
+    private readonly SupersedingCancellationScope _incrementalContentCancellation = new();
     private List<Series> _seriesFilteredSource = new();
     private List<string> _allGroupsCache = new();
     private List<string> _liveGroupsCache = new();
@@ -2846,9 +2928,15 @@ public partial class MainViewModel : ObservableObject
             do
             {
                 _needsThrottledLoad = false;
+                var scheduledGeneration = _incrementalContentCancellation.CaptureGeneration();
                 // 500ms bekle (Aynı anda biten diğer kategorilerin de veritabanına yazılmasına izin ver)
                 await Task.Delay(500);
-                await LoadChannelsAsync(playlistId);
+                if (SelectedPlaylist?.Id != playlistId)
+                {
+                    return;
+                }
+
+                await LoadChannelsAsync(playlistId, scheduledGeneration);
             } while (_needsThrottledLoad);
         }
         catch
@@ -2900,14 +2988,22 @@ public partial class MainViewModel : ObservableObject
     }
 
     private int BeginIncrementalContentGeneration()
-        => Interlocked.Increment(ref _incrementalContentGeneration);
+        => _incrementalContentCancellation.Supersede();
+
+    private bool IsPlaylistLoadCurrent(int generation, int playlistId)
+        => _incrementalContentCancellation.IsCurrent(generation) &&
+           SelectedPlaylist?.Id == playlistId;
+
+    private bool IsHomeContentRequestCurrent(int playlistId, int? generation)
+        => SelectedPlaylist?.Id == playlistId &&
+           (!generation.HasValue || _incrementalContentCancellation.IsCurrent(generation.Value));
 
     private bool IsIncrementalContentRequestCurrent(
         int generation,
         AppView view,
         ChannelType? channelType,
         int playlistId)
-        => generation == Volatile.Read(ref _incrementalContentGeneration) &&
+        => _incrementalContentCancellation.IsCurrent(generation) &&
            ActiveView == view &&
            SelectedChannelType == channelType &&
            SelectedPlaylist?.Id == playlistId;
@@ -2926,12 +3022,22 @@ public partial class MainViewModel : ObservableObject
         CancellationToken cancellationToken = default,
         int? contentGeneration = null)
     {
-        if (cancellationToken.IsCancellationRequested)
+        using var linkedCancellation = _incrementalContentCancellation.CreateLinkedTokenSource(
+            cancellationToken,
+            out var currentGeneration);
+        var effectiveCancellationToken = linkedCancellation.Token;
+
+        if (effectiveCancellationToken.IsCancellationRequested)
         {
             return;
         }
 
-        var requestGeneration = contentGeneration ?? Volatile.Read(ref _incrementalContentGeneration);
+        var requestGeneration = contentGeneration ?? currentGeneration;
+        if (requestGeneration != currentGeneration)
+        {
+            return;
+        }
+
         var requestView = ActiveView;
         var requestChannelType = SelectedChannelType;
         var requestPlaylist = SelectedPlaylist;
@@ -2964,7 +3070,7 @@ public partial class MainViewModel : ObservableObject
                 Group: effectiveGroup,
                 Type: effectiveType,
                 OnlyFavorites: ShowOnlyFavorites,
-                SortOrder: SelectedSortOrder));
+                SortOrder: SelectedSortOrder), effectiveCancellationToken);
 
             // If selected group returns nothing on first page, fallback to "all" to avoid false empty UI.
             if (requestedPage == 0 &&
@@ -2980,9 +3086,9 @@ public partial class MainViewModel : ObservableObject
                     Group: null,
                     Type: effectiveType,
                     OnlyFavorites: ShowOnlyFavorites,
-                    SortOrder: SelectedSortOrder));
+                    SortOrder: SelectedSortOrder), effectiveCancellationToken);
 
-                if (cancellationToken.IsCancellationRequested ||
+                if (effectiveCancellationToken.IsCancellationRequested ||
                     !IsIncrementalContentRequestCurrent(
                         requestGeneration,
                         requestView,
@@ -3008,7 +3114,7 @@ public partial class MainViewModel : ObservableObject
                 }
             }
 
-            if (cancellationToken.IsCancellationRequested ||
+            if (effectiveCancellationToken.IsCancellationRequested ||
                 !IsIncrementalContentRequestCurrent(
                     requestGeneration,
                     requestView,
@@ -3031,7 +3137,7 @@ public partial class MainViewModel : ObservableObject
             var applied = false;
             _dispatcherService.Invoke(() =>
             {
-                if (cancellationToken.IsCancellationRequested ||
+                if (effectiveCancellationToken.IsCancellationRequested ||
                     !IsIncrementalContentRequestCurrent(
                         requestGeneration,
                         requestView,
@@ -3072,9 +3178,13 @@ public partial class MainViewModel : ObservableObject
 
             QueueVisibleChannelVisualEnrichment(page);
         }
+        catch (OperationCanceledException) when (effectiveCancellationToken.IsCancellationRequested)
+        {
+            // Expected when navigation, filtering, or profile selection supersedes this page.
+        }
         finally
         {
-            if (requestGeneration == Volatile.Read(ref _incrementalContentGeneration))
+            if (_incrementalContentCancellation.IsCurrent(requestGeneration))
             {
                 _isLoadingMoreChannels = false;
             }

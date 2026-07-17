@@ -9,8 +9,8 @@
   <group
       android:translateX="68.4"
       android:translateY="68.4"
-      android:scaleX="0.52"
-      android:scaleY="0.52">
+      android:scaleX="0.42"
+      android:scaleY="0.42">
     <path
         android:fillType="evenOdd"
         android:pathData="M176.365,296.044L256.771,349.274C256.771,349.274 285.806,366.237 307.832,355.226C329.854,344.215 329.2,330.135 329.78,321.328L330.026,192.765L175.996,295.787L176.365,296.044Z">

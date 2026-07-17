@@ -119,6 +119,17 @@ namespace Noctra.Tests
         }
 
         [Fact]
+        public async Task GetChannelGroupMetadataAsync_WhenCancelled_StopsAtSqliteBoundary()
+        {
+            var service = CreateService();
+            using var cancellationSource = new CancellationTokenSource();
+            cancellationSource.Cancel();
+
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+                service.GetChannelGroupMetadataAsync(1, cancellationSource.Token));
+        }
+
+        [Fact]
         public async Task AddFromChannelsAsync_WhenChannelsEmpty_DoesNotCreatePlaylist()
         {
             var service = CreateService();

@@ -28,7 +28,7 @@ public class UpsellWindowLayoutTests
 
         var rootBorder = window.Elements().Single(element => element.Name.LocalName == "Border");
         Assert.Equal("{DynamicResource BackgroundGradientBrush}", (string?)rootBorder.Attribute("Background"));
-        Assert.Equal("{DynamicResource BorderBrush}", (string?)rootBorder.Attribute("BorderBrush"));
+        Assert.Equal("{DynamicResource PremiumBadgeBrush}", (string?)rootBorder.Attribute("BorderBrush"));
     }
 
     [Fact]

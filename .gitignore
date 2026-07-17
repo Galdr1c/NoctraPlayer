@@ -44,8 +44,10 @@ Noctra.Avalonia/Assets/*
 !Noctra.Avalonia/Assets/Avatars/**
 Noctra.Mobile/Assets/*
 !Noctra.Mobile/Assets/Noctra.ico
-!Noctra.Mobile/Assets/Square150x150Logo.png
-!Noctra.Mobile/Assets/Square150x150Logo.Gray.png
+!Noctra.Mobile/Assets/Square150x150LogoTPLight.png
+!Noctra.Mobile/Assets/Square150x150LogoTPDark.png
+!Noctra.Mobile/Assets/Square150x150LogoTPFullLight.png
+!Noctra.Mobile/Assets/Square150x150LogoTPFullDark.png
 !Noctra.Mobile/Assets/Avatars/
 !Noctra.Mobile/Assets/Avatars/**
 Noctra.Packaging/Assets/

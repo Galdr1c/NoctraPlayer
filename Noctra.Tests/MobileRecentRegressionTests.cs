@@ -82,7 +82,8 @@ public sealed class MobileRecentRegressionTests
     {
         var source = File.ReadAllText(ProjectFile("Noctra.Core", "ViewModels", "MainViewModel.cs"));
 
-        Assert.Contains("_incrementalContentGeneration", source, StringComparison.Ordinal);
+        Assert.Contains("SupersedingCancellationScope", source, StringComparison.Ordinal);
+        Assert.Contains("CreateLinkedTokenSource", source, StringComparison.Ordinal);
         Assert.Contains("BeginIncrementalContentGeneration()", source, StringComparison.Ordinal);
         Assert.Contains("IsIncrementalContentRequestCurrent(", source, StringComparison.Ordinal);
         Assert.Contains("LoadMoreChannelsAsync(token, contentGeneration)", source, StringComparison.Ordinal);
@@ -101,13 +102,84 @@ public sealed class MobileRecentRegressionTests
         }
     }
 
+    [Theory]
+    [InlineData("MobileVodCard.axaml", "#VodCardControl.ShowRemoveMyListMenu")]
+    [InlineData("MobileSeriesCard.axaml", "#SeriesCardControl.ShowRemoveMyListMenu")]
+    public void MobileMyListCards_ShowExactlyOneMyListAction(
+        string cardFile,
+        string removeFlagBinding)
+    {
+        var document = XDocument.Load(ProjectFile("Noctra.Mobile", "Controls", cardFile));
+        var menuItems = document
+            .Descendants()
+            .Where(element => element.Name.LocalName == "MenuItem")
+            .ToList();
+        var addItem = menuItems.Single(element =>
+            element.Attribute("Header")?.Value.Contains("Context.MyList.Toggle", StringComparison.Ordinal) == true);
+        var removeItem = menuItems.Single(element =>
+            element.Attribute("Header")?.Value.Contains("MyList.Remove", StringComparison.Ordinal) == true);
+
+        var addVisibility = addItem.Attribute("IsVisible")?.Value ?? string.Empty;
+        var removeVisibility = removeItem.Attribute("IsVisible")?.Value ?? string.Empty;
+        Assert.Contains(removeFlagBinding, addVisibility, StringComparison.Ordinal);
+        Assert.Contains("InverseBoolConverter", addVisibility, StringComparison.Ordinal);
+        Assert.Contains(removeFlagBinding, removeVisibility, StringComparison.Ordinal);
+        Assert.DoesNotContain("InverseBoolConverter", removeVisibility, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void MobileThemeLogos_AreRepositoryAssetsAndDecodedOncePerVariant()
+    {
+        var assetNames = new[]
+        {
+            "Square150x150LogoTPLight.png",
+            "Square150x150LogoTPDark.png",
+            "Square150x150LogoTPFullLight.png",
+            "Square150x150LogoTPFullDark.png"
+        };
+        var gitIgnore = File.ReadAllText(ProjectFile(".gitignore"));
+        var converter = File.ReadAllText(
+            ProjectFile("Noctra.Mobile", "Converters", "LogoThemeConverter.cs"));
+
+        foreach (var assetName in assetNames)
+        {
+            Assert.True(
+                File.Exists(ProjectFile("Noctra.Mobile", "Assets", assetName)),
+                $"Missing mobile logo asset: {assetName}");
+            Assert.Contains(
+                $"!Noctra.Mobile/Assets/{assetName}",
+                gitIgnore,
+                StringComparison.Ordinal);
+            Assert.Contains(assetName, converter, StringComparison.Ordinal);
+        }
+
+        Assert.Contains("Lazy<Bitmap?>", converter, StringComparison.Ordinal);
+        Assert.Contains("LoadBitmap", converter, StringComparison.Ordinal);
+        Assert.DoesNotContain("return new Bitmap(stream);", converter, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void MobileRemoteImages_UseApproximate64MiBByteBudget()
+    {
+        var source = File.ReadAllText(
+            ProjectFile("Noctra.Mobile", "Controls", "MobileRemoteImage.cs"));
+
+        Assert.Contains("64L * 1024L * 1024L", source, StringComparison.Ordinal);
+        Assert.Contains("ByteBudgetLruCache<string, Bitmap>", source, StringComparison.Ordinal);
+        Assert.Contains("EstimateBitmapBytes", source, StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            "ConcurrentDictionary<string, Bitmap> Cache",
+            source,
+            StringComparison.Ordinal);
+    }
+
     [Fact]
     public void MobilePrimaryCardGrids_VirtualizeRecycledRows()
     {
         var control = File.ReadAllText(ProjectFile("Noctra.Mobile", "Controls", "MobileVirtualizingCardGrid.cs"));
 
         Assert.Contains("VirtualizingStackPanel", control, StringComparison.Ordinal);
-        Assert.Contains("BatchObservableCollection<MobileCardGridRow>", control, StringComparison.Ordinal);
+        Assert.Contains("IncrementalRowCollection<object, MobileCardGridRow>", control, StringComparison.Ordinal);
         Assert.Contains("OnDataContextChanged", control, StringComparison.Ordinal);
 
         foreach (var viewName in new[] { "MobileLiveView.axaml", "MobileMoviesView.axaml", "MobileSeriesView.axaml" })
@@ -123,9 +195,12 @@ public sealed class MobileRecentRegressionTests
     {
         var control = File.ReadAllText(ProjectFile("Noctra.Mobile", "Controls", "MobileVirtualizingCardGrid.cs"));
 
-        Assert.Contains("_sourceSnapshot", control, StringComparison.Ordinal);
-        Assert.Contains("TryAppendRows", control, StringComparison.Ordinal);
-        Assert.Contains("_rows.Add(", control, StringComparison.Ordinal);
+        Assert.Contains("IncrementalRowCollection<object, MobileCardGridRow>", control, StringComparison.Ordinal);
+        Assert.Contains("NotifyCollectionChangedAction.Add", control, StringComparison.Ordinal);
+        Assert.Contains("TryAppend(", control, StringComparison.Ordinal);
+        Assert.DoesNotContain("_sourceSnapshot", control, StringComparison.Ordinal);
+        Assert.DoesNotContain("SnapshotSourceItems", control, StringComparison.Ordinal);
+        Assert.DoesNotContain("for (var index = 0; index < _sourceSnapshot.Count", control, StringComparison.Ordinal);
     }
 
     [Fact]

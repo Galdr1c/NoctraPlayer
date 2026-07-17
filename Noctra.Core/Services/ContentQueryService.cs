@@ -25,10 +25,14 @@ public sealed class ContentQueryService : IContentQueryService
     }
 
     public Task<(int TotalCount, List<string> AllGroups, List<string> LiveGroups, List<string> VodGroups, List<string> SeriesGroups)>
-        GetChannelGroupMetadataAsync(int playlistId)
-        => _playlistService.GetChannelGroupMetadataAsync(playlistId);
+        GetChannelGroupMetadataAsync(
+            int playlistId,
+            CancellationToken cancellationToken = default)
+        => _playlistService.GetChannelGroupMetadataAsync(playlistId, cancellationToken);
 
-    public Task<List<Channel>> GetChannelPageAsync(ContentPageRequest request)
+    public Task<List<Channel>> GetChannelPageAsync(
+        ContentPageRequest request,
+        CancellationToken cancellationToken = default)
     {
         var hiddenGroups = request.ApplyHiddenGroups
             ? GetHiddenGroups(request.Type)
@@ -43,7 +47,8 @@ public sealed class ContentQueryService : IContentQueryService
             request.Type,
             request.OnlyFavorites,
             request.SortOrder,
-            hiddenGroups);
+            hiddenGroups,
+            cancellationToken);
     }
 
     public Task<List<Series>> GetSeriesListAsync(

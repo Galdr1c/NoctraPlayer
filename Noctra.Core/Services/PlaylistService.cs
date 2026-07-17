@@ -879,7 +879,10 @@ public partial class PlaylistService : IPlaylistService
         }
     }
 
-    private async Task EnsureLinearStreamChannelTypesRepairedOnceAsync(AppDbContext context, int playlistId)
+    private async Task EnsureLinearStreamChannelTypesRepairedOnceAsync(
+        AppDbContext context,
+        int playlistId,
+        CancellationToken cancellationToken = default)
     {
         if (!_linearStreamRepairCompleted.TryAdd(playlistId, 0))
         {
@@ -888,10 +891,13 @@ public partial class PlaylistService : IPlaylistService
 
         try
         {
-            var repaired = await RepairLinearStreamChannelTypesAsync(context, playlistId);
+            var repaired = await RepairLinearStreamChannelTypesAsync(
+                context,
+                playlistId,
+                cancellationToken);
             if (repaired > 0)
             {
-                await _mediaService.AggregateContentAsync(playlistId);
+                await _mediaService.AggregateContentAsync(playlistId, cancellationToken);
             }
         }
         catch
@@ -906,7 +912,10 @@ public partial class PlaylistService : IPlaylistService
         _linearStreamRepairCompleted.TryRemove(playlistId, out _);
     }
 
-    private static async Task<int> RepairLinearStreamChannelTypesAsync(AppDbContext context, int playlistId)
+    private static async Task<int> RepairLinearStreamChannelTypesAsync(
+        AppDbContext context,
+        int playlistId,
+        CancellationToken cancellationToken = default)
     {
         var liveType = (int)ChannelType.Live;
         var vodType = (int)ChannelType.VOD;
@@ -933,7 +942,7 @@ WHERE PlaylistId = {playlistId}
       OR lower(StreamUrl) LIKE '%format=m3u8%'
       OR lower(StreamUrl) LIKE '%extension=m3u8%'
       OR lower(StreamUrl) LIKE '%extension=ts%'
-  );");
+  );", cancellationToken);
 
         var seriesKeywordRepaired = await context.Database.ExecuteSqlInterpolatedAsync($@"
 UPDATE Channels
@@ -962,7 +971,7 @@ WHERE PlaylistId = {playlistId}
   AND lower(Name) NOT LIKE '%season%'
   AND lower(Name) NOT LIKE '%bölüm%'
   AND lower(Name) NOT LIKE '%bolum%'
-  AND lower(Name) NOT LIKE '%episode%';");
+  AND lower(Name) NOT LIKE '%episode%';", cancellationToken);
 
         var vodProxyRepaired = await context.Database.ExecuteSqlInterpolatedAsync($@"
 UPDATE Channels
@@ -996,7 +1005,7 @@ WHERE PlaylistId = {playlistId}
       OR lower(StreamUrl) LIKE '%.webm%'
       OR Name GLOB '*(19[0-9][0-9])*'
       OR Name GLOB '*(20[0-9][0-9])*'
-  );");
+  );", cancellationToken);
 
         var repaired = linearRepaired + seriesKeywordRepaired + vodProxyRepaired;
 
@@ -1991,16 +2000,19 @@ WHERE PlaylistId = {playlistId}
             .Take(limit)
             .ToListAsync();
     }
-    public async Task<List<Channel>> GetChannelsFilteredPageAsync(int playlistId, int skip, int take, string? searchText = null, string? group = null, ChannelType? type = null, bool onlyFavorites = false, ChannelSortOrder sortOrder = ChannelSortOrder.NewestFirst, List<string>? hiddenGroups = null)
+    public async Task<List<Channel>> GetChannelsFilteredPageAsync(int playlistId, int skip, int take, string? searchText = null, string? group = null, ChannelType? type = null, bool onlyFavorites = false, ChannelSortOrder sortOrder = ChannelSortOrder.NewestFirst, List<string>? hiddenGroups = null, CancellationToken cancellationToken = default)
     {
-        using var context = await _contextFactory.CreateDbContextAsync();
-        await EnsureLinearStreamChannelTypesRepairedOnceAsync(context, playlistId);
+        await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
+        await EnsureLinearStreamChannelTypesRepairedOnceAsync(
+            context,
+            playlistId,
+            cancellationToken);
         var query = BuildFilteredChannelQuery(context, playlistId, searchText, group, type, onlyFavorites, hiddenGroups);
 
         return await ApplySort(query, sortOrder)
             .Skip(Math.Max(0, skip))
             .Take(Math.Max(1, take))
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
     }
 
     public async Task<List<string>> GetGroupsAsync(int playlistId)
@@ -2028,16 +2040,21 @@ WHERE PlaylistId = {playlistId}
             .ToListAsync();
     }
 
-    public async Task<(int TotalCount, List<string> AllGroups, List<string> LiveGroups, List<string> VodGroups, List<string> SeriesGroups)> GetChannelGroupMetadataAsync(int playlistId)
+    public async Task<(int TotalCount, List<string> AllGroups, List<string> LiveGroups, List<string> VodGroups, List<string> SeriesGroups)> GetChannelGroupMetadataAsync(
+        int playlistId,
+        CancellationToken cancellationToken = default)
     {
-        using var context = await _contextFactory.CreateDbContextAsync();
-        await EnsureLinearStreamChannelTypesRepairedOnceAsync(context, playlistId);
+        await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
+        await EnsureLinearStreamChannelTypesRepairedOnceAsync(
+            context,
+            playlistId,
+            cancellationToken);
         
         // Toplam kanal sayısı (GroupTitle null/boş olanlar dahil) — hafif COUNT sorgusu
         var totalCount = await context.Channels
             .AsNoTracking()
             .Where(c => c.PlaylistId == playlistId)
-            .CountAsync();
+            .CountAsync(cancellationToken);
 
         // SELECT GroupTitle, Type, COUNT(*) FROM Channels
         // WHERE PlaylistId=? AND GroupTitle IS NOT NULL AND GroupTitle != ''
@@ -2048,7 +2065,7 @@ WHERE PlaylistId = {playlistId}
             .Where(c => c.PlaylistId == playlistId && c.GroupTitle != null && c.GroupTitle != "")
             .GroupBy(c => new { c.GroupTitle, c.Type })
             .Select(g => new { GroupTitle = g.Key.GroupTitle!, g.Key.Type })
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         var allGroups = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var liveGroups = new HashSet<string>(StringComparer.OrdinalIgnoreCase);

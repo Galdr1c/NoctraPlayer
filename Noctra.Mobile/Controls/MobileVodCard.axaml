@@ -14,7 +14,8 @@
     <MenuFlyout x:Key="CardActionsFlyout">
       <MenuItem Header="{loc:Translate Context.MyList.Toggle}"
                 Click="Context_AddToMyList_Click"
-                IsVisible="{Binding ., Converter={StaticResource MediaSupportsMyListConverter}}"/>
+                IsVisible="{Binding #VodCardControl.ShowRemoveMyListMenu,
+                                    Converter={StaticResource InverseBoolConverter}}"/>
       <MenuItem Header="{loc:Translate MyList.Remove}"
                 Click="Context_RemoveFromMyList_Click"
                 IsVisible="{Binding #VodCardControl.ShowRemoveMyListMenu}">

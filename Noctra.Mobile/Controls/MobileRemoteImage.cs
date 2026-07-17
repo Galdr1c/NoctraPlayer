@@ -13,6 +13,7 @@ using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using Avalonia.Threading;
+using Noctra.Core.Collections;
 using Noctra.Core.Services;
 
 namespace Noctra.Mobile.Controls;
@@ -21,6 +22,8 @@ public class RemoteImage : Image
 {
     private const int DefaultDecodePixelWidth = 384;
     private const int MaxDecodePixelWidth = 2048;
+    private const int MaxCacheEntries = 128;
+    private const long MaxCacheBytes = 64L * 1024L * 1024L;
 
     public static readonly StyledProperty<string?> UrlProperty =
         AvaloniaProperty.Register<RemoteImage, string?>(nameof(Url));
@@ -32,16 +35,15 @@ public class RemoteImage : Image
         AvaloniaProperty.Register<RemoteImage, bool>(nameof(IsImageLoaded), false);
 
     private static readonly HttpClient HttpClient = CreateHttpClient();
-    private static readonly ConcurrentDictionary<string, Bitmap> Cache = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly ByteBudgetLruCache<string, Bitmap> Cache = new(
+        MaxCacheBytes,
+        MaxCacheEntries,
+        StringComparer.OrdinalIgnoreCase);
     private static readonly ConcurrentDictionary<string, Task<Bitmap?>> InFlightLoads = new(StringComparer.OrdinalIgnoreCase);
     private static readonly ConcurrentDictionary<string, DateTime> FailedUntilUtc = new(StringComparer.OrdinalIgnoreCase);
-    private static readonly LinkedList<string> CacheLruList = new();
-    private static readonly Dictionary<string, LinkedListNode<string>> NodeMap = new(StringComparer.OrdinalIgnoreCase);
     private static readonly SemaphoreSlim DownloadGate = new(6, 6);
     private static readonly SemaphoreSlim DecodeGate = new(2, 2);
-    private static readonly object CacheLock = new();
 
-    private const int MaxCacheEntries = 128;
     private const int HttpImageMaxAttempts = 2;
     private const int HttpRetryBaseDelayMs = 250;
     private static readonly TimeSpan FailureCooldown = TimeSpan.FromMinutes(2);
@@ -153,9 +155,8 @@ public class RemoteImage : Image
         CancellationToken cancellationToken)
     {
         var cacheKey = CreateCacheKey(url, decodePixelWidth);
-        if (Cache.TryGetValue(cacheKey, out var cached))
+        if (Cache.TryGet(cacheKey, out var cached))
         {
-            TouchCacheEntry(cacheKey);
             return cached;
         }
 
@@ -411,53 +412,19 @@ public class RemoteImage : Image
     }
 
     private static void AddToCache(string url, Bitmap bitmap)
-    {
-        lock (CacheLock)
-        {
-            if (Cache.ContainsKey(url))
-            {
-                TouchCacheEntry(url);
-                return;
-            }
+        => Cache.TryAdd(url, bitmap, EstimateBitmapBytes(bitmap));
 
-            while (Cache.Count >= MaxCacheEntries && CacheLruList.First != null)
-            {
-                var oldest = CacheLruList.First.Value;
-                CacheLruList.RemoveFirst();
-                NodeMap.Remove(oldest);
-                Cache.TryRemove(oldest, out _);
-            }
-
-            if (Cache.TryAdd(url, bitmap))
-            {
-                NodeMap[url] = CacheLruList.AddLast(url);
-            }
-        }
-    }
-
-    private static void TouchCacheEntry(string url)
-    {
-        lock (CacheLock)
-        {
-            if (!NodeMap.TryGetValue(url, out var node))
-            {
-                return;
-            }
-
-            CacheLruList.Remove(node);
-            NodeMap[url] = CacheLruList.AddLast(url);
-        }
-    }
+    private static long EstimateBitmapBytes(Bitmap bitmap)
+        => Math.Max(1L, (long)bitmap.PixelSize.Width * bitmap.PixelSize.Height * 4L);
 
     private bool TryApplyCachedSource(string normalizedUrl, int decodePixelWidth)
     {
         var cacheKey = CreateCacheKey(normalizedUrl, decodePixelWidth);
-        if (!Cache.TryGetValue(cacheKey, out var cached))
+        if (!Cache.TryGet(cacheKey, out var cached))
         {
             return false;
         }
 
-        TouchCacheEntry(cacheKey);
         SetSourceOnUiThread(cached, normalizedUrl);
         return true;
     }

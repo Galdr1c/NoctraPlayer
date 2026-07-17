@@ -39,8 +39,10 @@ public sealed class MobileVirtualizingCardGrid : ListBox
     public static readonly StyledProperty<MobileCardGridKind> CardKindProperty =
         AvaloniaProperty.Register<MobileVirtualizingCardGrid, MobileCardGridKind>(nameof(CardKind));
 
-    private readonly BatchObservableCollection<MobileCardGridRow> _rows = new();
-    private List<object> _sourceSnapshot = new();
+    private readonly IncrementalRowCollection<object, MobileCardGridRow> _rowCollection =
+        new(items => new MobileCardGridRow(items));
+    private readonly Queue<PendingAppend> _pendingAppends = new();
+    private readonly object _pendingAppendsLock = new();
     private INotifyCollectionChanged? _observableSource;
     private int _rebuildQueued;
     private int _fullRebuildRequired;
@@ -63,7 +65,7 @@ public sealed class MobileVirtualizingCardGrid : ListBox
         Background = null;
         BorderThickness = new Thickness(0);
         Padding = new Thickness(0);
-        ItemsSource = _rows;
+        ItemsSource = _rowCollection.Rows;
         ItemsPanel = new FuncTemplate<Panel?>(() => new VirtualizingStackPanel
         {
             CacheLength = 0.5
@@ -109,7 +111,30 @@ public sealed class MobileVirtualizingCardGrid : ListBox
     }
 
     private void Source_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
-        => QueueRefresh();
+    {
+        if (e.Action == NotifyCollectionChangedAction.Add &&
+            e.NewItems is { Count: > 0 } &&
+            e.NewStartingIndex >= 0)
+        {
+            var items = e.NewItems
+                .Cast<object?>()
+                .Where(item => item != null)
+                .Cast<object>()
+                .ToArray();
+            if (items.Length == e.NewItems.Count)
+            {
+                lock (_pendingAppendsLock)
+                {
+                    _pendingAppends.Enqueue(new PendingAppend(e.NewStartingIndex, items));
+                }
+
+                QueueRefresh();
+                return;
+            }
+        }
+
+        QueueFullRebuild();
+    }
 
     private void OnInnerScrollChanged(object? sender, ScrollChangedEventArgs e)
     {
@@ -173,12 +198,24 @@ public sealed class MobileVirtualizingCardGrid : ListBox
         {
             Interlocked.Exchange(ref _rebuildQueued, 0);
             var requiresFullRebuild = Interlocked.Exchange(ref _fullRebuildRequired, 0) == 1;
-            if (!requiresFullRebuild && TryAppendRows())
+            if (requiresFullRebuild)
             {
+                ClearPendingAppends();
+                RebuildRows();
                 return;
             }
 
-            RebuildRows();
+            while (TryDequeuePendingAppend(out var append))
+            {
+                if (_rowCollection.TryAppend(append.StartingIndex, append.Items, _columns))
+                {
+                    continue;
+                }
+
+                ClearPendingAppends();
+                RebuildRows();
+                return;
+            }
         }, DispatcherPriority.Loaded);
     }
 
@@ -188,76 +225,27 @@ public sealed class MobileVirtualizingCardGrid : ListBox
         _columns = metrics.Columns;
         _cardWidth = metrics.CardWidth;
 
-        var items = SnapshotSourceItems();
-        var rows = new List<MobileCardGridRow>((items.Count + _columns - 1) / _columns);
-
-        for (var index = 0; index < items.Count; index += _columns)
-        {
-            rows.Add(BuildRow(items, index));
-        }
-
-        _rows.ReplaceAll(rows);
-        _sourceSnapshot = items;
-    }
-
-    private bool TryAppendRows()
-    {
-        if (_columns <= 0 || _sourceSnapshot.Count == 0)
-        {
-            return false;
-        }
-
-        var items = SnapshotSourceItems();
-        if (items.Count <= _sourceSnapshot.Count)
-        {
-            return false;
-        }
-
-        for (var index = 0; index < _sourceSnapshot.Count; index++)
-        {
-            if (!ReferenceEquals(items[index], _sourceSnapshot[index]) &&
-                !Equals(items[index], _sourceSnapshot[index]))
-            {
-                return false;
-            }
-        }
-
-        var appendStart = _sourceSnapshot.Count;
-        var incompleteRowItemCount = appendStart % _columns;
-        if (incompleteRowItemCount != 0)
-        {
-            var incompleteRowIndex = appendStart / _columns;
-            var incompleteRowStart = incompleteRowIndex * _columns;
-            _rows[incompleteRowIndex] = BuildRow(items, incompleteRowStart);
-            appendStart = incompleteRowStart + _columns;
-        }
-
-        for (var index = appendStart; index < items.Count; index += _columns)
-        {
-            _rows.Add(BuildRow(items, index));
-        }
-
-        _sourceSnapshot = items;
-        return true;
-    }
-
-    private List<object> SnapshotSourceItems()
-        => SourceItems?
+        var items = SourceItems?
             .Cast<object?>()
             .Where(item => item != null)
-            .Cast<object>()
-            .ToList() ?? new List<object>();
+            .Cast<object>() ?? Enumerable.Empty<object>();
+        _rowCollection.Rebuild(items, _columns);
+    }
 
-    private MobileCardGridRow BuildRow(IReadOnlyList<object> items, int startIndex)
+    private bool TryDequeuePendingAppend(out PendingAppend append)
     {
-        var itemCount = Math.Min(_columns, items.Count - startIndex);
-        var rowItems = new object[itemCount];
-        for (var index = 0; index < itemCount; index++)
+        lock (_pendingAppendsLock)
         {
-            rowItems[index] = items[startIndex + index];
+            return _pendingAppends.TryDequeue(out append!);
         }
+    }
 
-        return new MobileCardGridRow(rowItems);
+    private void ClearPendingAppends()
+    {
+        lock (_pendingAppendsLock)
+        {
+            _pendingAppends.Clear();
+        }
     }
 
     private void PopulateRow(MobileCardGridRowControl panel, MobileCardGridRow? row)
@@ -320,6 +308,7 @@ public sealed class MobileVirtualizingCardGrid : ListBox
 
     private readonly record struct GridProfile(double MinWidth, double MaxWidth, int MaxColumns);
     private readonly record struct GridMetrics(int Columns, double CardWidth);
+    private sealed record PendingAppend(int StartingIndex, IReadOnlyList<object> Items);
 
     private sealed class MobileCardGridRowControl : WrapPanel
     {

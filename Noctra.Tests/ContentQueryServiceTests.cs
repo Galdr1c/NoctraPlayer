@@ -8,8 +8,28 @@ namespace Noctra.Tests;
 public sealed class ContentQueryServiceTests
 {
     [Fact]
+    public async Task GetChannelGroupMetadataAsync_ForwardsCancellationToken()
+    {
+        using var cancellationSource = new CancellationTokenSource();
+        var playlistService = new Mock<IPlaylistService>();
+        playlistService
+            .Setup(service => service.GetChannelGroupMetadataAsync(42, cancellationSource.Token))
+            .ReturnsAsync((0, new List<string>(), new List<string>(), new List<string>(), new List<string>()));
+        var service = new ContentQueryService(
+            playlistService.Object,
+            Mock.Of<IMediaService>(),
+            Mock.Of<ISettingsService>(),
+            Mock.Of<Microsoft.EntityFrameworkCore.IDbContextFactory<Noctra.Data.AppDbContext>>());
+
+        await service.GetChannelGroupMetadataAsync(42, cancellationSource.Token);
+
+        playlistService.VerifyAll();
+    }
+
+    [Fact]
     public async Task GetChannelPageAsync_AppliesHiddenGroupsForRequestedContentType()
     {
+        using var cancellationSource = new CancellationTokenSource();
         var playlistService = new Mock<IPlaylistService>();
         var mediaService = new Mock<IMediaService>();
         var settingsService = new Mock<ISettingsService>();
@@ -29,7 +49,8 @@ public sealed class ContentQueryServiceTests
                 ChannelType.Live,
                 true,
                 ChannelSortOrder.NameAsc,
-                It.Is<List<string>>(groups => groups.SequenceEqual(new[] { "Hidden live" }))))
+                It.Is<List<string>>(groups => groups.SequenceEqual(new[] { "Hidden live" })),
+                cancellationSource.Token))
             .ReturnsAsync([
                 new Channel
                 {
@@ -52,7 +73,7 @@ public sealed class ContentQueryServiceTests
             Group: "English",
             Type: ChannelType.Live,
             OnlyFavorites: true,
-            SortOrder: ChannelSortOrder.NameAsc));
+            SortOrder: ChannelSortOrder.NameAsc), cancellationSource.Token);
 
         Assert.Single(result);
         playlistService.VerifyAll();

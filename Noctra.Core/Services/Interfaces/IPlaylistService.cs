@@ -78,7 +78,7 @@ public interface IPlaylistService
     /// <summary>
     /// Filtrelenmis kanallari sayfali getirir (incremental loading icin)
     /// </summary>
-    Task<List<Channel>> GetChannelsFilteredPageAsync(int playlistId, int skip, int take, string? searchText = null, string? group = null, ChannelType? type = null, bool onlyFavorites = false, ChannelSortOrder sortOrder = ChannelSortOrder.NewestFirst, List<string>? hiddenGroups = null);
+    Task<List<Channel>> GetChannelsFilteredPageAsync(int playlistId, int skip, int take, string? searchText = null, string? group = null, ChannelType? type = null, bool onlyFavorites = false, ChannelSortOrder sortOrder = ChannelSortOrder.NewestFirst, List<string>? hiddenGroups = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Sadece grup isimlerini getirir (hızlı başlangıç için)
@@ -93,7 +93,9 @@ public interface IPlaylistService
     /// <summary>
     /// Tüm grup ve kanal sayısı verilerini tek seferde (single-pass) getirir
     /// </summary>
-    Task<(int TotalCount, List<string> AllGroups, List<string> LiveGroups, List<string> VodGroups, List<string> SeriesGroups)> GetChannelGroupMetadataAsync(int playlistId);
+    Task<(int TotalCount, List<string> AllGroups, List<string> LiveGroups, List<string> VodGroups, List<string> SeriesGroups)> GetChannelGroupMetadataAsync(
+        int playlistId,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Kanal sayısını getirir (tümünü yüklemeden)

@@ -184,9 +184,9 @@ public class MobileReleaseGuardTests
         Assert.Contains("<vector", splash);
 
         AssertVectorSafeZone(foreground, expectedCenter: 54, sourceMaxRadius: 33, safeRadius: 33,
-            expectedPathHash: "567F1825552C99988442A08E4112BEFAA7FCF1C1F8E4A1D38D368B8270C8792A");
+            expectedPathHash: "567F1825552C99988442A08E4112BEFAA7FCF1C1FA450ABCB08C4106CC93D7F4");
         AssertVectorSafeZone(monochrome, expectedCenter: 54, sourceMaxRadius: 33, safeRadius: 33,
-            expectedPathHash: "567F1825552C99988442A08E4112BEFAA7FCF1C1F8E4A1D38D368B8270C8792A");
+            expectedPathHash: "567F1825552C99988442A08E4112BEFAA7FCF1C1FA450ABCB08C4106CC93D7F4");
         AssertVectorSafeZone(splash, expectedCenter: 144, sourceMaxRadius: 221, safeRadius: 96,
             expectedPathHash: "75F86A3EDDE547D3589AE4DB512595312DFD38F04E92A566D2D80423767E2A16");
     }
@@ -272,12 +272,15 @@ public class MobileReleaseGuardTests
     }
 
     [Fact]
-    public void MobileComboBoxDropdown_DoesNotChainScrollIntoPage()
+    public void MobileSelectionSheets_DoNotChainScrollIntoPage()
     {
-        var styles = ReadProjectFile("Noctra.Mobile", "Resources", "Styles.axaml");
+        var categorySelection = ReadProjectFile(
+            "Noctra.Mobile", "Views", "MobileCategorySelectionView.axaml");
+        var settingsSelection = ReadProjectFile(
+            "Noctra.Mobile", "Views", "MobileSelectionSheet.axaml");
 
-        Assert.Contains("MaxDropDownHeight\" Value=\"320\"", styles);
-        Assert.Contains("ScrollViewer.IsScrollChainingEnabled=\"False\"", styles);
+        Assert.Contains("ScrollViewer.IsScrollChainingEnabled=\"False\"", categorySelection);
+        Assert.Contains("ScrollViewer.IsScrollChainingEnabled=\"False\"", settingsSelection);
     }
 
     [Fact]
