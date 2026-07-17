@@ -1,131 +1,54 @@
-﻿<UserControl xmlns="https://github.com/avaloniaui"
+<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="clr-namespace:Noctra.ViewModels;assembly=Noctra.Core"
-             xmlns:models="using:Noctra.Models"
              xmlns:loc="using:Noctra.Mobile.Localization"
              xmlns:controls="using:Noctra.Mobile.Controls"
-             xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="Noctra.Mobile.Views.MobileMyListView"
              x:DataType="vm:MainViewModel"
              x:CompileBindings="False"
              mc:Ignorable="d">
 
-  <ScrollViewer x:Name="MyListScrollViewer"
-                ScrollChanged="MyListScrollViewer_ScrollChanged" VerticalScrollBarVisibility="Visible" HorizontalScrollBarVisibility="Disabled">
-    <StackPanel Margin="20,16,20,28" Spacing="24">
+  <Grid RowDefinitions="Auto,*">
+    <Grid Grid.Row="0" Margin="20,16,20,4" ColumnDefinitions="*,Auto">
+      <TextBlock Text="{loc:Translate MyList.Title}"
+                 FontSize="{DynamicResource FDisplaySmall}" FontWeight="Bold"
+                 Foreground="{DynamicResource TextPrimaryBrush}"
+                 VerticalAlignment="Center" />
+      <Border Grid.Column="1"
+              Background="{DynamicResource Surface1Brush}"
+              CornerRadius="4" Padding="12,6"
+              VerticalAlignment="Center"
+              IsVisible="{Binding MyList.Count, Converter={StaticResource CountToVisibilityConverter}}">
+        <TextBlock Foreground="{DynamicResource TextMutedBrush}"
+                   FontSize="{DynamicResource FCaption}" FontWeight="Medium">
+          <Run Text="{Binding MyList.Count}" />
+          <Run Text=" contents" />
+        </TextBlock>
+      </Border>
+    </Grid>
 
-      <!-- Title -->
-      <Grid ColumnDefinitions="*,Auto">
-        <TextBlock Text="{loc:Translate MyList.Title}"
-                   FontSize="{DynamicResource FDisplaySmall}" FontWeight="Bold"
-                   Foreground="{DynamicResource TextPrimaryBrush}"
-                   VerticalAlignment="Center" />
-        <Border Grid.Column="1"
-                Background="{DynamicResource Surface1Brush}"
-                CornerRadius="20" Padding="12,6"
-                VerticalAlignment="Center"
-                IsVisible="{Binding MyList.Count,
-                                    Converter={StaticResource CountToVisibilityConverter}}">
-          <TextBlock Foreground="{DynamicResource TextMutedBrush}"
-                     FontSize="{DynamicResource FCaption}" FontWeight="Medium">
-            <Run Text="{Binding MyList.Count}" /><Run Text=" items" />
-          </TextBlock>
-        </Border>
-      </Grid>
+    <controls:MobileSectionedCardFeed Grid.Row="1"
+        Margin="20,0,20,0"
+        ItemContainerTheme="{StaticResource TransparentListBoxItemTheme}">
+      <controls:MobileSectionedCardFeed.Sections>
+        <controls:MobileCardSection Header="{loc:Translate History.LiveTv}"
+            CardKind="Live" PresentationMode="MyList"
+            SourceItems="{Binding MyListLiveChannels}" />
+        <controls:MobileCardSection Header="{loc:Translate History.Series}"
+            CardKind="Series" PresentationMode="MyList"
+            SourceItems="{Binding MyListSeriesItems}" />
+        <controls:MobileCardSection Header="{loc:Translate History.Movies}"
+            CardKind="Vod" PresentationMode="MyList"
+            SourceItems="{Binding MyListVodChannels}" />
+      </controls:MobileSectionedCardFeed.Sections>
+    </controls:MobileSectionedCardFeed>
 
-      <!-- Live TV -->
-      <StackPanel Spacing="12"
-                  IsVisible="{Binding MyListLiveChannels.Count,
-                                      Converter={StaticResource CountToVisibilityConverter}}">
-        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-          <Border Width="3" Height="20" CornerRadius="2"
-                  Background="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
-          <TextBlock Grid.Column="1"
-                     Text="{loc:Translate History.LiveTv}"
-                     FontSize="{DynamicResource FTitleL}" FontWeight="SemiBold"
-                     Foreground="{DynamicResource TextPrimaryBrush}" />
-        </Grid>
-        <ItemsControl ItemsSource="{Binding MyListLiveChannels}" HorizontalAlignment="Stretch">
-          <ItemsControl.ItemsPanel>
-            <ItemsPanelTemplate><WrapPanel HorizontalAlignment="Stretch" /></ItemsPanelTemplate>
-          </ItemsControl.ItemsPanel>
-          <ItemsControl.ItemTemplate>
-            <DataTemplate x:DataType="models:Channel">
-              <!-- ShowMyListMenu enables removal from the list. -->
-              <controls:MobileLiveTvCard ShowMyListMenu="True"
-                  ShowFavoriteMenu="True"
-                  Margin="0,0,12,12"
-                  Width="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl},
-                                  Converter={StaticResource ResponsiveCardMetricConverter},
-                                  ConverterParameter=liveWidth}" />
-            </DataTemplate>
-          </ItemsControl.ItemTemplate>
-        </ItemsControl>
-      </StackPanel>
-
-      <!-- Series -->
-      <StackPanel Spacing="12"
-                  IsVisible="{Binding MyListSeriesItems.Count,
-                                      Converter={StaticResource CountToVisibilityConverter}}">
-        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-          <Border Width="3" Height="20" CornerRadius="2"
-                  Background="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
-          <TextBlock Grid.Column="1"
-                     Text="{loc:Translate History.Series}"
-                     FontSize="{DynamicResource FTitleL}" FontWeight="SemiBold"
-                     Foreground="{DynamicResource TextPrimaryBrush}" />
-        </Grid>
-        <ItemsControl ItemsSource="{Binding MyListSeriesItems}" HorizontalAlignment="Stretch">
-          <ItemsControl.ItemsPanel>
-            <ItemsPanelTemplate><WrapPanel HorizontalAlignment="Stretch" /></ItemsPanelTemplate>
-          </ItemsControl.ItemsPanel>
-          <ItemsControl.ItemTemplate>
-            <DataTemplate x:DataType="models:Series">
-              <controls:MobileSeriesCard Margin="0,0,12,12"
-                  ShowRemoveMyListMenu="True"
-                  Width="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=posterWidth}"
-                  Height="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=posterHeight}" />
-            </DataTemplate>
-          </ItemsControl.ItemTemplate>
-        </ItemsControl>
-      </StackPanel>
-
-      <!-- Movies -->
-      <StackPanel Spacing="12"
-                  IsVisible="{Binding MyListVodChannels.Count,
-                                      Converter={StaticResource CountToVisibilityConverter}}">
-        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-          <Border Width="3" Height="20" CornerRadius="2"
-                  Background="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
-          <TextBlock Grid.Column="1"
-                     Text="{loc:Translate History.Movies}"
-                     FontSize="{DynamicResource FTitleL}" FontWeight="SemiBold"
-                     Foreground="{DynamicResource TextPrimaryBrush}" />
-        </Grid>
-        <ItemsControl ItemsSource="{Binding MyListVodChannels}" HorizontalAlignment="Stretch">
-          <ItemsControl.ItemsPanel>
-            <ItemsPanelTemplate><WrapPanel HorizontalAlignment="Stretch" /></ItemsPanelTemplate>
-          </ItemsControl.ItemsPanel>
-          <ItemsControl.ItemTemplate>
-            <DataTemplate x:DataType="models:Channel">
-              <controls:MobileVodCard Margin="0,0,12,12"
-                  ShowRemoveMyListMenu="True"
-                  Width="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=posterWidth}"
-                  Height="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=posterHeight}" />
-            </DataTemplate>
-          </ItemsControl.ItemTemplate>
-        </ItemsControl>
-      </StackPanel>
-
-      <!-- Empty state -->
-      <controls:MobileEmptyStateView
-                  IsVisible="{Binding ShowMyListEmptyState}"
-                  IconKind="BookmarkOutline"
-                  Title="{loc:Translate MyList.Empty.Title}"
-                  Description="{loc:Translate MyList.Empty.Description}" />
-
-    </StackPanel>
-  </ScrollViewer>
+    <controls:MobileEmptyStateView Grid.Row="1" Margin="20"
+        IsVisible="{Binding ShowMyListEmptyState}"
+        IconKind="BookmarkOutline"
+        Title="{loc:Translate MyList.Empty.Title}"
+        Description="{loc:Translate MyList.Empty.Description}" />
+  </Grid>
 </UserControl>

@@ -206,7 +206,8 @@ public sealed class MobileRecentRegressionTests
     [Fact]
     public void MobilePrimaryCardGrids_ReuseCardSlotsWhileRowsAreRecycled()
     {
-        var control = File.ReadAllText(ProjectFile("Noctra.Mobile", "Controls", "MobileVirtualizingCardGrid.cs"));
+        var control = File.ReadAllText(ProjectFile("Noctra.Mobile", "Controls", "MobileVirtualizingCardGrid.cs"))
+                    + File.ReadAllText(ProjectFile("Noctra.Mobile", "Controls", "MobileCardRowPresenter.cs"));
 
         Assert.Contains("EnsureCardSlots", control, StringComparison.Ordinal);
         Assert.Contains("card.DataContext = item", control, StringComparison.Ordinal);
@@ -278,6 +279,97 @@ public sealed class MobileRecentRegressionTests
                 StringSplitOptions.None).Length - 1);
         Assert.Contains("SelectionChanged=\"ClearTransientSelection\"", seriesDetail, StringComparison.Ordinal);
         Assert.Contains("SelectedIndex = -1", seriesDetailCode, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void MobileSectionedCardFeed_OwnsOneVirtualizedViewportAndSuppressesSelection()
+    {
+        var source = File.ReadAllText(
+            ProjectFile("Noctra.Mobile", "Controls", "MobileSectionedCardFeed.cs"));
+
+        Assert.Contains("MobileSectionedCardFeed : ListBox", source, StringComparison.Ordinal);
+        Assert.Contains(
+            "SectionedIncrementalRowCollection<MobileCardSection, object>",
+            source,
+            StringComparison.Ordinal);
+        Assert.Contains("VirtualizingStackPanel", source, StringComparison.Ordinal);
+        Assert.Contains("supportsRecycling: true", source, StringComparison.Ordinal);
+        Assert.Contains("NotifyCollectionChangedAction.Add", source, StringComparison.Ordinal);
+        Assert.Contains("TryAppend(", source, StringComparison.Ordinal);
+        Assert.Contains("SelectionChanged += ClearTransientSelection", source, StringComparison.Ordinal);
+        Assert.Contains("SelectedIndex = -1", source, StringComparison.Ordinal);
+        Assert.Contains("ShouldTriggerSelection(Visual source, PointerEventArgs e)", source, StringComparison.Ordinal);
+        Assert.Contains("ShouldTriggerSelection(Visual source, KeyEventArgs e)", source, StringComparison.Ordinal);
+        Assert.Contains("event EventHandler<ScrollChangedEventArgs>? ScrollChanged", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void MobileSavedHistoryAndSearchViews_UseOneSectionedVirtualizedFeed()
+    {
+        foreach (var viewName in new[]
+                 {
+                     "MobileMyListView.axaml",
+                     "MobileFavoritesView.axaml",
+                     "MobileHistoryView.axaml",
+                     "MobileSearchView.axaml"
+                 })
+        {
+            var source = File.ReadAllText(ProjectFile("Noctra.Mobile", "Views", viewName));
+
+            Assert.Equal(
+                1,
+                source.Split("<controls:MobileSectionedCardFeed Grid.Row=", StringSplitOptions.None).Length - 1);
+            Assert.DoesNotContain("<ItemsControl ItemsSource=\"{Binding", source, StringComparison.Ordinal);
+            Assert.DoesNotContain("<WrapPanel HorizontalAlignment=\"Stretch\" />", source, StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
+    public void MobileContinueWatching_RemainsExplicitlyBoundedInsteadOfJoiningTheLargeFeed()
+    {
+        var view = File.ReadAllText(ProjectFile("Noctra.Mobile", "Views", "MobileHomeView.axaml"));
+        var viewModel = File.ReadAllText(ProjectFile("Noctra.Core", "ViewModels", "MainViewModel.cs"));
+
+        Assert.Contains("ItemsSource=\"{Binding ContinueWatching}\"", view, StringComparison.Ordinal);
+        Assert.Contains(".Take(10)", viewModel, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void MainViewModel_HistoryPagingAppendsRangesWithoutResettingExistingBuckets()
+    {
+        var source = File.ReadAllText(ProjectFile("Noctra.Core", "ViewModels", "MainViewModel.cs"));
+        var methodStart = source.IndexOf("public async Task LoadMoreHistoryAsync()", StringComparison.Ordinal);
+        var methodEnd = source.IndexOf(
+            "public async Task LoadMoreHistoryIfNeededAsync",
+            methodStart,
+            StringComparison.Ordinal);
+        Assert.True(methodStart >= 0 && methodEnd > methodStart);
+        var method = source[methodStart..methodEnd];
+
+        Assert.Contains("HistoryChannels.AddRange(nextPage)", method, StringComparison.Ordinal);
+        Assert.Contains("AppendHistoryChannelBuckets(nextPage)", method, StringComparison.Ordinal);
+        Assert.DoesNotContain("HistoryChannels.Add(item)", method, StringComparison.Ordinal);
+        Assert.DoesNotContain("UpdateHistoryBucketsAsync()", method, StringComparison.Ordinal);
+        Assert.Contains("HistoryLiveChannels.AddRange(", source, StringComparison.Ordinal);
+        Assert.Contains("HistoryVodChannels.AddRange(", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void MobileVirtualizedFeeds_ShareOneRecyclingCardRowRenderer()
+    {
+        var primary = File.ReadAllText(
+            ProjectFile("Noctra.Mobile", "Controls", "MobileVirtualizingCardGrid.cs"));
+        var sectioned = File.ReadAllText(
+            ProjectFile("Noctra.Mobile", "Controls", "MobileSectionedCardFeed.cs"));
+        var renderer = File.ReadAllText(
+            ProjectFile("Noctra.Mobile", "Controls", "MobileCardRowPresenter.cs"));
+
+        Assert.Contains("MobileCardRowPresenter", primary, StringComparison.Ordinal);
+        Assert.Contains("MobileCardRowPresenter", sectioned, StringComparison.Ordinal);
+        Assert.Contains("EnsureCardSlots", renderer, StringComparison.Ordinal);
+        Assert.Contains("card.DataContext = item", renderer, StringComparison.Ordinal);
+        Assert.Contains("card.IsVisible = item != null", renderer, StringComparison.Ordinal);
+        Assert.Contains("MobileCardPresentationMode", renderer, StringComparison.Ordinal);
     }
 
     [Fact]

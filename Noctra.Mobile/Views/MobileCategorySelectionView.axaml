@@ -9,12 +9,12 @@
              IsVisible="False">
   <UserControl.Styles>
     <Style Selector="Button.CategorySelectionRow">
-      <Setter Property="MinHeight" Value="56" />
+      <Setter Property="MinHeight" Value="46" />
       <Setter Property="Padding" Value="16,12" />
       <Setter Property="Background" Value="Transparent" />
       <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
       <Setter Property="BorderThickness" Value="0" />
-      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="CornerRadius" Value="6" />
       <Setter Property="HorizontalAlignment" Value="Stretch" />
       <Setter Property="HorizontalContentAlignment" Value="Stretch" />
     </Style>
@@ -22,14 +22,13 @@
       <Setter Property="Background" Value="{DynamicResource AccentSubtleBrush}" />
     </Style>
     <Style Selector="Button.CategoryHideButton">
-      <Setter Property="Width" Value="48" />
-      <Setter Property="Height" Value="48" />
-      <Setter Property="MinWidth" Value="48" />
-      <Setter Property="MinHeight" Value="48" />
-      <Setter Property="Padding" Value="0" />
+      <Setter Property="Width" Value="28" />
+      <Setter Property="Height" Value="28" />
+      <Setter Property="MinWidth" Value="38" />
+      <Setter Property="MinHeight" Value="38" />
       <Setter Property="Background" Value="Transparent" />
       <Setter Property="BorderThickness" Value="0" />
-      <Setter Property="CornerRadius" Value="24" />
+      <Setter Property="CornerRadius" Value="4" />
     </Style>
     <Style Selector="Button.CategoryHideButton:pressed">
       <Setter Property="Background" Value="{DynamicResource AccentSubtleBrush}" />
@@ -49,7 +48,7 @@
   </UserControl.Styles>
 
   <Grid RowDefinitions="Auto,*"
-        Background="{DynamicResource Bg0Brush}"
+        Background="Transparent"
         ClipToBounds="True">
     <Border Grid.Row="0"
             Background="{DynamicResource Surface0Brush}"
@@ -84,13 +83,13 @@
     <Grid x:Name="CategorySafeAreaHost"
           Grid.Row="1">
       <Grid MaxWidth="720"
-            Margin="16,18,16,24"
+            Margin="16,18,16,16"
             RowDefinitions="Auto,*"
             HorizontalAlignment="Stretch">
-        <Border Background="{DynamicResource Surface1Brush}"
+        <Border Background="{DynamicResource CardHoverGradientBrush}"
                 BorderBrush="{DynamicResource BorderBrush}"
                 BorderThickness="1"
-                CornerRadius="8"
+                CornerRadius="6"
                 Margin="0,0,0,8">
           <Button x:Name="AllCategoriesButton"
                   Classes="CategorySelectionRow"
@@ -104,7 +103,7 @@
                          VerticalAlignment="Center" />
               <icons:MaterialIcon x:Name="AllCategoriesCheck"
                                   Grid.Column="1"
-                                  Kind="Check"
+                                  Kind="RadioboxMarked"
                                   Width="22"
                                   Height="22"
                                   Foreground="{DynamicResource AccentBrush}"
@@ -132,10 +131,10 @@
           <ListBox.ItemTemplate>
             <DataTemplate>
               <Border Margin="0,0,0,8"
-                      Background="{DynamicResource Surface1Brush}"
+                      Background="{DynamicResource BackgroundGradientBrush}"
                       BorderBrush="{DynamicResource BorderBrush}"
-                      BorderThickness="1"
-                      CornerRadius="8">
+                      BorderThickness="0,0,0,2.5"
+                      CornerRadius="6">
                 <Grid ColumnDefinitions="*,Auto">
                   <Button Grid.Column="0"
                           Classes="CategorySelectionRow"
@@ -150,7 +149,7 @@
                                  TextWrapping="Wrap"
                                  VerticalAlignment="Center" />
                       <icons:MaterialIcon Grid.Column="1"
-                                          Kind="Check"
+                                          Kind="RadioboxMarked"
                                           Width="22"
                                           Height="22"
                                           Foreground="{DynamicResource AccentBrush}"

@@ -1,9 +1,8 @@
-﻿<UserControl xmlns="https://github.com/avaloniaui"
+<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="clr-namespace:Noctra.ViewModels;assembly=Noctra.Core"
-             xmlns:models="using:Noctra.Models"
              xmlns:loc="using:Noctra.Mobile.Localization"
              xmlns:controls="using:Noctra.Mobile.Controls"
              xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
@@ -12,37 +11,28 @@
              x:CompileBindings="False"
              mc:Ignorable="d">
 
-  <Grid RowDefinitions="Auto,*">
-
-    <!-- Fixed search input -->
+  <Grid RowDefinitions="Auto,Auto,*">
     <Border Grid.Row="0" Padding="20,14,20,12"
             Background="{DynamicResource Bg0Brush}">
       <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
-
-        <Border Background="{DynamicResource Surface1Brush}"
-                CornerRadius="6">
+        <Border Background="{DynamicResource Surface1Brush}" CornerRadius="6">
           <Grid ColumnDefinitions="Auto,*,Auto">
             <icons:MaterialIcon Kind="Magnify" Width="18" Height="18"
                                 Foreground="{DynamicResource TextMutedBrush}"
                                 Margin="14,0,0,0" VerticalAlignment="Center" />
-            <TextBox Grid.Column="1"
-                     x:Name="SearchInput"
+            <TextBox Grid.Column="1" x:Name="SearchInput"
                      Text="{Binding SearchQuery, Mode=TwoWay}"
                      PlaceholderText="{loc:Translate Search.Placeholder}"
-                     Background="Transparent"
-                     BorderThickness="0"
-                     MinHeight="46"
-                     Padding="10,0,10,0"
+                     Background="Transparent" BorderThickness="0"
+                     MinHeight="46" Padding="10,0,10,0"
                      FontSize="{DynamicResource FBodyL}"
                      VerticalContentAlignment="Center"
                      KeyDown="SearchInput_KeyDown" />
-              <!-- Clear button, visible when text exists -->
             <Button Grid.Column="2"
                     Background="Transparent" BorderThickness="0"
                     Padding="10,0" MinHeight="46"
                     Click="ClearSearch_Click"
-                    IsVisible="{Binding SearchQuery,
-                                        Converter={StaticResource StringNotEmptyToVisibilityConverter}}">
+                    IsVisible="{Binding SearchQuery, Converter={StaticResource StringNotEmptyToVisibilityConverter}}">
               <icons:MaterialIcon Kind="Close" Width="16" Height="16"
                                   Foreground="{DynamicResource TextMutedBrush}" />
             </Button>
@@ -54,180 +44,59 @@
                 MinHeight="46" Padding="16,0"
                 Background="{DynamicResource AccentBrush}"
                 Foreground="{DynamicResource TextPrimaryBrush}"
-                BorderThickness="0"
-                FontWeight="Medium" FontSize="{DynamicResource FBody}"
-                CornerRadius="6"
+                BorderThickness="0" FontWeight="Medium"
+                FontSize="{DynamicResource FBody}" CornerRadius="6"
                 HorizontalAlignment="Stretch"
                 VerticalContentAlignment="Center"
                 Content="{loc:Translate Search.Button}" />
       </Grid>
     </Border>
 
-    <!-- Scrollable results -->
-    <ScrollViewer Grid.Row="1"
-                  x:Name="SearchScrollViewer"
-                  ScrollChanged="SearchScrollViewer_ScrollChanged" VerticalScrollBarVisibility="Visible" HorizontalScrollBarVisibility="Disabled">
-      <StackPanel Margin="20,4,20,28" Spacing="24">
-
-        <!-- Suggestion strip -->
-        <Border Background="{DynamicResource Surface0Brush}"
-                CornerRadius="14" Padding="14"
-                IsVisible="{Binding SearchSuggestion,
-                                    Converter={StaticResource StringNotEmptyToVisibilityConverter}}">
-          <StackPanel Spacing="8">
-            <TextBlock Text="{loc:Translate Search.DidYouMean}"
-                       Foreground="{DynamicResource TextMutedBrush}" FontSize="{DynamicResource FCaption}" />
-            <Button Content="{Binding SearchSuggestion}"
-                    Command="{Binding ApplySearchSuggestionCommand}"
-                    MinHeight="42"
-                    Background="{DynamicResource Surface1Brush}"
-                    Foreground="{DynamicResource AccentBrush}"
-                    BorderThickness="0" CornerRadius="10"
-                    FontWeight="Medium" FontSize="{DynamicResource FBody}" />
-          </StackPanel>
-        </Border>
-
-        <!-- Result sections -->
-
-        <!-- Live -->
-        <StackPanel Spacing="12"
-                    IsVisible="{Binding SearchLiveChannels.Count,
-                                        Converter={StaticResource CountToVisibilityConverter}}">
-          <TextBlock Text="{loc:Translate History.LiveTv}"
-                     FontSize="{DynamicResource FTitleL}" FontWeight="SemiBold"
-                     Foreground="{DynamicResource TextPrimaryBrush}" />
-          <ItemsControl ItemsSource="{Binding SearchLiveChannels}" HorizontalAlignment="Stretch">
-            <ItemsControl.ItemsPanel>
-              <ItemsPanelTemplate><WrapPanel HorizontalAlignment="Stretch" /></ItemsPanelTemplate>
-            </ItemsControl.ItemsPanel>
-            <ItemsControl.ItemTemplate>
-              <DataTemplate x:DataType="models:Channel">
-                <controls:MobileLiveTvCard Margin="0,0,12,12"
-                    Width="{Binding Bounds.Width,
-                                    RelativeSource={RelativeSource AncestorType=ItemsControl},
-                                    Converter={StaticResource ResponsiveCardMetricConverter},
-                                    ConverterParameter=liveWidth}" />
-              </DataTemplate>
-            </ItemsControl.ItemTemplate>
-          </ItemsControl>
-        </StackPanel>
-
-        <!-- Series -->
-        <StackPanel Spacing="12"
-                    IsVisible="{Binding SearchSeriesChannels.Count,
-                                        Converter={StaticResource CountToVisibilityConverter}}">
-          <TextBlock Text="{loc:Translate History.Series}"
-                     FontSize="{DynamicResource FTitleL}" FontWeight="SemiBold"
-                     Foreground="{DynamicResource TextPrimaryBrush}" />
-          <ItemsControl ItemsSource="{Binding SearchSeriesChannels}" HorizontalAlignment="Stretch">
-            <ItemsControl.ItemsPanel>
-              <ItemsPanelTemplate><WrapPanel HorizontalAlignment="Stretch" /></ItemsPanelTemplate>
-            </ItemsControl.ItemsPanel>
-            <ItemsControl.ItemTemplate>
-              <DataTemplate x:DataType="models:Series">
-                <controls:MobileSeriesCard Margin="0,0,12,12"
-                    Width="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=posterWidth}"
-                    Height="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=posterHeight}" />
-              </DataTemplate>
-            </ItemsControl.ItemTemplate>
-          </ItemsControl>
-        </StackPanel>
-
-        <!-- Movies -->
-        <StackPanel Spacing="12"
-                    IsVisible="{Binding SearchVodChannels.Count,
-                                        Converter={StaticResource CountToVisibilityConverter}}">
-          <TextBlock Text="{loc:Translate History.Movies}"
-                     FontSize="{DynamicResource FTitleL}" FontWeight="SemiBold"
-                     Foreground="{DynamicResource TextPrimaryBrush}" />
-          <ItemsControl ItemsSource="{Binding SearchVodChannels}" HorizontalAlignment="Stretch">
-            <ItemsControl.ItemsPanel>
-              <ItemsPanelTemplate><WrapPanel HorizontalAlignment="Stretch" /></ItemsPanelTemplate>
-            </ItemsControl.ItemsPanel>
-            <ItemsControl.ItemTemplate>
-              <DataTemplate x:DataType="models:Channel">
-                <controls:MobileVodCard Margin="0,0,12,12"
-                    Width="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=posterWidth}"
-                    Height="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=posterHeight}" />
-              </DataTemplate>
-            </ItemsControl.ItemTemplate>
-          </ItemsControl>
-        </StackPanel>
-
-        <!-- Similar results -->
-        <StackPanel Spacing="20" IsVisible="{Binding ShowSearchSimilarSection}">
-
-          <Border Height="1" Background="{DynamicResource BorderBrush}" />
-
-          <TextBlock Text="{loc:Translate Search.SimilarResults}"
-                     FontSize="{DynamicResource FTitleL}" FontWeight="SemiBold"
-                     Foreground="{DynamicResource TextPrimaryBrush}" />
-
-          <StackPanel Spacing="12"
-                      IsVisible="{Binding SearchSimilarLiveChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
-            <TextBlock Text="{loc:Translate History.LiveTv}"
-                       FontSize="{DynamicResource FBodyL}" FontWeight="Medium"
-                       Foreground="{DynamicResource TextMutedBrush}" />
-            <ItemsControl ItemsSource="{Binding SearchSimilarLiveChannels}" HorizontalAlignment="Stretch">
-              <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate><WrapPanel HorizontalAlignment="Stretch" /></ItemsPanelTemplate>
-              </ItemsControl.ItemsPanel>
-              <ItemsControl.ItemTemplate>
-                <DataTemplate x:DataType="models:Channel">
-                  <controls:MobileLiveTvCard Margin="0,0,12,12"
-                      Width="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=liveWidth}" />
-                </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
-          </StackPanel>
-
-          <StackPanel Spacing="12"
-                      IsVisible="{Binding SearchSimilarSeriesChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
-            <TextBlock Text="{loc:Translate History.Series}"
-                       FontSize="{DynamicResource FBodyL}" FontWeight="Medium"
-                       Foreground="{DynamicResource TextMutedBrush}" />
-            <ItemsControl ItemsSource="{Binding SearchSimilarSeriesChannels}" HorizontalAlignment="Stretch">
-              <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate><WrapPanel HorizontalAlignment="Stretch" /></ItemsPanelTemplate>
-              </ItemsControl.ItemsPanel>
-              <ItemsControl.ItemTemplate>
-                <DataTemplate x:DataType="models:Series">
-                  <controls:MobileSeriesCard Margin="0,0,12,12"
-                      Width="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=posterWidth}"
-                      Height="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=posterHeight}" />
-                </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
-          </StackPanel>
-
-          <StackPanel Spacing="12"
-                      IsVisible="{Binding SearchSimilarVodChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
-            <TextBlock Text="{loc:Translate History.Movies}"
-                       FontSize="{DynamicResource FBodyL}" FontWeight="Medium"
-                       Foreground="{DynamicResource TextMutedBrush}" />
-            <ItemsControl ItemsSource="{Binding SearchSimilarVodChannels}" HorizontalAlignment="Stretch">
-              <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate><WrapPanel HorizontalAlignment="Stretch" /></ItemsPanelTemplate>
-              </ItemsControl.ItemsPanel>
-              <ItemsControl.ItemTemplate>
-                <DataTemplate x:DataType="models:Channel">
-                  <controls:MobileVodCard Margin="0,0,12,12"
-                      Width="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=posterWidth}"
-                      Height="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=posterHeight}" />
-                </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
-          </StackPanel>
-        </StackPanel>
-
-        <!-- Empty state -->
-        <controls:MobileEmptyStateView
-                    IsVisible="{Binding ShowSearchEmptyState}"
-                    IconKind="Magnify"
-                    Title="{loc:Translate Search.Empty.Title}"
-                    Description="{loc:Translate Search.Empty.Description}" />
-
+    <Border Grid.Row="1" Margin="20,0,20,4"
+            Background="{DynamicResource Surface0Brush}"
+            CornerRadius="14" Padding="14"
+            IsVisible="{Binding SearchSuggestion, Converter={StaticResource StringNotEmptyToVisibilityConverter}}">
+      <StackPanel Spacing="8">
+        <TextBlock Text="{loc:Translate Search.DidYouMean}"
+                   Foreground="{DynamicResource TextMutedBrush}"
+                   FontSize="{DynamicResource FCaption}" />
+        <Button Content="{Binding SearchSuggestion}"
+                Command="{Binding ApplySearchSuggestionCommand}"
+                MinHeight="42"
+                Background="{DynamicResource Surface1Brush}"
+                Foreground="{DynamicResource AccentBrush}"
+                BorderThickness="0" CornerRadius="10"
+                FontWeight="Medium" FontSize="{DynamicResource FBody}" />
       </StackPanel>
-    </ScrollViewer>
+    </Border>
+
+    <controls:MobileSectionedCardFeed Grid.Row="2"
+        Margin="20,0,20,0"
+        ScrollChanged="SearchScrollViewer_ScrollChanged"
+        ItemContainerTheme="{StaticResource TransparentListBoxItemTheme}">
+      <controls:MobileSectionedCardFeed.Sections>
+        <controls:MobileCardSection Header="{loc:Translate History.LiveTv}"
+            CardKind="Live" SourceItems="{Binding SearchLiveChannels}" />
+        <controls:MobileCardSection Header="{loc:Translate History.Series}"
+            CardKind="Series" SourceItems="{Binding SearchSeriesChannels}" />
+        <controls:MobileCardSection Header="{loc:Translate History.Movies}"
+            CardKind="Vod" SourceItems="{Binding SearchVodChannels}" />
+        <controls:MobileCardSection Header="{loc:Translate History.LiveTv}"
+            GroupHeader="{loc:Translate Search.SimilarResults}"
+            CardKind="Live" SourceItems="{Binding SearchSimilarLiveChannels}" />
+        <controls:MobileCardSection Header="{loc:Translate History.Series}"
+            GroupHeader="{loc:Translate Search.SimilarResults}"
+            CardKind="Series" SourceItems="{Binding SearchSimilarSeriesChannels}" />
+        <controls:MobileCardSection Header="{loc:Translate History.Movies}"
+            GroupHeader="{loc:Translate Search.SimilarResults}"
+            CardKind="Vod" SourceItems="{Binding SearchSimilarVodChannels}" />
+      </controls:MobileSectionedCardFeed.Sections>
+    </controls:MobileSectionedCardFeed>
+
+    <controls:MobileEmptyStateView Grid.Row="2" Margin="20"
+        IsVisible="{Binding ShowSearchEmptyState}"
+        IconKind="Magnify"
+        Title="{loc:Translate Search.Empty.Title}"
+        Description="{loc:Translate Search.Empty.Description}" />
   </Grid>
 </UserControl>

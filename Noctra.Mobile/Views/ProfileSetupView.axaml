@@ -127,8 +127,7 @@
         <!-- Sol: İptal (← ok) -->
         <Button Grid.Column="0"
                 Classes="HeaderAction"
-                Command="{Binding CancelCommand}"
-                VerticalAlignment="Center">
+                Command="{Binding CancelCommand}">
           <StackPanel Orientation="Horizontal" Spacing="4">
             <icons:MaterialIcon Kind="ChevronLeft" Width="20" Height="20"
                                 Foreground="{DynamicResource TextPrimaryBrush}"
@@ -143,6 +142,7 @@
         <TextBlock Grid.Column="1"
                    FontSize="{DynamicResource FTitleM}"
                    FontWeight="SemiBold"
+                   Margin="-35,0,0,0"
                    Foreground="{DynamicResource TextPrimaryBrush}"
                    HorizontalAlignment="Center"
                    VerticalAlignment="Center">
@@ -464,6 +464,7 @@
                          Foreground="{DynamicResource ErrorBrush}"
                          FontSize="{DynamicResource FCaption}"
                          TextWrapping="Wrap"
+                         FontWeight="Bold"
                          Margin="16,0,16,12"
                          IsVisible="{Binding UrlError, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
 
@@ -638,9 +639,10 @@
 
         <!-- ── Durum mesajı ── -->
         <TextBlock Text="{Binding StatusMessage}"
-                   Foreground="{DynamicResource TextMutedBrush}"
+                   Foreground="{DynamicResource ErrorBrush}"
                    FontSize="{DynamicResource FCaption}"
                    TextWrapping="Wrap"
+                   FontWeight="SemiBold"
                    HorizontalAlignment="Center"
                    TextAlignment="Center"
                    IsVisible="{Binding StatusMessage, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />

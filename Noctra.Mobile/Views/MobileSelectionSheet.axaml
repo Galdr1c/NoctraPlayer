@@ -5,11 +5,13 @@
              x:CompileBindings="False">
   <UserControl.Styles>
     <Style Selector="Button.SelectionSheetOption">
-      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Background" Value="{DynamicResource BackgroundGradientBrush}" />
       <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
-      <Setter Property="BorderThickness" Value="0,0,0,1" />
-      <Setter Property="Padding" Value="16,14" />
-      <Setter Property="MinHeight" Value="52" />
+      <Setter Property="BorderThickness" Value="0,0,0,2.5" />
+      <Setter Property="Padding" Value="16,12" />
+      <Setter Property="Margin" Value="0,0,0,8" />
+      <Setter Property="MinHeight" Value="46" />
+      <Setter Property="CornerRadius" Value="6" />
       <Setter Property="HorizontalContentAlignment" Value="Stretch" />
       <Setter Property="HorizontalAlignment" Value="Stretch" />
     </Style>
@@ -23,7 +25,7 @@
             Background="{DynamicResource OverlayDimBrush}"
             PointerPressed="Scrim_PointerPressed" />
     <Border x:Name="SheetSurface"
-            Background="{DynamicResource BackgroundGradientBrush}"
+            Background="{DynamicResource Bg0Color}"
             BorderBrush="{DynamicResource BorderBrush}"
             BorderThickness="0,1,0,0"
             CornerRadius="0"
@@ -56,6 +58,7 @@
                        Foreground="{DynamicResource TextPrimaryBrush}"
                        FontSize="{DynamicResource FTitleL}"
                        FontWeight="Bold"
+                       Margin="8,0,0,0"
                        TextTrimming="CharacterEllipsis"
                        VerticalAlignment="Center" />
             <Button Grid.Column="1"
@@ -98,7 +101,7 @@
                             Width="24"
                             Height="24"
                             VerticalAlignment="Center">
-                        <icons:MaterialIcon Kind="Check"
+                        <icons:MaterialIcon Kind="RadioboxMarked"
                                             Width="22"
                                             Height="22"
                                             Foreground="{DynamicResource AccentBrush}"

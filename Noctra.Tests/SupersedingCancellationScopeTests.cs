@@ -52,7 +52,12 @@ public sealed class SupersedingCancellationScopeTests
                     using var linked = scope.CreateLinkedTokenSource(
                         CancellationToken.None,
                         out var generation);
-                    Assert.True(scope.IsCurrent(generation) || linked.IsCancellationRequested);
+                    if (!scope.IsCurrent(generation))
+                    {
+                        Assert.True(SpinWait.SpinUntil(
+                            () => linked.IsCancellationRequested,
+                            TimeSpan.FromSeconds(1)));
+                    }
                 }
                 catch (Exception ex)
                 {

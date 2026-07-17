@@ -35,7 +35,7 @@
         <ItemsControl ItemsSource="{Binding ContinueWatching}">
           <ItemsControl.ItemsPanel>
             <ItemsPanelTemplate>
-              <WrapPanel Orientation="Horizontal" HorizontalAlignment="Center" />
+              <WrapPanel Orientation="Horizontal" />
             </ItemsPanelTemplate>
           </ItemsControl.ItemsPanel>
           <ItemsControl.ItemTemplate>

@@ -232,7 +232,7 @@ public class MobileReleaseGuardTests
     }
 
     [Fact]
-    public void MobileContentGrids_VirtualizePrimarySurfacesAndKeepSecondaryWrapLayouts()
+    public void MobileContentGrids_VirtualizePrimaryAndSectionedSurfaces()
     {
         foreach (var viewName in new[]
                  {
@@ -256,8 +256,9 @@ public class MobileReleaseGuardTests
                  })
         {
             var view = ReadProjectFile("Noctra.Mobile", "Views", viewName);
-            Assert.Contains("<ScrollViewer", view);
-            Assert.Contains("<WrapPanel HorizontalAlignment=\"Stretch\"", view);
+            Assert.Contains("<controls:MobileSectionedCardFeed", view);
+            Assert.DoesNotContain("<ScrollViewer", view);
+            Assert.DoesNotContain("<WrapPanel HorizontalAlignment=\"Stretch\"", view);
         }
     }
 

@@ -868,7 +868,7 @@
                                   Foreground="{DynamicResource TextMutedBrush}" />
             </Grid>
           </Button>
-          <Button Classes="SettingsDangerActionButton"
+          <Button Theme="{StaticResource DangerButtonStyle}"
                   Content="{loc:Translate Settings.Privacy.ClearAllNow}"
                   Command="{Binding ClearHistoryCommand}"/>
 
@@ -1110,7 +1110,7 @@
                      Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="{DynamicResource FCaption}"
                      TextWrapping="Wrap" />
-          <Button Classes="SettingsDangerActionButton"
+          <Button Theme="{StaticResource DangerButtonStyle}"
                   Command="{Binding ClearCacheCommand}">
             <StackPanel Orientation="Horizontal" Spacing="8">
               <icons:MaterialIcon Kind="DeleteOutline" Width="18" Height="18" Foreground="{DynamicResource ErrorBrush}" />

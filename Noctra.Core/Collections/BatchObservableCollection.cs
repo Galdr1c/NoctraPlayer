@@ -5,10 +5,8 @@ using System.ComponentModel;
 namespace Noctra.Core.Collections;
 
 /// <summary>
-/// ObservableCollection that supports batch AddRange and ReplaceAll operations
-/// that fire a single NotifyCollectionChangedAction.Reset event instead of
-/// N+1 per-item CollectionChanged events. This prevents N+1 UI layout passes
-/// when adding or replacing many items at once.
+/// ObservableCollection that supports range mutations with one collection
+/// notification instead of N+1 per-item layout passes.
 /// </summary>
 /// <typeparam name="T">The type of elements in the collection.</typeparam>
 public class BatchObservableCollection<T> : ObservableCollection<T>
@@ -45,7 +43,7 @@ public class BatchObservableCollection<T> : ObservableCollection<T>
     }
 
     /// <summary>
-    /// Adds multiple items to the collection and fires a single Reset notification.
+    /// Adds multiple items to the collection and fires one indexed Add notification.
     /// Use this instead of foreach + Add to avoid N+1 UI layout passes.
     /// </summary>
     public void AddRange(IEnumerable<T> items)
@@ -67,6 +65,34 @@ public class BatchObservableCollection<T> : ObservableCollection<T>
             NotifyCollectionChangedAction.Add,
             (System.Collections.IList)list,
             startingIndex));
+    }
+
+    /// <summary>
+    /// Inserts multiple items at one index and publishes one indexed Add event.
+    /// </summary>
+    public void InsertRange(int index, IEnumerable<T> items)
+    {
+        ArgumentNullException.ThrowIfNull(items);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan((uint)index, (uint)Items.Count);
+
+        var list = items.ToList();
+        if (list.Count == 0)
+        {
+            return;
+        }
+
+        for (var offset = 0; offset < list.Count; offset++)
+        {
+            var item = list[offset];
+            Items.Insert(index + offset, item);
+            UpdateCountedCountOnAdd(item);
+        }
+
+        RaiseCountNotifications();
+        OnCollectionChanged(new NotifyCollectionChangedEventArgs(
+            NotifyCollectionChangedAction.Add,
+            (System.Collections.IList)list,
+            index));
     }
 
     /// <summary>

@@ -189,6 +189,7 @@
     <Style Selector="Button.ProfileSwitch">
       <Setter Property="Background" Value="{DynamicResource Surface0Brush}" />
       <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
       <Setter Property="BorderThickness" Value="0" />
       <Setter Property="Padding" Value="0" />
     </Style>
@@ -211,12 +212,6 @@
                                Width="48" Height="48"
                                Stretch="Uniform"
                  VerticalAlignment="Center" />
-          <TextBlock Text="NOCTRA"
-                     FontSize="{DynamicResource FTitleL}"
-                     FontWeight="Bold"
-                     Foreground="{DynamicResource AccentBrush}"
-                     LetterSpacing="1.5"
-                     VerticalAlignment="Center" />
         </StackPanel>
         <Button x:Name="HeaderProfileButton"
                 Grid.Column="1"

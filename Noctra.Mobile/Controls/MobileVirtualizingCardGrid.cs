@@ -250,41 +250,13 @@ public sealed class MobileVirtualizingCardGrid : ListBox
 
     private void PopulateRow(MobileCardGridRowControl panel, MobileCardGridRow? row)
     {
-        panel.EnsureCardSlots();
-
-        for (var index = 0; index < panel.Cards.Count; index++)
-        {
-            var card = panel.Cards[index];
-            var item = row is not null && index < row.Items.Count
-                ? row.Items[index]
-                : null;
-            card.DataContext = item;
-            card.IsVisible = item != null;
-            card.Width = _cardWidth;
-            if (CardKind is MobileCardGridKind.Vod or MobileCardGridKind.Series)
-            {
-                card.Height = Math.Round(_cardWidth * 1.5);
-            }
-            else
-            {
-                card.Height = double.NaN;
-            }
-
-            card.Margin = new Thickness(
-                0,
-                0,
-                row is not null && index < row.Items.Count - 1 ? CardGap : 0,
-                CardKind == MobileCardGridKind.Live ? 0 : CardGap);
-        }
+        panel.RowPresenter.Populate(
+            CardKind,
+            MobileCardPresentationMode.Standard,
+            _columns,
+            _cardWidth,
+            row?.Items ?? Array.Empty<object>());
     }
-
-    private Control CreateCard()
-        => CardKind switch
-        {
-            MobileCardGridKind.Live => new MobileLiveTvCard(),
-            MobileCardGridKind.Vod => new MobileVodCard(),
-            _ => new MobileSeriesCard()
-        };
 
     private double GetAvailableWidth()
         => double.IsFinite(Bounds.Width) && Bounds.Width > 0
@@ -310,41 +282,19 @@ public sealed class MobileVirtualizingCardGrid : ListBox
     private readonly record struct GridMetrics(int Columns, double CardWidth);
     private sealed record PendingAppend(int StartingIndex, IReadOnlyList<object> Items);
 
-    private sealed class MobileCardGridRowControl : WrapPanel
+    private sealed class MobileCardGridRowControl : ContentControl
     {
         private readonly MobileVirtualizingCardGrid _owner;
-        private readonly List<Control> _cards = new();
-        private MobileCardGridKind _cardKind;
-        private int _slotCount;
 
         public MobileCardGridRowControl(MobileVirtualizingCardGrid owner)
         {
             _owner = owner;
-            Orientation = Orientation.Horizontal;
-            HorizontalAlignment = HorizontalAlignment.Stretch;
+            RowPresenter = new MobileCardRowPresenter();
+            Content = RowPresenter;
+            HorizontalContentAlignment = HorizontalAlignment.Stretch;
         }
 
-        public IReadOnlyList<Control> Cards => _cards;
-
-        public void EnsureCardSlots()
-        {
-            if (_slotCount == _owner._columns && _cardKind == _owner.CardKind)
-            {
-                return;
-            }
-
-            Children.Clear();
-            _cards.Clear();
-            _slotCount = _owner._columns;
-            _cardKind = _owner.CardKind;
-
-            for (var index = 0; index < _slotCount; index++)
-            {
-                var card = _owner.CreateCard();
-                _cards.Add(card);
-                Children.Add(card);
-            }
-        }
+        public MobileCardRowPresenter RowPresenter { get; }
 
         protected override void OnDataContextChanged(EventArgs e)
         {

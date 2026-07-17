@@ -5775,6 +5775,16 @@ public partial class MainViewModel : ObservableObject
         _dispatcherService.Invoke(() => OnPropertyChanged(nameof(HistorySeriesItems)));
     }
 
+    private void AppendHistoryChannelBuckets(IEnumerable<Channel> channels)
+    {
+        var page = channels as IReadOnlyList<Channel> ?? channels.ToList();
+        HistoryLiveChannels.AddRange(page.Where(channel => channel.Type == ChannelType.Live));
+        HistoryVodChannels.AddRange(page.Where(channel => channel.Type == ChannelType.VOD));
+        ShowHistoryEmptyState = HistoryLiveChannels.Count == 0
+                             && HistoryVodChannels.Count == 0
+                             && HistorySeriesItems.Count == 0;
+    }
+
     private async Task ApplySeriesProgressToHistoryCacheAsync(AppDbContext db, int profileId)
     {
         var progressRows = await db.SeriesEpisodeProgresses
@@ -6986,11 +6996,8 @@ public partial class MainViewModel : ObservableObject
 
             _dispatcherService.Invoke(() =>
             {
-                foreach (var item in nextPage)
-                {
-                    HistoryChannels.Add(item);
-                }
-                _ = UpdateHistoryBucketsAsync();
+                HistoryChannels.AddRange(nextPage);
+                AppendHistoryChannelBuckets(nextPage);
                 _ = EnrichChannelsWithEpgAsync(nextPage);
             });
         }
