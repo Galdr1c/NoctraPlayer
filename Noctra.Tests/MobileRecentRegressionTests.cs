@@ -45,6 +45,30 @@ public sealed class MobileRecentRegressionTests
     }
 
     [Fact]
+    public void MobileCategorySelection_FiltersLocallyAndResetsOnEveryShow()
+    {
+        var view = File.ReadAllText(ProjectFile("Noctra.Mobile", "Views", "MobileCategorySelectionView.axaml"));
+        var codeBehind = File.ReadAllText(ProjectFile("Noctra.Mobile", "Views", "MobileCategorySelectionView.axaml.cs"));
+        var normalizedCodeBehind = codeBehind.Replace("\r\n", "\n", StringComparison.Ordinal);
+
+        Assert.Contains("x:Name=\"CategorySearchTextBox\"", view, StringComparison.Ordinal);
+        Assert.Contains("PlaceholderText=\"{loc:Translate Shell.Search.Tooltip}\"", view, StringComparison.Ordinal);
+        Assert.Contains("TextChanged=\"CategorySearchTextBox_TextChanged\"", view, StringComparison.Ordinal);
+        Assert.Contains("x:Name=\"ClearCategorySearchButton\"", view, StringComparison.Ordinal);
+        Assert.Contains("Click=\"ClearCategorySearch_Click\"", view, StringComparison.Ordinal);
+        Assert.Contains("Kind=\"Magnify\"", view, StringComparison.Ordinal);
+        Assert.Contains("Kind=\"Close\"", view, StringComparison.Ordinal);
+
+        Assert.Contains("CategorySearchTextBox.Text?.Trim()", codeBehind, StringComparison.Ordinal);
+        Assert.Contains("StringComparison.CurrentCultureIgnoreCase", codeBehind, StringComparison.Ordinal);
+        Assert.Contains("ClearCategorySearchButton.IsVisible = _categorySearchQuery.Length > 0", codeBehind, StringComparison.Ordinal);
+        Assert.Contains("CategorySearchTextBox.Focus();", codeBehind, StringComparison.Ordinal);
+        Assert.Contains("ResetCategorySearch();\n        RefreshCategories();", normalizedCodeBehind, StringComparison.Ordinal);
+        Assert.Contains("<VirtualizingStackPanel CacheLength=\"1.5\"", view, StringComparison.Ordinal);
+        Assert.Contains("Categories.ReplaceAll(items);", codeBehind, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void MobileSeriesDetail_VirtualizesEpisodesInsideBoundedViewport()
     {
         var source = File.ReadAllText(ProjectFile("Noctra.Mobile", "Views", "MobileSeriesDetailView.axaml"));

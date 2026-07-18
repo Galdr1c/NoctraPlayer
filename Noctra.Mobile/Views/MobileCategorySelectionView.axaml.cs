@@ -38,6 +38,7 @@ public partial class MobileCategorySelectionView : UserControl
 {
     private MainViewModel? _viewModel;
     private INotifyCollectionChanged? _groupsCollection;
+    private string _categorySearchQuery = string.Empty;
 
     public MobileCategorySelectionView()
     {
@@ -57,6 +58,7 @@ public partial class MobileCategorySelectionView : UserControl
         AttachGroupsCollection();
 
         TitleTextBlock.Text = title;
+        ResetCategorySearch();
         RefreshCategories();
         if (Categories.Count > 0)
         {
@@ -116,6 +118,19 @@ public partial class MobileCategorySelectionView : UserControl
     private void Back_Click(object? sender, RoutedEventArgs e)
         => CloseRequested?.Invoke(this, EventArgs.Empty);
 
+    private void CategorySearchTextBox_TextChanged(object? sender, TextChangedEventArgs e)
+    {
+        _categorySearchQuery = CategorySearchTextBox.Text?.Trim() ?? string.Empty;
+        ClearCategorySearchButton.IsVisible = _categorySearchQuery.Length > 0;
+        RefreshCategories();
+    }
+
+    private void ClearCategorySearch_Click(object? sender, RoutedEventArgs e)
+    {
+        CategorySearchTextBox.Text = string.Empty;
+        CategorySearchTextBox.Focus();
+    }
+
     private static void ClearTransientSelection(object? sender, SelectionChangedEventArgs e)
     {
         if (sender is ListBox { SelectedIndex: >= 0 } listBox)
@@ -161,11 +176,25 @@ public partial class MobileCategorySelectionView : UserControl
         }
 
         AllCategoriesCheck.IsVisible = string.IsNullOrWhiteSpace(_viewModel.SelectedGroup);
-        var items = _viewModel.Groups.Select(group =>
+        var groups = _viewModel.Groups.AsEnumerable();
+        if (_categorySearchQuery.Length > 0)
+        {
+            groups = groups.Where(group =>
+                group.Contains(_categorySearchQuery, StringComparison.CurrentCultureIgnoreCase));
+        }
+
+        var items = groups.Select(group =>
             new MobileCategorySelectionItem(
                 group,
                 string.Equals(group, _viewModel.SelectedGroup, StringComparison.Ordinal)));
         Categories.ReplaceAll(items);
+    }
+
+    private void ResetCategorySearch()
+    {
+        _categorySearchQuery = string.Empty;
+        CategorySearchTextBox.Text = string.Empty;
+        ClearCategorySearchButton.IsVisible = false;
     }
 
     private void AttachGroupsCollection()

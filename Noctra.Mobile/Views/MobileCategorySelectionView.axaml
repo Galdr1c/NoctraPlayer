@@ -86,31 +86,78 @@
             Margin="16,18,16,16"
             RowDefinitions="Auto,*"
             HorizontalAlignment="Stretch">
-        <Border Background="{DynamicResource CardHoverGradientBrush}"
-                BorderBrush="{DynamicResource BorderBrush}"
-                BorderThickness="1"
-                CornerRadius="6"
-                Margin="0,0,0,8">
-          <Button x:Name="AllCategoriesButton"
-                  Classes="CategorySelectionRow"
-                  Click="SelectCategory_Click">
-            <Grid ColumnDefinitions="*,Auto"
-                  ColumnSpacing="12">
-              <TextBlock Text="{loc:Translate Common.All}"
-                         FontSize="{DynamicResource FBodyL}"
-                         FontWeight="SemiBold"
-                         Foreground="{DynamicResource TextPrimaryBrush}"
-                         VerticalAlignment="Center" />
-              <icons:MaterialIcon x:Name="AllCategoriesCheck"
-                                  Grid.Column="1"
-                                  Kind="RadioboxMarked"
-                                  Width="22"
-                                  Height="22"
-                                  Foreground="{DynamicResource AccentBrush}"
-                                  VerticalAlignment="Center" />
+        <Grid ColumnDefinitions="Auto,*"
+              ColumnSpacing="8"
+              Margin="0,0,0,8">
+          <Border MinWidth="104"
+                  Background="{DynamicResource CardHoverGradientBrush}"
+                  BorderBrush="{DynamicResource BorderBrush}"
+                  BorderThickness="1"
+                  CornerRadius="6">
+            <Button x:Name="AllCategoriesButton"
+                    Classes="CategorySelectionRow"
+                    Click="SelectCategory_Click">
+              <Grid ColumnDefinitions="*,Auto"
+                    ColumnSpacing="12">
+                <TextBlock Text="{loc:Translate Common.All}"
+                           FontSize="{DynamicResource FBodyL}"
+                           FontWeight="SemiBold"
+                           Foreground="{DynamicResource TextPrimaryBrush}"
+                           VerticalAlignment="Center" />
+                <icons:MaterialIcon x:Name="AllCategoriesCheck"
+                                    Grid.Column="1"
+                                    Kind="RadioboxMarked"
+                                    Width="22"
+                                    Height="22"
+                                    Foreground="{DynamicResource AccentBrush}"
+                                    VerticalAlignment="Center" />
+              </Grid>
+            </Button>
+          </Border>
+
+          <Border Grid.Column="1"
+                  Background="{DynamicResource Surface1Brush}"
+                  BorderBrush="{DynamicResource BorderBrush}"
+                  BorderThickness="1"
+                  CornerRadius="6">
+            <Grid ColumnDefinitions="Auto,*,Auto">
+              <icons:MaterialIcon Kind="Magnify"
+                                  Width="20"
+                                  Height="20"
+                                  Margin="14,0,0,0"
+                                  VerticalAlignment="Center"
+                                  Foreground="{DynamicResource TextMutedBrush}"
+                                  IsHitTestVisible="False" />
+
+              <TextBox x:Name="CategorySearchTextBox"
+                       Grid.Column="1"
+                       MinHeight="46"
+                       Padding="10,0"
+                       Background="Transparent"
+                       BorderThickness="0"
+                       FontSize="{DynamicResource FBodyL}"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
+                       PlaceholderText="{loc:Translate Shell.Search.Tooltip}"
+                       VerticalContentAlignment="Center"
+                       TextChanged="CategorySearchTextBox_TextChanged" />
+
+              <Button x:Name="ClearCategorySearchButton"
+                      Grid.Column="2"
+                      MinWidth="48"
+                      MinHeight="46"
+                      Padding="12,0"
+                      Background="Transparent"
+                      BorderThickness="0"
+                      IsVisible="False"
+                      Click="ClearCategorySearch_Click">
+                <icons:MaterialIcon Kind="Close"
+                                    Width="18"
+                                    Height="18"
+                                    Foreground="{DynamicResource TextMutedBrush}" />
+              </Button>
             </Grid>
-          </Button>
-        </Border>
+          </Border>
+        </Grid>
 
         <ListBox x:Name="CategoryListBox"
                  Grid.Row="1"
