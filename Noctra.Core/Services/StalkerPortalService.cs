@@ -275,7 +275,7 @@ public class StalkerPortalService : IStalkerPortalService
         if (totalCategories > 0)
         {
             var filteredCategories = await onCategoriesDiscovered(allCategories, prioritizeAction);
-            pendingCategories = new List<StalkerCategory>(filteredCategories);
+            pendingCategories = BuildBalancedCategoryQueue(filteredCategories);
         }
 
         if (totalCategories == 0)
@@ -432,6 +432,32 @@ public class StalkerPortalService : IStalkerPortalService
     // ═══════════════════════════════════════════════════════════
     //  ENDPOINT KEŞFİ — PARALEL
     // ═══════════════════════════════════════════════════════════
+
+    private static List<StalkerCategory> BuildBalancedCategoryQueue(
+        IReadOnlyCollection<StalkerCategory> categories)
+    {
+        var live = new Queue<StalkerCategory>(categories.Where(category =>
+            category.Type.Equals("itv", StringComparison.OrdinalIgnoreCase)));
+        var vod = new Queue<StalkerCategory>(categories.Where(category =>
+            category.Type.Equals("vod", StringComparison.OrdinalIgnoreCase)));
+        var series = new Queue<StalkerCategory>(categories.Where(category =>
+            category.Type.Equals("series", StringComparison.OrdinalIgnoreCase)));
+        var other = new Queue<StalkerCategory>(categories.Where(category =>
+            !category.Type.Equals("itv", StringComparison.OrdinalIgnoreCase) &&
+            !category.Type.Equals("vod", StringComparison.OrdinalIgnoreCase) &&
+            !category.Type.Equals("series", StringComparison.OrdinalIgnoreCase)));
+        var balanced = new List<StalkerCategory>(categories.Count);
+
+        while (live.Count > 0 || vod.Count > 0 || series.Count > 0 || other.Count > 0)
+        {
+            if (live.TryDequeue(out var liveCategory)) balanced.Add(liveCategory);
+            if (vod.TryDequeue(out var vodCategory)) balanced.Add(vodCategory);
+            if (series.TryDequeue(out var seriesCategory)) balanced.Add(seriesCategory);
+            if (other.TryDequeue(out var otherCategory)) balanced.Add(otherCategory);
+        }
+
+        return balanced;
+    }
 
     private async Task<(string NormalizedUrl, string? Endpoint, string? InitialToken)>
         ResolveEndpointParallelAsync(

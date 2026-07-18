@@ -468,7 +468,7 @@ public partial class MainViewModel : ObservableObject
                 {
                     try
                     {
-                        if (IsChannelLoading)
+                        if (IsChannelLoading && ActiveView != AppView.Series)
                         {
                             Interlocked.Exchange(ref _deferredSeriesRefreshAfterChannelLoad, 1);
                             return;
@@ -945,7 +945,7 @@ public partial class MainViewModel : ObservableObject
                                                                     PerformanceTrace.Mark("profile.xtream.categories.persisted", categories.Count, $"playlist-{playlist.Id}");
                                                                     BeginInvokeIfProfileScopeActive(profileScope, () =>
                                                                     {
-                                                                        if (SelectedPlaylist?.Id == playlist.Id) _ = LoadChannelsAsync(playlist.Id);
+                                                                        RefreshGroupMetadataAfterProviderPersistence(playlist.Id);
                                                                     });
                                                                     return categories;
                                                                 },
@@ -1093,6 +1093,7 @@ public partial class MainViewModel : ObservableObject
                                 int importVodCount = 0;
                                 int importSeriesCount = 0;
                                 int failedCategoryCount = 0;
+                                var earlySeriesAggregationGate = new StalkerEarlySeriesAggregationGate();
                                 var progress = new Progress<StalkerLoadProgress>(p =>
                                 {
                                     var now = DateTime.UtcNow;
@@ -1140,10 +1141,7 @@ public partial class MainViewModel : ObservableObject
                                         // UI'yi hemen güncelle — gruplar (sol menü) anında dolacak
                                         BeginInvokeIfProfileScopeActive(profileScope, () =>
                                         {
-                                            if (SelectedPlaylist?.Id == playlist.Id)
-                                            {
-                                                _ = LoadChannelsAsync(playlist.Id);
-                                            }
+                                            RefreshGroupMetadataAfterProviderPersistence(playlist.Id);
                                         });
                                         
                                         return categories;
@@ -1184,6 +1182,15 @@ public partial class MainViewModel : ObservableObject
                                             importSeriesCount,
                                             failedCategoryCount,
                                             cancellationToken: profileScope.Token);
+
+                                        await TryRunEarlyStalkerSeriesAggregationAsync(
+                                            earlySeriesAggregationGate,
+                                            playlist.Id,
+                                            category.Type,
+                                            channels.Count,
+                                            categoryCompleted: true,
+                                            profileScope,
+                                            category.Name);
 
                                         // Eğer ekranda bu kategori açıksa anlık göster, değilse sol menü zaten yüklü
                                         if (SelectedPlaylist?.Id == playlist.Id && SelectedGroup == category.Name)
@@ -1526,7 +1533,10 @@ public partial class MainViewModel : ObservableObject
                             var stats = string.Format(CultureInfo.CurrentCulture,
                                 _localizationService.GetString("Main.Status.CategoryProgressFormat"), 0, totalCategories);
                             ReportChannelRefreshProgress(MapChannelCategoryProgress(0, totalCategories), stats);
-                            if (!isFullRefresh && SelectedPlaylist?.Id == playlist.Id) _ = LoadChannelsAsync(playlist.Id);
+                            if (!isFullRefresh)
+                            {
+                                RefreshGroupMetadataAfterProviderPersistence(playlist.Id);
+                            }
                         });
 
                         return categories;
@@ -1611,7 +1621,7 @@ public partial class MainViewModel : ObservableObject
                 ThrowIfProfileLoadCancelled(profileScope);
                 BeginInvokeIfProfileScopeActive(profileScope, () =>
                 {
-                    if (SelectedPlaylist?.Id == playlist.Id) _ = LoadChannelsAsync(playlist.Id);
+                    RefreshGroupMetadataAfterProviderPersistence(playlist.Id);
                 });
             }
             else
@@ -1626,7 +1636,7 @@ public partial class MainViewModel : ObservableObject
             {
                 IsChannelLoading = false;
                 ChannelLoadingProgress = 100;
-                if (SelectedPlaylist?.Id == playlist.Id) _ = LoadChannelsAsync(playlist.Id);
+                if (!isFullRefresh && SelectedPlaylist?.Id == playlist.Id) _ = LoadChannelsAsync(playlist.Id);
             });
             PerformanceTrace.Mark("profile.xtream.import.complete", playlist.Id, $"profile-{profile.Id}");
 
@@ -1770,6 +1780,7 @@ public partial class MainViewModel : ObservableObject
             int importVodCount = 0;
             int importSeriesCount = 0;
             int failedCategoryCount = 0;
+            var earlySeriesAggregationGate = new StalkerEarlySeriesAggregationGate();
             var progress = new Progress<StalkerLoadProgress>(p =>
             {
                 var now = DateTime.UtcNow;
@@ -1904,6 +1915,18 @@ public partial class MainViewModel : ObservableObject
                         failedCategoryCount,
                         cancellationToken: profileScope.Token);
 
+                    if (!isFullRefresh)
+                    {
+                        await TryRunEarlyStalkerSeriesAggregationAsync(
+                            earlySeriesAggregationGate,
+                            playlist.Id,
+                            category.Type,
+                            channels.Count,
+                            categoryCompleted,
+                            profileScope,
+                            category.Name);
+                    }
+
                     if (!isFullRefresh && SelectedPlaylist?.Id == playlist.Id && SelectedGroup == category.Name)
                     {
                         _ = ThrottledLoadChannelsAsync(playlist.Id);
@@ -1920,7 +1943,7 @@ public partial class MainViewModel : ObservableObject
                 ThrowIfProfileLoadCancelled(profileScope);
                 BeginInvokeIfProfileScopeActive(profileScope, () =>
                 {
-                    if (SelectedPlaylist?.Id == playlist.Id) _ = LoadChannelsAsync(playlist.Id);
+                    RefreshGroupMetadataAfterProviderPersistence(playlist.Id);
                 });
             }
             else
@@ -1996,6 +2019,41 @@ public partial class MainViewModel : ObservableObject
             {
                 throw;
             }
+        }
+    }
+
+    private async Task TryRunEarlyStalkerSeriesAggregationAsync(
+        StalkerEarlySeriesAggregationGate gate,
+        int playlistId,
+        string categoryType,
+        int channelCount,
+        bool categoryCompleted,
+        ProfileLoadScope profileScope,
+        string categoryName)
+    {
+        if (!gate.TryClaim(categoryType, channelCount, categoryCompleted))
+        {
+            return;
+        }
+
+        try
+        {
+            _logger?.LogInformation(
+                "[Stalker] Running one early Series aggregation after category {Category}.",
+                categoryName);
+            await _mediaService.AggregateContentAsync(playlistId, profileScope.Token);
+            ThrowIfProfileLoadCancelled(profileScope);
+            _mediaService.RaiseAggregationCompleted(playlistId);
+        }
+        catch (OperationCanceledException) when (profileScope.Token.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogDebug(
+                ex,
+                "[Stalker] Early Series aggregation failed; final aggregation will retry.");
         }
     }
 
@@ -3885,6 +3943,20 @@ public partial class MainViewModel : ObservableObject
         return (true, metadata.TotalCount);
     }
 
+    private void RefreshGroupMetadataAfterProviderPersistence(int playlistId)
+    {
+        if (SelectedPlaylist?.Id != playlistId)
+        {
+            return;
+        }
+
+        // Progressive providers can persist their category markers after the first
+        // page has already cached an empty metadata result for this playlist.
+        _groupMetadataPlaylistId = null;
+        _groupMetadataTotalCount = 0;
+        _ = LoadChannelsAsync(playlistId);
+    }
+
     private void ReorderGroupCachesFromLanguagePreference()
     {
         _allGroupsCache = OrderGroupsByLanguagePreference(_allGroupsCache);
@@ -4141,7 +4213,8 @@ public partial class MainViewModel : ObservableObject
 
             if (needsSeries)
             {
-                if (_seriesCachePlaylistId != requestedPlaylistId)
+                if (_seriesCachePlaylistId != requestedPlaylistId ||
+                    (view == AppView.Series && _allSeriesCache.Count == 0 && IsChannelLoading))
                 {
                     await LoadHomeContentAsync(
                         token,

@@ -12,6 +12,70 @@ namespace Noctra.Tests;
 public sealed class MainViewModelIncrementalCancellationTests
 {
     [Fact]
+    public async Task ProviderCategoriesPersisted_AfterEmptyMetadataCache_ShowsGroupFilterWithoutProfileReload()
+    {
+        var metadataAttempt = 0;
+        var contentQuery = new Mock<IContentQueryService>();
+        contentQuery
+            .Setup(service => service.GetChannelGroupMetadataAsync(7, It.IsAny<CancellationToken>()))
+            .Returns(() =>
+            {
+                if (Interlocked.Increment(ref metadataAttempt) == 1)
+                {
+                    return Task.FromResult((
+                        0,
+                        new List<string>(),
+                        new List<string>(),
+                        new List<string>(),
+                        new List<string>()));
+                }
+
+                return Task.FromResult((
+                    1,
+                    new List<string> { "Live category" },
+                    new List<string> { "Live category" },
+                    new List<string>(),
+                    new List<string>()));
+            });
+        contentQuery
+            .Setup(service => service.GetSeriesListAsync(7, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Series>());
+        contentQuery
+            .Setup(service => service.GetChannelPageAsync(
+                It.IsAny<ContentPageRequest>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync([
+                new Channel
+                {
+                    Id = 701,
+                    PlaylistId = 7,
+                    Name = "First progressive channel",
+                    StreamUrl = "https://stream.test/live",
+                    GroupTitle = "Live category",
+                    Type = ChannelType.Live
+                }
+            ]);
+
+        var viewModel = CreateViewModel(contentQuery.Object);
+        viewModel.ActiveView = AppView.Live;
+        viewModel.SelectedChannelType = ChannelType.Live;
+        viewModel.SelectedPlaylist = new Playlist { Id = 7, Name = "Fresh Stalker" };
+        await WaitForAsync(() => Volatile.Read(ref metadataAttempt) == 1 && !viewModel.IsChannelLoading);
+
+        Assert.False(viewModel.ShowGroupFilter);
+
+        var refreshMethod = typeof(MainViewModel).GetMethod(
+            "RefreshGroupMetadataAfterProviderPersistence",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        Assert.NotNull(refreshMethod);
+        refreshMethod.Invoke(viewModel, new object[] { 7 });
+
+        await WaitForAsync(() => viewModel.ShowGroupFilter);
+        Assert.Equal(2, Volatile.Read(ref metadataAttempt));
+        Assert.Contains("Live category", viewModel.Groups);
+    }
+
+    [Fact]
     public async Task DelayedReload_ForOldPlaylist_DoesNotCancelNewPlaylistLoad()
     {
         var newMetadataStarted = new TaskCompletionSource<CancellationToken>(

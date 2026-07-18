@@ -10,6 +10,31 @@ namespace Noctra.Tests;
 public sealed class StalkerPortalServiceBatchTests
 {
     [Fact]
+    public async Task GetChannelsProgressiveBatchedAsync_FirstWorkerWindowIncludesEveryContentType()
+    {
+        using var handler = new StalkerInterleavingHandler();
+        using var client = new HttpClient(handler);
+        var localization = new Mock<ILocalizationService>();
+        localization
+            .Setup(service => service.GetString(It.IsAny<string>()))
+            .Returns<string>(key => key);
+        var service = new StalkerPortalService(client, localization.Object);
+
+        await service.GetChannelsProgressiveBatchedAsync(
+            $"http://stalker-interleave-{Guid.NewGuid():N}.test",
+            "00:1A:79:00:00:01",
+            includeVod: true,
+            onCategoriesDiscovered: (categories, _) => Task.FromResult(categories),
+            onCategoryBatchLoaded: (_, _, _) => Task.CompletedTask);
+
+        var firstWorkerWindow = handler.OrderedListTypes.Take(5).ToArray();
+        Assert.Equal(5, firstWorkerWindow.Length);
+        Assert.Contains("itv", firstWorkerWindow);
+        Assert.Contains("vod", firstWorkerWindow);
+        Assert.Contains("series", firstWorkerWindow);
+    }
+
+    [Fact]
     public async Task GetChannelsProgressiveBatchedAsync_EmitsPagesWithoutMaterializingCategory()
     {
         using var client = new HttpClient(new StalkerBatchHandler());
@@ -192,6 +217,107 @@ public sealed class StalkerPortalServiceBatchTests
             {
                 Content = new StringContent(JsonSerializer.Serialize(payload))
             });
+        }
+
+        private static Dictionary<string, string> ParseQuery(string? query)
+        {
+            if (string.IsNullOrWhiteSpace(query))
+                return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+            return query.TrimStart('?')
+                .Split('&', StringSplitOptions.RemoveEmptyEntries)
+                .Select(part => part.Split('=', 2))
+                .ToDictionary(
+                    part => Uri.UnescapeDataString(part[0]),
+                    part => part.Length > 1 ? Uri.UnescapeDataString(part[1]) : string.Empty,
+                    StringComparer.OrdinalIgnoreCase);
+        }
+    }
+
+    private sealed class StalkerInterleavingHandler : HttpMessageHandler
+    {
+        private readonly object _sync = new();
+        private readonly List<string> _orderedListTypes = [];
+
+        public IReadOnlyList<string> OrderedListTypes
+        {
+            get
+            {
+                lock (_sync)
+                {
+                    return _orderedListTypes.ToArray();
+                }
+            }
+        }
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            var query = ParseQuery(request.RequestUri?.Query);
+            var action = query.GetValueOrDefault("action");
+            var type = query.GetValueOrDefault("type") ?? "itv";
+
+            if (action == "get_ordered_list")
+            {
+                lock (_sync)
+                {
+                    _orderedListTypes.Add(type);
+                }
+            }
+
+            object payload = action switch
+            {
+                "handshake" => new { js = new { token = "test-token" } },
+                "get_profile" => new { js = new { id = "1" } },
+                "get_genres" => new { js = CreateCategories("live") },
+                "get_categories" => new { js = CreateCategories(type) },
+                "get_ordered_list" => CreateOrderedList(query, type),
+                _ => new { js = Array.Empty<object>() }
+            };
+
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(JsonSerializer.Serialize(payload))
+            });
+        }
+
+        private static object[] CreateCategories(string prefix)
+            => Enumerable.Range(1, 6)
+                .Select(index => (object)new
+                {
+                    id = $"{prefix}-{index}",
+                    title = $"{prefix} {index}",
+                    count = 1
+                })
+                .ToArray();
+
+        private static object CreateOrderedList(
+            IReadOnlyDictionary<string, string> query,
+            string type)
+        {
+            var categoryId = type == "itv"
+                ? query.GetValueOrDefault("genre")
+                : query.GetValueOrDefault("category");
+            return new
+            {
+                js = new
+                {
+                    data = new[]
+                    {
+                        new
+                        {
+                            id = $"{type}-{categoryId}",
+                            name = $"{type} {categoryId}",
+                            cmd = $"ffmpeg http://stream.test/{type}/{categoryId}",
+                            tv_genre_id = categoryId,
+                            category_id = categoryId
+                        }
+                    },
+                    total_items = 1,
+                    max_page_items = 500
+                }
+            };
         }
 
         private static Dictionary<string, string> ParseQuery(string? query)
