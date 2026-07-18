@@ -134,6 +134,83 @@ public sealed class DatabaseSchemaFixupServiceTests
         }
     }
 
+    [Fact]
+    public async Task ApplyAsync_AddsPersistentPlaylistRepairVersion()
+    {
+        var databasePath = CreateTempDatabasePath();
+        try
+        {
+            await using var context = CreateContext(databasePath);
+            await context.Database.ExecuteSqlRawAsync(
+                """
+                CREATE TABLE Playlists (
+                    Id INTEGER NOT NULL CONSTRAINT PK_Playlists PRIMARY KEY AUTOINCREMENT,
+                    Name TEXT NOT NULL,
+                    IsActive INTEGER NOT NULL DEFAULT 1
+                );
+                """);
+
+            await new DatabaseSchemaFixupService().ApplyAsync(
+                context,
+                DatabaseSchemaFixupProfile.Mobile);
+
+            Assert.True(await ColumnExistsAsync(
+                context,
+                "Playlists",
+                "ChannelTypeRepairVersion"));
+        }
+        finally
+        {
+            TryDelete(databasePath);
+        }
+    }
+
+    [Fact]
+    public async Task ApplyAsync_DoesNotRewriteAlreadyCleanEuSeriesMetadata()
+    {
+        var databasePath = CreateTempDatabasePath();
+        try
+        {
+            await using var context = CreateContext(databasePath);
+            await context.Database.EnsureCreatedAsync();
+            var playlist = new Noctra.Models.Playlist { Name = "M3U" };
+            context.Playlists.Add(playlist);
+            await context.SaveChangesAsync();
+            context.Series.Add(new Noctra.Models.Series
+            {
+                Name = "Already Clean",
+                PlaylistId = playlist.Id,
+                GroupTitle = "EU SERIES"
+            });
+            await context.SaveChangesAsync();
+            await context.Database.ExecuteSqlRawAsync(
+                "CREATE TABLE SeriesUpdateAudit (Count INTEGER NOT NULL);");
+            await context.Database.ExecuteSqlRawAsync(
+                "INSERT INTO SeriesUpdateAudit (Count) VALUES (0);");
+            await context.Database.ExecuteSqlRawAsync(
+                """
+                CREATE TRIGGER CountSeriesUpdates
+                AFTER UPDATE ON Series
+                BEGIN
+                    UPDATE SeriesUpdateAudit SET Count = Count + 1;
+                END;
+                """);
+
+            await new DatabaseSchemaFixupService().ApplyAsync(
+                context,
+                DatabaseSchemaFixupProfile.Mobile);
+
+            Assert.Equal(
+                0,
+                await ExecuteScalarIntAsync(context, "SELECT Count FROM SeriesUpdateAudit;"));
+            Assert.True(await IndexExistsAsync(context, "IX_Series_GroupTitle"));
+        }
+        finally
+        {
+            TryDelete(databasePath);
+        }
+    }
+
     private static AppDbContext CreateContext(string databasePath)
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()
@@ -197,6 +274,30 @@ public sealed class DatabaseSchemaFixupServiceTests
             parameter.Value = indexName;
             command.Parameters.Add(parameter);
             return await command.ExecuteScalarAsync() is not null;
+        }
+        finally
+        {
+            if (shouldClose)
+            {
+                await connection.CloseAsync();
+            }
+        }
+    }
+
+    private static async Task<int> ExecuteScalarIntAsync(AppDbContext context, string sql)
+    {
+        var connection = context.Database.GetDbConnection();
+        var shouldClose = connection.State != System.Data.ConnectionState.Open;
+        if (shouldClose)
+        {
+            await connection.OpenAsync();
+        }
+
+        try
+        {
+            await using var command = connection.CreateCommand();
+            command.CommandText = sql;
+            return Convert.ToInt32(await command.ExecuteScalarAsync());
         }
         finally
         {

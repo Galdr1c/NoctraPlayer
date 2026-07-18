@@ -54,7 +54,7 @@
             <icons:MaterialIcon Kind="StarOutline"
                                 Width="24"
                                 Height="24"
-                                Foreground="{DynamicResource AccentLightBrush}" />
+                                Foreground="{DynamicResource AccentBrush}" />
           </Border>
           <TextBlock Text="{loc:Translate ReviewPrompt.Title}"
                      Foreground="{DynamicResource TextPrimaryBrush}"

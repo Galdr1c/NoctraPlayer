@@ -128,6 +128,62 @@ public sealed class MainViewModelIncrementalCancellationTests
         Assert.Contains("New group", viewModel.Groups);
     }
 
+    [Fact]
+    public async Task NavigatingHome_WhenInitialMetadataIsSuperseded_RecoversSeriesAndGroupMetadata()
+    {
+        var metadataStarted = new TaskCompletionSource<CancellationToken>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        var metadata = new TaskCompletionSource<(int, List<string>, List<string>, List<string>, List<string>)>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        var metadataAttempt = 0;
+        var contentQuery = new Mock<IContentQueryService>();
+        contentQuery
+            .Setup(service => service.GetChannelGroupMetadataAsync(3, It.IsAny<CancellationToken>()))
+            .Returns((int _, CancellationToken token) =>
+            {
+                if (Interlocked.Increment(ref metadataAttempt) == 1)
+                {
+                    metadataStarted.TrySetResult(token);
+                    token.Register(() => metadata.TrySetCanceled(token));
+                    return metadata.Task;
+                }
+
+                return Task.FromResult((
+                    1,
+                    new List<string> { "Recovered M3U group" },
+                    new List<string>(),
+                    new List<string>(),
+                    new List<string> { "Recovered M3U group" }));
+            });
+        contentQuery
+            .Setup(service => service.GetSeriesListAsync(3, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([
+                new Series
+                {
+                    Id = 71,
+                    PlaylistId = 3,
+                    Name = "Recovered M3U series"
+                }
+            ]);
+        contentQuery
+            .Setup(service => service.GetChannelPageAsync(
+                It.IsAny<ContentPageRequest>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Channel>());
+
+        var viewModel = CreateViewModel(contentQuery.Object);
+        viewModel.SelectedPlaylist = new Playlist { Id = 3, Name = "M3U" };
+        var oldToken = await metadataStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
+
+        viewModel.NavigateCommand.Execute(AppView.Home);
+
+        await WaitForAsync(() =>
+            viewModel.SeriesViewItems.Any(series => series.Id == 71) &&
+            viewModel.Groups.Contains("Recovered M3U group"));
+        Assert.True(oldToken.IsCancellationRequested);
+        Assert.True(metadataAttempt >= 2);
+    }
+
     private static MainViewModel CreateViewModel(IContentQueryService contentQueryService)
     {
         var settings = new Mock<ISettingsService>();

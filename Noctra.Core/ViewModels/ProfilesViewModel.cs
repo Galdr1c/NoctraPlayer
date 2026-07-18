@@ -198,22 +198,34 @@ public partial class ProfilesViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private async Task SelectProfile(Profile profile)
+    private Task SelectProfile(Profile profile)
     {
-        if (profile == null) return;
+        if (profile == null) return Task.CompletedTask;
         
         if (IsManageMode)
         {
              // In manage mode, clicking profile edits it
-             await EditProfile(profile);
-             return;
+             return EditProfile(profile);
         }
 
-        // Normal mode
-        await _profileService.UpdateLastUsedAsync(profile.Id);
-
+        profile.LastUsed = DateTime.UtcNow;
         OnProfileSelected?.Invoke(profile);
         RequestClose?.Invoke();
+        _ = PersistLastUsedAsync(profile.Id);
+        return Task.CompletedTask;
+    }
+
+    private async Task PersistLastUsedAsync(int profileId)
+    {
+        try
+        {
+            await _profileService.UpdateLastUsedAsync(profileId);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine(
+                $"[ProfilesViewModel] Failed to persist LastUsed for profile {profileId}: {ex.Message}");
+        }
     }
     
     [RelayCommand]

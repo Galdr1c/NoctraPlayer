@@ -21,6 +21,7 @@ namespace Noctra.Services;
 public partial class PlaylistService : IPlaylistService
 {
     private const int BulkInsertLogInterval = 1000;
+    private const int ChannelTypeRepairAggregationPendingVersion = -1;
 
     private static readonly ConcurrentDictionary<string, SemaphoreSlim> AddPlaylistLocks = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<int, Dictionary<string, ChannelBackupData>> _refreshBackups = new();
@@ -891,13 +892,53 @@ public partial class PlaylistService : IPlaylistService
 
         try
         {
-            var repaired = await RepairLinearStreamChannelTypesAsync(
-                context,
-                playlistId,
-                cancellationToken);
+            var persistedRepairVersion = await context.Playlists
+                .AsNoTracking()
+                .Where(playlist => playlist.Id == playlistId)
+                .Select(playlist => playlist.ChannelTypeRepairVersion)
+                .SingleOrDefaultAsync(cancellationToken);
+            if (persistedRepairVersion >= Playlist.CurrentChannelTypeRepairVersion)
+            {
+                return;
+            }
+
+            if (persistedRepairVersion == ChannelTypeRepairAggregationPendingVersion)
+            {
+                await _mediaService.AggregateContentAsync(playlistId, cancellationToken);
+                await SetChannelTypeRepairVersionAsync(
+                    context,
+                    playlistId,
+                    Playlist.CurrentChannelTypeRepairVersion,
+                    cancellationToken);
+                return;
+            }
+
+            int repaired;
+            await using (var repairTransaction =
+                         await context.Database.BeginTransactionAsync(cancellationToken))
+            {
+                repaired = await RepairLinearStreamChannelTypesAsync(
+                    context,
+                    playlistId,
+                    cancellationToken);
+                await SetChannelTypeRepairVersionAsync(
+                    context,
+                    playlistId,
+                    repaired > 0
+                        ? ChannelTypeRepairAggregationPendingVersion
+                        : Playlist.CurrentChannelTypeRepairVersion,
+                    cancellationToken);
+                await repairTransaction.CommitAsync(cancellationToken);
+            }
+
             if (repaired > 0)
             {
                 await _mediaService.AggregateContentAsync(playlistId, cancellationToken);
+                await SetChannelTypeRepairVersionAsync(
+                    context,
+                    playlistId,
+                    Playlist.CurrentChannelTypeRepairVersion,
+                    cancellationToken);
             }
         }
         catch
@@ -905,6 +946,21 @@ public partial class PlaylistService : IPlaylistService
             _linearStreamRepairCompleted.TryRemove(playlistId, out _);
             throw;
         }
+    }
+
+    private static Task<int> SetChannelTypeRepairVersionAsync(
+        AppDbContext context,
+        int playlistId,
+        int version,
+        CancellationToken cancellationToken)
+    {
+        return context.Playlists
+            .Where(playlist => playlist.Id == playlistId)
+            .ExecuteUpdateAsync(
+                setters => setters.SetProperty(
+                    playlist => playlist.ChannelTypeRepairVersion,
+                    version),
+                cancellationToken);
     }
 
     private void InvalidateLinearStreamRepair(int playlistId)

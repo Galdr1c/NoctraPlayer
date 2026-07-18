@@ -64,6 +64,7 @@ public class AppDbContext : DbContext
             entity.Property(e => e.Name).IsRequired().HasMaxLength(255);
             entity.HasIndex(e => e.TmdbId);
             entity.HasIndex(e => e.PlaylistId);
+            entity.HasIndex(e => e.GroupTitle);
             entity.HasMany(e => e.Seasons)
                   .WithOne(e => e.Series)
                   .HasForeignKey(e => e.SeriesId)

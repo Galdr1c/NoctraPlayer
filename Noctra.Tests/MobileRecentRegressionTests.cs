@@ -18,13 +18,13 @@ public sealed class MobileRecentRegressionTests
     }
 
     [Fact]
-    public void MobileSeriesDetail_DoesNotReintroduceBrokenGlyphsOrHardcodedActionColors()
+    public void MobileSeriesDetail_PreservesIntentionalContinueTintAndAvoidsInvalidActionColors()
     {
         var source = File.ReadAllText(ProjectFile("Noctra.Mobile", "Views", "MobileSeriesDetailView.axaml"));
 
         Assert.DoesNotContain("â€¢", source, StringComparison.Ordinal);
         Assert.DoesNotContain("BorderThickness=\"1,5\"", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("Background=\"#1A8B5CF6\"", source, StringComparison.Ordinal);
+        Assert.Contains("Background=\"#1A8B5CF6\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("Background=\"#1A000000\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("Foreground=\"#E50914\"", source, StringComparison.Ordinal);
         Assert.Contains("BorderThickness=\"1\"", source, StringComparison.Ordinal);
@@ -379,6 +379,34 @@ public sealed class MobileRecentRegressionTests
 
         Assert.DoesNotContain("StreamUrl={channel.StreamUrl}", source, StringComparison.Ordinal);
         Assert.Contains("HasStreamUrl=", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void MobileProfileSelection_ShowsLoadingWithoutRequeryingTheSelectedProfile()
+    {
+        var source = File.ReadAllText(
+            ProjectFile("Noctra.Mobile", "Views", "ProfileListView.axaml.cs"));
+        var methodStart = source.IndexOf(
+            "private async void ViewModel_OnProfileSelected(Profile profile)",
+            StringComparison.Ordinal);
+        var methodEnd = source.IndexOf(
+            "public bool TryHandleBack()",
+            methodStart,
+            StringComparison.Ordinal);
+
+        Assert.True(methodStart >= 0 && methodEnd > methodStart);
+        var method = source[methodStart..methodEnd];
+        Assert.DoesNotContain("CreateDbContextAsync", method, StringComparison.Ordinal);
+        Assert.DoesNotContain("reloadedProfile", method, StringComparison.Ordinal);
+        Assert.Contains("loadingViewModel.SetProfile(profile)", method, StringComparison.Ordinal);
+        Assert.Contains("mainViewModel.LoadProfileAsync(profile)", method, StringComparison.Ordinal);
+        Assert.True(
+            method.IndexOf("ProfileLoadingHost.IsVisible = true", StringComparison.Ordinal) <
+            method.IndexOf("mainViewModel.LoadProfileAsync(profile)", StringComparison.Ordinal));
+        Assert.Contains("DispatcherPriority.Background", method, StringComparison.Ordinal);
+        Assert.True(
+            method.IndexOf("DispatcherPriority.Background", StringComparison.Ordinal) <
+            method.IndexOf("mainViewModel.LoadProfileAsync(profile)", StringComparison.Ordinal));
     }
 
     [Fact]

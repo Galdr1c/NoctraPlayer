@@ -1348,6 +1348,7 @@ namespace Noctra.Tests
                     Url = "https://iptv-org.github.io/iptv/countries/tr.m3u",
                     IsActive = true,
                     ChannelCount = 1,
+                    ChannelTypeRepairVersion = 0,
                     CreatedAt = DateTime.UtcNow,
                     LastUpdated = DateTime.UtcNow
                 };
@@ -1397,6 +1398,7 @@ namespace Noctra.Tests
                     Url = "https://iptv-org.github.io/iptv/index.m3u",
                     IsActive = true,
                     ChannelCount = 1,
+                    ChannelTypeRepairVersion = 0,
                     CreatedAt = DateTime.UtcNow,
                     LastUpdated = DateTime.UtcNow
                 };
@@ -1442,6 +1444,7 @@ namespace Noctra.Tests
                     Url = "http://provider.test/list.m3u",
                     IsActive = true,
                     ChannelCount = 3,
+                    ChannelTypeRepairVersion = 0,
                     CreatedAt = DateTime.UtcNow,
                     LastUpdated = DateTime.UtcNow
                 };
@@ -1507,6 +1510,7 @@ namespace Noctra.Tests
                     Url = "http://provider.test/xtream",
                     IsActive = true,
                     ChannelCount = 2,
+                    ChannelTypeRepairVersion = 0,
                     CreatedAt = DateTime.UtcNow,
                     LastUpdated = DateTime.UtcNow
                 };
@@ -1544,6 +1548,140 @@ namespace Noctra.Tests
             Assert.Empty(live);
             Assert.Contains(series, c => c.StreamUrl == "xtream-series://123");
             Assert.Contains(series, c => c.StreamUrl == "stalker-series://456");
+        }
+
+        [Fact]
+        public async Task GetChannelsFilteredAsync_CurrentRepairVersionSkipsLegacyChannelTypeRepair()
+        {
+            var service = CreateService();
+            int playlistId;
+
+            await using (var context = new AppDbContext(_options))
+            {
+                var playlist = new Playlist
+                {
+                    Name = "Current M3U",
+                    Url = "https://provider.test/current.m3u",
+                    IsActive = true,
+                    ChannelCount = 1
+                };
+                context.Playlists.Add(playlist);
+                await context.SaveChangesAsync();
+                playlistId = playlist.Id;
+                context.Channels.Add(new Channel
+                {
+                    PlaylistId = playlistId,
+                    Name = "Linear Movie Group Channel",
+                    GroupTitle = "Movies",
+                    StreamUrl = "https://provider.test/live/master.m3u8",
+                    Type = ChannelType.VOD
+                });
+                await context.SaveChangesAsync();
+                await SetRepairVersionAsync(context, playlistId, 1);
+            }
+
+            var movies = await service.GetChannelsFilteredAsync(playlistId, type: ChannelType.VOD);
+
+            Assert.Single(movies);
+            Assert.Equal(ChannelType.VOD, movies[0].Type);
+            _mediaServiceMock.Verify(
+                media => media.AggregateContentAsync(playlistId, It.IsAny<CancellationToken>()),
+                Times.Never);
+        }
+
+        [Fact]
+        public async Task GetChannelsFilteredAsync_LegacyRepairPersistsCurrentVersion()
+        {
+            var service = CreateService();
+            int playlistId;
+
+            await using (var context = new AppDbContext(_options))
+            {
+                var playlist = new Playlist
+                {
+                    Name = "Legacy M3U",
+                    Url = "https://provider.test/legacy.m3u",
+                    IsActive = true,
+                    ChannelCount = 1
+                };
+                context.Playlists.Add(playlist);
+                await context.SaveChangesAsync();
+                playlistId = playlist.Id;
+                context.Channels.Add(new Channel
+                {
+                    PlaylistId = playlistId,
+                    Name = "Legacy Linear Channel",
+                    GroupTitle = "Movies",
+                    StreamUrl = "https://provider.test/live/master.m3u8",
+                    Type = ChannelType.VOD
+                });
+                await context.SaveChangesAsync();
+                await SetRepairVersionAsync(context, playlistId, 0);
+            }
+
+            var live = await service.GetChannelsFilteredAsync(playlistId, type: ChannelType.Live);
+
+            Assert.Single(live);
+            await using var verificationContext = new AppDbContext(_options);
+            Assert.Equal(1, await GetRepairVersionAsync(verificationContext, playlistId));
+        }
+
+        [Fact]
+        public async Task GetChannelsFilteredAsync_AggregationFailureRetriesBeforeRepairVersionCompletes()
+        {
+            var aggregationAttempts = 0;
+            _mediaServiceMock
+                .Setup(media => media.AggregateContentAsync(
+                    It.IsAny<int>(),
+                    It.IsAny<CancellationToken>()))
+                .Returns(() =>
+                {
+                    aggregationAttempts++;
+                    return aggregationAttempts == 1
+                        ? Task.FromException(new InvalidOperationException("aggregation interrupted"))
+                        : Task.CompletedTask;
+                });
+            var service = CreateService();
+            int playlistId;
+
+            await using (var context = new AppDbContext(_options))
+            {
+                var playlist = new Playlist
+                {
+                    Name = "Interrupted Legacy M3U",
+                    Url = "https://provider.test/interrupted.m3u",
+                    IsActive = true,
+                    ChannelCount = 1
+                };
+                context.Playlists.Add(playlist);
+                await context.SaveChangesAsync();
+                playlistId = playlist.Id;
+                context.Channels.Add(new Channel
+                {
+                    PlaylistId = playlistId,
+                    Name = "Legacy Linear Channel",
+                    GroupTitle = "Movies",
+                    StreamUrl = "https://provider.test/live/master.m3u8",
+                    Type = ChannelType.VOD
+                });
+                await context.SaveChangesAsync();
+                await SetRepairVersionAsync(context, playlistId, 0);
+            }
+
+            await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                service.GetChannelsFilteredAsync(playlistId, type: ChannelType.Live));
+
+            await using (var failedContext = new AppDbContext(_options))
+            {
+                Assert.NotEqual(1, await GetRepairVersionAsync(failedContext, playlistId));
+            }
+
+            var live = await service.GetChannelsFilteredAsync(playlistId, type: ChannelType.Live);
+
+            Assert.Single(live);
+            Assert.Equal(2, aggregationAttempts);
+            await using var completedContext = new AppDbContext(_options);
+            Assert.Equal(1, await GetRepairVersionAsync(completedContext, playlistId));
         }
 
         [Fact]
@@ -1599,6 +1737,7 @@ namespace Noctra.Tests
                     Url = "http://provider.test/get.php",
                     IsActive = true,
                     ChannelCount = 2,
+                    ChannelTypeRepairVersion = 0,
                     CreatedAt = DateTime.UtcNow,
                     LastUpdated = DateTime.UtcNow
                 };
@@ -1653,6 +1792,53 @@ namespace Noctra.Tests
                 _localizationServiceMock.Object,
                 importJobService ?? new ImportJobService(_contextFactory)
             );
+        }
+
+        private static async Task SetRepairVersionAsync(
+            AppDbContext context,
+            int playlistId,
+            int version)
+        {
+            if (!await HasRepairVersionColumnAsync(context))
+            {
+                await context.Database.ExecuteSqlRawAsync(
+                    "ALTER TABLE Playlists ADD COLUMN ChannelTypeRepairVersion INTEGER NOT NULL DEFAULT 0;");
+            }
+
+            await context.Database.ExecuteSqlInterpolatedAsync(
+                $"UPDATE Playlists SET ChannelTypeRepairVersion = {version} WHERE Id = {playlistId};");
+        }
+
+        private static async Task<int> GetRepairVersionAsync(AppDbContext context, int playlistId)
+        {
+            var connection = context.Database.GetDbConnection();
+            if (connection.State != System.Data.ConnectionState.Open)
+            {
+                await connection.OpenAsync();
+            }
+
+            await using var command = connection.CreateCommand();
+            command.CommandText =
+                "SELECT ChannelTypeRepairVersion FROM Playlists WHERE Id = $playlistId;";
+            var parameter = command.CreateParameter();
+            parameter.ParameterName = "$playlistId";
+            parameter.Value = playlistId;
+            command.Parameters.Add(parameter);
+            return Convert.ToInt32(await command.ExecuteScalarAsync());
+        }
+
+        private static async Task<bool> HasRepairVersionColumnAsync(AppDbContext context)
+        {
+            var connection = context.Database.GetDbConnection();
+            if (connection.State != System.Data.ConnectionState.Open)
+            {
+                await connection.OpenAsync();
+            }
+
+            await using var command = connection.CreateCommand();
+            command.CommandText =
+                "SELECT 1 FROM pragma_table_info('Playlists') WHERE name = 'ChannelTypeRepairVersion' LIMIT 1;";
+            return await command.ExecuteScalarAsync() is not null;
         }
 
         private static async IAsyncEnumerable<Channel> StreamChannelsThenFail()

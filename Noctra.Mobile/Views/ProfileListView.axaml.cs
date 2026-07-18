@@ -8,9 +8,7 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Input;
 using Avalonia.Threading;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Noctra.Data;
 using Noctra.Models;
 using Noctra.Services.Interfaces;
 using Noctra.ViewModels;
@@ -317,23 +315,18 @@ public partial class ProfileListView : UserControl
 
         try
         {
-            var contextFactory = app.Services.GetRequiredService<IDbContextFactory<AppDbContext>>();
-            await using var db = await contextFactory.CreateDbContextAsync();
-            var reloadedProfile = await db.Profiles
-                .Include(p => p.ProviderAccount)
-                .FirstOrDefaultAsync(p => p.Id == profile.Id);
-
-            if (reloadedProfile is null)
-            {
-                mainViewModel.StatusMessage = localizationService.GetString("Profiles.Error.NotFound");
-                return;
-            }
-
-            loadingViewModel.SetProfile(reloadedProfile);
+            loadingViewModel.SetProfile(profile);
             loadingViewModel.StatusMessage = localizationService.GetString("Profiles.Status.Preparing");
             CopyImportJobStatus(mainViewModel, loadingViewModel);
             ProfileLoadingContent.DataContext = loadingViewModel;
             ProfileLoadingHost.IsVisible = true;
+
+            // Queue the continuation below render priority. This guarantees that the
+            // profile shell becomes visible before Android SQLite starts cached-content
+            // discovery, whose async provider may still perform synchronous work.
+            await Dispatcher.UIThread.InvokeAsync(
+                static () => { },
+                DispatcherPriority.Background);
 
             static void CopyImportJobStatus(CoreMainViewModel source, ProfileLoadingViewModel target)
             {
@@ -369,7 +362,7 @@ public partial class ProfileListView : UserControl
             mainViewModel.PropertyChanged += OnStatusChanged;
             try
             {
-                await Task.WhenAll(Task.Delay(800), mainViewModel.LoadProfileAsync(reloadedProfile));
+                await Task.WhenAll(Task.Delay(800), mainViewModel.LoadProfileAsync(profile));
                 loadedSuccessfully = true;
             }
             finally

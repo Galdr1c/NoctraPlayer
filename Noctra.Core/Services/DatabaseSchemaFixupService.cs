@@ -27,6 +27,7 @@ public sealed class DatabaseSchemaFixupService : IDatabaseSchemaFixupService
         await AddColumnIfMissingAsync(context, "Playlists", "SourceEtag", "TEXT", cancellationToken).ConfigureAwait(false);
         await AddColumnIfMissingAsync(context, "Playlists", "SourceLastModified", "TEXT", cancellationToken).ConfigureAwait(false);
         await AddColumnIfMissingAsync(context, "Playlists", "SourceContentLength", "INTEGER", cancellationToken).ConfigureAwait(false);
+        await AddColumnIfMissingAsync(context, "Playlists", "ChannelTypeRepairVersion", "INTEGER NOT NULL DEFAULT 0", cancellationToken).ConfigureAwait(false);
 
         await AddColumnIfMissingAsync(context, "Channels", "IsCompleted", "INTEGER NOT NULL DEFAULT 0", cancellationToken).ConfigureAwait(false);
         await AddColumnIfMissingAsync(context, "Channels", "CurrentProgramId", "INTEGER", cancellationToken).ConfigureAwait(false);
@@ -81,13 +82,15 @@ public sealed class DatabaseSchemaFixupService : IDatabaseSchemaFixupService
         await AddColumnIfMissingAsync(context, "Series", "NetworkName", "TEXT", cancellationToken).ConfigureAwait(false);
         await AddColumnIfMissingAsync(context, "Series", "NetworkLogoUrl", "TEXT", cancellationToken).ConfigureAwait(false);
         await TryExecuteAsync(context, "CREATE INDEX IF NOT EXISTS IX_Series_PlaylistId ON Series(PlaylistId);", cancellationToken).ConfigureAwait(false);
+        await TryExecuteAsync(context, "CREATE INDEX IF NOT EXISTS IX_Series_GroupTitle ON Series(GroupTitle);", cancellationToken).ConfigureAwait(false);
 
         await TryExecuteAsync(
             context,
             """
             UPDATE Series
             SET Plot = NULL, Cast = NULL, BackdropUrl = NULL, TrailerUrl = NULL, ContentRating = NULL, MetadataFetchedAt = NULL
-            WHERE GroupTitle LIKE 'EU %' OR GroupTitle LIKE 'EU|%' OR GroupTitle = 'EU'
+            WHERE (GroupTitle LIKE 'EU %' OR GroupTitle LIKE 'EU|%' OR GroupTitle = 'EU')
+              AND (Plot IS NOT NULL OR Cast IS NOT NULL OR BackdropUrl IS NOT NULL OR TrailerUrl IS NOT NULL OR ContentRating IS NOT NULL OR MetadataFetchedAt IS NOT NULL)
             """,
             cancellationToken).ConfigureAwait(false);
 

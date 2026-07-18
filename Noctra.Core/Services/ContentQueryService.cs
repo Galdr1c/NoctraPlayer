@@ -28,7 +28,9 @@ public sealed class ContentQueryService : IContentQueryService
         GetChannelGroupMetadataAsync(
             int playlistId,
             CancellationToken cancellationToken = default)
-        => _playlistService.GetChannelGroupMetadataAsync(playlistId, cancellationToken);
+        => RunQueryAsync(
+            () => _playlistService.GetChannelGroupMetadataAsync(playlistId, cancellationToken),
+            cancellationToken);
 
     public Task<List<Channel>> GetChannelPageAsync(
         ContentPageRequest request,
@@ -38,27 +40,38 @@ public sealed class ContentQueryService : IContentQueryService
             ? GetHiddenGroups(request.Type)
             : null;
 
-        return _playlistService.GetChannelsFilteredPageAsync(
-            request.PlaylistId,
-            request.Skip,
-            request.Take,
-            request.SearchText,
-            request.Group,
-            request.Type,
-            request.OnlyFavorites,
-            request.SortOrder,
-            hiddenGroups,
+        return RunQueryAsync(
+            () => _playlistService.GetChannelsFilteredPageAsync(
+                request.PlaylistId,
+                request.Skip,
+                request.Take,
+                request.SearchText,
+                request.Group,
+                request.Type,
+                request.OnlyFavorites,
+                request.SortOrder,
+                hiddenGroups,
+                cancellationToken),
             cancellationToken);
     }
 
     public Task<List<Series>> GetSeriesListAsync(
         int playlistId,
         CancellationToken cancellationToken = default)
-        => _mediaService.GetSeriesListAsync(playlistId, cancellationToken);
+        => RunQueryAsync(
+            () => _mediaService.GetSeriesListAsync(playlistId, cancellationToken),
+            cancellationToken);
 
-    public async Task<List<int>> GetProfilePlaylistIdsAsync(
+    public Task<List<int>> GetProfilePlaylistIdsAsync(
         int profileId,
         CancellationToken cancellationToken = default)
+        => RunQueryAsync(
+            () => GetProfilePlaylistIdsCoreAsync(profileId, cancellationToken),
+            cancellationToken);
+
+    private async Task<List<int>> GetProfilePlaylistIdsCoreAsync(
+        int profileId,
+        CancellationToken cancellationToken)
     {
         await using var db = await _contextFactory.CreateDbContextAsync(cancellationToken);
         var activeIds = await db.Playlists
@@ -79,12 +92,27 @@ public sealed class ContentQueryService : IContentQueryService
             .ToListAsync(cancellationToken);
     }
 
-    public async Task<List<Channel>> GetHistoryPageAsync(
+    public Task<List<Channel>> GetHistoryPageAsync(
         int profileId,
         IReadOnlyCollection<int> profilePlaylistIds,
         int skip,
         int take,
         CancellationToken cancellationToken = default)
+        => RunQueryAsync(
+            () => GetHistoryPageCoreAsync(
+                profileId,
+                profilePlaylistIds,
+                skip,
+                take,
+                cancellationToken),
+            cancellationToken);
+
+    private async Task<List<Channel>> GetHistoryPageCoreAsync(
+        int profileId,
+        IReadOnlyCollection<int> profilePlaylistIds,
+        int skip,
+        int take,
+        CancellationToken cancellationToken)
     {
         if (profilePlaylistIds.Count == 0 || take <= 0)
         {
@@ -150,6 +178,21 @@ public sealed class ContentQueryService : IContentQueryService
         }
 
         return result;
+    }
+
+    private static Task<T> RunQueryAsync<T>(
+        Func<Task<T>> query,
+        CancellationToken cancellationToken)
+    {
+        if (cancellationToken.IsCancellationRequested)
+        {
+            return Task.FromCanceled<T>(cancellationToken);
+        }
+
+        // Microsoft.Data.Sqlite executes substantial portions of its async API
+        // synchronously. Establish an explicit worker boundary so a COUNT/GROUP BY
+        // or first-page query cannot monopolize the Avalonia UI thread.
+        return Task.Run(query, cancellationToken);
     }
 
     private List<string> GetHiddenGroups(ChannelType? type)

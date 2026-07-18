@@ -131,6 +131,7 @@ public partial class MainViewModel : ObservableObject
     private BatchObservableCollection<Channel> _continueWatching = new();
 
     private List<Series> _allSeriesCache = new();
+    private int? _seriesCachePlaylistId;
     private readonly Dictionary<ChannelSortOrder, List<Series>> _allSeriesSortCache = new();
     private List<Series>? _allSeriesSortSource;
     private string _allSeriesSortHiddenGroupsKey = string.Empty;
@@ -1300,12 +1301,15 @@ public partial class MainViewModel : ObservableObject
         _isLoadingMoreSeriesItems = false;
         _seriesFilteredSource.Clear();
         _allSeriesCache.Clear();
+        _seriesCachePlaylistId = null;
         _pendingSeriesMetadataEnrichmentIds.Clear();
         _seriesVisualNoPosterKeys.Clear();
         _allGroupsCache.Clear();
         _liveGroupsCache.Clear();
         _vodGroupsCache.Clear();
         _seriesGroupsCache.Clear();
+        _groupMetadataPlaylistId = null;
+        _groupMetadataTotalCount = 0;
         _isEpisodeContinueDirty = true;
         _cachedEpisodeContinue = null;
 
@@ -1367,12 +1371,15 @@ public partial class MainViewModel : ObservableObject
         _isLoadingMoreSeriesItems = false;
         _seriesFilteredSource.Clear();
         _allSeriesCache.Clear();
+        _seriesCachePlaylistId = null;
         _pendingSeriesMetadataEnrichmentIds.Clear();
         _seriesVisualNoPosterKeys.Clear();
         _allGroupsCache.Clear();
         _liveGroupsCache.Clear();
         _vodGroupsCache.Clear();
         _seriesGroupsCache.Clear();
+        _groupMetadataPlaylistId = null;
+        _groupMetadataTotalCount = 0;
         _isEpisodeContinueDirty = true;
         _cachedEpisodeContinue = null;
 
@@ -2194,6 +2201,8 @@ public partial class MainViewModel : ObservableObject
             return;
         }
 
+        CancelPendingFilterRequests();
+
         if (value == null)
         {
             BeginIncrementalContentGeneration();
@@ -2201,6 +2210,19 @@ public partial class MainViewModel : ObservableObject
         }
 
         _ = LoadChannelsAsync(value.Id);
+    }
+
+    private void CancelPendingFilterRequests()
+    {
+        Interlocked.Increment(ref _filterRequestVersion);
+        var filterCancellation = _filterCts;
+        _filterCts = null;
+        filterCancellation?.Cancel();
+        filterCancellation?.Dispose();
+        Interlocked.Exchange(ref _pendingFilterRequest, 0);
+        _pendingFilterReason = null;
+        _pendingFilterCaller = null;
+        _lastCompletedFilterSignature = null;
     }
 
     private async Task LoadChannelsAsync(
@@ -2238,20 +2260,12 @@ public partial class MainViewModel : ObservableObject
             StatusMessage = _localizationService.GetString("Main.Status.OptimizingLayout");
             
             // Single-pass query: Fetch all groups and total count at once (Significantly faster)
-            var meta = await _contentQueryService.GetChannelGroupMetadataAsync(
-                playlistId,
-                cancellationToken);
-            if (!IsPlaylistLoadCurrent(contentGeneration, playlistId))
+            var metadata = await EnsureGroupMetadataAsync(playlistId, cancellationToken);
+            if (!metadata.Applied || !IsPlaylistLoadCurrent(contentGeneration, playlistId))
             {
                 return;
             }
-            
-            _allGroupsCache = OrderGroupsByLanguagePreference(meta.AllGroups);
-            _liveGroupsCache = OrderGroupsByLanguagePreference(meta.LiveGroups);
-            _vodGroupsCache = OrderGroupsByLanguagePreference(meta.VodGroups);
-            _seriesGroupsCache = OrderGroupsByLanguagePreference(meta.SeriesGroups);
 
-            UpdateGroupsForSelectedType();
             ResetIncrementalState();
 
             await Task.WhenAll(
@@ -2268,7 +2282,7 @@ public partial class MainViewModel : ObservableObject
                 $"playlist-{playlistId}");
 
             StatusMessage = string.Format(CultureInfo.CurrentCulture,
-                _localizationService.GetString("Main.Status.ContentsReadyFormat"), meta.TotalCount);
+                _localizationService.GetString("Main.Status.ContentsReadyFormat"), metadata.TotalCount);
             DeferPostChannelLoadBackgroundTasks();
             EnsureChannelBackgroundRefresh();
         }
@@ -2305,6 +2319,7 @@ public partial class MainViewModel : ObservableObject
             Channels.Clear();
             FilteredChannels.Clear();
             _allSeriesCache.Clear();
+            _seriesCachePlaylistId = null;
             _seriesFilteredSource.Clear();
             SeriesViewItems.Clear();
             SetItems(Groups, Enumerable.Empty<string>());
@@ -2428,6 +2443,7 @@ public partial class MainViewModel : ObservableObject
             }
 
             _allSeriesCache = series;
+            _seriesCachePlaylistId = playlistId;
 
             _isEpisodeContinueDirty = true;
             _cachedEpisodeContinue = null;
@@ -2894,6 +2910,8 @@ public partial class MainViewModel : ObservableObject
     private List<string> _liveGroupsCache = new();
     private List<string> _vodGroupsCache = new();
     private List<string> _seriesGroupsCache = new();
+    private int? _groupMetadataPlaylistId;
+    private int _groupMetadataTotalCount;
     private Timer? _epgSyncTimer;
     private Timer? _uiEpgRefreshTimer;
     private Timer? _channelSyncTimer;
@@ -3838,6 +3856,35 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
+    private async Task<(bool Applied, int TotalCount)> EnsureGroupMetadataAsync(
+        int playlistId,
+        CancellationToken cancellationToken)
+    {
+        if (_groupMetadataPlaylistId == playlistId)
+        {
+            return (true, _groupMetadataTotalCount);
+        }
+
+        var metadata = await _contentQueryService.GetChannelGroupMetadataAsync(
+            playlistId,
+            cancellationToken);
+
+        if (cancellationToken.IsCancellationRequested || SelectedPlaylist?.Id != playlistId)
+        {
+            return (false, 0);
+        }
+
+        _allGroupsCache = OrderGroupsByLanguagePreference(metadata.AllGroups);
+        _liveGroupsCache = OrderGroupsByLanguagePreference(metadata.LiveGroups);
+        _vodGroupsCache = OrderGroupsByLanguagePreference(metadata.VodGroups);
+        _seriesGroupsCache = OrderGroupsByLanguagePreference(metadata.SeriesGroups);
+        _groupMetadataPlaylistId = playlistId;
+        _groupMetadataTotalCount = metadata.TotalCount;
+
+        UpdateGroupsForSelectedType();
+        return (true, metadata.TotalCount);
+    }
+
     private void ReorderGroupCachesFromLanguagePreference()
     {
         _allGroupsCache = OrderGroupsByLanguagePreference(_allGroupsCache);
@@ -4031,6 +4078,12 @@ public partial class MainViewModel : ObservableObject
 
     private async Task<bool> ApplyFiltersAsync(CancellationToken token)
     {
+        if (token.IsCancellationRequested)
+        {
+            CompleteNavigationContentReset();
+            return false;
+        }
+
         var contentGeneration = BeginIncrementalContentGeneration();
         if (SelectedPlaylist == null || token.IsCancellationRequested)
         {
@@ -4043,6 +4096,7 @@ public partial class MainViewModel : ObservableObject
         try
         {
             if (token.IsCancellationRequested) return false;
+            var requestedPlaylistId = SelectedPlaylist.Id;
             var view = ActiveView;
             var needsChannels = view is AppView.Home or AppView.Live or AppView.Movies or AppView.Search;
             var needsSeries = view is AppView.Home or AppView.Series or AppView.Search;
@@ -4087,10 +4141,36 @@ public partial class MainViewModel : ObservableObject
 
             if (needsSeries)
             {
+                if (_seriesCachePlaylistId != requestedPlaylistId)
+                {
+                    await LoadHomeContentAsync(
+                        token,
+                        contentGeneration,
+                        requestedPlaylistId);
+                }
+
+                if (token.IsCancellationRequested ||
+                    !IsPlaylistLoadCurrent(contentGeneration, requestedPlaylistId))
+                {
+                    return false;
+                }
+
                 UpdateSeriesViewItems();
             }
             else
             {
+            }
+
+            // Navigation can supersede the profile's first metadata query before it commits.
+            // Recover it only after the visible page is available so category discovery does
+            // not delay the first cards.
+            if (_groupMetadataPlaylistId != requestedPlaylistId)
+            {
+                var metadata = await EnsureGroupMetadataAsync(requestedPlaylistId, token);
+                if (!metadata.Applied || token.IsCancellationRequested)
+                {
+                    return false;
+                }
             }
 
             return !token.IsCancellationRequested;
@@ -5485,7 +5565,7 @@ public partial class MainViewModel : ObservableObject
             _suppressNavigationFilterRefresh = false;
         }
 
-        if (view is AppView.Live or AppView.Movies or AppView.Series &&
+        if (view is AppView.Home or AppView.Live or AppView.Movies or AppView.Series &&
             (previousView != view || CurrentViewItemCount == 0))
         {
             ScheduleImmediateFilter();
