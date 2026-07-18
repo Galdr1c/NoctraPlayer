@@ -103,6 +103,12 @@
         <StyleInclude Source="avares://Noctra.Mobile/Controls/PremiumSpinner.axaml" />
         <StyleInclude Source="avares://Noctra.Mobile/Resources/CommonStyles.axaml" />
         <StyleInclude Source="avares://Noctra.Mobile/Resources/SettingsStyles.axaml" />
+        <Style Selector="TextBox">
+            <Setter Property="MinHeight" Value="48" />
+            <Setter Property="CaretBrush" Value="{DynamicResource AccentBrush}" />
+            <Setter Property="SelectionBrush" Value="{DynamicResource TextSelectionBrush}" />
+            <Setter Property="SelectionForegroundBrush" Value="{DynamicResource TextPrimaryBrush}" />
+        </Style>
         <Style Selector="Button">
             <Setter Property="Cursor" Value="Hand"/>
         </Style>

@@ -33,6 +33,7 @@
   <SolidColorBrush x:Key="AccentHoverBrush" Color="{StaticResource Accent600Color}" />
   <SolidColorBrush x:Key="AccentLightBrush" Color="{StaticResource Accent300Color}" />
   <SolidColorBrush x:Key="GlowBrush" Color="{StaticResource GlowColor}" />
+  <SolidColorBrush x:Key="TextSelectionBrush" Color="#668B5CF6" />
   <SolidColorBrush x:Key="NavActiveBackgroundBrush" Color="#338B5CF6" />
 
   <SolidColorBrush x:Key="TextPrimaryBrush" Color="{StaticResource TextPrimaryColor}" />

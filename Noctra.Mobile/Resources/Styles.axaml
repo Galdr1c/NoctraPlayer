@@ -95,7 +95,7 @@
     <Setter Property="BorderThickness" Value="1.5" />
     <Setter Property="CornerRadius" Value="{DynamicResource RadiusMedium}" />
     <Setter Property="Padding" Value="14,0" />
-    <Setter Property="MinHeight" Value="44" />
+    <Setter Property="MinHeight" Value="48" />
     <Style Selector="^:focus">
       <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
       <Setter Property="BorderThickness" Value="2" />

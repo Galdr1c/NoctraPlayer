@@ -273,6 +273,103 @@ public class MobileReleaseGuardTests
     }
 
     [Fact]
+    public void ProfileSetupTextBoxes_UseAvaloniaNativeMobileContextFlyout()
+    {
+        var view = ReadProjectFile("Noctra.Mobile", "Views", "ProfileSetupView.axaml");
+        var app = ReadProjectFile("Noctra.Mobile", "App.axaml");
+        var buildProps = ReadProjectFile("Directory.Build.props");
+
+        Assert.DoesNotContain("MobileTextBoxMenuBehavior", view);
+        Assert.DoesNotContain("xmlns:behaviors=", view);
+        Assert.False(TryFindProjectFile(
+            out _, "Noctra.Mobile", "Behaviors", "MobileTextBoxMenuBehavior.cs"));
+        Assert.Contains("<FluentTheme", app);
+        Assert.Contains("<AvaloniaVersion>12.0.4</AvaloniaVersion>", buildProps);
+    }
+
+    [Fact]
+    public void MobileTextBoxes_ExposePurposeSpecificKeyboardHints()
+    {
+        var profile = ReadProjectFile("Noctra.Mobile", "Views", "ProfileSetupView.axaml");
+        var search = ReadProjectFile("Noctra.Mobile", "Views", "MobileSearchView.axaml");
+        var categories = ReadProjectFile("Noctra.Mobile", "Views", "MobileCategorySelectionView.axaml");
+        var settings = ReadProjectFile("Noctra.Mobile", "Views", "MobileSettingsView.axaml");
+
+        Assert.Equal(4, CountOccurrences(profile, "TextInputOptions.ReturnKeyType=\"Next\""));
+        Assert.Equal(2, CountOccurrences(profile, "TextInputOptions.ReturnKeyType=\"Done\""));
+        Assert.Equal(1, CountOccurrences(profile, "TextInputOptions.ContentType=\"Url\""));
+        Assert.Equal(1, CountOccurrences(profile, "TextInputOptions.ContentType=\"Password\""));
+        Assert.Equal(2, CountOccurrences(profile, "TextInputOptions.ContentType=\"Digits\""));
+        Assert.Equal(3, CountOccurrences(profile, "TextInputOptions.IsSensitive=\"True\""));
+
+        foreach (var searchView in new[] { search, categories })
+        {
+            Assert.Contains("TextInputOptions.ContentType=\"Search\"", searchView);
+            Assert.Contains("TextInputOptions.ReturnKeyType=\"Search\"", searchView);
+        }
+
+        Assert.Equal(1, CountOccurrences(settings, "TextInputOptions.ContentType=\"Url\""));
+        Assert.Equal(3, CountOccurrences(settings, "TextInputOptions.ReturnKeyType=\"Done\""));
+    }
+
+    [Fact]
+    public void MobileTextBoxes_UseAccessibleTouchTargetsAndNoctraSelectionColors()
+    {
+        var app = ReadProjectFile("Noctra.Mobile", "App.axaml");
+        var styles = ReadProjectFile("Noctra.Mobile", "Resources", "Styles.axaml");
+        var darkTheme = ReadProjectFile("Noctra.Mobile", "Resources", "Themes", "DarkTheme.axaml");
+        var lightTheme = ReadProjectFile("Noctra.Mobile", "Resources", "Themes", "LightTheme.axaml");
+
+        Assert.Contains("<Style Selector=\"TextBox\">", app);
+        Assert.Contains("<Setter Property=\"MinHeight\" Value=\"48\"", app);
+        Assert.Contains("<Setter Property=\"CaretBrush\" Value=\"{DynamicResource AccentBrush}\"", app);
+        Assert.Contains("<Setter Property=\"SelectionBrush\" Value=\"{DynamicResource TextSelectionBrush}\"", app);
+        Assert.Contains("<Setter Property=\"SelectionForegroundBrush\" Value=\"{DynamicResource TextPrimaryBrush}\"", app);
+        Assert.Contains("<ControlTheme x:Key=\"NoctraTextBox\" TargetType=\"TextBox\">", styles);
+        Assert.Contains("<Setter Property=\"MinHeight\" Value=\"48\" />", styles);
+
+        foreach (var theme in new[] { darkTheme, lightTheme })
+        {
+            Assert.Contains("<SolidColorBrush x:Key=\"TextSelectionBrush\" Color=\"#668B5CF6\" />", theme);
+        }
+
+        foreach (var viewName in new[]
+                 {
+                     "MobileSearchView.axaml",
+                     "MobileCategorySelectionView.axaml",
+                     "MobileSettingsView.axaml"
+                 })
+        {
+            var view = ReadProjectFile("Noctra.Mobile", "Views", viewName);
+            var textBoxes = System.Text.RegularExpressions.Regex.Matches(
+                view,
+                "<TextBox\\b.*?/>",
+                System.Text.RegularExpressions.RegexOptions.Singleline);
+
+            Assert.NotEmpty(textBoxes);
+            Assert.All(textBoxes.Cast<System.Text.RegularExpressions.Match>(), match =>
+            {
+                Assert.DoesNotContain("MinHeight=\"44\"", match.Value);
+                Assert.DoesNotContain("MinHeight=\"46\"", match.Value);
+            });
+        }
+    }
+
+    [Fact]
+    public void AndroidActivity_ResizesProfileFormAboveSoftwareKeyboard()
+    {
+        var activity = ReadProjectFile("Noctra.Android", "MainActivity.cs");
+        var profile = ReadProjectFile("Noctra.Mobile", "Views", "ProfileSetupView.axaml");
+
+        Assert.Contains("using Android.Views;", activity);
+        Assert.Contains("WindowSoftInputMode = SoftInput.AdjustResize,", activity);
+        Assert.Contains("<ScrollViewer Grid.Row=\"1\"", profile);
+        Assert.DoesNotContain("BringIntoViewOnFocusChange=\"False\"", profile);
+        Assert.False(TryFindProjectFile(
+            out _, "Noctra.Mobile", "Behaviors", "MobileKeyboardAvoidanceBehavior.cs"));
+    }
+
+    [Fact]
     public void MobileSelectionSheets_DoNotChainScrollIntoPage()
     {
         var categorySelection = ReadProjectFile(

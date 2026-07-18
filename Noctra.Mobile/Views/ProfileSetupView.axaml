@@ -5,7 +5,6 @@
              xmlns:vm="clr-namespace:Noctra.ViewModels;assembly=Noctra.Core"
              xmlns:views="using:Noctra.Mobile.Views"
              xmlns:loc="using:Noctra.Mobile.Localization"
-             xmlns:behaviors="using:Noctra.Mobile.Behaviors"
              xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="Noctra.Mobile.Views.ProfileSetupView"
              x:DataType="vm:AddProfileViewModel"
@@ -29,7 +28,6 @@
       <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
       <Setter Property="TextWrapping" Value="NoWrap" />
       <Setter Property="AcceptsReturn" Value="False" />
-      <Setter Property="behaviors:MobileTextBoxMenuBehavior.IsEnabled" Value="True" />
     </Style>
     <Style Selector="TextBox:focus">
       <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
@@ -230,6 +228,7 @@
           <TextBlock Classes="FieldLabel"
                      Text="{loc:Translate Profiles.Add.ProfileName}" />
           <TextBox Text="{Binding ProfileName}"
+                   TextInputOptions.ReturnKeyType="Next"
                    PlaceholderText="{loc:Translate Profiles.Add.ProfileNamePlaceholder}" />
           <TextBlock Text="{Binding ProfileNameError}"
                      Foreground="{DynamicResource ErrorBrush}"
@@ -414,6 +413,9 @@
                              IsVisible="{Binding !IsM3U}" />
                 </Panel>
                 <TextBox Text="{Binding Url}"
+                         TextInputOptions.ContentType="Url"
+                         TextInputOptions.ReturnKeyType="Next"
+                         TextInputOptions.ShowSuggestions="False"
                          IsEnabled="{Binding CanEditProviderUrl}"
                          PlaceholderText="{loc:Translate Profiles.Account.ServerUrlPlaceholder}" />
 
@@ -444,6 +446,7 @@
                              IsVisible="{Binding IsStalker}" />
                 </Panel>
                 <TextBox Text="{Binding Username}"
+                         TextInputOptions.ReturnKeyType="Next"
                          PlaceholderText="{loc:Translate Profiles.Account.UsernamePlaceholder}" />
               </StackPanel>
 
@@ -455,6 +458,10 @@
                 <TextBlock Classes="FieldLabel"
                            Text="{loc:Translate Profiles.Account.Password}" />
                 <TextBox Text="{Binding Password}"
+                         TextInputOptions.ContentType="Password"
+                         TextInputOptions.ReturnKeyType="Done"
+                         TextInputOptions.IsSensitive="True"
+                         TextInputOptions.ShowSuggestions="False"
                          PasswordChar="&#x2022;"
                          PlaceholderText="{loc:Translate Profiles.Account.PasswordPlaceholder}" />
               </StackPanel>
@@ -594,6 +601,10 @@
                                  IsVisible="{Binding !HasExistingPin}" />
                     </Panel>
                     <TextBox Text="{Binding PinCode}"
+                             TextInputOptions.ContentType="Digits"
+                             TextInputOptions.ReturnKeyType="Next"
+                             TextInputOptions.IsSensitive="True"
+                             TextInputOptions.ShowSuggestions="False"
                              MaxLength="4"
                              PasswordChar="&#x2022;"
                              PlaceholderText="&#x2022;&#x2022;&#x2022;&#x2022;"
@@ -612,6 +623,10 @@
                                  IsVisible="{Binding !HasExistingPin}" />
                     </Panel>
                     <TextBox Text="{Binding PinConfirm}"
+                             TextInputOptions.ContentType="Digits"
+                             TextInputOptions.ReturnKeyType="Done"
+                             TextInputOptions.IsSensitive="True"
+                             TextInputOptions.ShowSuggestions="False"
                              MaxLength="4"
                              PasswordChar="&#x2022;"
                              PlaceholderText="&#x2022;&#x2022;&#x2022;&#x2022;"

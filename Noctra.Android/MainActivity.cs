@@ -7,6 +7,7 @@ using Android.Content.PM;
 using Android.Content.Res;
 using Android.OS;
 using Android.Util;
+using Android.Views;
 using Avalonia.Android;
 using Microsoft.Extensions.DependencyInjection;
 using Noctra.Android.DependencyInjection;
@@ -25,6 +26,7 @@ namespace Noctra.Android;
     MainLauncher = true,
     SupportsPictureInPicture = true,
     ResizeableActivity = true,
+    WindowSoftInputMode = SoftInput.AdjustResize,
     ConfigurationChanges = ConfigChanges.Orientation | ConfigChanges.ScreenSize | ConfigChanges.SmallestScreenSize | ConfigChanges.UiMode)]
 public class MainActivity : AvaloniaMainActivity
 {

@@ -22,15 +22,17 @@
                                 Margin="14,0,0,0" VerticalAlignment="Center" />
             <TextBox Grid.Column="1" x:Name="SearchInput"
                      Text="{Binding SearchQuery, Mode=TwoWay}"
+                     TextInputOptions.ContentType="Search"
+                     TextInputOptions.ReturnKeyType="Search"
                      PlaceholderText="{loc:Translate Search.Placeholder}"
                      Background="Transparent" BorderThickness="0"
-                     MinHeight="46" Padding="10,0,10,0"
+                     MinHeight="48" Padding="10,0,10,0"
                      FontSize="{DynamicResource FBodyL}"
                      VerticalContentAlignment="Center"
                      KeyDown="SearchInput_KeyDown" />
             <Button Grid.Column="2"
                     Background="Transparent" BorderThickness="0"
-                    Padding="10,0" MinHeight="46"
+                    Padding="10,0" MinHeight="48"
                     Click="ClearSearch_Click"
                     IsVisible="{Binding SearchQuery, Converter={StaticResource StringNotEmptyToVisibilityConverter}}">
               <icons:MaterialIcon Kind="Close" Width="16" Height="16"
@@ -41,7 +43,7 @@
 
         <Button Grid.Column="1"
                 Command="{Binding CommitSearchCommand}"
-                MinHeight="46" Padding="16,0"
+                MinHeight="48" Padding="16,0"
                 Background="{DynamicResource AccentBrush}"
                 Foreground="{DynamicResource TextPrimaryBrush}"
                 BorderThickness="0" FontWeight="Medium"
