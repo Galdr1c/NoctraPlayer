@@ -1,4 +1,4 @@
-﻿<UserControl xmlns="https://github.com/avaloniaui"
+<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -11,7 +11,10 @@
              x:CompileBindings="True"
              mc:Ignorable="d">
   <Grid Background="{DynamicResource Bg0Brush}">
-    <ScrollViewer>
+    <ScrollViewer x:Name="SettingsScrollViewer"
+                  BringIntoViewOnFocusChange="True"
+                  VerticalScrollBarVisibility="Auto"
+                  HorizontalScrollBarVisibility="Disabled">
       <StackPanel Margin="24,18,24,28" Spacing="20">
       <StackPanel Spacing="6">
         <TextBlock Text="{loc:Translate Settings.Title}"

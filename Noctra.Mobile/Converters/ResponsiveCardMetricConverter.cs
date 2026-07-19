@@ -166,7 +166,7 @@ public sealed class ResponsiveCardMetricConverter : IValueConverter
             if (mode.StartsWith("continue", StringComparison.OrdinalIgnoreCase))
             {
                 // Landscape cards: one wide card on phones, two or three on larger screens.
-                return new CardMetricProfile(250, 360, 300, 0.56, 16, 4);
+                return new CardMetricProfile(220, 410, 270, 0.56, 16, 4);
             }
 
             if (mode.StartsWith("live", StringComparison.OrdinalIgnoreCase))
@@ -182,7 +182,7 @@ public sealed class ResponsiveCardMetricConverter : IValueConverter
             {
                 // Avatar picker için ayrı mod (K-3 çözümü): daha küçük kareler,
                 // telefonda 4-6 sütun sığar. Eski profileWidth paylaşımı kalktı.
-                return new CardMetricProfile(64, 96, 80, 1.0, 8, 6);
+                return new CardMetricProfile(128, 192, 128, 1.0, 8, 6);
             }
 
             if (mode.StartsWith("profile", StringComparison.OrdinalIgnoreCase))

@@ -1,4 +1,4 @@
-﻿<UserControl xmlns="https://github.com/avaloniaui"
+<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -170,6 +170,8 @@
          FORM İÇERİĞİ — Kaydırılabilir alan
          ════════════════════════════════════════════════════════ -->
     <ScrollViewer Grid.Row="1"
+                  x:Name="ProfileFormScrollViewer"
+                  BringIntoViewOnFocusChange="True"
                   VerticalScrollBarVisibility="Auto"
                   HorizontalScrollBarVisibility="Disabled">
       <StackPanel MaxWidth="560"

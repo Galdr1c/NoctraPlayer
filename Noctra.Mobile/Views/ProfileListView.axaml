@@ -366,10 +366,10 @@
                 <StackPanel Spacing="10">
 
                   <!-- Artı kutusu: noktalı kenarlıklı (StrokeDashArray="3,2") -->
-                  <Grid Width="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=profileWidth}"
-                        Height="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=profileHeight}"
+                  <Grid Width="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=avatarTileWidth}"
+                        Height="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=avatarTileHeight}"
                         HorizontalAlignment="Center"
-                        Margin="5">
+                        Margin="8,32">
                     <Rectangle RadiusX="12" RadiusY="12"
                                Stroke="{DynamicResource BorderBrush}"
                                StrokeThickness="2"

@@ -17,6 +17,7 @@ using HotAvalonia;
 using Microsoft.Extensions.DependencyInjection;
 using Noctra.Mobile.Behaviors;
 using Noctra.Models;
+using Avalonia.Input;
 using Noctra.Mobile.Localization;
 using Noctra.Mobile.Services;
 using Noctra.Services;
@@ -99,6 +100,7 @@ public partial class MainView : UserControl
 
         // Android donanım/jest geri tuşunu bu view'e bağla.
         RegisterBackHandler();
+        AddHandler(InputElement.GotFocusEvent, TextBox_GotFocus);
         OverlayProfileList.ProfileLoaded -= OverlayProfileList_ProfileLoaded;
         OverlayProfileList.ProfileLoaded += OverlayProfileList_ProfileLoaded;
 
@@ -256,8 +258,33 @@ public partial class MainView : UserControl
         return true;
     }
 
+    private void TextBox_GotFocus(object? sender, GotFocusEventArgs e)
+    {
+        if (e.Source is TextBox textBox)
+        {
+            DispatcherTimer.RunOnce(() =>
+            {
+                if (textBox.IsFocused)
+                {
+                    bool isPinOrPassword = textBox.PasswordChar != '\0';
+                    if (isPinOrPassword)
+                    {
+                        var bounds = textBox.Bounds;
+                        var height = bounds.Height > 0 ? bounds.Height : 48;
+                        textBox.BringIntoView(new Rect(0, 0, bounds.Width, height + 24));
+                    }
+                    else
+                    {
+                        textBox.BringIntoView();
+                    }
+                }
+            }, TimeSpan.FromMilliseconds(250));
+        }
+    }
+
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
+        RemoveHandler(InputElement.GotFocusEvent, TextBox_GotFocus);
         var topLevel = TopLevel.GetTopLevel(this);
         if (topLevel?.InsetsManager is { } insets)
         {

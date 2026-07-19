@@ -330,7 +330,7 @@ public class MobileReleaseGuardTests
 
         foreach (var theme in new[] { darkTheme, lightTheme })
         {
-            Assert.Contains("<SolidColorBrush x:Key=\"TextSelectionBrush\" Color=\"#668B5CF6\" />", theme);
+            Assert.Contains("<SolidColorBrush x:Key=\"TextSelectionBrush\" Color=\"#997C3AED\" />", theme);
         }
 
         foreach (var viewName in new[]
