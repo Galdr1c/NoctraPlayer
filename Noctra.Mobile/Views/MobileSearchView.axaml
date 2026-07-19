@@ -15,7 +15,7 @@
     <Border Grid.Row="0" Padding="20,14,20,12"
             Background="{DynamicResource Bg0Brush}">
       <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
-        <Border Background="{DynamicResource Surface1Brush}" CornerRadius="6">
+        <Border Background="{DynamicResource Surface1Brush}" BorderThickness="1.5" MinHeight="54" CornerRadius="8">
           <Grid ColumnDefinitions="Auto,*,Auto">
             <icons:MaterialIcon Kind="Magnify" Width="18" Height="18"
                                 Foreground="{DynamicResource TextMutedBrush}"
@@ -29,7 +29,8 @@
                      KeyDown="SearchInput_KeyDown" />
             <Button Grid.Column="2"
                     Background="Transparent" BorderThickness="0"
-                    Padding="10,0" MinHeight="48"
+                    Padding="5" MinHeight="28"
+                    Margin="5,0"
                     Click="ClearSearch_Click"
                     IsVisible="{Binding SearchQuery, Converter={StaticResource StringNotEmptyToVisibilityConverter}}">
               <icons:MaterialIcon Kind="Close" Width="16" Height="16"
@@ -40,11 +41,11 @@
 
         <Button Grid.Column="1"
                 Command="{Binding CommitSearchCommand}"
-                MinHeight="48" Padding="16,0"
+                MinHeight="54" Padding="18,0"
                 Background="{DynamicResource AccentBrush}"
-                Foreground="{DynamicResource TextPrimaryBrush}"
+                Foreground="{DynamicResource PremiumBadgeTextBrush}"
                 BorderThickness="0" FontWeight="Medium"
-                FontSize="{DynamicResource FBody}" CornerRadius="6"
+                FontSize="{DynamicResource FBody}" CornerRadius="8"
                 HorizontalAlignment="Stretch"
                 VerticalContentAlignment="Center"
                 Content="{loc:Translate Search.Button}" />
@@ -53,7 +54,7 @@
 
     <Border Grid.Row="1" Margin="20,0,20,4"
             Background="{DynamicResource Surface0Brush}"
-            CornerRadius="14" Padding="14"
+            CornerRadius="8" Padding="14"
             IsVisible="{Binding SearchSuggestion, Converter={StaticResource StringNotEmptyToVisibilityConverter}}">
       <StackPanel Spacing="8">
         <TextBlock Text="{loc:Translate Search.DidYouMean}"
@@ -64,7 +65,7 @@
                 MinHeight="42"
                 Background="{DynamicResource Surface1Brush}"
                 Foreground="{DynamicResource AccentBrush}"
-                BorderThickness="0" CornerRadius="10"
+                BorderThickness="0" CornerRadius="8"
                 FontWeight="Medium" FontSize="{DynamicResource FBody}" />
       </StackPanel>
     </Border>

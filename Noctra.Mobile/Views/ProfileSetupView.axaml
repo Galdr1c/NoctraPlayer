@@ -234,6 +234,7 @@
                      Text="{loc:Translate Profiles.Add.ProfileName}" />
           <TextBox x:Name="ProfileNameTextBox"
                    Text="{Binding ProfileName}"
+                   Classes.error="{Binding ServerUrlError, Converter={StaticResource StringNotEmptyToBoolConverter}}"
                    LostFocus="ProfileName_LostFocus"
                    TextInputOptions.ReturnKeyType="Next"
                    PlaceholderText="{loc:Translate Profiles.Add.ProfileNamePlaceholder}" />
@@ -423,6 +424,7 @@
                          Classes="url"
                          Text="{Binding Url}"
                          LostFocus="Url_LostFocus"
+                         Classes.error="{Binding ServerUrlError, Converter={StaticResource StringNotEmptyToBoolConverter}}"
                          TextInputOptions.ReturnKeyType="Next"
                          IsEnabled="{Binding CanEditProviderUrl}"
                          PlaceholderText="{loc:Translate Profiles.Account.ServerUrlPlaceholder}" />
@@ -462,6 +464,7 @@
                 <TextBox x:Name="UsernameTextBox"
                          Text="{Binding Username}"
                          LostFocus="Username_LostFocus"
+                         Classes.error="{Binding ServerUrlError, Converter={StaticResource StringNotEmptyToBoolConverter}}"
                          IsEnabled="{Binding CanEditProviderCredentials}"
                          TextInputOptions.ReturnKeyType="Next"
                          PlaceholderText="{loc:Translate Profiles.Account.UsernamePlaceholder}" />
@@ -489,6 +492,7 @@
                 <TextBox x:Name="PasswordTextBox"
                          Classes="password"
                          Text="{Binding Password}"
+                         Classes.error="{Binding ServerUrlError, Converter={StaticResource StringNotEmptyToBoolConverter}}"
                          LostFocus="Password_LostFocus"
                          IsEnabled="{Binding CanEditProviderCredentials}"
                          TextInputOptions.ContentType="Password"
@@ -651,6 +655,7 @@
                     <TextBox x:Name="PinCodeTextBox"
                              Classes="pin"
                              Text="{Binding PinCode}"
+                             Classes.error="{Binding ServerUrlError, Converter={StaticResource StringNotEmptyToBoolConverter}}"
                              LostFocus="PinCode_LostFocus"
                              TextInputOptions.ReturnKeyType="Next"
                              PlaceholderText="&#x2022;&#x2022;&#x2022;&#x2022;" />
@@ -675,6 +680,7 @@
                     <TextBox x:Name="PinConfirmTextBox"
                              Classes="pin"
                              Text="{Binding PinConfirm}"
+                             Classes.error="{Binding ServerUrlError, Converter={StaticResource StringNotEmptyToBoolConverter}}"
                              LostFocus="PinConfirm_LostFocus"
                              TextInputOptions.ReturnKeyType="Done"
                              PlaceholderText="&#x2022;&#x2022;&#x2022;&#x2022;" />
@@ -709,7 +715,7 @@
               <Setter Property="Background" Value="Transparent" />
             </Style>
             <Style Selector="Border[Tag=Progress]">
-              <Setter Property="Background" Value="{DynamicResource Surface1Brush}" />
+              <Setter Property="Background" Value="Transparent" />
             </Style>
             <Style Selector="Border[Tag=Success]">
               <Setter Property="Background" Value="{DynamicResource SuccessSurfaceBrush}" />

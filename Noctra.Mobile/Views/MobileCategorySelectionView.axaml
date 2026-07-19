@@ -137,16 +137,16 @@
 
               <Button x:Name="ClearCategorySearchButton"
                       Grid.Column="2"
-                      MinWidth="48"
-                      MinHeight="48"
-                      Padding="12,0"
+                      MinHeight="28"
+                      Padding="5"
+                      Margin="5,0"
                       Background="Transparent"
                       BorderThickness="0"
                       IsVisible="False"
                       Click="ClearCategorySearch_Click">
                 <icons:MaterialIcon Kind="Close"
-                                    Width="18"
-                                    Height="18"
+                                    Width="16"
+                                    Height="16"
                                     Foreground="{DynamicResource TextMutedBrush}" />
               </Button>
             </Grid>

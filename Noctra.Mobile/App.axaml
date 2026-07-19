@@ -108,7 +108,7 @@
 
         <!-- ═══════════════════════════════════════════════════════
              NoctraTextBox — Unified Input System
-             Base: 54dp height, 12dp radius, 1.5px border
+             Base: 54dp height, 8dp radius, 1.5px border
              Classes: .url .search .password .pin .error .readonly
              ═══════════════════════════════════════════════════════ -->
         <Style Selector="TextBox">
@@ -147,17 +147,28 @@
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderBrush" Value="Transparent" />
             <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="0" />
             <Setter Property="Padding" Value="10,0" />
             <Setter Property="MinHeight" Value="48" />
             <Setter Property="TextInputOptions.ContentType" Value="Search" />
             <Setter Property="TextInputOptions.ReturnKeyType" Value="Search" />
         </Style>
+        
+        <Style Selector="TextBox.search /template/ Border#PART_BorderElement">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="0" />
+        </Style>
         <Style Selector="TextBox.search:focus /template/ Border#PART_BorderElement">
+            <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderBrush" Value="Transparent" />
             <Setter Property="BorderThickness" Value="0" />
         </Style>
-        <Style Selector="TextBox.search:pointerover:not(:focus) /template/ Border#PART_BorderElement">
+        <Style Selector="TextBox.search:not(:focus) /template/ Border#PART_BorderElement">
+            <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
         </Style>
         <!-- Class: .password -->
         <Style Selector="TextBox.password">
@@ -181,6 +192,10 @@
             <Setter Property="BorderThickness" Value="1.5" />
         </Style>
         <Style Selector="TextBox.error:focus /template/ Border#PART_BorderElement">
+            <Setter Property="BorderBrush" Value="{DynamicResource ErrorBrush}" />
+            <Setter Property="BorderThickness" Value="1.5" />
+        </Style>
+        <Style Selector="TextBox.error:not(:focus) /template/ Border#PART_BorderElement">
             <Setter Property="BorderBrush" Value="{DynamicResource ErrorBrush}" />
             <Setter Property="BorderThickness" Value="1.5" />
         </Style>
