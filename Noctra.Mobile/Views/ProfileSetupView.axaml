@@ -80,12 +80,7 @@
       <Setter Property="Margin" Value="4,0,0,6" />
     </Style>
 
-    <Style Selector="RadioButton.ProviderTypeOption">
-      <Setter Property="HorizontalAlignment" Value="Stretch" />
-      <Setter Property="VerticalAlignment" Value="Center" />
-      <Setter Property="FontSize" Value="{DynamicResource FOverline}" />
-      <Setter Property="MinHeight" Value="44" />
-    </Style>
+
 
   </UserControl.Styles>
 
@@ -285,29 +280,67 @@
           <Border Classes="Section">
             <StackPanel>
 
-              <!-- Sağlayıcı tipi seçici: local M3U dosya modunda gizlenir;
-                   kaynak tipi değiştirmek ayrı, onaylı bir aksiyondur. -->
-              <Grid ColumnDefinitions="*,*,*"
-                    ColumnSpacing="12"
-                    Margin="28,14,28,14"
-                    IsVisible="{Binding IsRemoteProviderSource}"
-                    IsEnabled="{Binding CanSwitchProviderType}">
-                <RadioButton Grid.Column="0"
-                             Classes="ProviderTypeOption"
-                             Content="Xtream"
-                             GroupName="ProviderType"
-                             IsChecked="{Binding IsXtream}" />
-                <RadioButton Grid.Column="1"
-                             Classes="ProviderTypeOption"
-                             Content="M3U"
-                             GroupName="ProviderType"
-                             IsChecked="{Binding IsM3U}" />
-                <RadioButton Grid.Column="2"
-                             Classes="ProviderTypeOption"
-                             Content="Stalker"
-                             GroupName="ProviderType"
-                             IsChecked="{Binding IsStalker}" />
-              </Grid>
+              <!-- Sağlayıcı tipi seçici: segmented control — kayan indicator ile -->
+              <Border Margin="16,14"
+                      Padding="4"
+                      CornerRadius="10"
+                      ClipToBounds="True"
+                      Background="{DynamicResource Surface1Brush}"
+                      IsVisible="{Binding IsRemoteProviderSource}"
+                      IsEnabled="{Binding CanSwitchProviderType}">
+                <Grid x:Name="SegmentedControlGrid" ColumnDefinitions="*,*,*">
+                  <!-- Kayan indicator — RadioButton'ların arkasında, Grid.Column=0'da
+                       başlar, RenderTransform ile sağa/sola kayar.
+                       Transitions otomatik olarak smooth animasyon sağlar. -->
+                  <Border x:Name="SegmentIndicator"
+                          Grid.Column="0"
+                          Background="{DynamicResource AccentBrush}"
+                          CornerRadius="8,0,0,8"
+                          HorizontalAlignment="Stretch"
+                          VerticalAlignment="Stretch"
+                          IsHitTestVisible="False"
+                          RenderTransformOrigin="0,0">
+                    <Border.RenderTransform>
+                      <TranslateTransform X="0">
+                        <TranslateTransform.Transitions>
+                          <Transitions>
+                            <DoubleTransition Property="X"
+                                              Duration="0:0:0.25"
+                                              Easing="CubicEaseInOut" />
+                          </Transitions>
+                        </TranslateTransform.Transitions>
+                      </TranslateTransform>
+                    </Border.RenderTransform>
+                    <Border.Transitions>
+                      <Transitions>
+                        <CornerRadiusTransition Property="CornerRadius"
+                                                Duration="0:0:0.2"
+                                                Easing="CubicEaseInOut" />
+                      </Transitions>
+                    </Border.Transitions>
+                  </Border>
+
+                  <!-- RadioButton'lar — artık kendi arka planlarını değiştirmezler -->
+                  <RadioButton Grid.Column="0"
+                               x:Name="SegmentXtream"
+                               Theme="{StaticResource SegmentedRadioButtonTransparent}"
+                               Content="Xtream"
+                               GroupName="ProviderType"
+                               IsChecked="{Binding IsXtream, Mode=TwoWay}" />
+                  <RadioButton Grid.Column="1"
+                               x:Name="SegmentM3U"
+                               Theme="{StaticResource SegmentedRadioButtonTransparent}"
+                               Content="M3U"
+                               GroupName="ProviderType"
+                               IsChecked="{Binding IsM3U, Mode=TwoWay}" />
+                  <RadioButton Grid.Column="2"
+                               x:Name="SegmentStalker"
+                               Theme="{StaticResource SegmentedRadioButtonTransparent}"
+                               Content="Stalker"
+                               GroupName="ProviderType"
+                               IsChecked="{Binding IsStalker, Mode=TwoWay}" />
+                </Grid>
+              </Border>
 
               <Border Classes="Divider" />
 
