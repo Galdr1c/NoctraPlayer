@@ -9,8 +9,8 @@
              IsVisible="False">
   <UserControl.Styles>
     <Style Selector="Button.CategorySelectionRow">
-      <Setter Property="MinHeight" Value="46" />
-      <Setter Property="Padding" Value="16,12" />
+      <Setter Property="MinHeight" Value="26" />
+      <Setter Property="Padding" Value="16,4" />
       <Setter Property="Background" Value="Transparent" />
       <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
       <Setter Property="BorderThickness" Value="0" />
@@ -24,8 +24,7 @@
     <Style Selector="Button.CategoryHideButton">
       <Setter Property="Width" Value="28" />
       <Setter Property="Height" Value="28" />
-      <Setter Property="MinWidth" Value="38" />
-      <Setter Property="MinHeight" Value="38" />
+      <Setter Property="Margin" Value="8,0" />
       <Setter Property="Background" Value="Transparent" />
       <Setter Property="BorderThickness" Value="0" />
       <Setter Property="CornerRadius" Value="4" />
@@ -48,7 +47,7 @@
   </UserControl.Styles>
 
   <Grid RowDefinitions="Auto,*"
-        Background="Transparent"
+        Background="{DynamicResource Bg0Brush}"
         ClipToBounds="True">
     <Border Grid.Row="0"
             Background="{DynamicResource Surface0Brush}"
@@ -90,7 +89,7 @@
               ColumnSpacing="8"
               Margin="0,0,0,8">
           <Border MinWidth="104"
-                  Background="{DynamicResource CardHoverGradientBrush}"
+                  Background="{DynamicResource Surface1Brush}"
                   BorderBrush="{DynamicResource BorderBrush}"
                   BorderThickness="1"
                   CornerRadius="6">
@@ -180,9 +179,9 @@
           <ListBox.ItemTemplate>
             <DataTemplate>
               <Border Margin="0,0,0,8"
-                      Background="{DynamicResource BackgroundGradientBrush}"
+                      Background="Transparent"
                       BorderBrush="{DynamicResource BorderBrush}"
-                      BorderThickness="0,0,0,2.5"
+                      BorderThickness="0,0,0,1.5"
                       CornerRadius="6">
                 <Grid ColumnDefinitions="*,Auto">
                   <Button Grid.Column="0"
@@ -193,7 +192,7 @@
                           ColumnSpacing="12">
                       <TextBlock Text="{Binding Name}"
                                  FontSize="{DynamicResource FBodyL}"
-                                 FontWeight="SemiBold"
+                                 FontWeight="Normal"
                                  Foreground="{DynamicResource TextPrimaryBrush}"
                                  TextWrapping="Wrap"
                                  VerticalAlignment="Center" />

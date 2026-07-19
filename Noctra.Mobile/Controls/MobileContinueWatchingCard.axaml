@@ -47,7 +47,7 @@
       <StaticResource ResourceKey="CardActionsFlyout" />
     </Border.ContextFlyout>
 
-    <Border CornerRadius="{DynamicResource RadiusSmall}"
+    <Border CornerRadius="0"
             ClipToBounds="True"
             Background="{DynamicResource Surface0Brush}"
             BoxShadow="{DynamicResource CardShadow}">
@@ -87,7 +87,7 @@
                        Maximum="100"
                        Value="{Binding WatchedPercentage}"
                        Foreground="{DynamicResource AccentBrush}"
-                       Background="{DynamicResource OverlayHoverScrimBrush}"
+                       Background="{DynamicResource ThemePreviewDarkText}"
                        BorderThickness="0"
                        IsVisible="{Binding ., Converter={StaticResource WatchedProgressVisibilityConverter}}" />
         </StackPanel>

@@ -386,11 +386,10 @@
                       ColumnSpacing="14">
                       
                   <!-- Thumbnail with Episode Number Overlay -->
-                  <Border Width="88"
-                          Height="62"
+                  <Border Height="80"
                           CornerRadius="4"
                           ClipToBounds="True"
-                          Background="{DynamicResource Surface1Brush}">
+                          Background="{DynamicResource PlaceHolderBrush}">
                     <Grid>
                       <controls:RemoteImage Url="{Binding CoverUrl}"
                                             Stretch="UniformToFill" />
@@ -399,7 +398,7 @@
                       <Border VerticalAlignment="Bottom"
                               HorizontalAlignment="Left"
                               Background="{DynamicResource OverlayDimBrush}"
-                              CornerRadius="0,8,0,0"
+                              CornerRadius="0,4,0,0"
                               Padding="6,3,8,3">
                         <TextBlock Text="{Binding EpisodeNumber}"
                                    Foreground="{DynamicResource PlayerOverlayTextBrush}"
@@ -410,14 +409,14 @@
 
                       <!-- Progress Bar at Bottom -->
                       <ProgressBar VerticalAlignment="Bottom"
-                                   Height="6"
+                                   Height="5"
                                    Minimum="0"
                                    Maximum="100"
                                    Value="{Binding WatchedPercentage}"
                                    Foreground="{DynamicResource AccentBrush}"
-                                   Background="Transparent"
+                                   Background="{DynamicResource ThemePreviewDarkText}"
                                    BorderThickness="0"
-                                   CornerRadius="0,0,8,8"
+                                   CornerRadius="0"
                                    IsVisible="{Binding WatchedPercentage, Converter={StaticResource CountToVisibilityConverter}}" />
                     </Grid>
                   </Border>

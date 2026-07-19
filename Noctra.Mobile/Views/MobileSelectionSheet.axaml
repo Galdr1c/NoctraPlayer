@@ -5,12 +5,12 @@
              x:CompileBindings="False">
   <UserControl.Styles>
     <Style Selector="Button.SelectionSheetOption">
-      <Setter Property="Background" Value="{DynamicResource BackgroundGradientBrush}" />
+      <Setter Property="Background" Value="Transparent" />
       <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
-      <Setter Property="BorderThickness" Value="0,0,0,2.5" />
-      <Setter Property="Padding" Value="16,12" />
+      <Setter Property="BorderThickness" Value="0,0,0,1.5" />
+      <Setter Property="Padding" Value="16,4,48,4" />
       <Setter Property="Margin" Value="0,0,0,8" />
-      <Setter Property="MinHeight" Value="46" />
+      <Setter Property="MinHeight" Value="26" />
       <Setter Property="CornerRadius" Value="6" />
       <Setter Property="HorizontalContentAlignment" Value="Stretch" />
       <Setter Property="HorizontalAlignment" Value="Stretch" />
@@ -29,7 +29,7 @@
             BorderBrush="{DynamicResource BorderBrush}"
             BorderThickness="0,1,0,0"
             CornerRadius="0"
-            Padding="12"
+            Padding="12,8"
             VerticalAlignment="Bottom"
             BoxShadow="{DynamicResource OverlaySheetShadow}">
       <Border.RenderTransform>
@@ -64,8 +64,8 @@
             <Button Grid.Column="1"
                     Background="Transparent"
                     BorderThickness="0"
-                    Width="44"
-                    Height="44"
+                    Width="32"
+                    Height="32"
                     Click="Close_Click"
                     ToolTip.Tip="Close">
               <icons:MaterialIcon Kind="Close"
@@ -94,7 +94,7 @@
                       <TextBlock Text="{Binding Label}"
                                  Foreground="{DynamicResource TextPrimaryBrush}"
                                  FontSize="{DynamicResource FBodyL}"
-                                 FontWeight="SemiBold"
+                                 FontWeight="Normal"
                                  TextWrapping="Wrap"
                                  VerticalAlignment="Center" />
                       <Grid Grid.Column="1"

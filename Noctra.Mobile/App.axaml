@@ -105,7 +105,7 @@
         <StyleInclude Source="avares://Noctra.Mobile/Resources/SettingsStyles.axaml" />
         <Style Selector="TextBox">
             <Setter Property="MinHeight" Value="48" />
-            <Setter Property="CaretBrush" Value="{DynamicResource AccentBrush}" />
+            <Setter Property="CaretBrush" Value="{DynamicResource AccentLightBrush}" />
             <Setter Property="SelectionBrush" Value="{DynamicResource TextSelectionBrush}" />
             <Setter Property="SelectionForegroundBrush" Value="{DynamicResource TextPrimaryBrush}" />
         </Style>

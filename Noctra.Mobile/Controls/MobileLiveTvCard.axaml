@@ -48,7 +48,7 @@
     <Style Selector="Border.CardSurface">
       <Setter Property="Background" Value="Transparent"/>
       <Setter Property="BorderThickness" Value="0"/>
-      <Setter Property="CornerRadius" Value="8"/>
+      <Setter Property="CornerRadius" Value="0"/>
       <Setter Property="Padding" Value="10,6"/>
       <Setter Property="Margin" Value="0,0,0,16"/>
     </Style>
@@ -91,11 +91,11 @@
               ColumnSpacing="10">
           <Border Width="44"
                   Height="44"
-                  Background="Transparent"
+                  Background="{DynamicResource PlaceHolderBrush}"
                   IsHitTestVisible="False">
             <Grid>
               <Border Background="{DynamicResource SurfaceLightBrush}" 
-                      CornerRadius="8">
+                      CornerRadius="0">
                 <Border.IsVisible>
                   <Binding Path="#ChannelLogo.IsImageLoaded" Converter="{StaticResource InverseBoolConverter}"/>
                 </Border.IsVisible>
