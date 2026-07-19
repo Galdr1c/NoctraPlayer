@@ -229,7 +229,7 @@
                      Text="{loc:Translate Profiles.Add.ProfileName}" />
           <TextBox x:Name="ProfileNameTextBox"
                    Text="{Binding ProfileName}"
-                   Classes.error="{Binding ServerUrlError, Converter={StaticResource StringNotEmptyToBoolConverter}}"
+                   Classes.error="{Binding ProfileNameError, Converter={StaticResource StringNotEmptyToBoolConverter}}"
                    LostFocus="ProfileName_LostFocus"
                    TextInputOptions.ReturnKeyType="Next"
                    PlaceholderText="{loc:Translate Profiles.Add.ProfileNamePlaceholder}" />
@@ -497,7 +497,7 @@
                 <TextBox x:Name="UsernameTextBox"
                          Text="{Binding Username}"
                          LostFocus="Username_LostFocus"
-                         Classes.error="{Binding ServerUrlError, Converter={StaticResource StringNotEmptyToBoolConverter}}"
+                         Classes.error="{Binding UsernameError, Converter={StaticResource StringNotEmptyToBoolConverter}}"
                          IsEnabled="{Binding CanEditProviderCredentials}"
                          TextInputOptions.ReturnKeyType="Next"
                          PlaceholderText="{loc:Translate Profiles.Account.UsernamePlaceholder}" />
@@ -525,7 +525,7 @@
                 <TextBox x:Name="PasswordTextBox"
                          Classes="password"
                          Text="{Binding Password}"
-                         Classes.error="{Binding ServerUrlError, Converter={StaticResource StringNotEmptyToBoolConverter}}"
+                         Classes.error="{Binding PasswordError, Converter={StaticResource StringNotEmptyToBoolConverter}}"
                          LostFocus="Password_LostFocus"
                          IsEnabled="{Binding CanEditProviderCredentials}"
                          TextInputOptions.ContentType="Password"
@@ -688,7 +688,7 @@
                     <TextBox x:Name="PinCodeTextBox"
                              Classes="pin"
                              Text="{Binding PinCode}"
-                             Classes.error="{Binding ServerUrlError, Converter={StaticResource StringNotEmptyToBoolConverter}}"
+                             Classes.error="{Binding PinError, Converter={StaticResource StringNotEmptyToBoolConverter}}"
                              LostFocus="PinCode_LostFocus"
                              TextInputOptions.ReturnKeyType="Next"
                              PlaceholderText="&#x2022;&#x2022;&#x2022;&#x2022;" />
@@ -713,7 +713,7 @@
                     <TextBox x:Name="PinConfirmTextBox"
                              Classes="pin"
                              Text="{Binding PinConfirm}"
-                             Classes.error="{Binding ServerUrlError, Converter={StaticResource StringNotEmptyToBoolConverter}}"
+                             Classes.error="{Binding PinConfirmationError, Converter={StaticResource StringNotEmptyToBoolConverter}}"
                              LostFocus="PinConfirm_LostFocus"
                              TextInputOptions.ReturnKeyType="Done"
                              PlaceholderText="&#x2022;&#x2022;&#x2022;&#x2022;" />
