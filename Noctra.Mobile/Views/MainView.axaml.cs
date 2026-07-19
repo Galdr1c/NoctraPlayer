@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Platform;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
@@ -17,7 +18,6 @@ using HotAvalonia;
 using Microsoft.Extensions.DependencyInjection;
 using Noctra.Mobile.Behaviors;
 using Noctra.Models;
-using Avalonia.Input;
 using Noctra.Mobile.Localization;
 using Noctra.Mobile.Services;
 using Noctra.Services;
@@ -258,7 +258,7 @@ public partial class MainView : UserControl
         return true;
     }
 
-    private void TextBox_GotFocus(object? sender, GotFocusEventArgs e)
+    private void TextBox_GotFocus(object? sender, RoutedEventArgs e)
     {
         if (e.Source is TextBox textBox)
         {

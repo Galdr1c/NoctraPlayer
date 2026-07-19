@@ -16,23 +16,8 @@
 
   <UserControl.Styles>
 
-    <!-- TextBox ayarı -->
-    <Style Selector="TextBox">
-      <Setter Property="MinHeight" Value="52" />
-      <Setter Property="CornerRadius" Value="8" />
-      <Setter Property="Background" Value="{DynamicResource Surface1Brush}" />
-      <Setter Property="BorderBrush" Value="Transparent" />
-      <Setter Property="BorderThickness" Value="0" />
-      <Setter Property="Padding" Value="16,14" />
-      <Setter Property="FontSize" Value="15" />
-      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
-      <Setter Property="TextWrapping" Value="NoWrap" />
-      <Setter Property="AcceptsReturn" Value="False" />
-    </Style>
-    <Style Selector="TextBox:focus">
-      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
-      <Setter Property="BorderThickness" Value="2" />
-    </Style>
+    <!-- TextBox uses NoctraTextBox ControlTheme from Styles.axaml.
+         No local overrides needed — all visual props are in the unified theme. -->
 
     <!-- Bölüm kart stili -->
     <Style Selector="Border.Section">
@@ -158,10 +143,28 @@
                 Command="{Binding SaveCommand}"
                 IsEnabled="{Binding !IsSaving}"
                 VerticalAlignment="Center">
-          <TextBlock Text="{loc:Translate Profiles.Add.Save}"
-                     Foreground="{DynamicResource AccentBrush}"
-                     FontWeight="SemiBold"
-                     FontSize="{DynamicResource FTitleM}" />
+          <Panel>
+            <!-- Saving spinner -->
+            <StackPanel Orientation="Horizontal"
+                        Spacing="6"
+                        IsVisible="{Binding IsSaving}">
+              <ProgressBar IsIndeterminate="True"
+                           Width="14" Height="14"
+                           VerticalAlignment="Center"
+                           Foreground="{DynamicResource AccentBrush}" />
+              <TextBlock Text="{loc:Translate Profiles.Add.Save}"
+                         Foreground="{DynamicResource AccentBrush}"
+                         FontWeight="SemiBold"
+                         FontSize="{DynamicResource FTitleM}"
+                         VerticalAlignment="Center" />
+            </StackPanel>
+            <!-- Normal label -->
+            <TextBlock Text="{loc:Translate Profiles.Add.Save}"
+                       Foreground="{DynamicResource AccentBrush}"
+                       FontWeight="SemiBold"
+                       FontSize="{DynamicResource FTitleM}"
+                       IsVisible="{Binding !IsSaving}" />
+          </Panel>
         </Button>
       </Grid>
     </Border>
@@ -229,7 +232,9 @@
         <StackPanel Spacing="6">
           <TextBlock Classes="FieldLabel"
                      Text="{loc:Translate Profiles.Add.ProfileName}" />
-          <TextBox Text="{Binding ProfileName}"
+          <TextBox x:Name="ProfileNameTextBox"
+                   Text="{Binding ProfileName}"
+                   LostFocus="ProfileName_LostFocus"
                    TextInputOptions.ReturnKeyType="Next"
                    PlaceholderText="{loc:Translate Profiles.Add.ProfileNamePlaceholder}" />
           <TextBlock Text="{Binding ProfileNameError}"
@@ -414,12 +419,19 @@
                              Text="{loc:Translate Profiles.Account.ServerUrl}"
                              IsVisible="{Binding !IsM3U}" />
                 </Panel>
-                <TextBox Text="{Binding Url}"
-                         TextInputOptions.ContentType="Url"
+                <TextBox x:Name="UrlTextBox"
+                         Classes="url"
+                         Text="{Binding Url}"
+                         LostFocus="Url_LostFocus"
                          TextInputOptions.ReturnKeyType="Next"
-                         TextInputOptions.ShowSuggestions="False"
                          IsEnabled="{Binding CanEditProviderUrl}"
                          PlaceholderText="{loc:Translate Profiles.Account.ServerUrlPlaceholder}" />
+                <TextBlock Text="{Binding ServerUrlError}"
+                           Foreground="{DynamicResource ErrorBrush}"
+                           FontSize="{DynamicResource FCaption}"
+                           TextWrapping="Wrap"
+                           Margin="4,2,0,0"
+                           IsVisible="{Binding ServerUrlError, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
 
                 <!-- M3U dosya seçici butonu -->
                 <Button Command="{Binding PickM3uFileCommand}"
@@ -447,9 +459,24 @@
                              Text="{loc:Translate Profiles.Account.MacAddress}"
                              IsVisible="{Binding IsStalker}" />
                 </Panel>
-                <TextBox Text="{Binding Username}"
+                <TextBox x:Name="UsernameTextBox"
+                         Text="{Binding Username}"
+                         LostFocus="Username_LostFocus"
+                         IsEnabled="{Binding CanEditProviderCredentials}"
                          TextInputOptions.ReturnKeyType="Next"
                          PlaceholderText="{loc:Translate Profiles.Account.UsernamePlaceholder}" />
+                <TextBlock Text="{Binding UsernameError}"
+                           Foreground="{DynamicResource ErrorBrush}"
+                           FontSize="{DynamicResource FCaption}"
+                           TextWrapping="Wrap"
+                           Margin="4,2,0,0"
+                           IsVisible="{Binding UsernameError, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
+                <TextBlock Text="{Binding MacAddressError}"
+                           Foreground="{DynamicResource ErrorBrush}"
+                           FontSize="{DynamicResource FCaption}"
+                           TextWrapping="Wrap"
+                           Margin="4,2,0,0"
+                           IsVisible="{Binding MacAddressError, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
               </StackPanel>
 
               <!-- Şifre (sadece Xtream) -->
@@ -459,30 +486,28 @@
                           IsVisible="{Binding IsXtream}">
                 <TextBlock Classes="FieldLabel"
                            Text="{loc:Translate Profiles.Account.Password}" />
-                <TextBox Text="{Binding Password}"
+                <TextBox x:Name="PasswordTextBox"
+                         Classes="password"
+                         Text="{Binding Password}"
+                         LostFocus="Password_LostFocus"
+                         IsEnabled="{Binding CanEditProviderCredentials}"
                          TextInputOptions.ContentType="Password"
                          TextInputOptions.ReturnKeyType="Done"
-                         TextInputOptions.IsSensitive="True"
-                         TextInputOptions.ShowSuggestions="False"
-                         PasswordChar="&#x2022;"
                          PlaceholderText="{loc:Translate Profiles.Account.PasswordPlaceholder}" />
+                <TextBlock Text="{Binding PasswordError}"
+                           Foreground="{DynamicResource ErrorBrush}"
+                           FontSize="{DynamicResource FCaption}"
+                           TextWrapping="Wrap"
+                           Margin="4,2,0,0"
+                           IsVisible="{Binding PasswordError, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
               </StackPanel>
 
-              <!-- Hata mesajı -->
-              <TextBlock Text="{Binding UrlError}"
-                         Foreground="{DynamicResource ErrorBrush}"
-                         FontSize="{DynamicResource FCaption}"
-                         TextWrapping="Wrap"
-                         FontWeight="Bold"
-                         Margin="16,0,16,12"
-                         IsVisible="{Binding UrlError, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
+
 
               <!-- Bağlantı test butonu: sadece uzak sağlayıcılar için. Local M3U dosyada dosya doğrulama kart içinde yapılır. -->
               <Border Classes="Divider" IsVisible="{Binding ShowConnectionAnalysis}" />
               <Button Command="{Binding AnalyzeConnectionCommand}"
-                      Content="{loc:Translate Profiles.Account.Analyze}"
                       IsVisible="{Binding ShowConnectionAnalysis}"
-                      IsEnabled="{Binding !IsAnalyzingConnection}"
                       MinHeight="44"
                       MaxWidth="200"
                       CornerRadius="8"
@@ -491,7 +516,28 @@
                       FontWeight="Medium"
                       HorizontalAlignment="Stretch"
                       HorizontalContentAlignment="Center"
-                      Padding="16,12" />
+                      Padding="16,12">
+                <Panel>
+                  <!-- Analyzing spinner -->
+                  <StackPanel Orientation="Horizontal"
+                              Spacing="8"
+                              HorizontalAlignment="Center"
+                              IsVisible="{Binding IsAnalyzingConnection}">
+                    <ProgressBar IsIndeterminate="True"
+                                 Width="16" Height="16"
+                                 VerticalAlignment="Center"
+                                 Foreground="{DynamicResource AccentBrush}" />
+                    <TextBlock Text="{loc:Translate AddProfile.Status.Analyzing}"
+                               VerticalAlignment="Center"
+                               FontWeight="Medium" />
+                  </StackPanel>
+                  <!-- Default label -->
+                  <TextBlock Text="{loc:Translate Profiles.Account.Analyze}"
+                             HorizontalAlignment="Center"
+                             IsVisible="{Binding !IsAnalyzingConnection}"
+                             FontWeight="Medium" />
+                </Panel>
+              </Button>
 
               <!-- Bağlantı sağlığı göstergesi -->
               <Border Margin="16,0,16,14"
@@ -602,16 +648,18 @@
                                  Text="{loc:Translate Profiles.Add.Pin}"
                                  IsVisible="{Binding !HasExistingPin}" />
                     </Panel>
-                    <TextBox Text="{Binding PinCode}"
-                             TextInputOptions.ContentType="Digits"
+                    <TextBox x:Name="PinCodeTextBox"
+                             Classes="pin"
+                             Text="{Binding PinCode}"
+                             LostFocus="PinCode_LostFocus"
                              TextInputOptions.ReturnKeyType="Next"
-                             TextInputOptions.IsSensitive="True"
-                             TextInputOptions.ShowSuggestions="False"
-                             MaxLength="4"
-                             PasswordChar="&#x2022;"
-                             PlaceholderText="&#x2022;&#x2022;&#x2022;&#x2022;"
-                             LetterSpacing="8"
-                             HorizontalContentAlignment="Center" />
+                             PlaceholderText="&#x2022;&#x2022;&#x2022;&#x2022;" />
+                    <TextBlock Text="{Binding PinError}"
+                               Foreground="{DynamicResource ErrorBrush}"
+                               FontSize="{DynamicResource FCaption}"
+                               TextWrapping="Wrap"
+                               Margin="4,2,0,0"
+                               IsVisible="{Binding PinError, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
                   </StackPanel>
 
                   <!-- PIN onayı -->
@@ -624,24 +672,21 @@
                                  Text="{loc:Translate Profiles.Add.ConfirmPin}"
                                  IsVisible="{Binding !HasExistingPin}" />
                     </Panel>
-                    <TextBox Text="{Binding PinConfirm}"
-                             TextInputOptions.ContentType="Digits"
+                    <TextBox x:Name="PinConfirmTextBox"
+                             Classes="pin"
+                             Text="{Binding PinConfirm}"
+                             LostFocus="PinConfirm_LostFocus"
                              TextInputOptions.ReturnKeyType="Done"
-                             TextInputOptions.IsSensitive="True"
-                             TextInputOptions.ShowSuggestions="False"
-                             MaxLength="4"
-                             PasswordChar="&#x2022;"
-                             PlaceholderText="&#x2022;&#x2022;&#x2022;&#x2022;"
-                             LetterSpacing="8"
-                             HorizontalContentAlignment="Center" />
+                             PlaceholderText="&#x2022;&#x2022;&#x2022;&#x2022;" />
+                    <TextBlock Text="{Binding PinConfirmationError}"
+                               Foreground="{DynamicResource ErrorBrush}"
+                               FontSize="{DynamicResource FCaption}"
+                               TextWrapping="Wrap"
+                               Margin="4,2,0,0"
+                               IsVisible="{Binding PinConfirmationError, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
                   </StackPanel>
 
-                  <!-- PIN hata mesajı -->
-                  <TextBlock Text="{Binding PinError}"
-                             Foreground="{DynamicResource ErrorBrush}"
-                             FontSize="{DynamicResource FCaption}"
-                             TextWrapping="Wrap"
-                             IsVisible="{Binding PinError, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
+
 
                   <!-- PIN uyarısı -->
                   <TextBlock Text="{loc:Translate Profiles.Add.PinWarning}"
@@ -654,15 +699,79 @@
           </Border>
         </StackPanel>
 
-        <!-- ── Durum mesajı ── -->
-        <TextBlock Text="{Binding StatusMessage}"
-                   Foreground="{DynamicResource ErrorBrush}"
-                   FontSize="{DynamicResource FCaption}"
-                   TextWrapping="Wrap"
-                   FontWeight="SemiBold"
-                   HorizontalAlignment="Center"
-                   TextAlignment="Center"
-                   IsVisible="{Binding StatusMessage, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
+        <!-- ── Durum mesajı (kind-aware) ── -->
+        <Border IsVisible="{Binding StatusMessage, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"
+                Margin="16,4,16,8"
+                Padding="12,8"
+                CornerRadius="8">
+          <Border.Styles>
+            <Style Selector="Border">
+              <Setter Property="Background" Value="Transparent" />
+            </Style>
+            <Style Selector="Border[Tag=Progress]">
+              <Setter Property="Background" Value="{DynamicResource Surface1Brush}" />
+            </Style>
+            <Style Selector="Border[Tag=Success]">
+              <Setter Property="Background" Value="{DynamicResource SuccessSurfaceBrush}" />
+            </Style>
+            <Style Selector="Border[Tag=Warning]">
+              <Setter Property="Background" Value="{DynamicResource WarningSurfaceBrush}" />
+            </Style>
+            <Style Selector="Border[Tag=Error]">
+              <Setter Property="Background" Value="{DynamicResource ErrorSurfaceBrush}" />
+            </Style>
+          </Border.Styles>
+          <Border.Tag>
+            <Binding Path="StatusKind" Converter="{StaticResource EnumToStringConverter}" />
+          </Border.Tag>
+          <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+            <!-- Progress spinner -->
+            <ProgressBar IsIndeterminate="True"
+                         Width="14" Height="14"
+                         VerticalAlignment="Center"
+                         Foreground="{DynamicResource TextSecondaryBrush}"
+                         IsVisible="{Binding StatusKind,
+                                            Converter={StaticResource EnumEqualConverter},
+                                            ConverterParameter={x:Static vm:FormStatusKind.Progress}}" />
+            <!-- Success icon -->
+            <icons:MaterialIcon Kind="CheckCircle"
+                                Width="16" Height="16"
+                                VerticalAlignment="Center"
+                                Foreground="{DynamicResource SuccessBrush}"
+                                IsVisible="{Binding StatusKind,
+                                                   Converter={StaticResource EnumEqualConverter},
+                                                   ConverterParameter={x:Static vm:FormStatusKind.Success}}" />
+            <!-- Warning icon -->
+            <icons:MaterialIcon Kind="AlertCircle"
+                                Width="16" Height="16"
+                                VerticalAlignment="Center"
+                                Foreground="{DynamicResource WarningBrush}"
+                                IsVisible="{Binding StatusKind,
+                                                   Converter={StaticResource EnumEqualConverter},
+                                                   ConverterParameter={x:Static vm:FormStatusKind.Warning}}" />
+            <!-- Error icon -->
+            <icons:MaterialIcon Kind="AlertCircleOutline"
+                                Width="16" Height="16"
+                                VerticalAlignment="Center"
+                                Foreground="{DynamicResource ErrorBrush}"
+                                IsVisible="{Binding StatusKind,
+                                                   Converter={StaticResource EnumEqualConverter},
+                                                   ConverterParameter={x:Static vm:FormStatusKind.Error}}" />
+            <TextBlock Text="{Binding StatusMessage}"
+                       TextWrapping="Wrap"
+                       FontSize="{DynamicResource FCaption}"
+                       FontWeight="SemiBold"
+                       VerticalAlignment="Center"
+                       HorizontalAlignment="Center"
+                       TextAlignment="Center">
+              <TextBlock.Styles>
+                <Style Selector="TextBlock">
+                  <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+                </Style>
+              </TextBlock.Styles>
+            </TextBlock>
+          </StackPanel>
+        </Border>
 
         <!--
           ── Profili Sil butonu (SADECE DÜZENLEME MODUNDA) ────────

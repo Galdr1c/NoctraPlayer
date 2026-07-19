@@ -32,6 +32,7 @@ public partial class ProfileSetupView : UserControl
         if (_viewModel is not null)
         {
             _viewModel.RequestAvatarPicker -= ViewModel_RequestAvatarPicker;
+            _viewModel.ValidationErrorOccurred -= ViewModel_ValidationErrorOccurred;
         }
 
         _viewModel = viewModel;
@@ -39,6 +40,7 @@ public partial class ProfileSetupView : UserControl
         if (_viewModel is not null)
         {
             _viewModel.RequestAvatarPicker += ViewModel_RequestAvatarPicker;
+            _viewModel.ValidationErrorOccurred += ViewModel_ValidationErrorOccurred;
         }
     }
 
@@ -88,5 +90,42 @@ public partial class ProfileSetupView : UserControl
         }
 
         return false;
+    }
+
+    private void ProfileName_LostFocus(object? sender, RoutedEventArgs e)
+        => _viewModel?.TouchField("ProfileName");
+
+    private void Url_LostFocus(object? sender, RoutedEventArgs e)
+        => _viewModel?.TouchField("Url");
+
+    private void Username_LostFocus(object? sender, RoutedEventArgs e)
+        => _viewModel?.TouchField("Username");
+
+    private void Password_LostFocus(object? sender, RoutedEventArgs e)
+        => _viewModel?.TouchField("Password");
+
+    private void PinCode_LostFocus(object? sender, RoutedEventArgs e)
+        => _viewModel?.TouchField("PinCode");
+
+    private void PinConfirm_LostFocus(object? sender, RoutedEventArgs e)
+        => _viewModel?.TouchField("PinConfirm");
+
+    private void ViewModel_ValidationErrorOccurred(object? sender, string fieldName)
+    {
+        TextBox? textBoxToFocus = fieldName switch
+        {
+            "ProfileName" => this.FindControl<TextBox>("ProfileNameTextBox"),
+            "Url" => this.FindControl<TextBox>("UrlTextBox"),
+            "Username" => this.FindControl<TextBox>("UsernameTextBox"),
+            "Password" => this.FindControl<TextBox>("PasswordTextBox"),
+            "PinCode" => this.FindControl<TextBox>("PinCodeTextBox"),
+            "PinConfirm" => this.FindControl<TextBox>("PinConfirmTextBox"),
+            _ => null
+        };
+
+        if (textBoxToFocus is not null)
+        {
+            textBoxToFocus.Focus();
+        }
     }
 }

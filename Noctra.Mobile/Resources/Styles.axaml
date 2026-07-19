@@ -88,20 +88,6 @@
     </Style>
   </ControlTheme>
 
-  <ControlTheme x:Key="NoctraTextBox" TargetType="TextBox">
-    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
-    <Setter Property="Background" Value="{DynamicResource Surface1Brush}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
-    <Setter Property="BorderThickness" Value="1.5" />
-    <Setter Property="CornerRadius" Value="{DynamicResource RadiusMedium}" />
-    <Setter Property="Padding" Value="14,0" />
-    <Setter Property="MinHeight" Value="48" />
-    <Style Selector="^:focus">
-      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
-      <Setter Property="BorderThickness" Value="2" />
-    </Style>
-  </ControlTheme>
-
   <ControlTheme x:Key="NoctraProgressBar" TargetType="ProgressBar">
     <Setter Property="Background" Value="{DynamicResource Surface1Brush}" />
     <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />

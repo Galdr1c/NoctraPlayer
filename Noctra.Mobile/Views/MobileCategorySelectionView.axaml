@@ -130,14 +130,7 @@
 
               <TextBox x:Name="CategorySearchTextBox"
                        Grid.Column="1"
-                       MinHeight="48"
-                       Padding="10,0"
-                       Background="Transparent"
-                       BorderThickness="0"
-                       FontSize="{DynamicResource FBodyL}"
-                       Foreground="{DynamicResource TextPrimaryBrush}"
-                       TextInputOptions.ContentType="Search"
-                       TextInputOptions.ReturnKeyType="Search"
+                       Classes="search"
                        PlaceholderText="{loc:Translate Shell.Search.Tooltip}"
                        VerticalContentAlignment="Center"
                        TextChanged="CategorySearchTextBox_TextChanged" />

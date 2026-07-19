@@ -327,8 +327,7 @@
                      FontSize="{DynamicResource FCaption}" />
           <TextBox Text="{Binding UserAgent, Mode=TwoWay}"
                    PlaceholderText="VLC/3.0.x LibVLC/3.0.x"
-                   TextInputOptions.ReturnKeyType="Done"
-                   MinHeight="48" />
+                   TextInputOptions.ReturnKeyType="Done" />
           <Grid ColumnDefinitions="*,Auto">
             <TextBlock Text="{loc:Translate Settings.Playback.AutoPlayNext}"
                        Foreground="{DynamicResource TextPrimaryBrush}"
@@ -496,10 +495,9 @@
           <TextBlock Text="{loc:Translate Settings.Download.Path}"
                      Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="{DynamicResource FCaption}" />
-          <TextBox Text="{Binding DownloadPath}"
-                   IsReadOnly="True"
-                   TextWrapping="Wrap"
-                   MinHeight="48" />
+          <TextBox Classes="readonly"
+                   Text="{Binding DownloadPath}"
+                   TextWrapping="Wrap" />
           <TextBlock Text="{loc:Translate Mobile.Settings.Download.AndroidStorage}"
                      Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="{DynamicResource FCaption}"
@@ -828,12 +826,10 @@
                     <Grid ColumnDefinitions="*,Auto"
                           ColumnSpacing="8"
                           Margin="0,0,0,8">
-                      <TextBox Text="{Binding Url, Mode=TwoWay}"
+                      <TextBox Classes="url"
+                               Text="{Binding Url, Mode=TwoWay}"
                                PlaceholderText="{loc:Translate Settings.Epg.UrlPlaceholder}"
-                               TextInputOptions.ContentType="Url"
-                               TextInputOptions.ReturnKeyType="Done"
-                               TextInputOptions.ShowSuggestions="False"
-                               MinHeight="48" />
+                               TextInputOptions.ReturnKeyType="Done" />
                       <Button Grid.Column="1"
                               Command="{Binding $parent[ItemsControl].((vm:SettingsViewModel)DataContext).RemoveCustomEpgCommand}"
                               CommandParameter="{Binding .}"
@@ -1050,13 +1046,7 @@
             <TextBox Text="{Binding PromoCodeInput, Mode=TwoWay}"
                      PlaceholderText="{loc:Translate GlobalSettings.Promo.Placeholder}"
                      TextInputOptions.ReturnKeyType="Done"
-                     Padding="16,12"
-                     CornerRadius="8"
-                     BorderThickness="1.5"
-                     BorderBrush="{DynamicResource BorderBrush}"
-                     Background="{DynamicResource Surface1Brush}"
                      VerticalContentAlignment="Center"
-                     FontSize="{DynamicResource FBodyL}"
                      LetterSpacing="1" />
             <Button VerticalAlignment="Stretch"
                     HorizontalAlignment="Stretch"

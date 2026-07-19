@@ -40,6 +40,7 @@ public partial class AddProfileViewModel : ObservableObject
     public bool IsRemoteProviderSource => !IsLocalM3uFileSource;
     public bool CanSwitchProviderType => IsRemoteProviderSource && !IsSaving && !IsAnalyzingConnection;
     public bool CanEditProviderUrl => IsRemoteProviderSource && !IsSaving && !IsAnalyzingConnection;
+    public bool CanEditProviderCredentials => IsRemoteProviderSource && !IsSaving && !IsAnalyzingConnection;
     public bool ShowConnectionAnalysis => IsRemoteProviderSource;
     public bool ShowLocalM3uFileActions => IsLocalM3uFileSource;
 
@@ -61,13 +62,18 @@ public partial class AddProfileViewModel : ObservableObject
         OnPropertyChanged(nameof(IsRemoteProviderSource));
         OnPropertyChanged(nameof(CanSwitchProviderType));
         OnPropertyChanged(nameof(CanEditProviderUrl));
+        OnPropertyChanged(nameof(CanEditProviderCredentials));
         OnPropertyChanged(nameof(ShowConnectionAnalysis));
         OnPropertyChanged(nameof(ShowLocalM3uFileActions));
     }
 
     partial void OnUrlChanged(string value)
     {
+        ServerUrlError = null;
+        UrlError = null;
         PlaylistPreviewSummary = string.Empty;
+        CancelActiveAnalysis();
+        ClearAnalysisResults();
 
         if (_isUpdatingUrl || string.IsNullOrEmpty(value)) return;
         SetLocalM3uFileSourceState(false);
@@ -115,8 +121,6 @@ public partial class AddProfileViewModel : ObservableObject
         {
             _isUpdatingUrl = false;
         }
-
-        ValidateRealtimeInputs();
     }
 
     public void SetM3uFileSource(string filePath)
@@ -135,7 +139,6 @@ public partial class AddProfileViewModel : ObservableObject
         PlaylistPreviewSummary = string.Empty;
         ClearAnalysisResults();
         SetLocalM3uFileSourceState(true);
-        ValidateRealtimeInputs();
     }
 
     [RelayCommand]
@@ -157,7 +160,7 @@ public partial class AddProfileViewModel : ObservableObject
         }
         finally
         {
-            StatusMessage = string.Empty;
+            SetStatus(string.Empty, FormStatusKind.None);
         }
     }
 
@@ -167,14 +170,14 @@ public partial class AddProfileViewModel : ObservableObject
         {
             var copied = FormatBytes(progress.BytesCopied);
             var total = FormatBytes(progress.TotalBytes.Value);
-            StatusMessage = string.Format(
+            SetStatus(string.Format(
                 CultureInfo.CurrentCulture,
                 _localizationService.GetString("AddProfile.Status.CopyingFileFormat"),
-                copied, total);
+                copied, total), FormStatusKind.Progress);
         }
         else
         {
-            StatusMessage = _localizationService.GetString("AddProfile.Status.CopyingFile");
+            SetStatus(_localizationService.GetString("AddProfile.Status.CopyingFile"), FormStatusKind.Progress);
         }
     }
 
@@ -198,12 +201,12 @@ public partial class AddProfileViewModel : ObservableObject
     {
         if (!IsLocalM3uFileSource || string.IsNullOrWhiteSpace(Url))
         {
-            StatusMessage = _localizationService.GetString("Profiles.Account.FileNotSelected");
-            HasError = true;
+            SetStatus(_localizationService.GetString("Profiles.Account.FileNotSelected"), FormStatusKind.Error);
             return;
         }
 
-        await AnalyzeLocalM3uFileAsync(Url.Trim());
+        var token = PrepareAnalysisRequest();
+        await AnalyzeLocalM3uFileAsync(Url.Trim(), token, _analysisGeneration);
     }
 
     [RelayCommand]
@@ -235,7 +238,7 @@ public partial class AddProfileViewModel : ObservableObject
         PlaylistPreviewSummary = string.Empty;
         ClearAnalysisResults();
         SetLocalM3uFileSourceState(false);
-        ValidateRealtimeInputs();
+        ClearValidationErrors();
     }
 
     private void ParseCredentialsFromUrl(string url)
@@ -290,8 +293,7 @@ public partial class AddProfileViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            StatusMessage = UserFriendlyErrorMessage.WithPrefix(_localizationService.GetString("AddProfile.Error.UrlParse"), ex);
-            HasError = true;
+            SetStatus(UserFriendlyErrorMessage.WithPrefix(_localizationService.GetString("AddProfile.Error.UrlParse"), ex), FormStatusKind.Error);
         }
     }
 
@@ -322,8 +324,7 @@ public partial class AddProfileViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            StatusMessage = UserFriendlyErrorMessage.WithPrefix(_localizationService.GetString("AddProfile.Error.UrlCreate"), ex);
-            HasError = true;
+            SetStatus(UserFriendlyErrorMessage.WithPrefix(_localizationService.GetString("AddProfile.Error.UrlCreate"), ex), FormStatusKind.Error);
         }
     }
 
@@ -333,6 +334,10 @@ public partial class AddProfileViewModel : ObservableObject
     partial void OnUsernameChanged(string value)
     {
         PlaylistPreviewSummary = string.Empty;
+        UsernameError = null;
+        MacAddressError = null;
+        CancelActiveAnalysis();
+        ClearAnalysisResults();
 
         if (_isUpdatingUrl) return;
 
@@ -347,7 +352,6 @@ public partial class AddProfileViewModel : ObservableObject
             _isUpdatingUrl = true;
             Username = StalkerMacPrefix + NormalizeStalkerMacSuffix(suffix);
             _isUpdatingUrl = false;
-            UpdateStalkerMacValidation(Username);
             return;
         }
         
@@ -355,8 +359,6 @@ public partial class AddProfileViewModel : ObservableObject
         {
             ConvertXtreamToM3UUrl();
         }
-
-        ValidateRealtimeInputs();
     }
 
     [ObservableProperty]
@@ -365,6 +367,9 @@ public partial class AddProfileViewModel : ObservableObject
     partial void OnPasswordChanged(string value)
     {
         PlaylistPreviewSummary = string.Empty;
+        PasswordError = null;
+        CancelActiveAnalysis();
+        ClearAnalysisResults();
 
         if (_isUpdatingUrl) return;
         
@@ -372,8 +377,6 @@ public partial class AddProfileViewModel : ObservableObject
         {
             ConvertXtreamToM3UUrl();
         }
-
-        ValidateRealtimeInputs();
     }
     
     [ObservableProperty]
@@ -383,6 +386,7 @@ public partial class AddProfileViewModel : ObservableObject
     {
         PlaylistPreviewSummary = string.Empty;
         ClearAnalysisResults();
+        CancelActiveAnalysis();
 
         if (_isUpdatingUrl) return;
         if (value && IsLocalM3uFileSource)
@@ -425,7 +429,7 @@ public partial class AddProfileViewModel : ObservableObject
             }
         }
 
-        ValidateRealtimeInputs();
+        ClearValidationErrors();
     }
 
     [ObservableProperty]
@@ -435,6 +439,7 @@ public partial class AddProfileViewModel : ObservableObject
     {
         PlaylistPreviewSummary = string.Empty;
         ClearAnalysisResults();
+        CancelActiveAnalysis();
 
         if (_isUpdatingUrl) return;
         if (!value && IsLocalM3uFileSource)
@@ -478,7 +483,7 @@ public partial class AddProfileViewModel : ObservableObject
             }
         }
 
-        ValidateRealtimeInputs();
+        ClearValidationErrors();
     }
 
     [ObservableProperty]
@@ -489,11 +494,40 @@ public partial class AddProfileViewModel : ObservableObject
     private string? _cachedUsername;
     private string? _cachedPassword;
 
+    private CancellationTokenSource? _analysisCts;
+    private int _analysisGeneration = 0;
+
+    private void CancelActiveAnalysis()
+    {
+        try
+        {
+            _analysisCts?.Cancel();
+            _analysisCts?.Dispose();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Failed to cancel analysis: {ex.Message}");
+        }
+        finally
+        {
+            _analysisCts = null;
+        }
+    }
+
+    private CancellationToken PrepareAnalysisRequest()
+    {
+        CancelActiveAnalysis();
+        _analysisGeneration++;
+        _analysisCts = new CancellationTokenSource();
+        return _analysisCts.Token;
+    }
+
     private void ClearAnalysisResults()
     {
         ConnectionHealth = ConnectionHealth.Unknown;
         DetailedStatus = string.Empty;
         StatusMessage = string.Empty;
+        StatusKind = FormStatusKind.None;
         HasError = false;
         // PlaylistPreviewSummary is already cleared in individual setters
     }
@@ -502,6 +536,7 @@ public partial class AddProfileViewModel : ObservableObject
     {
         PlaylistPreviewSummary = string.Empty;
         ClearAnalysisResults();
+        CancelActiveAnalysis();
 
         if (_isUpdatingUrl) return;
         if (value && IsLocalM3uFileSource)
@@ -556,8 +591,7 @@ public partial class AddProfileViewModel : ObservableObject
             Username = StalkerMacPrefix;
             _isUpdatingUrl = false;
             
-            UpdateStalkerMacValidation(Username);
-            ValidateRealtimeInputs();
+            ClearValidationErrors();
             return;
         }
 
@@ -567,29 +601,104 @@ public partial class AddProfileViewModel : ObservableObject
             return;
         }
 
-        UrlError = null;
-        ValidateRealtimeInputs();
+        ClearValidationErrors();
     }
 
-    private void ValidateRealtimeInputs()
+    public void TouchField(string fieldName)
     {
-        if (IsStalker)
+        switch (fieldName)
         {
-            UpdateStalkerMacValidation(Username);
+            case "ProfileName":
+                IsProfileNameTouched = true;
+                ValidateProfileName();
+                break;
+            case "Url":
+                IsUrlTouched = true;
+                ValidateUrlField();
+                break;
+            case "Username":
+                IsUsernameTouched = true;
+                ValidateUsernameField();
+                break;
+            case "Password":
+                IsPasswordTouched = true;
+                ValidatePasswordField();
+                break;
+            case "PinCode":
+                IsPinCodeTouched = true;
+                ValidatePinCodeField();
+                break;
+            case "PinConfirm":
+                IsPinConfirmTouched = true;
+                ValidatePinConfirmField();
+                break;
+        }
+    }
+
+    private void ClearValidationErrors()
+    {
+        ProfileNameError = null;
+        ServerUrlError = null;
+        UrlError = null;
+        UsernameError = null;
+        MacAddressError = null;
+        PasswordError = null;
+        PinError = null;
+        PinConfirmationError = null;
+
+        IsProfileNameTouched = false;
+        IsUrlTouched = false;
+        IsUsernameTouched = false;
+        IsPasswordTouched = false;
+        IsPinCodeTouched = false;
+        IsPinConfirmTouched = false;
+        IsSubmitted = false;
+    }
+
+    private void ValidateProfileName()
+    {
+        if (!IsProfileNameTouched && !IsSubmitted)
+        {
+            ProfileNameError = null;
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(ProfileName))
+        {
+            ProfileNameError = _localizationService.GetString("AddProfile.Error.ProfileNameRequired");
+        }
+        else
+        {
+            ProfileNameError = null;
+        }
+    }
+
+    private void ValidateUrlField()
+    {
+        if (!IsUrlTouched && !IsSubmitted)
+        {
+            ServerUrlError = null;
+            UrlError = null;
             return;
         }
 
         if (string.IsNullOrWhiteSpace(Url))
         {
-            UrlError = _localizationService.GetString("AddProfile.Error.UrlRequired");
+            ServerUrlError = _localizationService.GetString("AddProfile.Error.UrlRequired");
+            UrlError = ServerUrlError;
             return;
         }
 
         if (IsM3U && IsLocalM3uFileSource)
         {
-            UrlError = File.Exists(Url)
-                ? null
-                : _localizationService.GetString("AddProfile.Error.M3uUrlRequirement");
+            if (!File.Exists(Url))
+            {
+                ServerUrlError = _localizationService.GetString("AddProfile.Error.M3uUrlRequirement");
+                UrlError = ServerUrlError;
+                return;
+            }
+            ServerUrlError = null;
+            UrlError = null;
             return;
         }
 
@@ -602,7 +711,8 @@ public partial class AddProfileViewModel : ObservableObject
 
         if (!Uri.TryCreate(normalizedUrl, UriKind.Absolute, out _))
         {
-            UrlError = _localizationService.GetString("AddProfile.Error.UrlInvalid");
+            ServerUrlError = _localizationService.GetString("AddProfile.Error.UrlInvalid");
+            UrlError = ServerUrlError;
             return;
         }
 
@@ -611,36 +721,144 @@ public partial class AddProfileViewModel : ObservableObject
             var lower = normalizedUrl.ToLowerInvariant();
             if (!lower.Contains(".m3u") && !lower.Contains(".m3u8") && !lower.Contains("get.php"))
             {
-                UrlError = _localizationService.GetString("AddProfile.Error.M3uUrlRequirement");
+                ServerUrlError = _localizationService.GetString("AddProfile.Error.M3uUrlRequirement");
+                UrlError = ServerUrlError;
                 return;
             }
         }
 
-        if (IsXtream && (string.IsNullOrWhiteSpace(Username) || string.IsNullOrWhiteSpace(Password)))
-        {
-            UrlError = _localizationService.GetString("AddProfile.Error.XtreamCredentialsRequired");
-            return;
-        }
-
+        ServerUrlError = null;
         UrlError = null;
     }
 
-    private void UpdateStalkerMacValidation(string currentUsername)
+    private void ValidateUsernameField()
     {
-        if (!IsStalker)
+        if (!IsUsernameTouched && !IsSubmitted)
         {
+            UsernameError = null;
+            MacAddressError = null;
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(currentUsername))
+        if (IsStalker)
         {
-            UrlError = _localizationService.GetString("AddProfile.Error.MacRequired");
+            UsernameError = null;
+            if (string.IsNullOrWhiteSpace(Username))
+            {
+                MacAddressError = _localizationService.GetString("AddProfile.Error.MacRequired");
+            }
+            else if (!StalkerMacRegex().IsMatch(Username.Trim()))
+            {
+                MacAddressError = _localizationService.GetString("AddProfile.Error.MacInvalid");
+            }
+            else
+            {
+                MacAddressError = null;
+            }
+        }
+        else if (IsXtream)
+        {
+            MacAddressError = null;
+            if (string.IsNullOrWhiteSpace(Username))
+            {
+                UsernameError = _localizationService.GetString("AddProfile.Error.XtreamCredentialsRequired");
+            }
+            else
+            {
+                UsernameError = null;
+            }
+        }
+        else
+        {
+            UsernameError = null;
+            MacAddressError = null;
+        }
+    }
+
+    private void ValidatePasswordField()
+    {
+        if (!IsPasswordTouched && !IsSubmitted)
+        {
+            PasswordError = null;
             return;
         }
 
-        UrlError = StalkerMacRegex().IsMatch(currentUsername.Trim())
-            ? null
-            : _localizationService.GetString("AddProfile.Error.MacInvalid");
+        if (IsXtream)
+        {
+            if (string.IsNullOrWhiteSpace(Password))
+            {
+                PasswordError = _localizationService.GetString("AddProfile.Error.XtreamCredentialsRequired");
+            }
+            else
+            {
+                PasswordError = null;
+            }
+        }
+        else
+        {
+            PasswordError = null;
+        }
+    }
+
+    private void ValidatePinCodeField()
+    {
+        if (!IsPinCodeTouched && !IsSubmitted)
+        {
+            PinError = null;
+            return;
+        }
+
+        if (HasPin)
+        {
+            if (string.IsNullOrEmpty(PinCode))
+            {
+                if (string.IsNullOrEmpty(EditingProfile?.PinHash))
+                {
+                    PinError = _localizationService.GetString("AddProfile.Error.PinRequired");
+                }
+                else
+                {
+                    PinError = null;
+                }
+            }
+            else if (PinCode.Length != 4 || !PinCode.All(char.IsDigit))
+            {
+                PinError = _localizationService.GetString("AddProfile.Error.PinLength");
+            }
+            else
+            {
+                PinError = null;
+            }
+        }
+        else
+        {
+            PinError = null;
+        }
+    }
+
+    private void ValidatePinConfirmField()
+    {
+        if (!IsPinConfirmTouched && !IsSubmitted)
+        {
+            PinConfirmationError = null;
+            return;
+        }
+
+        if (HasPin && !string.IsNullOrEmpty(PinCode) && PinCode.Length == 4)
+        {
+            if (PinCode != PinConfirm)
+            {
+                PinConfirmationError = _localizationService.GetString("AddProfile.Error.PinMismatch");
+            }
+            else
+            {
+                PinConfirmationError = null;
+            }
+        }
+        else
+        {
+            PinConfirmationError = null;
+        }
     }
 
     private static string NormalizeStalkerMacSuffix(string? input)
@@ -717,13 +935,63 @@ public partial class AddProfileViewModel : ObservableObject
     private string _statusMessage = string.Empty;
 
     [ObservableProperty]
+    private FormStatusKind _statusKind = FormStatusKind.None;
+
+    [ObservableProperty]
     private bool _hasError;
+
+    /// <summary>
+    /// Sets both StatusMessage and StatusKind atomically.
+    /// Automatically sets HasError = true when kind is Error.
+    /// </summary>
+    private void SetStatus(string message, FormStatusKind kind)
+    {
+        StatusMessage = message;
+        StatusKind = kind;
+        HasError = kind == FormStatusKind.Error;
+    }
 
     [ObservableProperty]
     private string? _urlError;
 
     [ObservableProperty]
     private string? _profileNameError;
+
+    [ObservableProperty]
+    private string? _serverUrlError;
+
+    [ObservableProperty]
+    private string? _usernameError;
+
+    [ObservableProperty]
+    private string? _passwordError;
+
+    [ObservableProperty]
+    private string? _macAddressError;
+
+    [ObservableProperty]
+    private string? _pinConfirmationError;
+
+    [ObservableProperty]
+    private bool _isProfileNameTouched;
+
+    [ObservableProperty]
+    private bool _isUrlTouched;
+
+    [ObservableProperty]
+    private bool _isUsernameTouched;
+
+    [ObservableProperty]
+    private bool _isPasswordTouched;
+
+    [ObservableProperty]
+    private bool _isPinCodeTouched;
+
+    [ObservableProperty]
+    private bool _isPinConfirmTouched;
+
+    [ObservableProperty]
+    private bool _isSubmitted;
 
     [ObservableProperty]
     private bool _isSaving;
@@ -749,6 +1017,7 @@ public partial class AddProfileViewModel : ObservableObject
 
     public event EventHandler? RequestClose;
     public event EventHandler? RequestAvatarPicker;
+    public event EventHandler<string>? ValidationErrorOccurred;
 
     public AddProfileViewModel(
         IProfileService profileService,
@@ -855,7 +1124,7 @@ public partial class AddProfileViewModel : ObservableObject
         try
         {
             IsSaving = true;
-            StatusMessage = _localizationService.GetString("AddProfile.Delete.Deleting");
+            SetStatus(_localizationService.GetString("AddProfile.Delete.Deleting"), FormStatusKind.Progress);
 
             await _profileService.DeleteProfileAsync(
                 EditingProfile.Id,
@@ -876,6 +1145,17 @@ public partial class AddProfileViewModel : ObservableObject
     }
 
     private bool ValidateUrl()
+    {
+        IsSubmitted = true;
+        ValidateUrlField();
+        ValidateUsernameField();
+        ValidatePasswordField();
+
+        return ServerUrlError == null && UsernameError == null && PasswordError == null && MacAddressError == null;
+    }
+
+    private bool ValidateUrlOld() => true;
+    private bool ValidateUrlOld_Deleted()
     {
         if (string.IsNullOrWhiteSpace(Url))
         {
@@ -954,9 +1234,12 @@ public partial class AddProfileViewModel : ObservableObject
             return;
         }
 
+        var token = PrepareAnalysisRequest();
+        var generation = _analysisGeneration;
+
         if (IsM3U && IsLocalM3uFileSource)
         {
-            await AnalyzeLocalM3uFileAsync(urlToCheck);
+            await AnalyzeLocalM3uFileAsync(urlToCheck, token, generation);
             return;
         }
 
@@ -970,54 +1253,63 @@ public partial class AddProfileViewModel : ObservableObject
         {
             if (!Uri.TryCreate(urlToCheck, UriKind.Absolute, out _))
             {
-                StatusMessage = _localizationService.GetString("AddProfile.Error.UrlInvalid");
+                if (generation == _analysisGeneration)
+                {
+                    StatusMessage = _localizationService.GetString("AddProfile.Error.UrlInvalid");
+                }
                 return;
             }
 
-            await AnalyzeRemoteM3uAsync(urlToCheck);
+            await AnalyzeRemoteM3uAsync(urlToCheck, token, generation);
             return;
         }
 
         // Prepare the actual URL to check based on profile type
         if (IsXtream && !string.IsNullOrWhiteSpace(Username) && !string.IsNullOrWhiteSpace(Password))
         {
-            // For Xtream, we check the player_api.php with credentials
-            // This verifies both the server AND the username/password
-            var uri = new Uri(urlToCheck);
-            var baseUrl = $"{uri.Scheme}://{uri.Host}";
-            if (!uri.IsDefaultPort) baseUrl += $":{uri.Port}";
-            
-            urlToCheck = $"{baseUrl}/player_api.php?username={Uri.EscapeDataString(Username)}&password={Uri.EscapeDataString(Password)}";
+            try
+            {
+                var uri = new Uri(urlToCheck);
+                var baseUrl = $"{uri.Scheme}://{uri.Host}";
+                if (!uri.IsDefaultPort) baseUrl += $":{uri.Port}";
+                
+                urlToCheck = $"{baseUrl}/player_api.php?username={Uri.EscapeDataString(Username)}&password={Uri.EscapeDataString(Password)}";
+            }
+            catch
+            {
+                if (generation == _analysisGeneration)
+                {
+                    StatusMessage = _localizationService.GetString("AddProfile.Error.UrlInvalid");
+                }
+                return;
+            }
         }
         else if (IsStalker)
         {
-            // For Stalker, we try to hit the portal initialization endpoint
-            // This is better than just the base URL, but we still bypass strict MAC check
-            // because a full Stalker handshake is complex to simulate here.
-            // We just want to know if a Stalker Portal exists at this address.
             if (!urlToCheck.EndsWith("/c/") && !urlToCheck.EndsWith("/portal.php"))
             {
-                // Try to guess the portal path if just base URL is given
-                // We will test the base URL first, if that fails or returns 404, we might try common paths?
-                // For now, let's just stick to what the user entered, maybe appending /c/ if it looks like a root
+                // Stalker paths
             }
         }
 
         if (!Uri.TryCreate(urlToCheck, UriKind.Absolute, out _))
         {
-            StatusMessage = _localizationService.GetString("AddProfile.Error.UrlInvalid");
+            if (generation == _analysisGeneration)
+            {
+                SetStatus(_localizationService.GetString("AddProfile.Error.UrlInvalid"), FormStatusKind.Error);
+            }
             return;
         }
 
         if (IsM3U)
         {
-            await AnalyzeRemoteM3uAsync(urlToCheck);
+            await AnalyzeRemoteM3uAsync(urlToCheck, token, generation);
             return;
         }
 
         IsAnalyzingConnection = true;
         HasError = false;
-        StatusMessage = _localizationService.GetString("AddProfile.Status.Analyzing");
+        SetStatus(_localizationService.GetString("AddProfile.Status.Analyzing"), FormStatusKind.Progress);
         PlaylistPreviewSummary = string.Empty;
         ConnectionHealth = ConnectionHealth.Unknown;
         DetailedStatus = string.Empty;
@@ -1025,35 +1317,30 @@ public partial class AddProfileViewModel : ObservableObject
         try
         {
             // Perform health check
-            var (health, statusCode, latency, error) = await PerformHealthCheckAsync(urlToCheck);
+            var (health, statusCode, latency, error) = await PerformHealthCheckAsync(urlToCheck, token);
 
-            // Special handling for Xtream Auth failure (JSON response with error or 401)
-            // PerformHealthCheckAsync currently returns status code.
-            // If it's 200 OK, it means "Server Reached".
-            // For Xtream player_api, 200 OK usually means valid login or at least valid API.
-            // If credentials are wrong, it might return 200 OK but with JSON {"user_info":{"auth":0}} 
-            // Parsing that JSON is heavy, but status code 200 is a good start. 
-            // A 401/403 definitely means Auth Failed.
+            if (generation != _analysisGeneration) return;
 
             ConnectionHealth = health;
             DetailedStatus = FormatDetailedStatus(statusCode, latency, error);
 
             if (health == ConnectionHealth.Critical)
             {
-                HasError = true;
-                StatusMessage = _localizationService.GetString("AddProfile.Analysis.Failed");
+                SetStatus(_localizationService.GetString("AddProfile.Analysis.Failed"), FormStatusKind.Error);
                 return;
             }
 
-            var providerVerification = await VerifyProviderAsync(CancellationToken.None);
+            var providerVerification = await VerifyProviderAsync(token);
+
+            if (generation != _analysisGeneration) return;
+
             if (providerVerification.Health == ConnectionHealth.Critical)
             {
                 ConnectionHealth = ConnectionHealth.Critical;
                 DetailedStatus = string.IsNullOrWhiteSpace(providerVerification.Error)
                     ? _localizationService.GetString("AddProfile.Analysis.Failed")
                     : providerVerification.Error;
-                HasError = true;
-                StatusMessage = _localizationService.GetString("AddProfile.Analysis.Failed");
+                SetStatus(_localizationService.GetString("AddProfile.Analysis.Failed"), FormStatusKind.Error);
                 return;
             }
 
@@ -1063,27 +1350,35 @@ public partial class AddProfileViewModel : ObservableObject
                 DetailedStatus = FormatDetailedStatus(statusCode, providerVerification.Latency, null);
             }
 
-            HasError = false;
-            StatusMessage = _localizationService.GetString("AddProfile.Analysis.Completed");
+            SetStatus(_localizationService.GetString("AddProfile.Analysis.Completed"), FormStatusKind.Success);
+        }
+        catch (OperationCanceledException)
+        {
+            // Ignored, active analysis cancelled
         }
         catch (Exception ex)
         {
-            HasError = true;
-            StatusMessage = UserFriendlyErrorMessage.WithPrefix(_localizationService.GetString("AddProfile.Analysis.ErrorPrefix"), ex);
-            ConnectionHealth = ConnectionHealth.Critical;
-            DetailedStatus = _localizationService.GetString("AddProfile.Analysis.UnexpectedError");
+            if (generation == _analysisGeneration)
+            {
+                SetStatus(UserFriendlyErrorMessage.WithPrefix(_localizationService.GetString("AddProfile.Analysis.ErrorPrefix"), ex), FormStatusKind.Error);
+                ConnectionHealth = ConnectionHealth.Critical;
+                DetailedStatus = _localizationService.GetString("AddProfile.Analysis.UnexpectedError");
+            }
         }
         finally
         {
-            IsAnalyzingConnection = false;
+            if (generation == _analysisGeneration)
+            {
+                IsAnalyzingConnection = false;
+            }
         }
     }
 
-    private async Task AnalyzeRemoteM3uAsync(string urlToCheck)
+    private async Task AnalyzeRemoteM3uAsync(string urlToCheck, CancellationToken cancellationToken, int generation)
     {
         IsAnalyzingConnection = true;
         HasError = false;
-        StatusMessage = _localizationService.GetString("AddProfile.Status.Analyzing");
+        SetStatus(_localizationService.GetString("AddProfile.Status.Analyzing"), FormStatusKind.Progress);
         PlaylistPreviewSummary = string.Empty;
         ConnectionHealth = ConnectionHealth.Unknown;
         DetailedStatus = string.Empty;
@@ -1091,16 +1386,19 @@ public partial class AddProfileViewModel : ObservableObject
 
         try
         {
-            var result = await VerifyRemoteM3uAsync(urlToCheck, CancellationToken.None);
+            var result = await VerifyRemoteM3uAsync(urlToCheck, cancellationToken);
+
+            if (generation != _analysisGeneration) return;
+
             ConnectionHealth = result.Health;
 
             if (result.Health == ConnectionHealth.Critical)
             {
-                HasError = true;
-                DetailedStatus = string.IsNullOrWhiteSpace(result.Error)
+                var errorMsg = string.IsNullOrWhiteSpace(result.Error)
                     ? _localizationService.GetString("AddProfile.Analysis.Failed")
                     : result.Error;
-                StatusMessage = string.Empty;
+                DetailedStatus = errorMsg;
+                SetStatus(string.Empty, FormStatusKind.Error);
                 return;
             }
 
@@ -1108,27 +1406,35 @@ public partial class AddProfileViewModel : ObservableObject
                 CultureInfo.CurrentCulture,
                 _localizationService.GetString("Profiles.Account.LocalM3uValidationResult"),
                 result.ChannelCount);
-            HasError = false;
-            StatusMessage = string.Empty;
+            SetStatus(string.Empty, FormStatusKind.None);
+        }
+        catch (OperationCanceledException)
+        {
+            // Ignored
         }
         catch (Exception ex)
         {
-            HasError = true;
-            ConnectionHealth = ConnectionHealth.Critical;
-            DetailedStatus = UserFriendlyErrorMessage.FromException(ex);
-            StatusMessage = string.Empty;
+            if (generation == _analysisGeneration)
+            {
+                ConnectionHealth = ConnectionHealth.Critical;
+                DetailedStatus = UserFriendlyErrorMessage.FromException(ex);
+                SetStatus(string.Empty, FormStatusKind.None);
+            }
         }
         finally
         {
-            IsAnalyzingConnection = false;
+            if (generation == _analysisGeneration)
+            {
+                IsAnalyzingConnection = false;
+            }
         }
     }
 
-    private async Task AnalyzeLocalM3uFileAsync(string filePath)
+    private async Task AnalyzeLocalM3uFileAsync(string filePath, CancellationToken cancellationToken, int generation)
     {
         IsAnalyzingConnection = true;
         HasError = false;
-        StatusMessage = _localizationService.GetString("Profiles.Account.FileValidation");
+        SetStatus(_localizationService.GetString("Profiles.Account.FileValidation"), FormStatusKind.Progress);
         PlaylistPreviewSummary = string.Empty;
         ConnectionHealth = ConnectionHealth.Unknown;
         DetailedStatus = string.Empty;
@@ -1136,31 +1442,42 @@ public partial class AddProfileViewModel : ObservableObject
         try
         {
             var channels = await _m3uParser.ParseFromFileAsync(filePath);
+
+            if (generation != _analysisGeneration) return;
+
             if (channels.Count == 0)
             {
-                HasError = true;
+                SetStatus(_localizationService.GetString("AddProfile.Analysis.Failed"), FormStatusKind.Error);
                 ConnectionHealth = ConnectionHealth.Critical;
-                StatusMessage = _localizationService.GetString("AddProfile.Analysis.Failed");
                 DetailedStatus = _localizationService.GetString("Playlist.Error.EmptyNoDelete");
                 return;
             }
 
             ConnectionHealth = ConnectionHealth.Good;
             DetailedStatus = string.Format(_localizationService.GetString("Profiles.Account.LocalM3uValidationResult"), channels.Count);
-            StatusMessage = _localizationService.GetString("AddProfile.Analysis.Completed");
+            SetStatus(_localizationService.GetString("AddProfile.Analysis.Completed"), FormStatusKind.Success);
+        }
+        catch (OperationCanceledException)
+        {
+            // Ignored
         }
         catch (Exception ex)
         {
-            HasError = true;
-            ConnectionHealth = ConnectionHealth.Critical;
-            StatusMessage = UserFriendlyErrorMessage.WithPrefix(
-                _localizationService.GetString("AddProfile.Analysis.ErrorPrefix"),
-                ex);
-            DetailedStatus = UserFriendlyErrorMessage.FromException(ex);
+            if (generation == _analysisGeneration)
+            {
+                ConnectionHealth = ConnectionHealth.Critical;
+                SetStatus(UserFriendlyErrorMessage.WithPrefix(
+                    _localizationService.GetString("AddProfile.Analysis.ErrorPrefix"),
+                    ex), FormStatusKind.Error);
+                DetailedStatus = UserFriendlyErrorMessage.FromException(ex);
+            }
         }
         finally
         {
-            IsAnalyzingConnection = false;
+            if (generation == _analysisGeneration)
+            {
+                IsAnalyzingConnection = false;
+            }
         }
     }
 
@@ -1304,14 +1621,11 @@ public partial class AddProfileViewModel : ObservableObject
             : trimmed.TrimEnd('/');
     }
 
-    private async Task<(ConnectionHealth Health, int? StatusCode, long? Latency, string? Error)> PerformHealthCheckAsync(string url)
+    private async Task<(ConnectionHealth Health, int? StatusCode, long? Latency, string? Error)> PerformHealthCheckAsync(string url, CancellationToken cancellationToken)
     {
         try
         {
-            using var handler = new System.Net.Http.HttpClientHandler
-            {
-                ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true
-            };
+            using var handler = new System.Net.Http.HttpClientHandler();
             using var client = new System.Net.Http.HttpClient(handler);
             client.Timeout = TimeSpan.FromSeconds(15); // 15s timeout
             client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
@@ -1323,19 +1637,19 @@ public partial class AddProfileViewModel : ObservableObject
             try
             {
                 var request = new System.Net.Http.HttpRequestMessage(System.Net.Http.HttpMethod.Head, url);
-                response = await client.SendAsync(request, System.Net.Http.HttpCompletionOption.ResponseHeadersRead);
+                response = await client.SendAsync(request, System.Net.Http.HttpCompletionOption.ResponseHeadersRead, cancellationToken);
                 if (response.StatusCode == System.Net.HttpStatusCode.MethodNotAllowed)
                 {
                     response.Dispose();
                     stopwatch.Restart();
-                    response = await client.GetAsync(url, System.Net.Http.HttpCompletionOption.ResponseHeadersRead);
+                    response = await client.GetAsync(url, System.Net.Http.HttpCompletionOption.ResponseHeadersRead, cancellationToken);
                 }
             }
             catch (System.Net.Http.HttpRequestException)
             {
                 // Some servers block HEAD, try GET
                 stopwatch.Restart();
-                response = await client.GetAsync(url, System.Net.Http.HttpCompletionOption.ResponseHeadersRead);
+                response = await client.GetAsync(url, System.Net.Http.HttpCompletionOption.ResponseHeadersRead, cancellationToken);
             }
             
             stopwatch.Stop();
@@ -1417,17 +1731,17 @@ public partial class AddProfileViewModel : ObservableObject
     [RelayCommand]
     private async Task SaveAsync()
     {
-        // Clear previous errors
-        ProfileNameError = null;
-        UrlError = null;
-        PinError = null;
+        // Cancel any running connection analysis before proceeding
+        CancelActiveAnalysis();
+
         HasError = false;
+        StatusMessage = string.Empty;
+
         // Non-premium users cannot save with PIN
         if (HasPin && !_licenseService.IsPremium)
         {
             HasPin = false;
         }
-        StatusMessage = string.Empty;
 
         // If user did not type a name, generate one from URL host.
         if (string.IsNullOrWhiteSpace(ProfileName))
@@ -1440,52 +1754,39 @@ public partial class AddProfileViewModel : ObservableObject
             {
                 ProfileName = uri.Host;
             }
-
-            if (string.IsNullOrWhiteSpace(ProfileName))
-            {
-                ProfileNameError = _localizationService.GetString("AddProfile.Error.ProfileNameRequired");
-                return;
-            }
         }
 
-        // Validate URL
-        if (!ValidateUrl())
+        // Mark submitted so all validators run unconditionally
+        IsSubmitted = true;
+        ValidateProfileName();
+        ValidateUrlField();
+        ValidateUsernameField();
+        ValidatePasswordField();
+        IsPinCodeTouched = true;
+        ValidatePinCodeField();
+        if (PinError == null)
         {
+            IsPinConfirmTouched = true;
+            ValidatePinConfirmField();
+        }
+
+        if (ProfileNameError != null || ServerUrlError != null || UsernameError != null ||
+            PasswordError != null || MacAddressError != null || PinError != null || PinConfirmationError != null)
+        {
+            if (ProfileNameError != null) ValidationErrorOccurred?.Invoke(this, "ProfileName");
+            else if (ServerUrlError != null) ValidationErrorOccurred?.Invoke(this, "Url");
+            else if (UsernameError != null || MacAddressError != null) ValidationErrorOccurred?.Invoke(this, "Username");
+            else if (PasswordError != null) ValidationErrorOccurred?.Invoke(this, "Password");
+            else if (PinError != null) ValidationErrorOccurred?.Invoke(this, "PinCode");
+            else if (PinConfirmationError != null) ValidationErrorOccurred?.Invoke(this, "PinConfirm");
+
             return;
-        }
-
-        // Validate PIN
-        if (HasPin)
-        {
-            if (PinCode.Length > 0)
-            {
-                // Must be exactly 4 digits
-                if (PinCode.Length != 4 || !PinCode.All(char.IsDigit))
-                {
-                    PinError = _localizationService.GetString("AddProfile.Error.PinLength");
-                    return;
-                }
-
-                // Confirmation must match
-                if (PinCode != PinConfirm)
-                {
-                    PinError = _localizationService.GetString("AddProfile.Error.PinMismatch");
-                    return;
-                }
-            }
-            else if (string.IsNullOrEmpty(EditingProfile?.PinHash))
-            {
-                // No existing PIN and nothing entered — require PIN entry
-                PinError = _localizationService.GetString("AddProfile.Error.PinRequired");
-                return;
-            }
-            // else: HasPin=true, PinCode boş, EditingProfile.PinHash dolu → mevcut PIN korunur
         }
 
         try
         {
             // Show saving indicator
-            StatusMessage = _localizationService.GetString("AddProfile.Status.Saving");
+            SetStatus(_localizationService.GetString("AddProfile.Status.Saving"), FormStatusKind.Progress);
             IsSaving = true;
 
             var newAccountType = IsStalker
@@ -1514,17 +1815,17 @@ public partial class AddProfileViewModel : ObservableObject
 
             if (EditingProfile != null && credentialsChanged)
             {
-                StatusMessage = _localizationService.GetString("AddProfile.Status.Analyzing");
+                SetStatus(_localizationService.GetString("AddProfile.Status.Analyzing"), FormStatusKind.Progress);
 
                 var providerValidation = await VerifyProviderAsync(CancellationToken.None);
                 if (providerValidation.Health == ConnectionHealth.Critical)
                 {
-                    HasError = true;
-                    StatusMessage = string.IsNullOrWhiteSpace(providerValidation.Error)
+                    var errorMsg = string.IsNullOrWhiteSpace(providerValidation.Error)
                         ? _localizationService.GetString("AddProfile.Error.NewProviderValidationFailed")
                         : providerValidation.Error;
+                    SetStatus(errorMsg, FormStatusKind.Error);
                     ConnectionHealth = ConnectionHealth.Critical;
-                    DetailedStatus = StatusMessage;
+                    DetailedStatus = errorMsg;
                     return;
                 }
 
@@ -1533,12 +1834,12 @@ public partial class AddProfileViewModel : ObservableObject
                     var preview = await BuildImportPreviewAsync();
                     if (!preview.IsValid || preview.TotalChannels <= 0)
                     {
-                        HasError = true;
-                        StatusMessage = string.IsNullOrWhiteSpace(preview.ErrorMessage)
+                        var errorMsg = string.IsNullOrWhiteSpace(preview.ErrorMessage)
                             ? _localizationService.GetString("AddProfile.Error.NewProviderValidationFailed")
                             : preview.ErrorMessage;
+                        SetStatus(errorMsg, FormStatusKind.Error);
                         ConnectionHealth = ConnectionHealth.Critical;
-                        DetailedStatus = StatusMessage;
+                        DetailedStatus = errorMsg;
                         return;
                     }
                 }
@@ -1574,15 +1875,14 @@ public partial class AddProfileViewModel : ObservableObject
             }
 
             // Success feedback
-            StatusMessage = _localizationService.GetString("AddProfile.Status.Saved");
+            SetStatus(_localizationService.GetString("AddProfile.Status.Saved"), FormStatusKind.Success);
             await Task.Delay(400);
 
             RequestClose?.Invoke(this, EventArgs.Empty);
         }
         catch (Exception ex)
         {
-            HasError = true;
-            StatusMessage = UserFriendlyErrorMessage.WithPrefix(_localizationService.GetString("Common.ErrorPrefix"), ex);
+            SetStatus(UserFriendlyErrorMessage.WithPrefix(_localizationService.GetString("Common.ErrorPrefix"), ex), FormStatusKind.Error);
         }
         finally
         {

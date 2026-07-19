@@ -21,13 +21,10 @@
                                 Foreground="{DynamicResource TextMutedBrush}"
                                 Margin="14,0,0,0" VerticalAlignment="Center" />
             <TextBox Grid.Column="1" x:Name="SearchInput"
+                     Classes="search"
                      Text="{Binding SearchQuery, Mode=TwoWay}"
-                     TextInputOptions.ContentType="Search"
                      TextInputOptions.ReturnKeyType="Search"
                      PlaceholderText="{loc:Translate Search.Placeholder}"
-                     Background="Transparent" BorderThickness="0"
-                     MinHeight="48" Padding="10,0,10,0"
-                     FontSize="{DynamicResource FBodyL}"
                      VerticalContentAlignment="Center"
                      KeyDown="SearchInput_KeyDown" />
             <Button Grid.Column="2"

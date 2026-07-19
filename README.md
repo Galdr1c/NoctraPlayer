@@ -1,6 +1,6 @@
 <div align="center">
   <br />
-  <img src="./Square71x71Logo.png" alt="Noctra" />
+  <img src="./Noctra.Avalonia/Assets/Square150x150Logo.png" alt="Noctra" Width="75"/>
   <h1>Noctra</h1>
   <p><strong>Modern IPTV player for M3U, Xtream Codes, and Stalker Portal providers.</strong></p>
   <p>
