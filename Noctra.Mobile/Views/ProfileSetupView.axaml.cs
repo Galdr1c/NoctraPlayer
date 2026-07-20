@@ -24,6 +24,10 @@ public partial class ProfileSetupView : UserControl
     private int _currentSegmentIndex;
     private int _providerSyncVersion;
 
+    // Focus management: remembers which control opened the overlay
+    // so focus can be restored when the overlay closes.
+    private Avalonia.Input.IInputElement? _previousFocus;
+
     public ProfileSetupView()
     {
         InitializeComponent();
@@ -348,11 +352,29 @@ public partial class ProfileSetupView : UserControl
             return;
         }
 
+        // Save current focus so we can restore it when the overlay closes.
+        _previousFocus = TopLevel.GetTopLevel(this)?.FocusManager?.GetFocusedElement();
+
         _avatarPickerViewModel = app.Services.GetRequiredService<AvatarPickerViewModel>();
         _avatarPickerViewModel.SelectedAvatar = _viewModel?.SelectedAvatar;
         _avatarPickerViewModel.AvatarSelected += AvatarPicker_AvatarSelected;
         AvatarPickerContent.DataContext = _avatarPickerViewModel;
+
+        // Disable hit-test on the background form so TalkBack/D-pad
+        // cannot navigate to controls behind the overlay.
+        ProfileFormScrollViewer.IsHitTestVisible = false;
+
         AvatarPickerHost.IsVisible = true;
+
+        // Move focus into the overlay — the cancel button is the
+        // first meaningful control for keyboard/TalkBack users.
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (AvatarPickerHost.IsVisible)
+            {
+                FocusFirstOverlayElement();
+            }
+        }, Avalonia.Threading.DispatcherPriority.Loaded);
     }
 
     private void AvatarPicker_AvatarSelected(object? sender, string avatar)
@@ -376,6 +398,27 @@ public partial class ProfileSetupView : UserControl
 
         AvatarPickerHost.IsVisible = false;
         AvatarPickerContent.DataContext = null;
+
+        // Re-enable hit-test on the background form.
+        ProfileFormScrollViewer.IsHitTestVisible = true;
+
+        // Restore focus to the control that opened the overlay.
+        if (_previousFocus is { } focusable && focusable.IsEnabled)
+        {
+            focusable.Focus();
+        }
+        _previousFocus = null;
+    }
+
+    /// <summary>
+    /// Moves focus to the first focusable element inside the overlay.
+    /// The close button (AvatarPickerCloseButton) is the first meaningful
+    /// control for TalkBack, keyboard, and D-pad users.
+    /// </summary>
+    private void FocusFirstOverlayElement()
+    {
+        // Focus the close button — it's the first actionable control.
+        AvatarPickerCloseButton?.Focus();
     }
 
     public bool TryHandleBack()

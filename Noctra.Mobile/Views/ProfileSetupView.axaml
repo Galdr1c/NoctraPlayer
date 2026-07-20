@@ -888,6 +888,7 @@
                 Background="{DynamicResource Bg0Brush}">
           <Grid ColumnDefinitions="Auto,*,Auto">
             <Button Grid.Column="0"
+                    x:Name="AvatarPickerCloseButton"
                     Classes="HeaderAction"
                     Click="OnCloseAvatarPicker"
                     VerticalAlignment="Center">

@@ -39,7 +39,9 @@
                   Padding="0"
                   Background="Transparent"
                   BorderThickness="0"
-                  Click="Close_Click">
+                  Click="Close_Click"
+                  AutomationProperties.Name="{loc:Translate Common.Close}"
+                  AutomationProperties.HelpText="{loc:Translate Common.Close}">
             <icons:MaterialIcon Kind="Close"
                                 Width="20"
                                 Height="20"

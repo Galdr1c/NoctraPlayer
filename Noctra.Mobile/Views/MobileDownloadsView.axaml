@@ -182,7 +182,9 @@
             <!-- Sort -->
             <Button x:Name="DownloadSortSelectionButton"
                     Classes="SortIconButton"
-                    Click="OpenDownloadSortSheet_Click">
+                    Click="OpenDownloadSortSheet_Click"
+                    AutomationProperties.Name="Sort downloads"
+                    AutomationProperties.HelpText="Opens sort options for downloaded content">
               <icons:MaterialIcon x:Name="DownloadSortSelectionIcon"
                                   Kind="Sort"
                                   Width="24"

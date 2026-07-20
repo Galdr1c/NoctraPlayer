@@ -1353,6 +1353,10 @@ public partial class MainViewModel : ObservableObject
         SetItems(SearchSimilarSeriesChannels, Enumerable.Empty<Series>());
         SetItems(SearchSimilarVodChannels, Enumerable.Empty<Channel>());
 
+        // Explicitly reset search state (SearchText setter may be suppressed)
+        IsSearching = false;
+        OnPropertyChanged(nameof(ShowSearchIdleState));
+
         StatusMessage = string.Empty;
         _prioritizeCategoryAction = null;
         NotifyContentStateChanged();
@@ -1368,6 +1372,8 @@ public partial class MainViewModel : ObservableObject
         IsSeriesDetailVisible = false;
         SearchText = string.Empty;
         SearchQuery = string.Empty;
+        IsSearching = false;
+        OnPropertyChanged(nameof(ShowSearchIdleState));
 
         // Reset pagination and internal caches
         _currentPage = 0;
@@ -3670,6 +3676,9 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
+    // Minimum query length for search to trigger
+    private const int MinSearchQueryLength = 2;
+
     partial void OnSearchTextChanged(string value)
     {
         if (_suppressNavigationFilterRefresh)
@@ -3677,16 +3686,63 @@ public partial class MainViewModel : ObservableObject
             return;
         }
 
+        // Minimum query length check first — avoid allocating a CTS we won't use
+        var trimmed = value?.Trim() ?? string.Empty;
+        if (trimmed.Length < MinSearchQueryLength)
+        {
+            // Cancel any pending filter from a previous valid query
+            _filterCts?.Cancel();
+            _filterCts?.Dispose();
+            _filterCts = null;
 
-        // Debounce logic
+            // Clear results immediately for short queries
+            IsSearching = false;
+            SearchLiveChannels.Clear();
+            SearchSeriesChannels.Clear();
+            SearchVodChannels.Clear();
+            SearchSuggestion = string.Empty;
+            SearchSimilarLiveChannels.Clear();
+            SearchSimilarSeriesChannels.Clear();
+            SearchSimilarVodChannels.Clear();
+            ShowSearchSimilarSection = false;
+            ShowSearchEmptyState = false;
+            OnPropertyChanged(nameof(ShowSearchIdleState));
+            return;
+        }
+
+        // Cancel previous debounce and start a new one
         _filterCts?.Cancel();
         _filterCts?.Dispose();
         _filterCts = new CancellationTokenSource();
         var token = _filterCts.Token;
         var version = Interlocked.Increment(ref _filterRequestVersion);
 
+        IsSearching = true;
+        ShowSearchEmptyState = false;
+        OnPropertyChanged(nameof(ShowSearchIdleState));
+        _ = ApplySearchWithCancellationHandlingAsync(token, version);
+    }
 
-        _ = ApplyFiltersWithDelayAsync(token, version, "search", nameof(OnSearchTextChanged));
+    private async Task ApplySearchWithCancellationHandlingAsync(CancellationToken token, int version)
+    {
+        try
+        {
+            await ApplyFiltersWithDelayAsync(token, version, "search", nameof(OnSearchTextChanged));
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected when a newer search supersedes this one.
+            // IsSearching will be set by the newer search's handler.
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Search filter failed");
+            _dispatcherService.BeginInvoke(() =>
+            {
+                IsSearching = false;
+                OnPropertyChanged(nameof(ShowSearchIdleState));
+            });
+        }
     }
 
     partial void OnSelectedGroupChanged(string? value)
@@ -5493,6 +5549,17 @@ public partial class MainViewModel : ObservableObject
     private bool _showSearchEmptyState;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowSearchIdleState))]
+    private bool _isSearching;
+
+    /// <summary>
+    /// Shows the idle state when the user hasn't started searching yet
+    /// (no SearchText committed, no results, not currently searching).
+    /// </summary>
+    public bool ShowSearchIdleState => !IsSearching && !ShowSearchEmptyState && string.IsNullOrWhiteSpace(SearchText)
+        && SearchLiveChannels.Count == 0 && SearchSeriesChannels.Count == 0 && SearchVodChannels.Count == 0;
+
+    [ObservableProperty]
     private bool _showMyListEmptyState = true;
 
     [ObservableProperty]
@@ -7242,6 +7309,8 @@ public partial class MainViewModel : ObservableObject
             || SearchVodChannels.Count > 0;
 
         ShowSearchEmptyState = !hasAnyExact && !ShowSearchSimilarSection;
+        IsSearching = false;
+        OnPropertyChanged(nameof(ShowSearchIdleState));
 
         QueueVisibleChannelVisualEnrichment(SearchVodChannels.ToList());
         QueueVisibleSeriesVisualEnrichment(SearchSeriesChannels.ToList());

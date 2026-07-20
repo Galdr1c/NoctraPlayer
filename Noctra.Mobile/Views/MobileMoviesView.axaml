@@ -33,7 +33,9 @@
                 Grid.Column="1"
                 Classes="SortIconButton"
                 IsVisible="{Binding ShowContentFilters}"
-                Click="OpenSortSelectionSheet_Click">
+                Click="OpenSortSelectionSheet_Click"
+                AutomationProperties.Name="Sort movies"
+                AutomationProperties.HelpText="Opens sort options for movies">
           <icons:MaterialIcon x:Name="SortSelectionIcon"
                               Kind="Sort"
                               Width="24"

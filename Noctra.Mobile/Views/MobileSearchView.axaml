@@ -31,7 +31,9 @@
                     Background="Transparent" BorderThickness="0"
                     Theme="{StaticResource Searchicon}"
                     Click="ClearSearch_Click"
-                    IsVisible="{Binding SearchQuery, Converter={StaticResource StringNotEmptyToVisibilityConverter}}">
+                    IsVisible="{Binding SearchQuery, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"
+                    AutomationProperties.Name="Clear search"
+                    AutomationProperties.HelpText="Clears the entered search query">
               <icons:MaterialIcon Kind="CloseCircleOutline" Width="28" Height="28"
                                   Foreground="{DynamicResource TextMutedBrush}" />
             </Button>
@@ -68,6 +70,34 @@
                 FontWeight="Medium" FontSize="{DynamicResource FBody}" />
       </StackPanel>
     </Border>
+
+    <!-- Searching indicator -->
+    <StackPanel Grid.Row="2" HorizontalAlignment="Center" VerticalAlignment="Center"
+                Spacing="10" IsVisible="{Binding IsSearching}">
+      <ProgressBar IsIndeterminate="True" Width="36" Height="4"
+                   Foreground="{DynamicResource AccentBrush}" />
+      <TextBlock Text="{loc:Translate Search.Searching}"
+                 HorizontalAlignment="Center"
+                 Foreground="{DynamicResource TextMutedBrush}"
+                 FontSize="{DynamicResource FCaption}" />
+    </StackPanel>
+
+    <!-- Idle state: no search performed yet -->
+    <StackPanel Grid.Row="2" HorizontalAlignment="Center" VerticalAlignment="Center"
+                Spacing="14" IsVisible="{Binding ShowSearchIdleState}">
+      <icons:MaterialIcon Kind="Magnify"
+                          Width="48" Height="48"
+                          Foreground="{DynamicResource TextMutedBrush}" />
+      <TextBlock Text="{loc:Translate Search.Idle.Title}"
+                 HorizontalAlignment="Center"
+                 Foreground="{DynamicResource TextPrimaryBrush}"
+                 FontSize="{DynamicResource FBody}"
+                 FontWeight="SemiBold" />
+      <TextBlock Text="{loc:Translate Search.Idle.Description}"
+                 HorizontalAlignment="Center"
+                 Foreground="{DynamicResource TextMutedBrush}"
+                 FontSize="{DynamicResource FCaption}" />
+    </StackPanel>
 
     <controls:MobileSectionedCardFeed Grid.Row="2"
         Margin="20,0,20,0"
