@@ -27,6 +27,13 @@ public partial class AddProfileWindow : Window
         _dialogService = dialogService;
         DataContext = viewModel;
         BindViewModel(viewModel);
+        SyncPasswordChar();
+    }
+
+    protected override void OnLoaded(RoutedEventArgs e)
+    {
+        base.OnLoaded(e);
+        SyncPasswordChar();
     }
 
     protected override void OnDataContextChanged(EventArgs e)
@@ -46,6 +53,7 @@ public partial class AddProfileWindow : Window
         {
             _viewModel.RequestClose -= ViewModel_RequestClose;
             _viewModel.RequestAvatarPicker -= ViewModel_RequestAvatarPicker;
+            _viewModel.PropertyChanged -= ViewModel_PropertyChanged;
         }
 
         _viewModel = viewModel;
@@ -54,6 +62,23 @@ public partial class AddProfileWindow : Window
         {
             _viewModel.RequestClose += ViewModel_RequestClose;
             _viewModel.RequestAvatarPicker += ViewModel_RequestAvatarPicker;
+            _viewModel.PropertyChanged += ViewModel_PropertyChanged;
+        }
+    }
+
+    private const char PasswordMask = '\u2022';
+
+    private void SyncPasswordChar()
+    {
+        if (DesktopPasswordTextBox is null || _viewModel is null) return;
+        DesktopPasswordTextBox.PasswordChar = _viewModel.IsPasswordRevealed ? '\0' : PasswordMask;
+    }
+
+    private void ViewModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(AddProfileViewModel.IsPasswordRevealed))
+        {
+            SyncPasswordChar();
         }
     }
 

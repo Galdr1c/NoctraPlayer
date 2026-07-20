@@ -95,6 +95,16 @@
     <Setter Property="CornerRadius" Value="3" />
   </ControlTheme>
 
+  <ControlTheme x:Key="Searchicon" TargetType="Button">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Margin" Value="0" />
+    <Setter Property="MinHeight" Value="48" />
+    <Setter Property="MinWidth" Value="48" />   
+  </ControlTheme>
+
   <!-- ==========================================
         CHECKBOX THEME (ToggleSwitch-harmonious)
         ========================================== -->

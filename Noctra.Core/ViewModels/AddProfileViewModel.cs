@@ -373,6 +373,7 @@ public partial class AddProfileViewModel : ObservableObject
     {
         PlaylistPreviewSummary = string.Empty;
         InvalidateActiveAnalysis();
+        IsPasswordRevealed = false;
 
         if (_isUpdatingUrl) return;
         if (value && IsLocalM3uFileSource)
@@ -425,6 +426,7 @@ public partial class AddProfileViewModel : ObservableObject
     {
         PlaylistPreviewSummary = string.Empty;
         InvalidateActiveAnalysis();
+        IsPasswordRevealed = false;
 
         if (_isUpdatingUrl) return;
         if (!value && IsLocalM3uFileSource)
@@ -533,6 +535,7 @@ public partial class AddProfileViewModel : ObservableObject
     {
         PlaylistPreviewSummary = string.Empty;
         InvalidateActiveAnalysis();
+        IsPasswordRevealed = false;
 
         if (_isUpdatingUrl) return;
         if (value && IsLocalM3uFileSource)
@@ -957,6 +960,29 @@ public partial class AddProfileViewModel : ObservableObject
 
     [ObservableProperty]
     private bool _isSaving;
+
+    [ObservableProperty]
+    private bool _isPasswordRevealed;
+
+    partial void OnIsPasswordRevealedChanged(bool value)
+    {
+        OnPropertyChanged(nameof(PasswordToggleIcon));
+        OnPropertyChanged(nameof(PasswordToggleA11yName));
+    }
+
+    /// <summary>Eye icon kind that reflects current reveal state.</summary>
+    public string PasswordToggleIcon => IsPasswordRevealed ? "EyeClosed" : "EyeOutline";
+
+    /// <summary>Accessible name for the password toggle button.</summary>
+    public string PasswordToggleA11yName => IsPasswordRevealed
+        ? _localizationService.GetString("Profiles.Account.HidePassword")
+        : _localizationService.GetString("Profiles.Account.ShowPassword");
+
+    [RelayCommand]
+    private void TogglePasswordReveal()
+    {
+        IsPasswordRevealed = !IsPasswordRevealed;
+    }
 
     [ObservableProperty]
     private bool _isAnalyzingConnection;

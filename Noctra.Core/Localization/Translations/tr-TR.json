@@ -317,6 +317,8 @@
   "Profiles.Account.UsernamePlaceholder": "Kullanıcı adı",
   "Profiles.Account.Password": "Şifre",
   "Profiles.Account.PasswordPlaceholder": "Şifre",
+  "Profiles.Account.ShowPassword": "Şifreyi göster",
+  "Profiles.Account.HidePassword": "Şifreyi gizle",
   "Profiles.Account.Analyze": "Bağlantıyı Analiz Et",
   "Profiles.Account.TestConnection": "Bağlantıyı Test Et",
   "Profiles.Account.TestConnectionHint": "İsteğe bağlı — kaydederken de kontrol edilir",

@@ -100,6 +100,31 @@
             <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
             <Setter Property="Background" Value="{DynamicResource InteractiveHoverBrush}"/>
         </Style>
+
+        <!-- Password reveal button press feedback -->
+        <Style Selector="Button.PasswordRevealBtn">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Width" Value="48"/>
+            <Setter Property="Height" Value="48"/>
+            <Setter Property="Padding" Value="8"/>
+            <Setter Property="CornerRadius" Value="24"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.15" Easing="CubicEaseOut"/>
+                    <BrushTransition Property="Background" Duration="0:0:0.15"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Button.PasswordRevealBtn:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource Surface1Brush}"/>
+        </Style>
+        <Style Selector="Button.PasswordRevealBtn:pressed /template/ ContentPresenter">
+            <Setter Property="RenderTransform" Value="scale(0.90)" />
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
     </Window.Styles>
 
     <Border CornerRadius="8"
@@ -440,9 +465,22 @@
 
                                         <StackPanel Grid.Column="1" Margin="10,0,0,0" IsVisible="{Binding !IsStalker}">
                                             <TextBlock Text="{loc:Translate Profiles.Account.Password}" Foreground="{DynamicResource TextMutedBrush}" FontSize="14" Margin="4,0,0,8" FontWeight="SemiBold"/>
-                                            <TextBox Text="{Binding Password}" Height="52"
-                                                     PlaceholderText="{loc:Translate Profiles.Account.PasswordPlaceholder}"
-                                                     Theme="{StaticResource ModernTextBox}"/>
+                                            <Grid>
+                                                <TextBox Text="{Binding Password}" Height="52"
+                                                         x:Name="DesktopPasswordTextBox"
+                                                         PasswordChar="•"
+                                                         PlaceholderText="{loc:Translate Profiles.Account.PasswordPlaceholder}"
+                                                         Theme="{StaticResource ModernTextBox}"/>
+                                                <Button Command="{Binding TogglePasswordRevealCommand}"
+                                                        Classes="PasswordRevealBtn"
+                                                        HorizontalAlignment="Right"
+                                                        ToolTip.Tip="{Binding PasswordToggleA11yName}"
+                                                        AutomationProperties.Name="{Binding PasswordToggleA11yName}">
+                                                    <materialIcons:MaterialIcon Kind="{Binding PasswordToggleIcon}"
+                                                                               Width="20" Height="20"
+                                                                               Foreground="{DynamicResource TextMutedBrush}"/>
+                                                </Button>
+                                            </Grid>
                                         </StackPanel>
                                     </Grid>
                                 </Panel>

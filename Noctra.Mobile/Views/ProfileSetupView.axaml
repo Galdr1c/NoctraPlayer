@@ -79,7 +79,26 @@
       <Setter Property="Margin" Value="4,0,0,6" />
     </Style>
 
-
+    <!-- Şifre göster/gizle butonu — press feedback -->
+    <Style Selector="Button.PasswordRevealBtn">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Width" Value="48" />
+      <Setter Property="Height" Value="48" />
+      <Setter Property="Padding" Value="8" />
+      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="RenderTransformOrigin" Value="0.5,0.5" />
+      <Setter Property="Transitions">
+        <Transitions>
+          <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.15" Easing="CubicEaseOut" />
+          <BrushTransition Property="Background" Duration="0:0:0.15" />
+        </Transitions>
+      </Setter>
+    </Style>
+    <Style Selector="Button.PasswordRevealBtn:pressed /template/ ContentPresenter">
+      <Setter Property="RenderTransform" Value="scale(0.90)" />
+      <Setter Property="Background" Value="Transparent" />
+    </Style>
 
   </UserControl.Styles>
 
@@ -511,24 +530,36 @@
                            TextWrapping="Wrap"
                            Margin="4,2,0,0"
                            IsVisible="{Binding MacAddressError, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
-              </StackPanel>
-
-              <!-- Şifre (sadece Xtream) -->
+              </StackPanel>                <!-- Şifre (sadece Xtream) -->
               <Border Classes="Divider" IsVisible="{Binding IsXtream}" />
               <StackPanel Margin="16,14"
                           Spacing="8"
                           IsVisible="{Binding IsXtream}">
                 <TextBlock Classes="FieldLabel"
                            Text="{loc:Translate Profiles.Account.Password}" />
-                <TextBox x:Name="PasswordTextBox"
-                         Classes="password"
-                         Text="{Binding Password}"
-                         Classes.error="{Binding PasswordError, Converter={StaticResource StringNotEmptyToBoolConverter}}"
-                         LostFocus="Password_LostFocus"
-                         IsEnabled="{Binding CanEditProviderCredentials}"
-                         TextInputOptions.ContentType="Password"
-                         TextInputOptions.ReturnKeyType="Done"
-                         PlaceholderText="{loc:Translate Profiles.Account.PasswordPlaceholder}" />
+                <Grid ColumnDefinitions="*,Auto">
+                  <TextBox x:Name="PasswordTextBox"
+                           Grid.Column="0"
+                           Classes="password"
+                           Text="{Binding Password}"
+                           Classes.error="{Binding PasswordError, Converter={StaticResource StringNotEmptyToBoolConverter}}"
+                           LostFocus="Password_LostFocus"
+                           IsEnabled="{Binding CanEditProviderCredentials}"
+                           TextInputOptions.ContentType="Password"
+                           TextInputOptions.ReturnKeyType="Done"
+                           PlaceholderText="{loc:Translate Profiles.Account.PasswordPlaceholder}" />
+                  <Button Grid.Column="1"
+                          Classes="PasswordRevealBtn"
+                          Command="{Binding TogglePasswordRevealCommand}"
+                          VerticalAlignment="Center"
+                          ToolTip.Tip="{Binding PasswordToggleA11yName}"
+                          AutomationProperties.Name="{Binding PasswordToggleA11yName}">
+                    <icons:MaterialIcon Kind="{Binding PasswordToggleIcon}"
+                                        Width="24" Height="24"
+                                        Foreground="{DynamicResource TextMutedBrush}"
+                                        VerticalAlignment="Center" />
+                  </Button>
+                </Grid>
                 <TextBlock Text="{Binding PasswordError}"
                            Foreground="{DynamicResource ErrorBrush}"
                            FontSize="{DynamicResource FCaption}"
@@ -541,7 +572,7 @@
 
               <!-- Bağlantı test butonu: sadece uzak sağlayıcılar için -->
               <Border Classes="Divider" IsVisible="{Binding ShowConnectionAnalysis}" />
-              <StackPanel Spacing="6"
+              <StackPanel Spacing="0"
                           IsVisible="{Binding ShowConnectionAnalysis}">
                 <Button Command="{Binding AnalyzeConnectionCommand}"
                         IsEnabled="{Binding !IsAnalyzingConnection}"
@@ -568,6 +599,7 @@
                 <TextBlock Text="{loc:Translate Profiles.Account.TestConnectionHint}"
                            FontSize="{DynamicResource FOverline}"
                            Foreground="{DynamicResource TextMutedBrush}"
+                           Margin="0,0,0,14"
                            HorizontalAlignment="Center"
                            TextAlignment="Center" />
               </StackPanel>

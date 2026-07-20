@@ -317,6 +317,8 @@
   "Profiles.Account.UsernamePlaceholder": "Nom d'utilisateur",
   "Profiles.Account.Password": "Mot de passe",
   "Profiles.Account.PasswordPlaceholder": "Mot de passe",
+  "Profiles.Account.ShowPassword": "Afficher le mot de passe",
+  "Profiles.Account.HidePassword": "Masquer le mot de passe",
   "Profiles.Account.Analyze": "Analyser la connexion",
   "Profiles.Account.TestConnection": "Tester la connexion",
   "Profiles.Account.TestConnectionHint": "Optionnel — vérifié également lors de la sauvegarde",

@@ -317,6 +317,8 @@
   "Profiles.Account.UsernamePlaceholder": "Username",
   "Profiles.Account.Password": "Password",
   "Profiles.Account.PasswordPlaceholder": "Password",
+  "Profiles.Account.ShowPassword": "Show password",
+  "Profiles.Account.HidePassword": "Hide password",
   "Profiles.Account.Analyze": "Analyze Connection",
   "Profiles.Account.TestConnection": "Test Connection",
   "Profiles.Account.TestConnectionHint": "Optional — also checked on save",

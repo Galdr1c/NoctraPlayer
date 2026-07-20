@@ -41,6 +41,7 @@ public partial class ProfileSetupView : UserControl
         _isLoaded = true;
         InitializeSegmentedControl();
         ScheduleProviderSelectionSync();
+        SyncPasswordRevealState();
     }
 
     protected override void OnUnloaded(RoutedEventArgs e)
@@ -140,6 +141,27 @@ public partial class ProfileSetupView : UserControl
             ScheduleProviderSelectionSync();
             UpdateUsernamePlaceholder();
         }
+
+        if (e.PropertyName == nameof(AddProfileViewModel.IsPasswordRevealed))
+        {
+            SyncPasswordRevealState();
+        }
+    }
+
+    /// <summary>
+    /// IsPasswordRevealedChanged olduğunda PasswordChar'ı günceller.
+    /// '\0' = düz metin (göster), '•' = maskele (gizle).
+    /// Focus ve caret konumunu korur.
+    /// </summary>
+    private const char PasswordMask = '\u2022';
+
+    private void SyncPasswordRevealState()
+    {
+        if (_viewModel is null || PasswordTextBox is null) return;
+
+        PasswordTextBox.PasswordChar = _viewModel.IsPasswordRevealed
+            ? '\0'
+            : PasswordMask;
     }
 
     private void UpdateUsernamePlaceholder()
