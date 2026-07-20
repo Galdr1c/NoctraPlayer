@@ -164,7 +164,7 @@
           <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="Auto,*,Auto">
             <!-- Icon -->
             <Border Width="44" Height="44" CornerRadius="8" Background="{DynamicResource SurfaceLightBrush}">
-              <materialIcons:MaterialIcon Kind="Harddisk" Width="32" Height="32" Foreground="{DynamicResource AccentBrush}"/>
+              <materialIcons:MaterialIcon Kind="Database" Width="32" Height="32" Foreground="{DynamicResource AccentBrush}"/>
             </Border>
             
             <StackPanel Grid.Column="1" Margin="16,0,0,0" VerticalAlignment="Center" Spacing="12">

@@ -857,40 +857,6 @@ public partial class AddProfileViewModel : ObservableObject
         }
     }
 
-    private static string NormalizeStalkerMacSuffix(string? input)
-    {
-        if (string.IsNullOrWhiteSpace(input))
-        {
-            return string.Empty;
-        }
-
-        var hex = new string(input
-            .Where(c => Uri.IsHexDigit(c))
-            .Select(char.ToUpperInvariant)
-            .ToArray());
-
-        if (hex.Length > 6)
-        {
-            hex = hex[..6];
-        }
-
-        if (hex.Length == 0)
-        {
-            return string.Empty;
-        }
-
-        var groups = Enumerable
-            .Range(0, (hex.Length + 1) / 2)
-            .Select(i =>
-            {
-                var start = i * 2;
-                var len = Math.Min(2, hex.Length - start);
-                return hex.Substring(start, len);
-            });
-
-        return string.Join(":", groups);
-    }
-
     // Profile Details
     [ObservableProperty]
     private string _profileName = string.Empty;
@@ -1243,7 +1209,9 @@ public partial class AddProfileViewModel : ObservableObject
 
         try
         {
-            // Perform health check
+            // Lightweight health check: single HEAD/GET request for all provider types.
+            // Full authentication (AuthenticateAsync + GetCategoriesAsync) is only
+            // performed during Save, not during test connection.
             var (health, statusCode, latency, error) = await PerformHealthCheckAsync(urlToCheck, token);
 
             if (generation != _analysisGeneration) return;
@@ -1255,26 +1223,6 @@ public partial class AddProfileViewModel : ObservableObject
             {
                 SetStatus(_localizationService.GetString("AddProfile.Analysis.Failed"), FormStatusKind.Error);
                 return;
-            }
-
-            var providerVerification = await VerifyProviderAsync(token);
-
-            if (generation != _analysisGeneration) return;
-
-            if (providerVerification.Health == ConnectionHealth.Critical)
-            {
-                ConnectionHealth = ConnectionHealth.Critical;
-                DetailedStatus = string.IsNullOrWhiteSpace(providerVerification.Error)
-                    ? _localizationService.GetString("AddProfile.Analysis.Failed")
-                    : providerVerification.Error;
-                SetStatus(_localizationService.GetString("AddProfile.Analysis.Failed"), FormStatusKind.Error);
-                return;
-            }
-
-            if (providerVerification.Health != ConnectionHealth.Unknown)
-            {
-                ConnectionHealth = providerVerification.Health;
-                DetailedStatus = FormatDetailedStatus(statusCode, providerVerification.Latency, null);
             }
 
             SetStatus(_localizationService.GetString("AddProfile.Analysis.Completed"), FormStatusKind.Success);
@@ -1329,10 +1277,7 @@ public partial class AddProfileViewModel : ObservableObject
                 return;
             }
 
-            DetailedStatus = string.Format(
-                CultureInfo.CurrentCulture,
-                _localizationService.GetString("Profiles.Account.LocalM3uValidationResult"),
-                result.ChannelCount);
+            DetailedStatus = _localizationService.GetString("Profiles.Account.ValidM3uFile");
             SetStatus(string.Empty, FormStatusKind.None);
         }
         catch (OperationCanceledException)
@@ -1368,11 +1313,13 @@ public partial class AddProfileViewModel : ObservableObject
 
         try
         {
-            var channels = await _m3uParser.ParseFromFileAsync(filePath);
+            // Quick validation: read first 50 lines to check if file is valid M3U
+            // without parsing the entire file (which can be very large)
+            var isValid = await QuickValidateM3uFileAsync(filePath, cancellationToken);
 
             if (generation != _analysisGeneration) return;
 
-            if (channels.Count == 0)
+            if (!isValid)
             {
                 SetStatus(_localizationService.GetString("AddProfile.Analysis.Failed"), FormStatusKind.Error);
                 ConnectionHealth = ConnectionHealth.Critical;
@@ -1381,7 +1328,7 @@ public partial class AddProfileViewModel : ObservableObject
             }
 
             ConnectionHealth = ConnectionHealth.Good;
-            DetailedStatus = string.Format(_localizationService.GetString("Profiles.Account.LocalM3uValidationResult"), channels.Count);
+            DetailedStatus = _localizationService.GetString("Profiles.Account.ValidM3uFile");
             SetStatus(_localizationService.GetString("AddProfile.Analysis.Completed"), FormStatusKind.Success);
         }
         catch (OperationCanceledException)
@@ -1406,6 +1353,46 @@ public partial class AddProfileViewModel : ObservableObject
                 IsAnalyzingConnection = false;
             }
         }
+    }
+
+    /// <summary>
+    /// Quick M3U file validation: reads only the first 50 lines to verify
+    /// the file is valid M3U format without parsing the entire file.
+    /// Returns true if file appears to be valid M3U (contains #EXTINF entries).
+    /// </summary>
+    private static async Task<bool> QuickValidateM3uFileAsync(string filePath, CancellationToken cancellationToken)
+    {
+        const int maxLines = 50;
+
+        using var reader = new StreamReader(filePath);
+        var lineCount = 0;
+
+        while (lineCount < maxLines && !cancellationToken.IsCancellationRequested)
+        {
+            var line = await reader.ReadLineAsync(cancellationToken);
+            if (line == null) break;
+
+            lineCount++;
+
+            // First line must be #EXTM3U header
+            if (lineCount == 1)
+            {
+                if (!line.TrimStart().StartsWith("#EXTM3U", StringComparison.OrdinalIgnoreCase))
+                {
+                    return false;
+                }
+                continue;
+            }
+
+            // Count #EXTINF lines as channel indicators
+            if (line.StartsWith("#EXTINF:", StringComparison.OrdinalIgnoreCase))
+            {
+                return true; // Found at least one valid channel entry
+            }
+        }
+
+        // Read lines but found no #EXTINF — not a valid M3U
+        return false;
     }
 
     private string FormatDetailedStatus(int? statusCode, long? latency, string? error)
@@ -1497,7 +1484,7 @@ public partial class AddProfileViewModel : ObservableObject
         }
     }
 
-    private async Task<(ConnectionHealth Health, long Latency, string? Error, int ChannelCount)> VerifyRemoteM3uAsync(
+    private async Task<(ConnectionHealth Health, long Latency, string? Error)> VerifyRemoteM3uAsync(
         string url,
         CancellationToken cancellationToken)
     {
@@ -1515,15 +1502,14 @@ public partial class AddProfileViewModel : ObservableObject
                 }
             }
 
-            stopwatch.Stop();
-            return count > 0
-                ? (ClassifyLatency(stopwatch.ElapsedMilliseconds), stopwatch.ElapsedMilliseconds, null, count)
-                : (ConnectionHealth.Critical, stopwatch.ElapsedMilliseconds, _localizationService.GetString("Playlist.Error.EmptyNoDelete"), 0);
+            stopwatch.Stop();                return count > 0
+                    ? (ClassifyLatency(stopwatch.ElapsedMilliseconds), stopwatch.ElapsedMilliseconds, null)
+                    : (ConnectionHealth.Critical, stopwatch.ElapsedMilliseconds, _localizationService.GetString("Playlist.Error.EmptyNoDelete"));
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             stopwatch.Stop();
-            return (ConnectionHealth.Critical, stopwatch.ElapsedMilliseconds, UserFriendlyErrorMessage.FromException(ex), 0);
+            return (ConnectionHealth.Critical, stopwatch.ElapsedMilliseconds, UserFriendlyErrorMessage.FromException(ex));
         }
     }
 

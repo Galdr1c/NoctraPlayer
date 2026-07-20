@@ -50,7 +50,7 @@
                   Height="44"
                   CornerRadius="8"
                   Background="{DynamicResource SurfaceLightBrush}">
-            <icons:MaterialIcon Kind="Harddisk"
+            <icons:MaterialIcon Kind="Database"
                                 Foreground="{DynamicResource AccentBrush}"
                                 Width="32"
                                 Height="32" />

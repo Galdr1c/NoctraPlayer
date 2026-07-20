@@ -134,26 +134,24 @@
 
       <!-- ── YÖNET MOD başlığı ── -->
 
-      <Grid ColumnDefinitions="Auto,*,Auto"
+      <Grid ColumnDefinitions="1*,Auto,1*"
             IsVisible="{Binding IsManageMode}"
             VerticalAlignment="Center">
 
-        <!-- Sol: Boş denge alanı -->
-        <!-- Sol: Uygulama logosu + adı -->
-        <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center" Margin="8,0">
-          <Image Source="{Binding ActualThemeVariant, RelativeSource={RelativeSource Self}, Converter={StaticResource LogoThemeConverter}}"
-                 Width="48" Height="48"
-                 Stretch="Uniform"
-                 VerticalAlignment="Center" />
-          <TextBlock Text="NOCTRA"
-                     FontSize="{DynamicResource FTitleL}"
-                     FontWeight="Bold"
-                     Foreground="{DynamicResource AccentBrush}"
-                     LetterSpacing="1.5"
-                     VerticalAlignment="Center" />
-        </StackPanel>
+        <!-- Sol: Geri ok butonu — 48dp dokunma alanı -->
+        <Button Grid.Column="0"
+                Classes="DoneBtn"
+                Click="ToggleManage_Click"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Center">
+          <StackPanel Orientation="Horizontal" Spacing="4">
+            <icons:MaterialIcon Kind="ChevronLeft" Width="20" Height="20"
+                                Foreground="{DynamicResource TextPrimaryBrush}"
+                                VerticalAlignment="Center" />
+          </StackPanel>
+        </Button>
 
-        <!-- Orta: "Profilleri Yönet" -->
+        <!-- Orta: "Profilleri Yönet" — gerçek merkezde -->
         <TextBlock Grid.Column="1"
                    Text="{loc:Translate Profiles.ManageMode.Title}"
                    FontSize="{DynamicResource FTitleM}"
@@ -168,6 +166,7 @@
         <Button Grid.Column="2"
                 Classes="DoneBtn"
                 Click="ToggleManage_Click"
+                HorizontalAlignment="Right"
                 VerticalAlignment="Center"
                 Content="{loc:Translate Profiles.ManageMode.Done}" />
       </Grid>

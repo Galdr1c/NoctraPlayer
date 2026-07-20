@@ -42,11 +42,13 @@
       <Setter Property="Background" Value="{DynamicResource Surface1Brush}" />
     </Style>
 
-    <!-- Header aksiyon butonu (İptal / Kaydet) -->
+    <!-- Header aksiyon butonu (İptal / Kaydet) — 48dp dokunma alanı -->
     <Style Selector="Button.HeaderAction">
       <Setter Property="Background" Value="Transparent" />
       <Setter Property="BorderThickness" Value="0" />
-      <Setter Property="Padding" Value="8,6" />
+      <Setter Property="Padding" Value="12,12" />
+      <Setter Property="MinWidth" Value="48" />
+      <Setter Property="MinHeight" Value="48" />
       <Setter Property="CornerRadius" Value="8" />
       <Setter Property="FontSize" Value="16" />
     </Style>
@@ -96,14 +98,15 @@
          HEADER — İptal | Başlık | Kaydet
          ════════════════════════════════════════════════════════ -->
     <Border Grid.Row="0"
-            Padding="8,10,8,8"
+            Padding="8,8,8,8"
             Background="{DynamicResource Bg0Brush}">
-      <Grid ColumnDefinitions="Auto,*,Auto">
+      <Grid ColumnDefinitions="1*,Auto,1*">
 
-        <!-- Sol: İptal (← ok) -->
+        <!-- Sol: İptal (← ok) — 48dp dokunma alanı -->
         <Button Grid.Column="0"
                 Classes="HeaderAction"
-                Command="{Binding CancelCommand}">
+                Command="{Binding CancelCommand}"
+                HorizontalAlignment="Left">
           <StackPanel Orientation="Horizontal" Spacing="4">
             <icons:MaterialIcon Kind="ChevronLeft" Width="20" Height="20"
                                 Foreground="{DynamicResource TextPrimaryBrush}"
@@ -114,28 +117,26 @@
           </StackPanel>
         </Button>
 
-        <!-- Orta: Başlık -->
+        <!-- Orta: Başlık — gerçek merkezde, negatif margin yok -->
         <TextBlock Grid.Column="1"
                    FontSize="{DynamicResource FTitleM}"
                    FontWeight="SemiBold"
-                   Margin="-35,0,0,0"
                    Foreground="{DynamicResource TextPrimaryBrush}"
                    HorizontalAlignment="Center"
                    VerticalAlignment="Center">
           <TextBlock.Styles>
-            <!-- Düzenleme modunda "Profili Düzenle", ekleme modunda "Profil Ekle" -->
             <Style Selector="TextBlock">
               <Setter Property="Text" Value="{loc:Translate Profiles.Add.Title}" />
             </Style>
           </TextBlock.Styles>
         </TextBlock>
 
-        <!-- Sağ: Kaydet (mavi/accent ile vurgulu) -->
+        <!-- Sağ: Kaydet (mavi/accent ile vurgulu) — 48dp dokunma alanı -->
         <Button Grid.Column="2"
                 Classes="HeaderAction"
                 Command="{Binding SaveCommand}"
                 IsEnabled="{Binding !IsSaving}"
-                VerticalAlignment="Center">
+                HorizontalAlignment="Right">
           <Panel>
             <!-- Saving spinner -->
             <StackPanel Orientation="Horizontal"
@@ -538,31 +539,38 @@
 
 
 
-              <!-- Bağlantı test butonu: sadece uzak sağlayıcılar için. Local M3U dosyada dosya doğrulama kart içinde yapılır. -->
+              <!-- Bağlantı test butonu: sadece uzak sağlayıcılar için -->
               <Border Classes="Divider" IsVisible="{Binding ShowConnectionAnalysis}" />
-              <Button Command="{Binding AnalyzeConnectionCommand}"
-                      IsVisible="{Binding ShowConnectionAnalysis}"
-                      IsEnabled="{Binding !IsAnalyzingConnection}"
-                      MinHeight="44"
-                      MaxWidth="200"
-                      CornerRadius="8"
-                      Background="Transparent"
-                      Foreground="{DynamicResource AccentBrush}"
-                      FontWeight="Medium"
-                      HorizontalAlignment="Stretch"
-                      HorizontalContentAlignment="Center"
-                      Padding="16,12">
-                <Panel>
-                  <TextBlock Text="{loc:Translate AddProfile.Status.Analyzing}"
-                             HorizontalAlignment="Center"
-                             FontWeight="Medium"
-                             IsVisible="{Binding IsAnalyzingConnection}" />
-                  <TextBlock Text="{loc:Translate Profiles.Account.Analyze}"
-                             HorizontalAlignment="Center"
-                             FontWeight="Medium"
-                             IsVisible="{Binding !IsAnalyzingConnection}" />
-                </Panel>
-              </Button>
+              <StackPanel Spacing="6"
+                          IsVisible="{Binding ShowConnectionAnalysis}">
+                <Button Command="{Binding AnalyzeConnectionCommand}"
+                        IsEnabled="{Binding !IsAnalyzingConnection}"
+                        MinHeight="44"
+                        MaxWidth="200"
+                        CornerRadius="8"
+                        Background="Transparent"
+                        Foreground="{DynamicResource AccentBrush}"
+                        FontWeight="Medium"
+                        HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Center"
+                        Padding="16,12">
+                  <Panel>
+                    <TextBlock Text="{loc:Translate AddProfile.Status.Analyzing}"
+                               HorizontalAlignment="Center"
+                               FontWeight="Medium"
+                               IsVisible="{Binding IsAnalyzingConnection}" />
+                    <TextBlock Text="{loc:Translate Profiles.Account.TestConnection}"
+                               HorizontalAlignment="Center"
+                               FontWeight="Medium"
+                               IsVisible="{Binding !IsAnalyzingConnection}" />
+                  </Panel>
+                </Button>
+                <TextBlock Text="{loc:Translate Profiles.Account.TestConnectionHint}"
+                           FontSize="{DynamicResource FOverline}"
+                           Foreground="{DynamicResource TextMutedBrush}"
+                           HorizontalAlignment="Center"
+                           TextAlignment="Center" />
+              </StackPanel>
 
               <!-- Bağlantı sağlığı göstergesi -->
               <Border Margin="16,0,16,14"
