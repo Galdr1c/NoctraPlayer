@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Noctra.Core.Services;
 using Noctra.Services.Interfaces;
 using Noctra.ViewModels;
+using System.Linq;
 
 namespace Noctra.Avalonia.Views;
 
@@ -82,6 +83,49 @@ public partial class AddProfileWindow : Window
         }
     }
 
+    private bool _isFormattingMac;
+
+    /// <summary>
+    /// Stalker modunda MAC adresini otomatik olarak biçimlendirir.
+    /// Caret konumunu koruyarak ':' karakterlerini ekler, paste edilen
+    /// düz değerleri formatlar ve büyük harfe çevirir.
+    /// Ortak StalkerMacFormatter servisini kullanır.
+    /// </summary>
+    private void UsernameTextBox_TextChanged(object? sender, TextChangedEventArgs e)
+    {
+        if (_isFormattingMac || sender is not TextBox textBox || _viewModel is null)
+            return;
+
+        if (!_viewModel.IsStalker)
+            return;
+
+        _isFormattingMac = true;
+        try
+        {
+            var caretIndex = textBox.CaretIndex;
+            var raw = textBox.Text ?? string.Empty;
+
+            // Caret öncesindeki hex karakter sayısını hesapla
+            var rawHexBeforeCaret = new string(raw[..Math.Min(caretIndex, raw.Length)]
+                .Where(c => Uri.IsHexDigit(c)).ToArray());
+            var hexCount = Math.Min(rawHexBeforeCaret.Length, 12);
+
+            // Ortak formatter'ı kullanarak MAC değerini biçimlendir
+            var formatted = StalkerMacFormatter.Normalize(raw);
+            var newCaretIndex = StalkerMacFormatter.CalculateCaretPosition(hexCount, formatted.Length);
+
+            if (textBox.Text != formatted)
+            {
+                textBox.Text = formatted;
+                textBox.CaretIndex = newCaretIndex;
+            }
+        }
+        finally
+        {
+            _isFormattingMac = false;
+        }
+    }
+
     private void DragBar_PointerPressed(object? sender, PointerPressedEventArgs e)
     {
         if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
@@ -97,6 +141,12 @@ public partial class AddProfileWindow : Window
 
     protected override void OnClosed(EventArgs e)
     {
+        // Gizlilik: Pencere kapatıldığında parolayı otomatik gizle.
+        if (_viewModel is not null)
+        {
+            _viewModel.IsPasswordRevealed = false;
+        }
+
         BindViewModel(null);
         base.OnClosed(e);
     }

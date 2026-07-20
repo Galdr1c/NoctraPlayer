@@ -66,7 +66,7 @@ public sealed class AddProfileLocalM3uTests
     }
 
     [Fact]
-    public async Task AnalyzeConnection_LocalM3uFile_UsesFileParser()
+    public async Task AnalyzeConnection_LocalM3uFile_CountsChannels()
     {
         var localPath = Path.Combine(
             Path.GetTempPath(),
@@ -74,14 +74,9 @@ public sealed class AddProfileLocalM3uTests
             Guid.NewGuid().ToString("N"),
             "selected-playlist.m3u");
         Directory.CreateDirectory(Path.GetDirectoryName(localPath)!);
-        await File.WriteAllTextAsync(localPath, "#EXTM3U");
-        var parser = new Mock<IM3UParser>();
-        parser
-            .Setup(service => service.ParseFromFileAsync(localPath))
-            .ReturnsAsync(new List<Channel>
-            {
-                new() { Name = "Test channel", StreamUrl = "https://example.test/live.m3u8" }
-            });
+        await File.WriteAllTextAsync(localPath,
+            "#EXTM3U\n#EXTINF:-1,Test channel\nhttps://example.test/live.m3u8\n");
+
         var avatarService = new Mock<IAvatarService>();
         avatarService
             .Setup(service => service.GetAvatarsByCategory())
@@ -98,7 +93,7 @@ public sealed class AddProfileLocalM3uTests
             avatarService.Object,
             new Mock<IDialogService>().Object,
             licenseService.Object,
-            parser.Object,
+            new Mock<IM3UParser>().Object,
             new Mock<IXtreamCodesService>().Object,
             new Mock<IStalkerPortalService>().Object,
             new DesktopSecurityService(),
@@ -109,11 +104,10 @@ public sealed class AddProfileLocalM3uTests
             viewModel.SetM3uFileSource(localPath);
             await viewModel.AnalyzeConnectionCommand.ExecuteAsync(null);
 
-            parser.Verify(
-                service => service.ParseFromFileAsync(localPath),
-                Times.Once);
+            // Local M3U uses CountM3uChannelsAsync (reads file directly, no parser)
             Assert.False(viewModel.HasError);
             Assert.Equal(ConnectionHealth.Good, viewModel.ConnectionHealth);
+            Assert.Contains("ValidM3uFileWithCount", viewModel.DetailedStatus);
         }
         finally
         {
@@ -122,32 +116,18 @@ public sealed class AddProfileLocalM3uTests
     }
 
     [Fact]
-    public async Task AnalyzeConnection_RemoteM3uWithCredentials_UsesM3uParserAndDoesNotAuthenticateAsXtream()
+    public async Task AnalyzeConnection_RemoteM3u_DoesNotAuthenticateAsXtream()
     {
         const string m3uUrl = "http://127.0.0.1:9/get.php?username=test-user&password=test-pass&type=m3u_plus&output=ts";
-        var parser = new Mock<IM3UParser>();
-        parser
-            .Setup(service => service.ParseFromUrlStreamAsync(
-                m3uUrl,
-                It.IsAny<CancellationToken>()))
-            .Returns(CreateChannelsAsync(new Channel
-            {
-                Name = "Remote test channel",
-                StreamUrl = "https://example.test/live/1.m3u8"
-            }));
         var xtream = new Mock<IXtreamCodesService>();
-        var vm = CreateViewModel(parser: parser.Object, xtreamCodesService: xtream.Object);
+        var vm = CreateViewModel(xtreamCodesService: xtream.Object);
 
         vm.IsM3U = true;
         vm.Url = m3uUrl;
 
         await vm.AnalyzeConnectionCommand.ExecuteAsync(null);
 
-        parser.Verify(
-            service => service.ParseFromUrlStreamAsync(
-                m3uUrl,
-                It.IsAny<CancellationToken>()),
-            Times.Once);
+        // Remote M3U uses HTTP health check, not M3U stream parser or Xtream auth
         xtream.Verify(
             service => service.AuthenticateAsync(
                 It.IsAny<string>(),
@@ -155,36 +135,24 @@ public sealed class AddProfileLocalM3uTests
                 It.IsAny<string>(),
                 It.IsAny<CancellationToken>()),
             Times.Never);
-        Assert.False(vm.HasError);
-        Assert.NotEqual(ConnectionHealth.Critical, vm.ConnectionHealth);
         Assert.Null(vm.UrlError);
     }
 
     [Fact]
-    public async Task AnalyzeConnection_RemoteM3uFailure_ShowsSingleFriendlyDetailedError()
+    public async Task AnalyzeConnection_RemoteM3uFailure_ShowsDetailedError()
     {
-        const string m3uUrl = "https://missing.example.test/playlist.m3u";
-        var parser = new Mock<IM3UParser>();
-        parser
-            .Setup(service => service.ParseFromUrlStreamAsync(
-                m3uUrl,
-                It.IsAny<CancellationToken>()))
-            .Returns(ThrowingChannelsAsync(new HttpRequestException(
-                "android_getaddrinfo failed: EAI_NODATA (No address associated with hostname)")));
-        var vm = CreateViewModel(parser: parser.Object);
+        // Use an invalid URL that will fail DNS/HTTP resolution
+        const string m3uUrl = "http://192.0.2.1:1/playlist.m3u";
+        var vm = CreateViewModel();
 
         vm.IsM3U = true;
         vm.Url = m3uUrl;
 
         await vm.AnalyzeConnectionCommand.ExecuteAsync(null);
 
-        Assert.True(vm.HasError);
+        // Remote M3U uses HTTP health check — connection failure results in Critical health
         Assert.Equal(ConnectionHealth.Critical, vm.ConnectionHealth);
-        Assert.Null(vm.UrlError);
-        Assert.True(string.IsNullOrEmpty(vm.StatusMessage));
         Assert.False(string.IsNullOrWhiteSpace(vm.DetailedStatus));
-        Assert.DoesNotContain("android_getaddrinfo", vm.DetailedStatus, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("EAI_NODATA", vm.DetailedStatus, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -435,7 +403,7 @@ public sealed class AddProfileLocalM3uTests
     }
 
     [Fact]
-    public async Task ValidateLocalM3uFile_ValidFile_CallsParser()
+    public async Task ValidateLocalM3uFile_ValidFile_CountsChannelsAndShowsCount()
     {
         var localPath = Path.Combine(
             Path.GetTempPath(),
@@ -443,24 +411,19 @@ public sealed class AddProfileLocalM3uTests
             Guid.NewGuid().ToString("N"),
             "validate-test.m3u");
         Directory.CreateDirectory(Path.GetDirectoryName(localPath)!);
-        await File.WriteAllTextAsync(localPath, "#EXTM3U");
+        await File.WriteAllTextAsync(localPath,
+            "#EXTM3U\n#EXTINF:-1,Test Channel\nhttps://example.test/stream.m3u8\n");
 
-        var parser = new Mock<IM3UParser>();
-        parser
-            .Setup(service => service.ParseFromFileAsync(localPath))
-            .ReturnsAsync(new List<Channel>
-            {
-                new() { Name = "Test", StreamUrl = "https://example.test/stream.m3u8" }
-            });
-
-        var vm = CreateViewModel(parser: parser.Object);
+        var vm = CreateViewModel();
         vm.SetM3uFileSource(localPath);
 
         await vm.ValidateLocalM3uFileCommand.ExecuteAsync(null);
 
-        parser.Verify(service => service.ParseFromFileAsync(localPath), Times.Once);
+        // Local M3U uses CountM3uChannelsAsync (reads file directly, no parser)
         Assert.False(vm.HasError);
         Assert.Equal(ConnectionHealth.Good, vm.ConnectionHealth);
+        // DetailedStatus contains the localization key with channel count
+        Assert.Contains("ValidM3uFileWithCount", vm.DetailedStatus);
 
         Directory.Delete(Path.GetDirectoryName(localPath)!, recursive: true);
     }

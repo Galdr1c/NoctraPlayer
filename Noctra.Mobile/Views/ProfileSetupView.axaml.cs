@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using Avalonia;
@@ -8,6 +7,7 @@ using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Threading;
 using Microsoft.Extensions.DependencyInjection;
+using Noctra.Core.Services;
 using Noctra.Services.Interfaces;
 using Noctra.ViewModels;
 
@@ -51,6 +51,31 @@ public partial class ProfileSetupView : UserControl
     protected override void OnUnloaded(RoutedEventArgs e)
     {
         _isLoaded = false;
+
+        // Gizlilik: Parola görünürken view kapatılırsa/arka plana geçilirse otomatik gizle.
+        if (_viewModel is not null)
+        {
+            _viewModel.IsPasswordRevealed = false;
+        }
+
+        // Unsubscribe segmented control events to prevent stale references.
+        if (_segmentedControlInitialized)
+        {
+            SegmentXtream.Click -= OnSegmentClicked;
+            SegmentM3U.Click -= OnSegmentClicked;
+            SegmentStalker.Click -= OnSegmentClicked;
+            SegmentedControlGrid.LayoutUpdated -= OnSegmentedLayoutUpdated;
+            SegmentedControlGrid.SizeChanged -= OnSegmentedControlSizeChanged;
+            _segmentedControlInitialized = false;
+        }
+
+        // Clean up avatar picker subscription if overlay is still open.
+        if (_avatarPickerViewModel is not null)
+        {
+            _avatarPickerViewModel.AvatarSelected -= AvatarPicker_AvatarSelected;
+            _avatarPickerViewModel = null;
+        }
+
         base.OnUnloaded(e);
     }
 
@@ -447,6 +472,7 @@ public partial class ProfileSetupView : UserControl
     /// Stalker modunda MAC adresini otomatik olarak biçimlendirir.
     /// Caret konumunu koruyarak ':' karakterlerini ekler, paste edilen
     /// düz değerleri (001A79ABCDEF) formatlar ve büyük harfe çevirir.
+    /// Ortak StalkerMacFormatter servisini kullanır.
     /// </summary>
     private void UsernameTextBox_TextChanged(object? sender, TextChangedEventArgs e)
     {
@@ -462,25 +488,14 @@ public partial class ProfileSetupView : UserControl
             var caretIndex = textBox.CaretIndex;
             var raw = textBox.Text ?? string.Empty;
 
-            // Sadece hex karakterleri al
-            var hexOnly = new string(raw.Where(c => Uri.IsHexDigit(c)).ToArray())
-                .ToUpperInvariant();
-
-            // Maksimum 12 hex karakter (6 byte)
-            if (hexOnly.Length > 12)
-                hexOnly = hexOnly[..12];
-
-            // ':' ile biçimlendir: XX:XX:XX:XX:XX:XX
-            var formatted = FormatMacWithColons(hexOnly);
-
-            // Caret konumunu hesapla: Formatting öncesi hex-only
-            // karakter sayısına göre pozisyon belirle
+            // Caret öncesindeki hex karakter sayısını hesapla
             var rawHexBeforeCaret = new string(raw[..Math.Min(caretIndex, raw.Length)]
                 .Where(c => Uri.IsHexDigit(c)).ToArray());
             var hexCount = Math.Min(rawHexBeforeCaret.Length, 12);
 
-            // Yeni caret konumu: hexCount karaktere kadar ':' ekle
-            var newCaretIndex = Math.Min(hexCount + (hexCount / 2), formatted.Length);
+            // Ortak formatter'ı kullanarak MAC değerini biçimlendir
+            var formatted = StalkerMacFormatter.Normalize(raw);
+            var newCaretIndex = StalkerMacFormatter.CalculateCaretPosition(hexCount, formatted.Length);
 
             if (textBox.Text != formatted)
             {
@@ -492,20 +507,6 @@ public partial class ProfileSetupView : UserControl
         {
             _isFormattingMac = false;
         }
-    }
-
-    private static string FormatMacWithColons(string hex)
-    {
-        if (string.IsNullOrEmpty(hex))
-            return string.Empty;
-
-        var parts = new List<string>();
-        for (int i = 0; i < hex.Length; i += 2)
-        {
-            var len = Math.Min(2, hex.Length - i);
-            parts.Add(hex.Substring(i, len));
-        }
-        return string.Join(":", parts);
     }
 
     private void Password_LostFocus(object? sender, RoutedEventArgs e)

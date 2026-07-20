@@ -212,6 +212,31 @@
           </StackPanel>
         </Border>
 
+        <!-- Error snackbar: Hata durumunda kısa süreli gösterilir -->
+        <Border x:Name="ErrorSnackbar"
+                Grid.RowSpan="2"
+                ZIndex="49001"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Bottom"
+                Margin="20,0,20,96"
+                Padding="12,10"
+                CornerRadius="8"
+                Background="{DynamicResource PlayerOverlayStrongBrush}"
+                IsVisible="False">
+          <StackPanel Orientation="Horizontal" Spacing="10">
+            <icons:MaterialIcon Kind="AlertCircleOutline"
+                                Width="20" Height="20"
+                                Foreground="{DynamicResource ErrorBrush}"
+                                VerticalAlignment="Center" />
+            <TextBlock x:Name="ErrorSnackbarText"
+                       Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                       FontSize="{DynamicResource FBody}"
+                       FontWeight="SemiBold"
+                       TextWrapping="Wrap"
+                       VerticalAlignment="Center" />
+          </StackPanel>
+        </Border>
+
         <ListBox x:Name="CategoryListBox"
                  Grid.Row="1"
                  ItemsSource="{Binding Categories}"

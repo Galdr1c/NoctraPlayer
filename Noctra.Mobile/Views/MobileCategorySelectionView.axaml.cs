@@ -81,6 +81,8 @@ public partial class MobileCategorySelectionView : UserControl
         _undoTimer?.Stop();
         UndoSnackbar.IsVisible = false;
         _lastHiddenCategory = null;
+        _errorTimer?.Stop();
+        ErrorSnackbar.IsVisible = false;
         DetachViewModel();
         return true;
     }
@@ -119,13 +121,21 @@ public partial class MobileCategorySelectionView : UserControl
 
         e.Handled = true;
 
-        // Kategoriyi gizle
-        await _viewModel.HideGroupCommand.ExecuteAsync(item.Name);
-
-        // Undo snackbar göster (eğer premium ise)
-        if (_viewModel.IsPremium)
+        try
         {
-            ShowUndoSnackbar(item.Name);
+            // Kategoriyi gizle
+            await _viewModel.HideGroupCommand.ExecuteAsync(item.Name);
+
+            // Undo snackbar göster (eğer premium ise)
+            if (_viewModel.IsPremium)
+            {
+                ShowUndoSnackbar(item.Name);
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[CategorySelection] Hide category failed: {ex.Message}");
+            ShowErrorSnackbar(GetLocalizedString("Common.Error"));
         }
     }
 
@@ -168,9 +178,17 @@ public partial class MobileCategorySelectionView : UserControl
         _undoTimer?.Stop();
         UndoSnackbar.IsVisible = false;
 
-        if (!string.IsNullOrEmpty(_lastHiddenCategory) && _viewModel is not null)
+        try
         {
-            await _viewModel.UnhideGroupCommand.ExecuteAsync(_lastHiddenCategory);
+            if (!string.IsNullOrEmpty(_lastHiddenCategory) && _viewModel is not null)
+            {
+                await _viewModel.UnhideGroupCommand.ExecuteAsync(_lastHiddenCategory);
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[CategorySelection] Undo hide failed: {ex.Message}");
+            ShowErrorSnackbar(GetLocalizedString("Common.Error"));
         }
 
         _lastHiddenCategory = null;
@@ -278,6 +296,36 @@ public partial class MobileCategorySelectionView : UserControl
         ClearCategorySearchButton.IsVisible = false;
     }
 
+    private DispatcherTimer? _errorTimer;
+
+    private void ShowErrorSnackbar(string message)
+    {
+        _errorTimer?.Stop();
+        ErrorSnackbar.IsVisible = true;
+        ErrorSnackbarText.Text = message;
+
+        _errorTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
+        _errorTimer.Tick += (_, _) =>
+        {
+            _errorTimer.Stop();
+            ErrorSnackbar.IsVisible = false;
+        };
+        _errorTimer.Start();
+    }
+
+    private static string GetLocalizedString(string key)
+    {
+        if (Avalonia.Application.Current is App app && app.Services is not null)
+        {
+            var loc = app.Services.GetService<ILocalizationService>();
+            if (loc is not null)
+            {
+                return loc.GetString(key);
+            }
+        }
+        return key;
+    }
+
     private void AttachGroupsCollection()
     {
         if (_groupsCollection is not null)
@@ -297,6 +345,8 @@ public partial class MobileCategorySelectionView : UserControl
         _undoTimer?.Stop();
         _undoTimer = null;
         _lastHiddenCategory = null;
+        _errorTimer?.Stop();
+        _errorTimer = null;
 
         if (_groupsCollection is not null)
         {

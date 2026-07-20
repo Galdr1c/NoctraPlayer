@@ -3,6 +3,7 @@ using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Noctra.Core.Models;
+using Noctra.Core.Services;
 using Noctra.Models;
 using Noctra.Services;
 using Noctra.Services.Interfaces;
@@ -11,9 +12,7 @@ namespace Noctra.ViewModels;
 
 public partial class AddProfileViewModel : ObservableObject
 {
-    private const string StalkerMacPrefix = "00:1A:79:";
-    [System.Text.RegularExpressions.GeneratedRegex("^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$")]
-    private static partial System.Text.RegularExpressions.Regex StalkerMacRegex();
+
     private readonly IProfileService _profileService;
     private readonly IDispatcherService _dispatcherService;
     private readonly IAvatarService _avatarService;
@@ -390,7 +389,7 @@ public partial class AddProfileViewModel : ObservableObject
         if (value)
         {
             // Detect switch from Stalker (MAC in Username)
-            if (Username.StartsWith(StalkerMacPrefix, StringComparison.OrdinalIgnoreCase))
+            if (Username.StartsWith(StalkerMacFormatter.Prefix, StringComparison.OrdinalIgnoreCase))
             {
                 Username = string.Empty;
                 Password = string.Empty;
@@ -443,7 +442,7 @@ public partial class AddProfileViewModel : ObservableObject
         if (value)
         {
             // Detect switch from Stalker (MAC in Username)
-            if (Username.StartsWith(StalkerMacPrefix, StringComparison.OrdinalIgnoreCase))
+            if (Username.StartsWith(StalkerMacFormatter.Prefix, StringComparison.OrdinalIgnoreCase))
             {
                 Username = string.Empty;
                 Password = string.Empty;
@@ -552,7 +551,7 @@ public partial class AddProfileViewModel : ObservableObject
         if (value)
         {
             // Cache current Xtream/M3U credentials before switching to Stalker
-            if (!Username.StartsWith(StalkerMacPrefix, StringComparison.OrdinalIgnoreCase))
+            if (!Username.StartsWith(StalkerMacFormatter.Prefix, StringComparison.OrdinalIgnoreCase))
             {
                 _cachedUrl = Url;
                 _cachedUsername = Username;
@@ -587,7 +586,7 @@ public partial class AddProfileViewModel : ObservableObject
             Password = string.Empty;
 
             _isUpdatingUrl = true;
-            Username = StalkerMacPrefix;
+            Username = StalkerMacFormatter.Prefix;
             _isUpdatingUrl = false;
             
             ClearValidationErrors();
@@ -746,7 +745,7 @@ public partial class AddProfileViewModel : ObservableObject
             {
                 MacAddressError = _localizationService.GetString("AddProfile.Error.MacRequired");
             }
-            else if (!StalkerMacRegex().IsMatch(Username.Trim()))
+            else if (!StalkerMacFormatter.IsValid(Username))
             {
                 MacAddressError = _localizationService.GetString("AddProfile.Error.MacInvalid");
             }
@@ -1293,24 +1292,22 @@ public partial class AddProfileViewModel : ObservableObject
 
         try
         {
-            var result = await VerifyRemoteM3uAsync(urlToCheck, cancellationToken);
+            // Remote M3U URL: HTTP health check (same as Xtream/Stalker).
+            // Shows "200 OK - 450ms" format.
+            var (health, statusCode, latency, error) = await PerformHealthCheckAsync(urlToCheck, cancellationToken);
 
             if (generation != _analysisGeneration) return;
 
-            ConnectionHealth = result.Health;
+            ConnectionHealth = health;
+            DetailedStatus = FormatDetailedStatus(statusCode, latency, error);
 
-            if (result.Health == ConnectionHealth.Critical)
+            if (health == ConnectionHealth.Critical)
             {
-                var errorMsg = string.IsNullOrWhiteSpace(result.Error)
-                    ? _localizationService.GetString("AddProfile.Analysis.Failed")
-                    : result.Error;
-                DetailedStatus = errorMsg;
-                SetStatus(string.Empty, FormStatusKind.Error);
+                SetStatus(_localizationService.GetString("AddProfile.Analysis.Failed"), FormStatusKind.Error);
                 return;
             }
 
-            DetailedStatus = _localizationService.GetString("Profiles.Account.ValidM3uFile");
-            SetStatus(string.Empty, FormStatusKind.None);
+            SetStatus(_localizationService.GetString("AddProfile.Analysis.Completed"), FormStatusKind.Success);
         }
         catch (OperationCanceledException)
         {
@@ -1345,9 +1342,8 @@ public partial class AddProfileViewModel : ObservableObject
 
         try
         {
-            // Quick validation: read first 50 lines to check if file is valid M3U
-            // without parsing the entire file (which can be very large)
-            var isValid = await QuickValidateM3uFileAsync(filePath, cancellationToken);
+            // Count #EXTINF lines to determine channel count and validate M3U format.
+            var (isValid, channelCount) = await CountM3uChannelsAsync(filePath, cancellationToken);
 
             if (generation != _analysisGeneration) return;
 
@@ -1360,7 +1356,10 @@ public partial class AddProfileViewModel : ObservableObject
             }
 
             ConnectionHealth = ConnectionHealth.Good;
-            DetailedStatus = _localizationService.GetString("Profiles.Account.ValidM3uFile");
+            DetailedStatus = string.Format(
+                CultureInfo.CurrentCulture,
+                _localizationService.GetString("Profiles.Account.ValidM3uFileWithCount"),
+                channelCount.ToString("N0", CultureInfo.CurrentCulture));
             SetStatus(_localizationService.GetString("AddProfile.Analysis.Completed"), FormStatusKind.Success);
         }
         catch (OperationCanceledException)
@@ -1388,43 +1387,40 @@ public partial class AddProfileViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Quick M3U file validation: reads only the first 50 lines to verify
-    /// the file is valid M3U format without parsing the entire file.
-    /// Returns true if file appears to be valid M3U (contains #EXTINF entries).
+    /// Counts all #EXTINF lines in an M3U file to determine channel count
+    /// and validate format. First line must be #EXTM3U header.
     /// </summary>
-    private static async Task<bool> QuickValidateM3uFileAsync(string filePath, CancellationToken cancellationToken)
+    private static async Task<(bool IsValid, int ChannelCount)> CountM3uChannelsAsync(
+        string filePath, CancellationToken cancellationToken)
     {
-        const int maxLines = 50;
-
         using var reader = new StreamReader(filePath);
         var lineCount = 0;
+        var channelCount = 0;
+        var headerValid = false;
 
-        while (lineCount < maxLines && !cancellationToken.IsCancellationRequested)
+        while (!cancellationToken.IsCancellationRequested)
         {
             var line = await reader.ReadLineAsync(cancellationToken);
             if (line == null) break;
 
             lineCount++;
 
-            // First line must be #EXTM3U header
-            if (lineCount == 1)
+            // First non-empty line must be #EXTM3U header
+            if (!headerValid)
             {
-                if (!line.TrimStart().StartsWith("#EXTM3U", StringComparison.OrdinalIgnoreCase))
-                {
-                    return false;
-                }
+                if (string.IsNullOrWhiteSpace(line)) continue;
+                headerValid = line.TrimStart().StartsWith("#EXTM3U", StringComparison.OrdinalIgnoreCase);
+                if (!headerValid) break;
                 continue;
             }
 
-            // Count #EXTINF lines as channel indicators
             if (line.StartsWith("#EXTINF:", StringComparison.OrdinalIgnoreCase))
             {
-                return true; // Found at least one valid channel entry
+                channelCount++;
             }
         }
 
-        // Read lines but found no #EXTINF — not a valid M3U
-        return false;
+        return (headerValid && channelCount > 0, channelCount);
     }
 
     private string FormatDetailedStatus(int? statusCode, long? latency, string? error)

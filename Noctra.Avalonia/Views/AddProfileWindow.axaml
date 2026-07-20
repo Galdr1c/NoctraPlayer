@@ -459,6 +459,7 @@
                                                            Text="{loc:Translate Profiles.Account.Username}" IsVisible="{Binding !IsStalker}"/>
                                             </Panel>
                                             <TextBox Text="{Binding Username}" Height="52"
+                                                     TextChanged="UsernameTextBox_TextChanged"
                                                      PlaceholderText="{loc:Translate Profiles.Account.UsernamePlaceholder}"
                                                      Theme="{StaticResource ModernTextBox}"/>
                                         </StackPanel>
