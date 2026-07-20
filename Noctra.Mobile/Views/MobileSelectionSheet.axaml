@@ -64,8 +64,8 @@
             <Button Grid.Column="1"
                     Background="Transparent"
                     BorderThickness="0"
-                    Width="32"
-                    Height="32"
+                    Width="48"
+                    Height="48"
                     Click="Close_Click"
                     ToolTip.Tip="Close">
               <icons:MaterialIcon Kind="Close"
@@ -98,8 +98,8 @@
                                  TextWrapping="Wrap"
                                  VerticalAlignment="Center" />
                       <Grid Grid.Column="1"
-                            Width="24"
-                            Height="24"
+                            Width="48"
+                            Height="48"
                             VerticalAlignment="Center">
                         <icons:MaterialIcon Kind="RadioboxMarked"
                                             Width="22"

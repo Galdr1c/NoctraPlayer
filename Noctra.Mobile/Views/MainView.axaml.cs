@@ -266,20 +266,55 @@ public partial class MainView : UserControl
             {
                 if (textBox.IsFocused)
                 {
-                    bool isPinOrPassword = textBox.PasswordChar != '\0';
-                    if (isPinOrPassword)
+                    // ScrollViewer'ın kendi BringIntoViewOnFocusChange davranışı zaten
+                    // TextBox görünür alana kaydırdıysa tekrar çağırmayalım (çift kayma/zıplama önlemi).
+                    if (!IsTextBoxVisibleInViewport(textBox))
                     {
-                        var bounds = textBox.Bounds;
-                        var height = bounds.Height > 0 ? bounds.Height : 48;
-                        textBox.BringIntoView(new Rect(0, 0, bounds.Width, height + 24));
-                    }
-                    else
-                    {
-                        textBox.BringIntoView();
+                        bool isPinOrPassword = textBox.PasswordChar != '\0';
+                        if (isPinOrPassword)
+                        {
+                            var bounds = textBox.Bounds;
+                            var height = bounds.Height > 0 ? bounds.Height : 48;
+                            textBox.BringIntoView(new Rect(0, 0, bounds.Width, height + 24));
+                        }
+                        else
+                        {
+                            textBox.BringIntoView();
+                        }
                     }
                 }
             }, TimeSpan.FromMilliseconds(250));
         }
+    }
+
+    /// <summary>
+    /// TextBox'ın üst üste binen ScrollViewer içinde görünür alanda (viewport)
+    /// olup olmadığını kontrol eder. Böylece hem BringIntoViewOnFocusChange hem de
+    /// global GotFocus handler aynı anda çalıştığında çift kayma yaşanmaz.
+    /// </summary>
+    private static bool IsTextBoxVisibleInViewport(TextBox textBox)
+    {
+        var scrollViewer = textBox.FindAncestorOfType<ScrollViewer>();
+        if (scrollViewer is null)
+        {
+            return false;
+        }
+
+        // TextBox'ın köşelerini ScrollViewer koordinat sistemine dönüştür
+        var topLeft = textBox.TranslatePoint(new Point(0, 0), scrollViewer);
+        var bottomRight = textBox.TranslatePoint(
+            new Point(textBox.Bounds.Width, textBox.Bounds.Height), scrollViewer);
+
+        if (topLeft is not { } top || bottomRight is not { } bottom)
+        {
+            return false;
+        }
+
+        var scrollOffset = scrollViewer.Offset.Y;
+        var viewportHeight = scrollViewer.Bounds.Height;
+
+        // TextBox tamamen viewport içinde mi?
+        return top.Y >= scrollOffset && bottom.Y <= scrollOffset + viewportHeight;
     }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)

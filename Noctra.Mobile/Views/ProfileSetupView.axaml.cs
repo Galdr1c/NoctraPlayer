@@ -1,11 +1,14 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Threading;
 using Microsoft.Extensions.DependencyInjection;
+using Noctra.Services.Interfaces;
 using Noctra.ViewModels;
 
 namespace Noctra.Mobile.Views;
@@ -135,6 +138,24 @@ public partial class ProfileSetupView : UserControl
                 or nameof(AddProfileViewModel.IsStalker))
         {
             ScheduleProviderSelectionSync();
+            UpdateUsernamePlaceholder();
+        }
+    }
+
+    private void UpdateUsernamePlaceholder()
+    {
+        if (_viewModel is null || UsernameTextBox is null) return;
+
+        if (_viewModel.IsStalker)
+        {
+            UsernameTextBox.PlaceholderText = "00:1A:79:XX:XX:XX";
+            return;
+        }
+
+        if (Avalonia.Application.Current is App app && app.Services is not null)
+        {
+            var loc = app.Services.GetService<ILocalizationService>();
+            UsernameTextBox.PlaceholderText = loc?.GetString("Profiles.Account.UsernamePlaceholder") ?? "Username";
         }
     }
 
@@ -354,6 +375,73 @@ public partial class ProfileSetupView : UserControl
 
     private void Username_LostFocus(object? sender, RoutedEventArgs e)
         => _viewModel?.TouchField("Username");
+
+    private bool _isFormattingMac;
+
+    /// <summary>
+    /// Stalker modunda MAC adresini otomatik olarak biçimlendirir.
+    /// Caret konumunu koruyarak ':' karakterlerini ekler, paste edilen
+    /// düz değerleri (001A79ABCDEF) formatlar ve büyük harfe çevirir.
+    /// </summary>
+    private void UsernameTextBox_TextChanged(object? sender, TextChangedEventArgs e)
+    {
+        if (_isFormattingMac || sender is not TextBox textBox || _viewModel is null)
+            return;
+
+        if (!_viewModel.IsStalker)
+            return;
+
+        _isFormattingMac = true;
+        try
+        {
+            var caretIndex = textBox.CaretIndex;
+            var raw = textBox.Text ?? string.Empty;
+
+            // Sadece hex karakterleri al
+            var hexOnly = new string(raw.Where(c => Uri.IsHexDigit(c)).ToArray())
+                .ToUpperInvariant();
+
+            // Maksimum 12 hex karakter (6 byte)
+            if (hexOnly.Length > 12)
+                hexOnly = hexOnly[..12];
+
+            // ':' ile biçimlendir: XX:XX:XX:XX:XX:XX
+            var formatted = FormatMacWithColons(hexOnly);
+
+            // Caret konumunu hesapla: Formatting öncesi hex-only
+            // karakter sayısına göre pozisyon belirle
+            var rawHexBeforeCaret = new string(raw[..Math.Min(caretIndex, raw.Length)]
+                .Where(c => Uri.IsHexDigit(c)).ToArray());
+            var hexCount = Math.Min(rawHexBeforeCaret.Length, 12);
+
+            // Yeni caret konumu: hexCount karaktere kadar ':' ekle
+            var newCaretIndex = Math.Min(hexCount + (hexCount / 2), formatted.Length);
+
+            if (textBox.Text != formatted)
+            {
+                textBox.Text = formatted;
+                textBox.CaretIndex = newCaretIndex;
+            }
+        }
+        finally
+        {
+            _isFormattingMac = false;
+        }
+    }
+
+    private static string FormatMacWithColons(string hex)
+    {
+        if (string.IsNullOrEmpty(hex))
+            return string.Empty;
+
+        var parts = new List<string>();
+        for (int i = 0; i < hex.Length; i += 2)
+        {
+            var len = Math.Min(2, hex.Length - i);
+            parts.Add(hex.Substring(i, len));
+        }
+        return string.Join(":", parts);
+    }
 
     private void Password_LostFocus(object? sender, RoutedEventArgs e)
         => _viewModel?.TouchField("Password");

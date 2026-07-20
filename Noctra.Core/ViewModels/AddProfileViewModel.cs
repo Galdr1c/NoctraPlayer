@@ -72,8 +72,7 @@ public partial class AddProfileViewModel : ObservableObject
         ServerUrlError = null;
         UrlError = null;
         PlaylistPreviewSummary = string.Empty;
-        CancelActiveAnalysis();
-        ClearAnalysisResults();
+        InvalidateActiveAnalysis();
 
         if (_isUpdatingUrl || string.IsNullOrEmpty(value)) return;
         SetLocalM3uFileSourceState(false);
@@ -136,8 +135,8 @@ public partial class AddProfileViewModel : ObservableObject
         Password = string.Empty;
         _isUpdatingUrl = false;
 
-        PlaylistPreviewSummary = string.Empty;
-        ClearAnalysisResults();
+        // Property setters above already called InvalidateActiveAnalysis() via OnChanged handlers,
+        // which increments generation and clears results. No need to call again.
         SetLocalM3uFileSourceState(true);
     }
 
@@ -236,7 +235,8 @@ public partial class AddProfileViewModel : ObservableObject
         _isUpdatingUrl = false;
 
         PlaylistPreviewSummary = string.Empty;
-        ClearAnalysisResults();
+        // Property setters above already called InvalidateActiveAnalysis() via OnChanged handlers,
+        // which increments generation and clears results. No need to call again.
         SetLocalM3uFileSourceState(false);
         ClearValidationErrors();
     }
@@ -336,25 +336,13 @@ public partial class AddProfileViewModel : ObservableObject
         PlaylistPreviewSummary = string.Empty;
         UsernameError = null;
         MacAddressError = null;
-        CancelActiveAnalysis();
-        ClearAnalysisResults();
+        InvalidateActiveAnalysis();
 
         if (_isUpdatingUrl) return;
 
-        if (IsStalker)
-        {
-            var suffix = value;
-            if (suffix.StartsWith(StalkerMacPrefix, StringComparison.OrdinalIgnoreCase))
-            {
-                suffix = suffix[StalkerMacPrefix.Length..];
-            }
+        // MAC formatlaması artık ProfileSetupView code-behind'da
+        // caret-korumalı şekilde yapılıyor (UsernameTextBox_TextChanged).
 
-            _isUpdatingUrl = true;
-            Username = StalkerMacPrefix + NormalizeStalkerMacSuffix(suffix);
-            _isUpdatingUrl = false;
-            return;
-        }
-        
         if (IsM3U && !string.IsNullOrWhiteSpace(Url) && !string.IsNullOrWhiteSpace(Password))
         {
             ConvertXtreamToM3UUrl();
@@ -368,8 +356,7 @@ public partial class AddProfileViewModel : ObservableObject
     {
         PlaylistPreviewSummary = string.Empty;
         PasswordError = null;
-        CancelActiveAnalysis();
-        ClearAnalysisResults();
+        InvalidateActiveAnalysis();
 
         if (_isUpdatingUrl) return;
         
@@ -385,8 +372,7 @@ public partial class AddProfileViewModel : ObservableObject
     partial void OnIsXtreamChanged(bool value)
     {
         PlaylistPreviewSummary = string.Empty;
-        ClearAnalysisResults();
-        CancelActiveAnalysis();
+        InvalidateActiveAnalysis();
 
         if (_isUpdatingUrl) return;
         if (value && IsLocalM3uFileSource)
@@ -438,8 +424,7 @@ public partial class AddProfileViewModel : ObservableObject
     partial void OnIsM3UChanged(bool value)
     {
         PlaylistPreviewSummary = string.Empty;
-        ClearAnalysisResults();
-        CancelActiveAnalysis();
+        InvalidateActiveAnalysis();
 
         if (_isUpdatingUrl) return;
         if (!value && IsLocalM3uFileSource)
@@ -514,10 +499,22 @@ public partial class AddProfileViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// Input değiştiğinde çağrılır: generation artırır, aktif analizi iptal eder
+    /// ve sonuçları temizler. Bu, eski analiz sonuçlarının yeni forma uygulanmasını
+    /// engeller (race condition önlemi).
+    /// </summary>
+    private void InvalidateActiveAnalysis()
+    {
+        Interlocked.Increment(ref _analysisGeneration);
+        CancelActiveAnalysis();
+        ClearAnalysisResults();
+    }
+
     private CancellationToken PrepareAnalysisRequest()
     {
         CancelActiveAnalysis();
-        _analysisGeneration++;
+        Interlocked.Increment(ref _analysisGeneration);
         _analysisCts = new CancellationTokenSource();
         return _analysisCts.Token;
     }
@@ -535,8 +532,7 @@ public partial class AddProfileViewModel : ObservableObject
     partial void OnIsStalkerChanged(bool value)
     {
         PlaylistPreviewSummary = string.Empty;
-        ClearAnalysisResults();
-        CancelActiveAnalysis();
+        InvalidateActiveAnalysis();
 
         if (_isUpdatingUrl) return;
         if (value && IsLocalM3uFileSource)
@@ -1154,83 +1150,14 @@ public partial class AddProfileViewModel : ObservableObject
         return ServerUrlError == null && UsernameError == null && PasswordError == null && MacAddressError == null;
     }
 
-    private bool ValidateUrlOld() => true;
-    private bool ValidateUrlOld_Deleted()
-    {
-        if (string.IsNullOrWhiteSpace(Url))
-        {
-            UrlError = _localizationService.GetString("AddProfile.Error.UrlRequired");
-            return false;
-        }
 
-        if (IsM3U && IsLocalM3uFileSource)
-        {
-            if (!File.Exists(Url))
-            {
-                UrlError = _localizationService.GetString("AddProfile.Error.M3uUrlRequirement");
-                return false;
-            }
-
-            UrlError = null;
-            return true;
-        }
-
-        if (!Url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
-            !Url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
-        {
-            Url = "http://" + Url.Trim();
-        }
-
-        if (!Uri.TryCreate(Url, UriKind.Absolute, out _))
-        {
-            UrlError = _localizationService.GetString("AddProfile.Error.UrlInvalid");
-            return false;
-        }
-
-        if (IsM3U)
-        {
-            var lower = Url.ToLowerInvariant();
-            if (!lower.Contains(".m3u") && !lower.Contains(".m3u8") && !lower.Contains("get.php"))
-            {
-                UrlError = _localizationService.GetString("AddProfile.Error.M3uUrlRequirement");
-                return false;
-            }
-        }
-
-        if (IsXtream)
-        {
-            if (string.IsNullOrWhiteSpace(Username) || string.IsNullOrWhiteSpace(Password))
-            {
-                UrlError = _localizationService.GetString("AddProfile.Error.XtreamCredentialsRequired");
-                return false;
-            }
-        }
-
-        if (IsStalker)
-        {
-            if (string.IsNullOrWhiteSpace(Username))
-            {
-                UrlError = _localizationService.GetString("AddProfile.Error.MacRequired");
-                return false;
-            }
-
-            if (!StalkerMacRegex().IsMatch(Username.Trim()))
-            {
-                UrlError = _localizationService.GetString("AddProfile.Error.MacInvalid");
-                return false;
-            }
-        }
-
-        UrlError = null;
-        return true;
-    }
     [RelayCommand]
     private async Task AnalyzeConnectionAsync()
     {
         var urlToCheck = Url?.Trim();
         if (string.IsNullOrWhiteSpace(urlToCheck))
         {
-            StatusMessage = _localizationService.GetString("AddProfile.Error.UrlRequired");
+            SetStatus(_localizationService.GetString("AddProfile.Error.UrlRequired"), FormStatusKind.Error);
             return;
         }
 
@@ -1255,7 +1182,7 @@ public partial class AddProfileViewModel : ObservableObject
             {
                 if (generation == _analysisGeneration)
                 {
-                    StatusMessage = _localizationService.GetString("AddProfile.Error.UrlInvalid");
+                    SetStatus(_localizationService.GetString("AddProfile.Error.UrlInvalid"), FormStatusKind.Error);
                 }
                 return;
             }
@@ -1279,7 +1206,7 @@ public partial class AddProfileViewModel : ObservableObject
             {
                 if (generation == _analysisGeneration)
                 {
-                    StatusMessage = _localizationService.GetString("AddProfile.Error.UrlInvalid");
+                    SetStatus(_localizationService.GetString("AddProfile.Error.UrlInvalid"), FormStatusKind.Error);
                 }
                 return;
             }
