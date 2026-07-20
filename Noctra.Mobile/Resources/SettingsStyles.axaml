@@ -18,6 +18,17 @@
     <Setter Property="Padding" Value="10,4" />
   </Style>
 
+  <Style Selector="Border.CategoryRow">
+      <Setter Property="MinHeight" Value="26" />
+      <Setter Property="Padding" Value="16,0" />
+      <Setter Property="Margin" Value="0,0,0,8" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0,0,0,1.5" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+      <Setter Property="CornerRadius" Value="6" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+    </Style>
+
   <Style Selector="Button.SettingsActionButton">
     <Setter Property="MinHeight" Value="44" />
     <Setter Property="Padding" Value="14,0" />

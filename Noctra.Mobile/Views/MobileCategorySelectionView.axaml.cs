@@ -4,9 +4,12 @@ using System.ComponentModel;
 using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
+using Microsoft.Extensions.DependencyInjection;
 using Noctra.Core.Collections;
+using Noctra.Services.Interfaces;
 using Noctra.ViewModels;
 
 namespace Noctra.Mobile.Views;
@@ -75,6 +78,9 @@ public partial class MobileCategorySelectionView : UserControl
         }
 
         IsVisible = false;
+        _undoTimer?.Stop();
+        UndoSnackbar.IsVisible = false;
+        _lastHiddenCategory = null;
         DetachViewModel();
         return true;
     }
@@ -112,7 +118,62 @@ public partial class MobileCategorySelectionView : UserControl
         }
 
         e.Handled = true;
+
+        // Kategoriyi gizle
         await _viewModel.HideGroupCommand.ExecuteAsync(item.Name);
+
+        // Undo snackbar göster (eğer premium ise)
+        if (_viewModel.IsPremium)
+        {
+            ShowUndoSnackbar(item.Name);
+        }
+    }
+
+    private DispatcherTimer? _undoTimer;
+    private string? _lastHiddenCategory;
+
+    private void ShowUndoSnackbar(string categoryName)
+    {
+        _lastHiddenCategory = categoryName;
+        UndoSnackbar.IsVisible = true;
+
+        // Localization'dan formatla — StatusMessage paylaşmalı property olduğu için race condition riski var
+        string text = categoryName;
+        if (Avalonia.Application.Current is App app && app.Services is not null)
+        {
+            var loc = app.Services.GetService<ILocalizationService>();
+            if (loc is not null)
+            {
+                text = string.Format(
+                    System.Globalization.CultureInfo.CurrentCulture,
+                    loc.GetString("Mobile.Categories.HiddenFormat"),
+                    categoryName);
+            }
+        }
+        UndoSnackbarText.Text = text;
+
+        _undoTimer?.Stop();
+        _undoTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(4) };
+        _undoTimer.Tick += (_, _) =>
+        {
+            _undoTimer.Stop();
+            UndoSnackbar.IsVisible = false;
+            _lastHiddenCategory = null;
+        };
+        _undoTimer.Start();
+    }
+
+    private async void UndoHide_Click(object? sender, RoutedEventArgs e)
+    {
+        _undoTimer?.Stop();
+        UndoSnackbar.IsVisible = false;
+
+        if (!string.IsNullOrEmpty(_lastHiddenCategory) && _viewModel is not null)
+        {
+            await _viewModel.UnhideGroupCommand.ExecuteAsync(_lastHiddenCategory);
+        }
+
+        _lastHiddenCategory = null;
     }
 
     private void Back_Click(object? sender, RoutedEventArgs e)
@@ -172,6 +233,7 @@ public partial class MobileCategorySelectionView : UserControl
         if (_viewModel is null)
         {
             Categories.ReplaceAll(Array.Empty<MobileCategorySelectionItem>());
+            UpdateEmptyState();
             return;
         }
 
@@ -188,6 +250,25 @@ public partial class MobileCategorySelectionView : UserControl
                 group,
                 string.Equals(group, _viewModel.SelectedGroup, StringComparison.Ordinal)));
         Categories.ReplaceAll(items);
+        UpdateEmptyState();
+    }
+
+    private void UpdateEmptyState()
+    {
+        var isEmpty = Categories.Count == 0;
+        EmptyStatePanel.IsVisible = isEmpty;
+        CategoryListBox.IsVisible = !isEmpty;
+    }
+
+    private void CategorySearchTextBox_KeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter)
+        {
+            // Search tuşu: klavyeyi kapat, formda no-op bırakma
+            // Avalonia'da doğrudan Focus() ile başka bir elemana odaklanarak klavyeyi kapatabiliriz
+            CategoryListBox?.Focus();
+            e.Handled = true;
+        }
     }
 
     private void ResetCategorySearch()
@@ -213,6 +294,10 @@ public partial class MobileCategorySelectionView : UserControl
 
     private void DetachViewModel()
     {
+        _undoTimer?.Stop();
+        _undoTimer = null;
+        _lastHiddenCategory = null;
+
         if (_groupsCollection is not null)
         {
             _groupsCollection.CollectionChanged -= Groups_CollectionChanged;

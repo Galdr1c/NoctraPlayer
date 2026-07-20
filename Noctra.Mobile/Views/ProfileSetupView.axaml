@@ -79,27 +79,6 @@
       <Setter Property="Margin" Value="4,0,0,6" />
     </Style>
 
-    <!-- Şifre göster/gizle butonu — press feedback -->
-    <Style Selector="Button.PasswordRevealBtn">
-      <Setter Property="Background" Value="Transparent" />
-      <Setter Property="BorderThickness" Value="0" />
-      <Setter Property="Width" Value="48" />
-      <Setter Property="Height" Value="48" />
-      <Setter Property="Padding" Value="8" />
-      <Setter Property="CornerRadius" Value="8" />
-      <Setter Property="RenderTransformOrigin" Value="0.5,0.5" />
-      <Setter Property="Transitions">
-        <Transitions>
-          <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.15" Easing="CubicEaseOut" />
-          <BrushTransition Property="Background" Duration="0:0:0.15" />
-        </Transitions>
-      </Setter>
-    </Style>
-    <Style Selector="Button.PasswordRevealBtn:pressed /template/ ContentPresenter">
-      <Setter Property="RenderTransform" Value="scale(0.90)" />
-      <Setter Property="Background" Value="Transparent" />
-    </Style>
-
   </UserControl.Styles>
 
   <!--
@@ -549,7 +528,7 @@
                            TextInputOptions.ReturnKeyType="Done"
                            PlaceholderText="{loc:Translate Profiles.Account.PasswordPlaceholder}" />
                   <Button Grid.Column="1"
-                          Classes="PasswordRevealBtn"
+                          Theme="{StaticResource RevealBtn}"
                           Command="{Binding TogglePasswordRevealCommand}"
                           VerticalAlignment="Center"
                           ToolTip.Tip="{Binding PasswordToggleA11yName}"
@@ -641,7 +620,12 @@
             <StackPanel>
 
               <!-- PIN açma / kapama satırı -->
-              <Border Padding="16,14">
+              <!-- Premium yokken satırın tamamı tıklanabilir → upsell açar -->
+              <Button Classes="SectionRow"
+                      Command="{Binding RequestPremiumUpgradeCommand}"
+                      IsVisible="{Binding !IsPinAvailable}"
+                      AutomationProperties.Name="{loc:Translate Profiles.Add.PinLock}, Premium feature"
+                      Padding="16,14">
                 <Grid ColumnDefinitions="*,Auto">
                   <StackPanel Grid.Column="0" Spacing="3" Margin="0,0,16,0">
                     <StackPanel Orientation="Horizontal" Spacing="8">
@@ -656,8 +640,7 @@
                       <Border Background="{DynamicResource PremiumBadgeBrush}"
                               CornerRadius="4"
                               Padding="6,2"
-                              VerticalAlignment="Center"
-                              IsVisible="{Binding !IsPinAvailable}">
+                              VerticalAlignment="Center">
                         <TextBlock Text="PREMIUM"
                                    FontSize="{DynamicResource FOverline}"
                                    FontWeight="Bold"
@@ -669,9 +652,34 @@
                                Foreground="{DynamicResource TextMutedBrush}"
                                TextWrapping="Wrap" />
                   </StackPanel>
+                  <icons:MaterialIcon Kind="ChevronRight"
+                                      Width="20" Height="20"
+                                      Foreground="{DynamicResource TextMutedBrush}"
+                                      VerticalAlignment="Center" />
+                </Grid>
+              </Button>
+
+              <!-- PIN açma / kapama satırı — premium ise normal toggle -->
+              <Border Padding="16,14"
+                      IsVisible="{Binding IsPinAvailable}">
+                <Grid ColumnDefinitions="*,Auto">
+                  <StackPanel Grid.Column="0" Spacing="3" Margin="0,0,16,0">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                      <icons:MaterialIcon Kind="Lock" Width="22" Height="22" Margin="0"
+                                                    Foreground="{DynamicResource AccentBrush}"
+                                                    VerticalAlignment="Center"/>
+                      <TextBlock Text="{loc:Translate Profiles.Add.PinLock}"
+                                 FontSize="{DynamicResource FBodyL}"
+                                 FontWeight="Medium"
+                                 Foreground="{DynamicResource TextPrimaryBrush}" />
+                    </StackPanel>
+                    <TextBlock Text="{loc:Translate Profiles.Add.PinLockDescription}"
+                               FontSize="{DynamicResource FOverline}"
+                               Foreground="{DynamicResource TextMutedBrush}"
+                               TextWrapping="Wrap" />
+                  </StackPanel>
                   <ToggleSwitch Grid.Column="1"
                                 IsChecked="{Binding HasPin}"
-                                IsEnabled="{Binding IsPinAvailable}"
                                 VerticalAlignment="Center"
                                 OnContent=""
                                 OffContent="" />

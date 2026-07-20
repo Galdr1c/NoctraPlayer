@@ -133,6 +133,8 @@
                        Classes="search"
                        PlaceholderText="{loc:Translate Shell.Search.Tooltip}"
                        VerticalContentAlignment="Center"
+                       TextInputOptions.ReturnKeyType="Done"
+                       KeyDown="CategorySearchTextBox_KeyDown"
                        TextChanged="CategorySearchTextBox_TextChanged" />
 
               <Button x:Name="ClearCategorySearchButton"
@@ -148,6 +150,63 @@
             </Grid>
           </Border>
         </Grid>
+
+        <!-- Boş durum: arama sonucu yoksa görünür -->
+        <StackPanel x:Name="EmptyStatePanel"
+                    Grid.Row="1"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Spacing="8"
+                    IsVisible="False">
+          <icons:MaterialIcon Kind="MagnifyRemoveOutline"
+                              Width="48" Height="48"
+                              Foreground="{DynamicResource TextMutedBrush}"
+                              HorizontalAlignment="Center" />
+          <TextBlock Text="{loc:Translate Mobile.Categories.EmptyTitle}"
+                     FontSize="{DynamicResource FTitleL}"
+                     FontWeight="SemiBold"
+                     Foreground="{DynamicResource TextPrimaryBrush}"
+                     HorizontalAlignment="Center" />
+          <TextBlock Text="{loc:Translate Mobile.Categories.EmptySubtitle}"
+                     FontSize="{DynamicResource FCaption}"
+                     Foreground="{DynamicResource TextMutedBrush}"
+                     HorizontalAlignment="Center" />
+        </StackPanel>
+
+        <!-- Undo snackbar: BackExitToast ile aynı tasarım -->
+        <Border x:Name="UndoSnackbar"
+                Grid.RowSpan="2"
+                ZIndex="49000"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Bottom"
+                Margin="20,0,20,96"
+                Padding="8"
+                CornerRadius="8"
+                Background="{DynamicResource CardHoverGradientBrush}"
+                IsVisible="False">
+          <StackPanel Orientation="Horizontal" Spacing="10">
+            <TextBlock x:Name="UndoSnackbarText"
+                       Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                       FontSize="{DynamicResource FBody}"
+                       FontWeight="SemiBold"
+                       TextWrapping="Wrap"
+                       VerticalAlignment="Center" />        
+            <Button Click="UndoHide_Click"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    Padding="8"
+                    MinWidth="48" MinHeight="36"
+                    VerticalContentAlignment="Center"
+                    HorizontalAlignment="Center" 
+                    CornerRadius="6"
+                    Margin="0">
+              <TextBlock Text="{loc:Translate Common.Undo}"
+                         FontSize="{DynamicResource FBody}"
+                         FontWeight="Bold"
+                         Foreground="{DynamicResource AccentBrush}" />          
+            </Button>  
+          </StackPanel>
+        </Border>
 
         <ListBox x:Name="CategoryListBox"
                  Grid.Row="1"
@@ -195,12 +254,11 @@
                     </Grid>
                   </Button>
                   <Button Grid.Column="1"
-                          Classes="CategoryHideButton"
+                          Theme="{StaticResource RevealBtn}"
                           Tag="{Binding}"
+                          Margin="12,0"
                           Click="HideCategory_Click"
-                          Height="36"
-                          Width="36"
-                          Background="Transparent"
+
                           ToolTip.Tip="{loc:Translate Mobile.Categories.Hide}">
                     <icons:MaterialIcon Kind="EyeOffOutline"
                                         Width="22"

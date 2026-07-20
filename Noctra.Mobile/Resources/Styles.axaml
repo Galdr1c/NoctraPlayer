@@ -61,6 +61,7 @@
       </Style>
       <Style Selector="^:pressed /template/ Border#PART_Border">
           <Setter Property="Background" Value="#33FF3333" />
+          <Setter Property="RenderTransform" Value="scale(0.98)" />
       </Style>
       <Style Selector="^:disabled">
           <Setter Property="Opacity" Value="0.5"/>
@@ -79,7 +80,7 @@
   <ControlTheme x:Key="IconButton" TargetType="Button">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderThickness" Value="0" />
-    <Setter Property="CornerRadius" Value="{DynamicResource RadiusPill}" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusSmall}" />
     <Setter Property="Padding" Value="8" />
     <Setter Property="MinHeight" Value="40" />
     <Setter Property="MinWidth" Value="40" />
@@ -102,8 +103,36 @@
     <Setter Property="Padding" Value="0" />
     <Setter Property="Margin" Value="0" />
     <Setter Property="MinHeight" Value="48" />
-    <Setter Property="MinWidth" Value="48" />   
+    <Setter Property="MinWidth" Value="48" />
+
+    <Style Selector="^:pressed /template/ ContentPresenter">
+        <Setter Property="RenderTransform" Value="scale(0.90)" />
+        <Setter Property="Background" Value="Transparent" />
+    </Style>
+       
   </ControlTheme>
+  
+  <ControlTheme x:Key="RevealBtn" TargetType="Button">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Width" Value="48" />
+      <Setter Property="Height" Value="48" />
+      <Setter Property="Padding" Value="8" />
+      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="RenderTransformOrigin" Value="0.5,0.5" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+      <Setter Property="Transitions">
+        <Transitions>
+          <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.15" Easing="CubicEaseOut" />
+          <BrushTransition Property="Background" Duration="0:0:0.15" />
+        </Transitions>
+      </Setter>
+      <Style Selector="^:pressed /template/ ContentPresenter">
+        <Setter Property="RenderTransform" Value="scale(0.90)" />
+        <Setter Property="Background" Value="Transparent" />
+      </Style>
+    </ControlTheme>
 
   <!-- ==========================================
         CHECKBOX THEME (ToggleSwitch-harmonious)

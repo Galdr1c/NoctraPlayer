@@ -578,22 +578,22 @@
           <ItemsControl ItemsSource="{Binding HiddenLiveGroups}">
             <ItemsControl.ItemTemplate>
               <DataTemplate>
-                <Border Background="{DynamicResource Surface1Brush}"
-                        CornerRadius="8"
-                        Padding="10"
-                        Margin="0,0,0,6">
+                <Border Classes="CategoryRow">
                   <Grid ColumnDefinitions="*,Auto"
                         ColumnSpacing="8">
                     <TextBlock Text="{Binding}"
+                               FontSize="{DynamicResource FBodyM}" 
+                               FontWeight="SemiBold" 
                                Foreground="{DynamicResource TextPrimaryBrush}"
                                TextTrimming="CharacterEllipsis"
                                VerticalAlignment="Center" />
                     <Button Grid.Column="1"
                             Command="{Binding $parent[ItemsControl].((vm:SettingsViewModel)DataContext).UnhideGroupCommand}"
                             CommandParameter="{Binding}"
-                            Theme="{StaticResource FilterButtonStyle}">
+                            Width="100"
+                            Theme="{StaticResource RevealBtn}">
                       <StackPanel Orientation="Horizontal" Spacing="5">
-                        <icons:MaterialIcon Kind="EyeOutline" Width="14" Height="14" />
+                        <icons:MaterialIcon Kind="EyeOutline" Width="22" Height="22" />
                         <TextBlock Text="{loc:Translate Settings.Channels.Hidden.Show}" />
                       </StackPanel>
                     </Button>
@@ -620,22 +620,22 @@
           <ItemsControl ItemsSource="{Binding HiddenMovieGroups}">
             <ItemsControl.ItemTemplate>
               <DataTemplate>
-                <Border Background="{DynamicResource Surface1Brush}"
-                        CornerRadius="8"
-                        Padding="10"
-                        Margin="0,0,0,6">
+                <Border Classes="CategoryRow">
                   <Grid ColumnDefinitions="*,Auto"
                         ColumnSpacing="8">
                     <TextBlock Text="{Binding}"
+                               FontSize="{DynamicResource FBodyM}" 
+                               FontWeight="SemiBold"  
                                Foreground="{DynamicResource TextPrimaryBrush}"
                                TextTrimming="CharacterEllipsis"
                                VerticalAlignment="Center" />
                     <Button Grid.Column="1"
                             Command="{Binding $parent[ItemsControl].((vm:SettingsViewModel)DataContext).UnhideGroupCommand}"
                             CommandParameter="{Binding}"
-                            Theme="{StaticResource FilterButtonStyle}">
+                            Width="100"
+                            Theme="{StaticResource RevealBtn}">
                       <StackPanel Orientation="Horizontal" Spacing="5">
-                        <icons:MaterialIcon Kind="EyeOutline" Width="14" Height="14" />
+                        <icons:MaterialIcon Kind="EyeOutline" Width="22" Height="22" />
                         <TextBlock Text="{loc:Translate Settings.Channels.Hidden.Show}" />
                       </StackPanel>
                     </Button>
@@ -662,22 +662,22 @@
           <ItemsControl ItemsSource="{Binding HiddenSeriesGroups}">
             <ItemsControl.ItemTemplate>
               <DataTemplate>
-                <Border Background="{DynamicResource Surface1Brush}"
-                        CornerRadius="8"
-                        Padding="10"
-                        Margin="0,0,0,6">
+                <Border Classes="CategoryRow">
                   <Grid ColumnDefinitions="*,Auto"
                         ColumnSpacing="8">
                     <TextBlock Text="{Binding}"
+                               FontSize="{DynamicResource FBodyM}" 
+                               FontWeight="SemiBold" 
                                Foreground="{DynamicResource TextPrimaryBrush}"
                                TextTrimming="CharacterEllipsis"
                                VerticalAlignment="Center" />
                     <Button Grid.Column="1"
                             Command="{Binding $parent[ItemsControl].((vm:SettingsViewModel)DataContext).UnhideGroupCommand}"
                             CommandParameter="{Binding}"
-                            Theme="{StaticResource FilterButtonStyle}">
+                            Width="100"
+                            Theme="{StaticResource RevealBtn}">
                       <StackPanel Orientation="Horizontal" Spacing="5">
-                        <icons:MaterialIcon Kind="EyeOutline" Width="14" Height="14" />
+                        <icons:MaterialIcon Kind="EyeOutline" Width="22" Height="22" />
                         <TextBlock Text="{loc:Translate Settings.Channels.Hidden.Show}" />
                       </StackPanel>
                     </Button>

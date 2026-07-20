@@ -984,6 +984,12 @@ public partial class AddProfileViewModel : ObservableObject
         IsPasswordRevealed = !IsPasswordRevealed;
     }
 
+    [RelayCommand]
+    private async Task RequestPremiumUpgradeAsync()
+    {
+        await _dialogService.ShowUpsellAsync();
+    }
+
     [ObservableProperty]
     private bool _isAnalyzingConnection;
 
