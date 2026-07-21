@@ -1,3 +1,4 @@
+using System;
 using Android.Content;
 using Android.Content.PM;
 using Noctra.Services.Interfaces;

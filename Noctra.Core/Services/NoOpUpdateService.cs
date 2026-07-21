@@ -9,6 +9,8 @@ namespace Noctra.Services;
 /// </summary>
 public sealed class NoOpUpdateService : IAppUpdateService
 {
+    public event EventHandler<UpdateStateChangedEventArgs>? UpdateStateChanged;
+
     public Task<UpdateCheckResult> CheckAsync(CancellationToken cancellationToken = default)
     {
         return Task.FromResult(new UpdateCheckResult

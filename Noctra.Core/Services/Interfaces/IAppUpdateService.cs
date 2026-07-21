@@ -32,6 +32,70 @@ public interface IAppUpdateService
     /// Flexible update tamamlanmış ama henüz complete edilmemiş olabilir.
     /// </summary>
     Task<UpdateCheckResult> CheckPendingUpdateAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Güncelleme durumu değişikliklerini ViewModel'e iletmek için event.
+    /// Android flexible update listener'indan tetiklenir.
+    /// Microsoft Store kendi yönettiği için tetiklenmez.
+    /// </summary>
+    event EventHandler<UpdateStateChangedEventArgs>? UpdateStateChanged;
+}
+
+/// <summary>
+/// Güncelleme durumu değişiklik event'i için event argümanları
+/// </summary>
+public sealed class UpdateStateChangedEventArgs : EventArgs
+{
+    /// <summary>
+    /// Yeni durum kodu
+    /// </summary>
+    public UpdateCheckStatus Status { get; }
+
+    /// <summary>
+    /// İndirme ilerlemesi (yüzde, varsa)
+    /// </summary>
+    public double? ProgressPercent { get; }
+
+    /// <summary>
+    /// İndirilen byte (varsa)
+    /// </summary>
+    public long? BytesDownloaded { get; }
+
+    /// <summary>
+    /// Toplam byte (varsa)
+    /// </summary>
+    public long? TotalBytes { get; }
+
+    /// <summary>
+    /// Hata mesajı (varsa)
+    /// </summary>
+    public string? ErrorMessage { get; }
+
+    public UpdateStateChangedEventArgs(UpdateCheckStatus status)
+    {
+        Status = status;
+    }
+
+    public UpdateStateChangedEventArgs(UpdateCheckStatus status, double progressPercent)
+    {
+        Status = status;
+        ProgressPercent = progressPercent;
+    }
+
+    public UpdateStateChangedEventArgs(UpdateCheckStatus status, string errorMessage)
+    {
+        Status = status;
+        ErrorMessage = errorMessage;
+    }
+
+    public UpdateStateChangedEventArgs(long bytesDownloaded, long totalBytes)
+    {
+        Status = UpdateCheckStatus.Downloading;
+        BytesDownloaded = bytesDownloaded;
+        TotalBytes = totalBytes;
+        if (totalBytes > 0)
+            ProgressPercent = Math.Round((double)bytesDownloaded / totalBytes * 100, 1);
+    }
 }
 
 /// <summary>
@@ -95,4 +159,17 @@ public sealed class UpdateCheckResult
     /// Hata mesajı (Status == Error için)
     /// </summary>
     public string? ErrorMessage { get; init; }
+}
+
+/// <summary>
+/// Windows Store modal dialog'ları için pencere handle'ı sağlayıcı.
+/// StoreContext.RequestDownloadAndInstallStorePackageUpdatesAsync
+/// desktop'ta HWND bağlantısı gerektirir.
+/// </summary>
+public interface IWindowHandleProvider
+{
+    /// <summary>
+    /// Ana uygulama penceresinin handle'ı (HWND veya IntPtr)
+    /// </summary>
+    IntPtr WindowHandle { get; }
 }

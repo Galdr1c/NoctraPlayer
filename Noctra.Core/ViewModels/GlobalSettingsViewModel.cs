@@ -161,8 +161,45 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
         _settingsService.SettingsChanged += OnSettingsService_Changed;
         _licenseService.SubscriptionChanged += OnLicenseSubscriptionChanged;
         
+        // Güncelleme durum değişikliklerini dinle
+        _appUpdateService.UpdateStateChanged += OnUpdateStateChanged;
+        
         LoadSettings();
         _ = UpdateCacheSizeAsync();
+        // Bekleyen flexible update kontrolü
+        _ = CheckPendingUpdateAsync();
+    }
+
+    private void OnUpdateStateChanged(object? sender, UpdateStateChangedEventArgs e)
+    {
+        switch (e.Status)
+        {
+            case UpdateCheckStatus.Downloading:
+                IsUpdateAvailable = false;
+                IsUpdateDownloaded = false;
+                if (e.ProgressPercent.HasValue)
+                {
+                    UpdateStatusText = string.Format(
+                        _localizationService.GetString("Settings.Update.DownloadingProgressFormat"),
+                        e.ProgressPercent.Value);
+                }
+                else
+                {
+                    UpdateStatusText = _localizationService.GetString("Settings.Update.Downloading");
+                }
+                break;
+
+            case UpdateCheckStatus.Downloaded:
+                IsUpdateAvailable = false;
+                IsUpdateDownloaded = true;
+                UpdateStatusText = _localizationService.GetString("Settings.Update.Downloaded");
+                break;
+
+            case UpdateCheckStatus.Error:
+                IsUpdateDownloaded = false;
+                UpdateStatusText = e.ErrorMessage ?? _localizationService.GetString("Settings.Update.CheckFailed");
+                break;
+        }
     }
 
     public bool IsPremium => _licenseService.IsPremium;
@@ -486,6 +523,8 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
 
     public void Dispose()
     {
+        _appUpdateService.UpdateStateChanged -= OnUpdateStateChanged;
+
         if (_settingsService != null)
         {
             _settingsService.SettingsChanged -= OnSettingsService_Changed;

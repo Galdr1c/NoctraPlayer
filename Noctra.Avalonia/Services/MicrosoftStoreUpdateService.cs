@@ -1,7 +1,10 @@
+using System;
 using System.Diagnostics;
-using System.Globalization;
+using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using Noctra.Services.Interfaces;
 using Windows.Services.Store;
+using WinRT;
 
 namespace Noctra.Avalonia.Services;
 
@@ -13,10 +16,16 @@ namespace Noctra.Avalonia.Services;
 public sealed class MicrosoftStoreUpdateService : IAppUpdateService
 {
     private readonly IPackageIdentityService? _packageIdentityService;
+    private readonly IWindowHandleProvider? _windowHandleProvider;
 
-    public MicrosoftStoreUpdateService(IPackageIdentityService? packageIdentityService = null)
+    public event EventHandler<UpdateStateChangedEventArgs>? UpdateStateChanged;
+
+    public MicrosoftStoreUpdateService(
+        IPackageIdentityService? packageIdentityService = null,
+        IWindowHandleProvider? windowHandleProvider = null)
     {
         _packageIdentityService = packageIdentityService;
+        _windowHandleProvider = windowHandleProvider;
     }
 
     public async Task<UpdateCheckResult> CheckAsync(CancellationToken cancellationToken = default)
@@ -31,30 +40,28 @@ public sealed class MicrosoftStoreUpdateService : IAppUpdateService
             var context = StoreContext.GetDefault();
             if (context == null) return new UpdateCheckResult { Status = UpdateCheckStatus.Error, ErrorMessage = "StoreContext unavailable" };
 
-            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            linkedCts.CancelAfter(TimeSpan.FromSeconds(10));
+            var operation = context.GetAppAndOptionalStorePackageUpdatesAsync();
+            var updates = await operation
+                .AsTask()
+                .WaitAsync(TimeSpan.FromSeconds(10), cancellationToken);
 
-            var updates = await context.GetAppAndOptionalStorePackageUpdatesAsync();
             if (updates == null || updates.Count == 0)
             {
                 return new UpdateCheckResult { Status = UpdateCheckStatus.UpToDate };
             }
 
+            // Microsoft Store API semantic version number vermez, sadece update sayısı verir.
             return new UpdateCheckResult
             {
                 Status = UpdateCheckStatus.UpdateAvailable,
-                LatestVersion = string.Format(
-                    CultureInfo.InvariantCulture,
-                    updates.Count == 1 ? "{0} {1}" : "{0} {1}",
-                    updates.Count,
-                    updates.Count == 1 ? "update" : "updates"),
+                LatestVersion = null, // Platform mesajı için null, ViewModel yönetecek
                 Changelog = $"{updates.Count} package update(s) available",
                 IsMandatory = false
             };
         }
         catch (OperationCanceledException)
         {
-            return new UpdateCheckResult { Status = UpdateCheckStatus.Error, ErrorMessage = "Check timed out" };
+            return new UpdateCheckResult { Status = UpdateCheckStatus.Error, ErrorMessage = "Check cancelled or timed out" };
         }
         catch (Exception ex)
         {
@@ -72,31 +79,37 @@ public sealed class MicrosoftStoreUpdateService : IAppUpdateService
             var context = StoreContext.GetDefault();
             if (context == null) return false;
 
-            var updates = await context.GetAppAndOptionalStorePackageUpdatesAsync();
+            // Desktop uygulamalarda Store modal dialog'unu ana pencereye bağla
+            if (_windowHandleProvider != null && _windowHandleProvider.WindowHandle != IntPtr.Zero)
+            {
+                var initializeWithWindow = (IInitializeWithWindow)(object)context;
+                initializeWithWindow.Initialize(_windowHandleProvider.WindowHandle);
+            }
+
+            var updatesOp = context.GetAppAndOptionalStorePackageUpdatesAsync();
+            var updates = await updatesOp
+                .AsTask()
+                .WaitAsync(TimeSpan.FromSeconds(10), cancellationToken);
+
             if (updates == null || updates.Count == 0) return false;
 
-            // RequestDownloadAndInstallStorePackageUpdatesAsync shows a modal dialog.
-            // Without HWND binding this may fail in unpackaged builds with ERROR_INVALID_WINDOW_HANDLE.
-            // Try/catch provides a user-friendly fallback.
-            var installOperation = await context.RequestDownloadAndInstallStorePackageUpdatesAsync(updates);
+            var installOp = context.RequestDownloadAndInstallStorePackageUpdatesAsync(updates);
+            var installOperation = await installOp.AsTask().WaitAsync(cancellationToken);
+
             if (installOperation == null) return false;
 
             var overallState = installOperation.OverallState;
             Debug.WriteLine($"[MicrosoftStoreUpdateService] Update result: {overallState}");
 
-            return overallState switch
-            {
-                StorePackageUpdateState.Completed => true,
-                StorePackageUpdateState.Canceled => false,
-                StorePackageUpdateState.ErrorLowBattery => false,
-                StorePackageUpdateState.ErrorWiFiRecommended => false,
-                StorePackageUpdateState.ErrorWiFiRequired => false,
-                _ => true
-            };
+            return overallState == StorePackageUpdateState.Completed;
+        }
+        catch (OperationCanceledException)
+        {
+            Debug.WriteLine("[MicrosoftStoreUpdateService] StartUpdate cancelled");
+            return false;
         }
         catch (Exception ex)
         {
-            // HWND hatası veya Store API hatası — kullanıcıya bilgi ver
             Debug.WriteLine($"[MicrosoftStoreUpdateService] StartUpdate failed: {ex.Message}");
             return false;
         }
@@ -113,4 +126,16 @@ public sealed class MicrosoftStoreUpdateService : IAppUpdateService
         // Microsoft Store kendi güncelleme döngüsünü yönetir
         return Task.FromResult(new UpdateCheckResult { Status = UpdateCheckStatus.UpToDate });
     }
+}
+
+/// <summary>
+/// WinRT IInitializeWithWindow COM arayüzü — StoreContext modal dialog'unu
+/// desktop pencere handle'ına bağlamak için gerekli.
+/// </summary>
+[ComImport]
+[Guid("3E68D4BD-7135-4D10-8018-9FB6D9F33FA1")]
+[InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+internal interface IInitializeWithWindow
+{
+    void Initialize(IntPtr hwnd);
 }

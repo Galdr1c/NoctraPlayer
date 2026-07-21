@@ -35,6 +35,7 @@ public partial class SettingsViewModel : ObservableObject
     private readonly IProfileService _profileService;
     private readonly IAppUpdateService _appUpdateService;
     private CancellationTokenSource? _epgRefreshWatchCts;
+    
     private int _isRefreshOperationRunning;
     private string? _activeRefreshScope;
     private bool _isLoadingSettings;
@@ -276,6 +277,7 @@ public partial class SettingsViewModel : ObservableObject
         _mainViewModel.PropertyChanged += MainViewModel_PropertyChanged;
         _settingsService.SettingsChanged += OnSettingsService_Changed;
         _licenseService.SubscriptionChanged += OnLicenseSubscriptionChanged;
+        _appUpdateService.UpdateStateChanged += OnUpdateStateChanged;
         
         ChannelListLastError = _mainViewModel.ChannelListLastError;
         
@@ -285,6 +287,40 @@ public partial class SettingsViewModel : ObservableObject
         _ = ScanEpgStatsCoreAsync(updateStatusMessage: false);
         _ = _mainViewModel.RefreshCurrentProfileExpirationAsync();
         _ = UpdateCacheSizeAsync();
+        // Bekleyen flexible update kontrolü
+        _ = CheckPendingUpdateAsync();
+    }
+
+    private void OnUpdateStateChanged(object? sender, UpdateStateChangedEventArgs e)
+    {
+        switch (e.Status)
+        {
+            case UpdateCheckStatus.Downloading:
+                IsUpdateAvailable = false;
+                IsUpdateDownloaded = false;
+                if (e.ProgressPercent.HasValue)
+                {
+                    UpdateStatusText = string.Format(
+                        _localizationService.GetString("Settings.Update.DownloadingProgressFormat"),
+                        e.ProgressPercent.Value);
+                }
+                else
+                {
+                    UpdateStatusText = _localizationService.GetString("Settings.Update.Downloading");
+                }
+                break;
+
+            case UpdateCheckStatus.Downloaded:
+                IsUpdateAvailable = false;
+                IsUpdateDownloaded = true;
+                UpdateStatusText = _localizationService.GetString("Settings.Update.Downloaded");
+                break;
+
+            case UpdateCheckStatus.Error:
+                IsUpdateDownloaded = false;
+                UpdateStatusText = e.ErrorMessage ?? _localizationService.GetString("Settings.Update.CheckFailed");
+                break;
+        }
     }
 
     public string CurrentVersion => _appVersionService.DisplayVersion;

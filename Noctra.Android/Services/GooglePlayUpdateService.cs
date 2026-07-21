@@ -1,8 +1,12 @@
+using System;
+using System.Threading;
+using System.Threading.Tasks;
 using Android.App;
 using Android.Content;
-using Google.Android.Play.AppUpdate;
-using Google.Android.Play.AppUpdate.Install;
-using Google.Android.Play.AppUpdate.Install.States;
+using Android.Gms.Tasks;
+using Xamarin.Google.Android.Play.Core.AppUpdate;
+using Xamarin.Google.Android.Play.Core.AppUpdate.Install;
+using Xamarin.Google.Android.Play.Core.AppUpdate.Install.Model;
 using Noctra.Services.Interfaces;
 using Noctra.Android.Services;
 
@@ -30,42 +34,50 @@ public sealed class GooglePlayUpdateService : IAppUpdateService, IDisposable
     private IInstallStateUpdatedListener? _installStateListener;
     private UpdateCheckResult? _lastCheckResult;
 
-    private const int UpdateRequestCode = 17362;
+    public event EventHandler<UpdateStateChangedEventArgs>? UpdateStateChanged;
 
     public GooglePlayUpdateService(AndroidActivityProvider activityProvider)
     {
         _activityProvider = activityProvider ?? throw new ArgumentNullException(nameof(activityProvider));
-        var activity = _activityProvider.Current
+        var activity = _activityProvider.CurrentActivity
             ?? throw new InvalidOperationException("Android activity is not available.");
         _appUpdateManager = AppUpdateManagerFactory.Create(activity);
     }
 
     private Activity GetActivity()
     {
-        return _activityProvider.Current
+        return _activityProvider.CurrentActivity
             ?? throw new InvalidOperationException("Android activity is not available.");
     }
 
     /// <summary>
     /// Google Play'de güncelleme varsa bilgi döndürür.
+    /// Unsupported: Play Store dışından yüklenmiş / sideload
+    /// Error: Ağ veya API hatası (timeout dahil)
+    /// UpdateAvailable: Yeni sürüm mevcut
     /// </summary>
-    public async Task<UpdateCheckResult> CheckAsync(CancellationToken cancellationToken = default)
+    public async Task<UpdateCheckResult> CheckAsync(System.Threading.CancellationToken cancellationToken = default)
     {
         try
         {
-            var info = await GetAppUpdateInfoAsync(cancellationToken);
+            var (info, isTimeout) = await GetAppUpdateInfoAsync(cancellationToken);
 
             if (info == null)
             {
-                return new UpdateCheckResult { Status = UpdateCheckStatus.Unsupported };
+                var status = isTimeout
+                    ? UpdateCheckStatus.Error
+                    : UpdateCheckStatus.Unsupported;
+                return new UpdateCheckResult
+                {
+                    Status = status,
+                    ErrorMessage = isTimeout ? "Play Store API timed out" : null
+                };
             }
 
             var availability = info.UpdateAvailability();
 
             if (availability == UpdateAvailability.UpdateAvailable)
             {
-                // IsMandatory: Play Console'daki update priority veya update'in ne kadar
-                // süredir mevcut olduğuna göre karar ver.
                 var updatePriority = info.UpdatePriority();
                 var stalenessDays = info.ClientVersionStalenessDays();
                 var isMandatory = updatePriority >= 4 || (stalenessDays?.IntValue() ?? 0) >= 14;
@@ -79,12 +91,6 @@ public sealed class GooglePlayUpdateService : IAppUpdateService, IDisposable
                 return _lastCheckResult;
             }
 
-            // Başka bir developer-triggered update devam ediyor
-            if (availability == UpdateAvailability.UpdateInProgress)
-            {
-                return new UpdateCheckResult { Status = UpdateCheckStatus.UpToDate };
-            }
-
             return new UpdateCheckResult { Status = UpdateCheckStatus.UpToDate };
         }
         catch (Exception ex)
@@ -95,39 +101,44 @@ public sealed class GooglePlayUpdateService : IAppUpdateService, IDisposable
     }
 
     /// <summary>
-    /// Flexible update indirmesini başlatır.
-    /// Listener ile durum izlenir, auto-complete yapılmaz.
+    /// Güncelleme indirmesini başlatır.
+    /// IsMandatory == true ise Immediate (tam ekran) kullanılır.
+    /// IsMandatory == false ise Flexible (arka plan) kullanılır.
     /// </summary>
-    public async Task<bool> StartUpdateAsync(CancellationToken cancellationToken = default)
+    public async Task<bool> StartUpdateAsync(System.Threading.CancellationToken cancellationToken = default)
     {
         try
         {
-            var info = await GetAppUpdateInfoAsync(cancellationToken);
+            var (info, _) = await GetAppUpdateInfoAsync(cancellationToken);
             if (info == null) return false;
 
             var activity = GetActivity();
 
+            // Zorunlu güncelleme ise Immediate kullan
+            if (_lastCheckResult?.IsMandatory == true && info.IsUpdateTypeAllowed(AppUpdateType.Immediate))
+            {
+                RegisterInstallStateListener();
+
+                var options = AppUpdateOptions
+                    .NewBuilder(AppUpdateType.Immediate)
+                    .Build();
+
+                _appUpdateManager.StartUpdateFlow(info, activity, options);
+                UpdateStateChanged?.Invoke(this, new UpdateStateChangedEventArgs(UpdateCheckStatus.Downloading, 0));
+                return true;
+            }
+
+            // Flexible update
             if (info.IsUpdateTypeAllowed(AppUpdateType.Flexible))
             {
                 RegisterInstallStateListener();
 
-                await _appUpdateManager.StartUpdateFlowForResult(
-                    info,
-                    AppUpdateType.Flexible,
-                    activity,
-                    UpdateRequestCode);
+                var options = AppUpdateOptions
+                    .NewBuilder(AppUpdateType.Flexible)
+                    .Build();
 
-                return true;
-            }
-
-            if (info.IsUpdateTypeAllowed(AppUpdateType.Immediate))
-            {
-                await _appUpdateManager.StartUpdateFlowForResult(
-                    info,
-                    AppUpdateType.Immediate,
-                    activity,
-                    UpdateRequestCode);
-
+                _appUpdateManager.StartUpdateFlow(info, activity, options);
+                UpdateStateChanged?.Invoke(this, new UpdateStateChangedEventArgs(UpdateCheckStatus.Downloading, 0));
                 return true;
             }
 
@@ -144,16 +155,16 @@ public sealed class GooglePlayUpdateService : IAppUpdateService, IDisposable
     /// Flexible güncelleme tamamlandığında kullanıcı onayıyla yükler.
     /// Google'ın önerdiği akış: completeUpdate() çağrılınca uygulama yeniden başlatılır.
     /// </summary>
-    public async Task<bool> CompleteUpdateAsync(CancellationToken cancellationToken = default)
+    public async Task<bool> CompleteUpdateAsync(System.Threading.CancellationToken cancellationToken = default)
     {
         try
         {
-            var info = await GetAppUpdateInfoAsync(cancellationToken);
+            var (info, _) = await GetAppUpdateInfoAsync(cancellationToken);
             if (info == null) return false;
 
             if (info.InstallStatus() == InstallStatus.Downloaded)
             {
-                await _appUpdateManager.CompleteUpdate();
+                _appUpdateManager.CompleteUpdate();
                 return true;
             }
 
@@ -170,14 +181,18 @@ public sealed class GooglePlayUpdateService : IAppUpdateService, IDisposable
     /// Uygulama foreground'a döndüğünde bekleyen indirilmiş güncellemeyi kontrol eder.
     /// Flexible update tamamlanmış ama henüz complete edilmemiş olabilir.
     /// </summary>
-    public async Task<UpdateCheckResult> CheckPendingUpdateAsync(CancellationToken cancellationToken = default)
+    public async Task<UpdateCheckResult> CheckPendingUpdateAsync(System.Threading.CancellationToken cancellationToken = default)
     {
         try
         {
-            var info = await GetAppUpdateInfoAsync(cancellationToken);
+            var (info, isTimeout) = await GetAppUpdateInfoAsync(cancellationToken);
             if (info == null)
             {
-                return new UpdateCheckResult { Status = UpdateCheckStatus.Unsupported };
+                return new UpdateCheckResult
+                {
+                    Status = isTimeout ? UpdateCheckStatus.Error : UpdateCheckStatus.Unsupported,
+                    ErrorMessage = isTimeout ? "Play Store API timed out" : null
+                };
             }
 
             if (info.InstallStatus() == InstallStatus.Downloaded)
@@ -198,39 +213,49 @@ public sealed class GooglePlayUpdateService : IAppUpdateService, IDisposable
         }
     }
 
-    private async Task<AppUpdateInfo?> GetAppUpdateInfoAsync(CancellationToken cancellationToken)
+    /// <summary>
+    /// AppUpdateInfo alır. Binding'deki GetAppUpdateInfo() Java Task döndürür,
+    /// IOnSuccessListener ile C# Task'e çevirip await ediyoruz.
+    /// Timeout ve hata ayrımı yapar.
+    /// </summary>
+    private async Task<(AppUpdateInfo?, bool isTimeout)> GetAppUpdateInfoAsync(System.Threading.CancellationToken cancellationToken)
     {
-        var task = _appUpdateManager.AppUpdateInfo;
-        var tcs = new TaskCompletionSource<AppUpdateInfo?>();
-
-        task.AddOnSuccessListener(new OnSuccessListener<AppUpdateInfo>(info =>
-        {
-            tcs.TrySetResult(info);
-        }));
-
-        task.AddOnFailureListener(new OnFailureListener(ex =>
-        {
-            tcs.TrySetResult(null);
-        }));
-
-        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        using var linkedCts = System.Threading.CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         linkedCts.CancelAfter(TimeSpan.FromSeconds(5));
 
         try
         {
-            await tcs.Task.WaitAsync(linkedCts.Token);
+            // GetAppUpdateInfo() Java Task döndürür.
+            // TaskCompletionSource ile C# Task'e çeviriyoruz.
+            var tcs = new TaskCompletionSource<AppUpdateInfo?>();
+
+            _appUpdateManager.GetAppUpdateInfo()
+                .AddOnSuccessListener(new OnSuccessListener<AppUpdateInfo>(result =>
+                {
+                    tcs.TrySetResult(result);
+                }))
+                .AddOnFailureListener(new OnFailureListener(ex =>
+                {
+                    tcs.TrySetException(new InvalidOperationException(
+                        $"Play Store API error: {ex.Message}", ex));
+                }));
+
+            var info = await tcs.Task.WaitAsync(linkedCts.Token);
+            return (info, false);
+        }
+        catch (OperationCanceledException) when (linkedCts.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
+        {
+            return (null, true);
         }
         catch (OperationCanceledException)
         {
-            return null;
+            return (null, false);
         }
-
-        return tcs.Task.Result;
     }
 
     /// <summary>
     /// Flexible güncelleme durumunu dinlemek için listener kaydeder.
-    /// Auto-complete yapılmaz — sadece log ve durum bildirimi.
+    /// State değişikliklerini UpdateStateChanged event'i ile ViewModel'e iletir.
     /// </summary>
     public void RegisterInstallStateListener()
     {
@@ -244,20 +269,25 @@ public sealed class GooglePlayUpdateService : IAppUpdateService, IDisposable
             switch (status)
             {
                 case InstallStatus.Downloaded:
-                    // İndirme tamamlandı — CompleteUpdateAsync kullanıcı onayıyla çağrılmalı
-                    System.Diagnostics.Debug.WriteLine("[GooglePlayUpdateService] Update downloaded, waiting for user confirmation");
+                    UpdateStateChanged?.Invoke(this, new UpdateStateChangedEventArgs(UpdateCheckStatus.Downloaded));
+                    break;
+
+                case InstallStatus.Downloading:
+                    var bytesDownloaded = state.BytesDownloaded();
+                    var totalBytes = state.TotalBytesToDownload();
+                    UpdateStateChanged?.Invoke(this, new UpdateStateChangedEventArgs(bytesDownloaded, totalBytes));
                     break;
 
                 case InstallStatus.Failed:
-                    System.Diagnostics.Debug.WriteLine("[GooglePlayUpdateService] Update download failed");
+                    UpdateStateChanged?.Invoke(this, new UpdateStateChangedEventArgs(UpdateCheckStatus.Error, "Download failed"));
                     break;
 
                 case InstallStatus.Installing:
-                    System.Diagnostics.Debug.WriteLine("[GooglePlayUpdateService] Update installing...");
+                    UpdateStateChanged?.Invoke(this, new UpdateStateChangedEventArgs(UpdateCheckStatus.Downloading, 90));
                     break;
 
                 case InstallStatus.Pending:
-                    System.Diagnostics.Debug.WriteLine("[GooglePlayUpdateService] Update pending...");
+                    UpdateStateChanged?.Invoke(this, new UpdateStateChangedEventArgs(UpdateCheckStatus.Downloading, 0));
                     break;
             }
         });
@@ -288,6 +318,30 @@ public sealed class GooglePlayUpdateService : IAppUpdateService, IDisposable
     }
 }
 
+/// <summary>
+/// InstallStateUpdatedListener: IInstallStateUpdatedListener implementasyonu.
+/// Binding'deki InstallState tipini kullanır.
+/// </summary>
+internal class InstallStateUpdatedListener : Java.Lang.Object, IInstallStateUpdatedListener
+{
+    private readonly Action<InstallState> _onStateUpdate;
+
+    public InstallStateUpdatedListener(Action<InstallState> onStateUpdate)
+    {
+        _onStateUpdate = onStateUpdate;
+    }
+
+    public void OnStateUpdate(InstallState? state)
+    {
+        if (state != null)
+            _onStateUpdate?.Invoke(state);
+    }
+}
+
+/// <summary>
+/// Android.Gms.Tasks IOnSuccessListener wrapper — Java Task'in success callback'ini
+/// C# Action ile bağlar.
+/// </summary>
 internal class OnSuccessListener<T> : Java.Lang.Object, IOnSuccessListener where T : Java.Lang.Object
 {
     private readonly Action<T> _onSuccess;
@@ -297,13 +351,17 @@ internal class OnSuccessListener<T> : Java.Lang.Object, IOnSuccessListener where
         _onSuccess = onSuccess;
     }
 
-    public void OnSuccess(Java.Lang.Object result)
+    public void OnSuccess(Java.Lang.Object? result)
     {
         if (result is T typed)
             _onSuccess?.Invoke(typed);
     }
 }
 
+/// <summary>
+/// Android.Gms.Tasks IOnFailureListener wrapper — Java Task'in failure callback'ini
+/// C# Action ile bağlar.
+/// </summary>
 internal class OnFailureListener : Java.Lang.Object, IOnFailureListener
 {
     private readonly Action<Java.Lang.Exception> _onFailure;
@@ -316,21 +374,5 @@ internal class OnFailureListener : Java.Lang.Object, IOnFailureListener
     public void OnFailure(Java.Lang.Exception exception)
     {
         _onFailure?.Invoke(exception);
-    }
-}
-
-internal class InstallStateUpdatedListener : Java.Lang.Object, IInstallStateUpdatedListener
-{
-    private readonly Action<AppUpdateState> _onStateUpdate;
-
-    public InstallStateUpdatedListener(Action<AppUpdateState> onStateUpdate)
-    {
-        _onStateUpdate = onStateUpdate;
-    }
-
-    public void OnStateUpdate(Java.Lang.Object state)
-    {
-        if (state is AppUpdateState typed)
-            _onStateUpdate?.Invoke(typed);
     }
 }
