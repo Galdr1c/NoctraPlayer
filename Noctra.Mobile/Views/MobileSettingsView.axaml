@@ -1000,8 +1000,7 @@
                      TextWrapping="Wrap" />
           <Button Classes="SettingsActionButton"
                   Command="{Binding CheckForUpdatesCommand}"
-                  IsVisible="{Binding !IsCheckingForUpdates}"
-                  IsEnabled="{Binding !IsStartingUpdate}">
+                  IsVisible="{Binding ShowUpdateCheckButton}">
             <StackPanel Orientation="Horizontal" Spacing="8">
               <icons:MaterialIcon Kind="Refresh" Width="18" Height="18" />
               <TextBlock Text="{loc:Translate GlobalSettings.Update.Check}" />

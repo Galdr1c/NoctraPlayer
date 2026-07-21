@@ -101,11 +101,19 @@ public class MainActivity : AvaloniaMainActivity
 
     protected override void OnActivityResult(int requestCode, Result resultCode, Intent? data)
     {
-        if (Avalonia.Application.Current is Noctra.Mobile.App app &&
-            app.Services?.GetService<AndroidFilePickerService>() is { } filePicker &&
-            filePicker.TryHandleActivityResult(requestCode, resultCode, data))
+        if (Avalonia.Application.Current is Noctra.Mobile.App app)
         {
-            return;
+            if (app.Services?.GetService<GooglePlayUpdateService>() is { } updateService &&
+                updateService.TryHandleActivityResult(requestCode, resultCode))
+            {
+                return;
+            }
+
+            if (app.Services?.GetService<AndroidFilePickerService>() is { } filePicker &&
+                filePicker.TryHandleActivityResult(requestCode, resultCode, data))
+            {
+                return;
+            }
         }
 
         base.OnActivityResult(requestCode, resultCode, data);
@@ -125,6 +133,35 @@ public class MainActivity : AvaloniaMainActivity
         }
 
         base.OnBackPressed();
+    }
+
+    protected override void OnResume()
+    {
+        base.OnResume();
+
+        if (Avalonia.Application.Current is not Noctra.Mobile.App app)
+        {
+            return;
+        }
+
+        app.Services?.GetService<AndroidActivityProvider>()?.SetCurrent(this);
+
+        if (app.Services?.GetService<GooglePlayUpdateService>() is { } updateService)
+        {
+            _ = ResumeUpdateFlowSafelyAsync(updateService);
+        }
+    }
+
+    private static async Task ResumeUpdateFlowSafelyAsync(GooglePlayUpdateService updateService)
+    {
+        try
+        {
+            await updateService.ResumeUpdateAsync().ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            Log.Warn("Noctra", $"Update resume check failed: {ex}");
+        }
     }
 
     protected override void OnStop()

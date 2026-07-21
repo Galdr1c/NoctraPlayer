@@ -657,7 +657,7 @@
                                 <!-- Check Button -->
                                 <Button Grid.Column="2" 
                                         Command="{Binding CheckForUpdatesCommand}"
-                                        IsEnabled="{Binding !IsCheckingForUpdates}"
+                                        IsVisible="{Binding ShowUpdateCheckButton}"
                                         Padding="16,8"
                                         Background="{DynamicResource Surface1Brush}"
                                         CornerRadius="8"

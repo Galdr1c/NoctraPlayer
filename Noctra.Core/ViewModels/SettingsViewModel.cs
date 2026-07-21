@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System.Globalization;
 using System.Collections.ObjectModel;
+using System.Threading;
 using Noctra.Core.Services;
 
 namespace Noctra.ViewModels;
@@ -15,7 +16,7 @@ namespace Noctra.ViewModels;
 /// <summary>
 /// Ayarlar view model
 /// </summary>
-public partial class SettingsViewModel : ObservableObject
+public partial class SettingsViewModel : ObservableObject, IDisposable
 {
     private readonly IPlaylistService _playlistService;
     private readonly ISettingsService _settingsService;
@@ -34,6 +35,7 @@ public partial class SettingsViewModel : ObservableObject
     private readonly ICacheService _cacheService;
     private readonly IProfileService _profileService;
     private readonly IAppUpdateService _appUpdateService;
+    private readonly IDispatcherService? _dispatcherService;
     private CancellationTokenSource? _epgRefreshWatchCts;
     
     private int _isRefreshOperationRunning;
@@ -254,7 +256,8 @@ public partial class SettingsViewModel : ObservableObject
         IAppUpdateService appUpdateService,
         IAppPathService? appPaths = null,
         ICacheService? cacheService = null,
-        IProfileService? profileService = null)
+        IProfileService? profileService = null,
+        IDispatcherService? dispatcherService = null)
     {
         _settingsService = settingsService;
         _epgService = epgService;
@@ -270,6 +273,7 @@ public partial class SettingsViewModel : ObservableObject
         _localizationService = localizationService;
         _securityService = securityService;
         _appUpdateService = appUpdateService;
+        _dispatcherService = dispatcherService;
         _appPaths = appPaths ?? new DesktopAppPathService();
         _cacheService = cacheService ?? new CacheService(_appPaths);
         _profileService = profileService;
@@ -293,34 +297,127 @@ public partial class SettingsViewModel : ObservableObject
 
     private void OnUpdateStateChanged(object? sender, UpdateStateChangedEventArgs e)
     {
+        if (_dispatcherService is not null)
+        {
+            _dispatcherService.BeginInvoke(() => ApplyUpdateState(e));
+            return;
+        }
+
+        ApplyUpdateState(e);
+    }
+
+    private void ApplyUpdateState(UpdateStateChangedEventArgs e)
+    {
+        IsCheckingForUpdates = false;
+
         switch (e.Status)
         {
             case UpdateCheckStatus.Downloading:
+                IsUpdateUnsupported = false;
+                IsStartingUpdate = false;
                 IsUpdateAvailable = false;
                 IsUpdateDownloaded = false;
-                if (e.ProgressPercent.HasValue)
-                {
-                    UpdateStatusText = string.Format(
+                IsUpdateDownloading = true;
+                UpdateStatusText = e.ProgressPercent.HasValue
+                    ? string.Format(
                         _localizationService.GetString("Settings.Update.DownloadingProgressFormat"),
-                        e.ProgressPercent.Value);
-                }
-                else
-                {
-                    UpdateStatusText = _localizationService.GetString("Settings.Update.Downloading");
-                }
+                        e.ProgressPercent.Value)
+                    : _localizationService.GetString("Settings.Update.Downloading");
                 break;
 
             case UpdateCheckStatus.Downloaded:
+                IsUpdateUnsupported = false;
+                IsStartingUpdate = false;
                 IsUpdateAvailable = false;
+                IsUpdateDownloading = false;
                 IsUpdateDownloaded = true;
                 UpdateStatusText = _localizationService.GetString("Settings.Update.Downloaded");
                 break;
 
-            case UpdateCheckStatus.Error:
+            case UpdateCheckStatus.UpdateAvailable:
+                IsUpdateUnsupported = false;
+                IsStartingUpdate = false;
+                IsUpdateDownloading = false;
                 IsUpdateDownloaded = false;
-                UpdateStatusText = e.ErrorMessage ?? _localizationService.GetString("Settings.Update.CheckFailed");
+                IsUpdateAvailable = true;
+                UpdateStatusText = GetAvailableUpdateText(AvailableVersion);
                 break;
+
+            case UpdateCheckStatus.UpToDate:
+                IsUpdateUnsupported = false;
+                IsStartingUpdate = false;
+                IsUpdateAvailable = false;
+                IsUpdateDownloading = false;
+                IsUpdateDownloaded = false;
+                AvailableVersion = null;
+                UpdateStatusText = _localizationService.GetString("Settings.Update.UpToDate");
+                break;
+
+            case UpdateCheckStatus.Canceled:
+            {
+                IsUpdateUnsupported = false;
+                var hadDownloadedUpdate = IsUpdateDownloaded;
+                var hadKnownUpdate = IsUpdateAvailable || IsUpdateDownloading || IsStartingUpdate;
+
+                IsStartingUpdate = false;
+                IsUpdateDownloading = false;
+
+                if (hadDownloadedUpdate)
+                {
+                    IsUpdateAvailable = false;
+                    IsUpdateDownloaded = true;
+                    UpdateStatusText = _localizationService.GetString("Settings.Update.Downloaded");
+                }
+                else if (hadKnownUpdate)
+                {
+                    IsUpdateDownloaded = false;
+                    IsUpdateAvailable = true;
+                    UpdateStatusText = GetAvailableUpdateText(AvailableVersion);
+                }
+                else
+                {
+                    ResetUpdateFlags();
+                    UpdateStatusText = _localizationService.GetString("Settings.Update.CheckFailed");
+                }
+
+                break;
+            }
+
+            case UpdateCheckStatus.Unsupported:
+                ResetUpdateFlags();
+                IsUpdateUnsupported = true;
+                UpdateStatusText = _localizationService.GetString("Settings.Update.Unsupported");
+                break;
+
+            case UpdateCheckStatus.Error:
+            {
+                var wasInstalling = IsStartingUpdate || IsUpdateDownloading || IsUpdateDownloaded;
+                ResetUpdateFlags();
+                IsUpdateUnsupported = false;
+                UpdateStatusText = _localizationService.GetString(
+                    wasInstalling
+                        ? "Settings.Update.StartFailed"
+                        : "Settings.Update.CheckFailed");
+                break;
+            }
         }
+    }
+
+    private string GetAvailableUpdateText(string? version)
+    {
+        return string.IsNullOrWhiteSpace(version)
+            ? _localizationService.GetString("Settings.Update.AvailableGeneric")
+            : string.Format(
+                _localizationService.GetString("Settings.Update.AvailableFormat"),
+                version);
+    }
+
+    private void ResetUpdateFlags()
+    {
+        IsStartingUpdate = false;
+        IsUpdateAvailable = false;
+        IsUpdateDownloading = false;
+        IsUpdateDownloaded = false;
     }
 
     public string CurrentVersion => _appVersionService.DisplayVersion;
@@ -404,55 +501,91 @@ public partial class SettingsViewModel : ObservableObject
     private string _updateStatusText = string.Empty;
 
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(CheckForUpdatesCommand), nameof(StartUpdateCommand), nameof(CompleteUpdateCommand))]
+    [NotifyPropertyChangedFor(nameof(ShowUpdateCheckButton))]
     private bool _isCheckingForUpdates;
 
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(CheckForUpdatesCommand), nameof(StartUpdateCommand), nameof(CompleteUpdateCommand))]
+    [NotifyPropertyChangedFor(nameof(ShowUpdateCheckButton))]
     private bool _isUpdateAvailable;
 
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(CheckForUpdatesCommand), nameof(StartUpdateCommand), nameof(CompleteUpdateCommand))]
+    [NotifyPropertyChangedFor(nameof(ShowUpdateCheckButton))]
     private bool _isStartingUpdate;
 
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(CheckForUpdatesCommand), nameof(StartUpdateCommand), nameof(CompleteUpdateCommand))]
+    [NotifyPropertyChangedFor(nameof(ShowUpdateCheckButton))]
     private bool _isUpdateDownloaded;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(CheckForUpdatesCommand), nameof(StartUpdateCommand), nameof(CompleteUpdateCommand))]
+    [NotifyPropertyChangedFor(nameof(ShowUpdateCheckButton))]
+    private bool _isUpdateDownloading;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(CheckForUpdatesCommand))]
+    [NotifyPropertyChangedFor(nameof(ShowUpdateCheckButton))]
+    private bool _isUpdateUnsupported;
 
     [ObservableProperty]
     private string? _availableVersion;
 
-    [RelayCommand]
+    public bool ShowUpdateCheckButton => CanCheckForUpdates;
+
+    private bool CanCheckForUpdates =>
+        !IsCheckingForUpdates &&
+        !IsStartingUpdate &&
+        !IsUpdateAvailable &&
+        !IsUpdateDownloading &&
+        !IsUpdateDownloaded &&
+        !IsUpdateUnsupported;
+
+    private bool CanStartUpdate =>
+        IsUpdateAvailable &&
+        !IsCheckingForUpdates &&
+        !IsStartingUpdate &&
+        !IsUpdateDownloading &&
+        !IsUpdateDownloaded;
+
+    private bool CanCompleteUpdate =>
+        IsUpdateDownloaded &&
+        !IsCheckingForUpdates &&
+        !IsStartingUpdate &&
+        !IsUpdateDownloading;
+
+    [RelayCommand(CanExecute = nameof(CanCheckForUpdates))]
     private async Task CheckForUpdatesAsync()
     {
-        if (IsCheckingForUpdates)
+        if (!CanCheckForUpdates)
+        {
             return;
+        }
 
         IsCheckingForUpdates = true;
+        IsUpdateUnsupported = false;
         IsUpdateAvailable = false;
-        IsUpdateDownloaded = false;
+        AvailableVersion = null;
         UpdateStatusText = _localizationService.GetString("Settings.Update.Checking");
 
         try
         {
             var result = await _appUpdateService.CheckAsync();
-
-            IsUpdateAvailable = result.IsUpdateAvailable;
             AvailableVersion = result.LatestVersion;
-
-            UpdateStatusText = result.Status switch
-            {
-                UpdateCheckStatus.UpdateAvailable =>
-                    string.Format(_localizationService.GetString("Settings.Update.AvailableFormat"), result.LatestVersion ?? ""),
-                UpdateCheckStatus.UpToDate =>
-                    _localizationService.GetString("Settings.Update.UpToDate"),
-                UpdateCheckStatus.Error =>
-                    _localizationService.GetString("Settings.Update.CheckFailed"),
-                UpdateCheckStatus.Unsupported =>
-                    _localizationService.GetString("Settings.Update.Unsupported"),
-                _ => _localizationService.GetString("Settings.Update.CheckFailed")
-            };
+            ApplyUpdateState(new UpdateStateChangedEventArgs(
+                result.Status,
+                result.ErrorMessage ?? string.Empty));
+        }
+        catch (OperationCanceledException)
+        {
+            ApplyUpdateState(new UpdateStateChangedEventArgs(UpdateCheckStatus.Canceled));
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[SettingsViewModel] CheckForUpdates failed: {ex.Message}");
-            UpdateStatusText = _localizationService.GetString("Settings.Update.CheckFailed");
+            ApplyUpdateState(new UpdateStateChangedEventArgs(UpdateCheckStatus.Error));
         }
         finally
         {
@@ -460,43 +593,57 @@ public partial class SettingsViewModel : ObservableObject
         }
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanStartUpdate))]
     private async Task StartUpdateAsync()
     {
-        if (!IsUpdateAvailable || IsStartingUpdate)
+        if (!CanStartUpdate)
+        {
             return;
+        }
 
         IsStartingUpdate = true;
+        var started = false;
         try
         {
-            var started = await _appUpdateService.StartUpdateAsync();
-            if (!started)
+            started = await _appUpdateService.StartUpdateAsync();
+            // Platform servisi terminal bir state event'i yayınladıysa o mesajı koru.
+            // Hiç event gelmeden false dönerse kontrollü bir başlangıç hatası göster.
+            if (!started && IsStartingUpdate)
             {
+                ResetUpdateFlags();
                 UpdateStatusText = _localizationService.GetString("Settings.Update.StartFailed");
             }
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[SettingsViewModel] StartUpdate failed: {ex.Message}");
+            ResetUpdateFlags();
             UpdateStatusText = _localizationService.GetString("Settings.Update.StartFailed");
         }
         finally
         {
-            IsStartingUpdate = false;
+            // Android'de Store onay ekranı sonuçlanana, Windows'ta Store işlemi event ile
+            // terminal duruma geçene kadar butonları kilitli tut.
+            if (!started)
+            {
+                IsStartingUpdate = false;
+            }
         }
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanCompleteUpdate))]
     private async Task CompleteUpdateAsync()
     {
-        if (!IsUpdateDownloaded || IsStartingUpdate)
+        if (!CanCompleteUpdate)
+        {
             return;
+        }
 
         IsStartingUpdate = true;
         try
         {
             var completed = await _appUpdateService.CompleteUpdateAsync();
-            if (!completed)
+            if (!completed && IsUpdateDownloaded)
             {
                 UpdateStatusText = _localizationService.GetString("Settings.Update.StartFailed");
             }
@@ -517,11 +664,10 @@ public partial class SettingsViewModel : ObservableObject
         try
         {
             var pending = await _appUpdateService.CheckPendingUpdateAsync();
-            if (pending.Status == UpdateCheckStatus.Downloaded)
+            if (pending.Status is UpdateCheckStatus.Downloaded or UpdateCheckStatus.Downloading)
             {
-                IsUpdateDownloaded = true;
                 AvailableVersion = pending.LatestVersion;
-                UpdateStatusText = _localizationService.GetString("Settings.Update.Downloaded");
+                ApplyUpdateState(new UpdateStateChangedEventArgs(pending.Status));
             }
         }
         catch (Exception ex)
@@ -1540,6 +1686,19 @@ public partial class SettingsViewModel : ObservableObject
             }
         }
     }
+
+    public void Dispose()
+    {
+        _appUpdateService.UpdateStateChanged -= OnUpdateStateChanged;
+        _mainViewModel.PropertyChanged -= MainViewModel_PropertyChanged;
+        _settingsService.SettingsChanged -= OnSettingsService_Changed;
+        _licenseService.SubscriptionChanged -= OnLicenseSubscriptionChanged;
+
+        _epgRefreshWatchCts?.Cancel();
+        _epgRefreshWatchCts?.Dispose();
+        _epgRefreshWatchCts = null;
+    }
+
 }
 
 /// <summary>

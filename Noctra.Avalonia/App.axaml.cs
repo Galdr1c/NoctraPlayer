@@ -306,25 +306,17 @@ public partial class App : Application
         services.AddSingleton<IPackageIdentityService, PackageIdentityService>();
         services.AddSingleton<INetworkService, NetworkService>();
         services.AddSingleton<IAppVersionService>(sp => new DesktopAppVersionService(sp.GetService<IPackageIdentityService>()));
-        services.AddSingleton<DesktopWindowHandleProvider>(sp =>
-        {
-            // MainWindow henüz oluşturulmamış olabilir; window provider lazy initialize edilir.
-            // App.Current, Noctra.Avalonia.App üzerinden Avalonia.Application.Current'a erişir.
-            var lifetime = Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime;
-            var mainWindow = lifetime?.MainWindow;
-            if (mainWindow != null)
-            {
-                return new DesktopWindowHandleProvider(mainWindow);
-            }
-            // MainWindow henüz atanmamışsa null döndür; HWND provider null-safe.
-            return null!;
-        });
-        services.AddSingleton<IWindowHandleProvider>(sp => sp.GetRequiredService<DesktopWindowHandleProvider>());
+        services.AddSingleton<DesktopWindowHandleProvider>();
+        services.AddSingleton<IWindowHandleProvider>(sp =>
+            sp.GetRequiredService<DesktopWindowHandleProvider>());
         services.AddSingleton<IAppUpdateService>(sp =>
         {
-            var pkg = sp.GetService<IPackageIdentityService>();
-            return pkg?.IsPackaged == true
-                ? new MicrosoftStoreUpdateService(pkg, sp.GetService<IWindowHandleProvider>())
+            var packageIdentity = sp.GetRequiredService<IPackageIdentityService>();
+            return packageIdentity.IsPackaged
+                ? new MicrosoftStoreUpdateService(
+                    packageIdentity,
+                    sp.GetRequiredService<IWindowHandleProvider>(),
+                    sp.GetRequiredService<IDispatcherService>())
                 : new NoOpUpdateService();
         });
 

@@ -35,8 +35,9 @@ public interface IAppUpdateService
 
     /// <summary>
     /// Güncelleme durumu değişikliklerini ViewModel'e iletmek için event.
-    /// Android flexible update listener'indan tetiklenir.
-    /// Microsoft Store kendi yönettiği için tetiklenmez.
+    /// Android flexible/immediate akışından ve Microsoft Store indirme/kurulum
+    /// işleminden tetiklenir. Event farklı bir thread'den gelebilir; UI katmanı
+    /// kendi dispatcher'ına geçmelidir.
     /// </summary>
     event EventHandler<UpdateStateChangedEventArgs>? UpdateStateChanged;
 }
