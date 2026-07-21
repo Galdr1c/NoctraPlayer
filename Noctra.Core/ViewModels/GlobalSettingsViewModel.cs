@@ -25,6 +25,7 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
     private readonly IProfileService _profileService;
     private readonly IEpgService _epgService;
     private readonly ILocalizationService _localizationService;
+    private readonly IAppUpdateService _appUpdateService;
 
     [ObservableProperty]
     private string _cacheSizeString = "0 B";
@@ -34,6 +35,21 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
 
     [ObservableProperty]
     private string _updateStatusText = string.Empty;
+
+    [ObservableProperty]
+    private bool _isCheckingForUpdates;
+
+    [ObservableProperty]
+    private bool _isUpdateAvailable;
+
+    [ObservableProperty]
+    private bool _isStartingUpdate;
+
+    [ObservableProperty]
+    private bool _isUpdateDownloaded;
+
+    [ObservableProperty]
+    private string? _availableVersion;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(ApplyPromoCodeCommand))]
@@ -124,7 +140,8 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
         ILicenseService licenseService,
         IProfileService profileService,
         IEpgService epgService,
-        ILocalizationService localizationService)
+        ILocalizationService localizationService,
+        IAppUpdateService appUpdateService)
     {
         _themeService = themeService;
         _dialogService = dialogService;
@@ -137,9 +154,10 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
         _profileService = profileService;
         _epgService = epgService;
         _localizationService = localizationService;
+        _appUpdateService = appUpdateService;
         
         CurrentVersion = _appVersionService.DisplayVersion;
-        UpdateStatusText = _localizationService.GetString("Settings.Update.UpToDate");
+        UpdateStatusText = string.Empty;
         _settingsService.SettingsChanged += OnSettingsService_Changed;
         _licenseService.SubscriptionChanged += OnLicenseSubscriptionChanged;
         
@@ -246,9 +264,115 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
     }
 
     [RelayCommand]
-    private void CheckForUpdatesAsync()
+    private async Task CheckForUpdatesAsync()
     {
-        UpdateStatusText = _localizationService.GetString("GlobalSettings.Update.Latest");
+        if (IsCheckingForUpdates)
+            return;
+
+        IsCheckingForUpdates = true;
+        IsUpdateAvailable = false;
+        IsUpdateDownloaded = false;
+        UpdateStatusText = _localizationService.GetString("Settings.Update.Checking");
+
+        try
+        {
+            var result = await _appUpdateService.CheckAsync();
+
+            IsUpdateAvailable = result.IsUpdateAvailable;
+            AvailableVersion = result.LatestVersion;
+
+            UpdateStatusText = result.Status switch
+            {
+                UpdateCheckStatus.UpdateAvailable =>
+                    string.Format(_localizationService.GetString("Settings.Update.AvailableFormat"), result.LatestVersion ?? ""),
+                UpdateCheckStatus.UpToDate =>
+                    _localizationService.GetString("Settings.Update.UpToDate"),
+                UpdateCheckStatus.Error =>
+                    _localizationService.GetString("Settings.Update.CheckFailed"),
+                UpdateCheckStatus.Unsupported =>
+                    _localizationService.GetString("Settings.Update.Unsupported"),
+                _ => _localizationService.GetString("Settings.Update.CheckFailed")
+            };
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[GlobalSettingsViewModel] CheckForUpdates failed: {ex.Message}");
+            UpdateStatusText = _localizationService.GetString("Settings.Update.CheckFailed");
+        }
+        finally
+        {
+            IsCheckingForUpdates = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task StartUpdateAsync()
+    {
+        if (!IsUpdateAvailable || IsStartingUpdate)
+            return;
+
+        IsStartingUpdate = true;
+        try
+        {
+            var started = await _appUpdateService.StartUpdateAsync();
+            if (!started)
+            {
+                UpdateStatusText = _localizationService.GetString("Settings.Update.StartFailed");
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[GlobalSettingsViewModel] StartUpdate failed: {ex.Message}");
+            UpdateStatusText = _localizationService.GetString("Settings.Update.StartFailed");
+        }
+        finally
+        {
+            IsStartingUpdate = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task CompleteUpdateAsync()
+    {
+        if (!IsUpdateDownloaded || IsStartingUpdate)
+            return;
+
+        IsStartingUpdate = true;
+        try
+        {
+            var completed = await _appUpdateService.CompleteUpdateAsync();
+            if (!completed)
+            {
+                UpdateStatusText = _localizationService.GetString("Settings.Update.StartFailed");
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[GlobalSettingsViewModel] CompleteUpdate failed: {ex.Message}");
+            UpdateStatusText = _localizationService.GetString("Settings.Update.StartFailed");
+        }
+        finally
+        {
+            IsStartingUpdate = false;
+        }
+    }
+
+    private async Task CheckPendingUpdateAsync()
+    {
+        try
+        {
+            var pending = await _appUpdateService.CheckPendingUpdateAsync();
+            if (pending.Status == UpdateCheckStatus.Downloaded)
+            {
+                IsUpdateDownloaded = true;
+                AvailableVersion = pending.LatestVersion;
+                UpdateStatusText = _localizationService.GetString("Settings.Update.Downloaded");
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[GlobalSettingsViewModel] CheckPendingUpdate failed: {ex.Message}");
+        }
     }
 
     [RelayCommand]

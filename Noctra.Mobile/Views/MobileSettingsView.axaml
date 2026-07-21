@@ -1001,21 +1001,30 @@
           <TextBlock Text="{loc:Translate GlobalSettings.Update.Checking}"
                      Foreground="{DynamicResource AccentBrush}"
                      FontSize="{DynamicResource FCaption}"
-                     IsVisible="False" />
+                     IsVisible="{Binding IsCheckingForUpdates}" />
           <Button Classes="SettingsActionButton"
                   Command="{Binding CheckForUpdatesCommand}"
-                  IsVisible="True">
+                  IsVisible="{Binding !IsCheckingForUpdates}"
+                  IsEnabled="{Binding !IsStartingUpdate}">
             <StackPanel Orientation="Horizontal" Spacing="8">
               <icons:MaterialIcon Kind="Refresh" Width="18" Height="18" />
               <TextBlock Text="{loc:Translate GlobalSettings.Update.Check}" />
             </StackPanel>
           </Button>
           <Button Classes="SettingsPrimaryActionButton"
-                  Command="{Binding CheckForUpdatesCommand}"
-                  IsVisible="False">
+                  Command="{Binding StartUpdateCommand}"
+                  IsVisible="{Binding IsUpdateAvailable}">
             <StackPanel Orientation="Horizontal" Spacing="8">
               <icons:MaterialIcon Kind="RocketLaunch" Width="18" Height="18" />
               <TextBlock Text="{loc:Translate GlobalSettings.Update.Now}" />
+            </StackPanel>
+          </Button>
+          <Button Classes="SettingsPrimaryActionButton"
+                  Command="{Binding CompleteUpdateCommand}"
+                  IsVisible="{Binding IsUpdateDownloaded}">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <icons:MaterialIcon Kind="Restart" Width="18" Height="18" />
+              <TextBlock Text="{loc:Translate Settings.Update.RestartAndInstall}" />
             </StackPanel>
           </Button>
         </StackPanel>

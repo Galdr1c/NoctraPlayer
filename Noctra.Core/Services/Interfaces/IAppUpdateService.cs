@@ -3,14 +3,14 @@ namespace Noctra.Services.Interfaces;
 /// <summary>
 /// Uygulama güncelleme servisi arayüzü.
 /// Platforma göre farklı implementasyonlar kullanılır:
-/// - Android: Google Play In-App Updates
+/// - Android: Google Play In-App Updates (flexible/immediate)
 /// - Windows Store: StoreContext API
 /// - Debug/Unpackaged: NoOp (güncelleme kontrolü yapmaz)
 /// </summary>
 public interface IAppUpdateService
 {
     /// <summary>
-    /// Güncelleme varsa bilgi döndürür, yoksa null döner.
+    /// Güncelleme kontrolü yapar. Sonuç her zaman döner (hata dahil).
     /// </summary>
     Task<UpdateCheckResult> CheckAsync(CancellationToken cancellationToken = default);
 
@@ -18,7 +18,47 @@ public interface IAppUpdateService
     /// Güncelleme işlemini başlatır (kullanıcıya mağaza sayfası açar veya
     /// uygulama içi güncelleme başlatır).
     /// </summary>
+    /// <returns>True eğer güncelleme başladıysa, false iptal/hata.</returns>
     Task<bool> StartUpdateAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Flexible update indirme tamamlandığında çağrılır.
+    /// Kullanıcı "yeniden başlat ve yükle" onayı verdikten sonra kullanılmalı.
+    /// </summary>
+    Task<bool> CompleteUpdateAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Uygulama foreground'a döndüğünde bekleyen indirilmiş güncellemeyi kontrol eder.
+    /// Flexible update tamamlanmış ama henüz complete edilmemiş olabilir.
+    /// </summary>
+    Task<UpdateCheckResult> CheckPendingUpdateAsync(CancellationToken cancellationToken = default);
+}
+
+/// <summary>
+/// Güncelleme kontrol durumu
+/// </summary>
+public enum UpdateCheckStatus
+{
+    /// <summary>Uygulama güncel, güncelleme yok.</summary>
+    UpToDate,
+
+    /// <summary>Yeni güncelleme mevcut.</summary>
+    UpdateAvailable,
+
+    /// <summary>Kontrol sırasında hata oluştu (ağ, API vb.).</summary>
+    Error,
+
+    /// <summary>Bu platform güncelleme desteklemiyor (sideload vb.).</summary>
+    Unsupported,
+
+    /// <summary>Güncelleme indiriliyor (flexible update).</summary>
+    Downloading,
+
+    /// <summary>Güncelleme indirildi, yükleme bekliyor (kullanıcı onayı gerekli).</summary>
+    Downloaded,
+
+    /// <summary>Güncelleme iptal edildi.</summary>
+    Canceled
 }
 
 /// <summary>
@@ -27,9 +67,14 @@ public interface IAppUpdateService
 public sealed class UpdateCheckResult
 {
     /// <summary>
-    /// Güncelleme mevcut mu?
+    /// Kontrol durumu (güncel, güncelleme var, hata vb.)
     /// </summary>
-    public bool IsUpdateAvailable { get; init; }
+    public UpdateCheckStatus Status { get; init; }
+
+    /// <summary>
+    /// Güncelleme mevcut mu? (Status == UpdateAvailable için kısayol)
+    /// </summary>
+    public bool IsUpdateAvailable => Status == UpdateCheckStatus.UpdateAvailable;
 
     /// <summary>
     /// Güncel sürüm numarası (mağazadaki/en son sürüm)
@@ -45,4 +90,9 @@ public sealed class UpdateCheckResult
     /// Zorunlu güncelleme mi?
     /// </summary>
     public bool IsMandatory { get; init; }
+
+    /// <summary>
+    /// Hata mesajı (Status == Error için)
+    /// </summary>
+    public string? ErrorMessage { get; init; }
 }

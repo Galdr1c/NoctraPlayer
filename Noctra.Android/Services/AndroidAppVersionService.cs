@@ -1,19 +1,40 @@
-using System.Reflection;
+using Android.Content;
+using Android.Content.PM;
 using Noctra.Services.Interfaces;
 
 namespace Noctra.Android.Services;
 
 /// <summary>
 /// Android platformu için sürüm servisi.
-/// Google Play'de belirlenen versionName ve versionCode değerlerini kullanır.
+/// PackageManager üzerinden gerçek versionName ve versionCode değerlerini okur.
 /// </summary>
 public sealed class AndroidAppVersionService : IAppVersionService
 {
+    private readonly Context _context;
+
+    public AndroidAppVersionService(Context context)
+    {
+        _context = context.ApplicationContext ?? context;
+    }
+
+    private PackageInfo? GetPackageInfo()
+    {
+        try
+        {
+            return _context.PackageManager?.GetPackageInfo(_context.PackageName!, 0);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[AndroidAppVersionService] Failed to get PackageInfo: {ex.Message}");
+            return null;
+        }
+    }
+
     public string DisplayVersion =>
-        Assembly.GetEntryAssembly()?.GetName().Version?.ToString(3)
-        ?? Assembly.GetExecutingAssembly().GetName().Version?.ToString(3)
-        ?? "1.0.0";
+        GetPackageInfo()?.VersionName ?? "1.0.0";
 
     public long BuildNumber =>
-        Assembly.GetEntryAssembly()?.GetName().Version?.Build ?? 0;
+        OperatingSystem.IsAndroidVersionAtLeast(28)
+            ? GetPackageInfo()?.LongVersionCode ?? 0
+            : GetPackageInfo()?.VersionCode ?? 0;
 }
