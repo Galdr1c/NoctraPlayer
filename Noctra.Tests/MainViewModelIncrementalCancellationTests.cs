@@ -285,7 +285,7 @@ public sealed class MainViewModelIncrementalCancellationTests
             new Mock<ISecurityService>().Object,
             new Mock<ITmdbSyncService>().Object,
             new Mock<ILicenseService>().Object,
-            new Mock<IUpdateService>().Object,
+            new Mock<IAppVersionService>().Object,
             localization.Object,
             new Mock<ILogger<MainViewModel>>().Object,
             null,

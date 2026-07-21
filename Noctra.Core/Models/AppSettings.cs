@@ -156,7 +156,6 @@ public class AppSettings
     // ============ Global Ayarlar ============
     
     public string Language { get; set; } = "en";
-    public bool AutoUpdate { get; set; } = true;
     public bool HardwareAcceleration { get; set; } = true;
     // ============ Legal / Privacy Consent ============
 

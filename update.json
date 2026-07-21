@@ -1,7 +1,0 @@
-{
-  "version": "1.1.0",
-  "changelog": "Desktop: Privacy consent, review prompts, improved settings organization. Mobile: Complete redesign with PiP support, gesture controls, background playback, and multi-language support.",
-  "downloadUrl": "https://github.com/Galdr1c/NoctraPlayer/releases/latest",
-  "isMandatory": false,
-  "releaseDate": "2026-05-25T00:00:00Z"
-}

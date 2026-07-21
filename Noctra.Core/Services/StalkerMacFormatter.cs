@@ -85,7 +85,9 @@ public static class StalkerMacFormatter
     public static int CalculateCaretPosition(int hexCountBeforeCaret, int formattedLength)
     {
         var clampedHex = Math.Min(hexCountBeforeCaret, 12);
+        if (clampedHex == 0) return 0;
         // Her iki hex byte'a bir ':' eklenir (ilk byte hariç)
-        return Math.Min(clampedHex + (clampedHex / 2), formattedLength);
+        // Formül: hexCount + (hexCount-1)/2 → 2→2, 4→5, 6→8, 8→11, 10→14, 12→17
+        return Math.Min(clampedHex + (clampedHex - 1) / 2, formattedLength);
     }
 }

@@ -73,7 +73,7 @@ public partial class MainViewModel : ObservableObject
     private readonly IDbContextFactory<AppDbContext> _contextFactory;
     private readonly ITmdbSyncService _tmdbSyncService;
     private readonly ILicenseService _licenseService;
-    private readonly IUpdateService _updateService;
+    private readonly IAppVersionService _appVersionService;
     private readonly IAppPathService _appPaths;
     private readonly IPlatformActionService _platformActions;
     private readonly DateTime _downloadCenterSessionStartUtc = DateTime.UtcNow;
@@ -375,7 +375,7 @@ public partial class MainViewModel : ObservableObject
         ISecurityService securityService,
         ITmdbSyncService tmdbSyncService,
         ILicenseService licenseService,
-        IUpdateService updateService,
+        IAppVersionService appVersionService,
         ILocalizationService localizationService,
         ILogger<MainViewModel>? logger = null,
         IAppPathService? appPaths = null,
@@ -408,7 +408,7 @@ public partial class MainViewModel : ObservableObject
         _securityService = securityService;
         _tmdbSyncService = tmdbSyncService;
         _licenseService = licenseService;
-        _updateService = updateService;
+        _appVersionService = appVersionService;
         _appPaths = appPaths ?? new DesktopAppPathService();
         _platformActions = platformActions ?? new DesktopPlatformActionService();
         RebuildSortOptions();
@@ -498,7 +498,7 @@ public partial class MainViewModel : ObservableObject
     }
 
     public bool IsPremium => _licenseService.IsPremium;
-    public string CurrentVersion => _updateService.CurrentVersion;
+    public string CurrentVersion => _appVersionService.DisplayVersion;
 
     public Task InitializeAsync()
     {

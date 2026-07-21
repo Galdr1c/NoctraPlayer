@@ -45,7 +45,7 @@ namespace Noctra.Tests
         private readonly Mock<IStalkerPortalService> _stalkerServiceMock = new();
         private readonly Mock<ISecurityService> _securityServiceMock = new();
         private readonly Mock<ILicenseService> _licenseServiceMock = new();
-        private readonly Mock<IUpdateService> _updateServiceMock = new();
+        private readonly Mock<IAppVersionService> _appVersionServiceMock = new();
         private readonly Mock<ILocalizationService> _localizationServiceMock = new();
 
         public ViewModelWarmupNotificationsTests()
@@ -107,7 +107,7 @@ namespace Noctra.Tests
                 _securityServiceMock.Object,
                 _tmdbServiceMock.Object,
                 _licenseServiceMock.Object,
-                _updateServiceMock.Object,
+                _appVersionServiceMock.Object,
                 _localizationServiceMock.Object,
                 _loggerMock.Object
             );

@@ -20,18 +20,18 @@ public sealed class AndroidDiagnosticReportService : IDiagnosticReportService
     private readonly Context _context;
     private readonly AndroidActivityProvider _activityProvider;
     private readonly ILicenseService _licenseService;
-    private readonly IUpdateService _updateService;
+    private readonly IAppVersionService _appVersionService;
 
     public AndroidDiagnosticReportService(
         Context context,
         AndroidActivityProvider activityProvider,
         ILicenseService licenseService,
-        IUpdateService updateService)
+        IAppVersionService appVersionService)
     {
         _context = context.ApplicationContext ?? context;
         _activityProvider = activityProvider;
         _licenseService = licenseService;
-        _updateService = updateService;
+        _appVersionService = appVersionService;
     }
 
     public void OpenBugReport()
@@ -138,7 +138,7 @@ public sealed class AndroidDiagnosticReportService : IDiagnosticReportService
         {
             sb.AppendLine($"User ID: {GetDeterministicUserId()}");
             sb.AppendLine($"Status: {(_licenseService.IsPremium ? "Premium" : "Free")}");
-            sb.AppendLine($"App Version: {_updateService.CurrentVersion}");
+            sb.AppendLine($"App Version: {_appVersionService.DisplayVersion}");
             sb.AppendLine($"Package: {_context.PackageName}");
             sb.AppendLine($"OS: Android {AndroidBuild.VERSION.Release} API {AndroidBuild.VERSION.SdkInt} ({RuntimeInformation.OSArchitecture})");
             sb.AppendLine($"Device: {AndroidBuild.Manufacturer} {AndroidBuild.Model}");

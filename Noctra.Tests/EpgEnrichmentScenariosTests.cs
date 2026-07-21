@@ -35,7 +35,7 @@ namespace Noctra.Tests
         private readonly Mock<IStalkerPortalService> _stalkerServiceMock = new();
         private readonly Mock<ISecurityService> _securityServiceMock = new();
         private readonly Mock<ILicenseService> _licenseServiceMock = new();
-        private readonly Mock<IUpdateService> _updateServiceMock = new();
+        private readonly Mock<IAppVersionService> _appVersionServiceMock = new();
 
         public EpgEnrichmentScenariosTests()
         {
@@ -68,7 +68,7 @@ namespace Noctra.Tests
                 _securityServiceMock.Object,
                 _tmdbServiceMock.Object,
                 _licenseServiceMock.Object,
-                _updateServiceMock.Object,
+                _appVersionServiceMock.Object,
                 new Mock<ILocalizationService>().Object,
                 _loggerMock.Object
             );

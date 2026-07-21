@@ -18,7 +18,7 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
     private readonly IDialogService _dialogService;
     private readonly ISettingsService _settingsService;
     private readonly ICacheService _cacheService;
-    private readonly IUpdateService _updateService;
+    private readonly IAppVersionService _appVersionService;
     private readonly IDispatcherService _dispatcherService;
     private readonly IDiagnosticReportService _diagnosticService;
     private readonly ILicenseService _licenseService;
@@ -34,16 +34,6 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
 
     [ObservableProperty]
     private string _updateStatusText = string.Empty;
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsIdle))]
-    private bool _isUpdateAvailable;
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsIdle))]
-    private bool _isCheckingUpdates;
-
-    public bool IsIdle => !IsUpdateAvailable && !IsCheckingUpdates;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(ApplyPromoCodeCommand))]
@@ -106,8 +96,6 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(CanTogglePremiumForTesting));
     }
 
-    private UpdateInfo? _latestUpdate;
-
     private GlobalSettings _settings = new();
     public GlobalSettings Settings
     {
@@ -130,7 +118,7 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
         IDialogService dialogService,
         ISettingsService settingsService,
         ICacheService cacheService,
-        IUpdateService updateService,
+        IAppVersionService appVersionService,
         IDispatcherService dispatcherService,
         IDiagnosticReportService diagnosticService,
         ILicenseService licenseService,
@@ -142,7 +130,7 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
         _dialogService = dialogService;
         _settingsService = settingsService;
         _cacheService = cacheService;
-        _updateService = updateService;
+        _appVersionService = appVersionService;
         _dispatcherService = dispatcherService;
         _diagnosticService = diagnosticService;
         _licenseService = licenseService;
@@ -150,7 +138,7 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
         _epgService = epgService;
         _localizationService = localizationService;
         
-        CurrentVersion = _updateService.CurrentVersion;
+        CurrentVersion = _appVersionService.DisplayVersion;
         UpdateStatusText = _localizationService.GetString("Settings.Update.UpToDate");
         _settingsService.SettingsChanged += OnSettingsService_Changed;
         _licenseService.SubscriptionChanged += OnLicenseSubscriptionChanged;
@@ -241,7 +229,6 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
         {
             IsDarkTheme = s.IsDarkTheme,
             Language = s.Language,
-            AutoUpdate = s.AutoUpdate,
             HardwareAcceleration = s.HardwareAcceleration,
             DiagnosticDataConsent = s.DiagnosticDataConsent
         };
@@ -259,39 +246,9 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
     }
 
     [RelayCommand]
-    private async Task CheckForUpdatesAsync()
+    private void CheckForUpdatesAsync()
     {
-        if (IsCheckingUpdates) return;
-
-        IsCheckingUpdates = true;
-        UpdateStatusText = _localizationService.GetString("GlobalSettings.Update.Checking");
-        IsUpdateAvailable = false;
-        _latestUpdate = null;
-
-        try
-        {
-            await Task.Delay(800); // UI feedback
-            var update = await _updateService.CheckForUpdatesAsync();
-            
-            if (update != null)
-            {
-                _latestUpdate = update;
-                IsUpdateAvailable = true;
-                UpdateStatusText = string.Format(_localizationService.GetString("GlobalSettings.Update.NewVersionFormat"), update.Version);
-            }
-            else
-            {
-                UpdateStatusText = _localizationService.GetString("GlobalSettings.Update.Latest");
-            }
-        }
-        catch
-        {
-            UpdateStatusText = _localizationService.GetString("GlobalSettings.Update.Failed");
-        }
-        finally
-        {
-            IsCheckingUpdates = false;
-        }
+        UpdateStatusText = _localizationService.GetString("GlobalSettings.Update.Latest");
     }
 
     [RelayCommand]
@@ -334,21 +291,7 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
         }
     }
 
-    [RelayCommand]
-    private async Task StartUpdateAsync()
-    {
-        if (_latestUpdate == null) return;
 
-        var confirmed = await _dialogService.ShowConfirmationAsync(
-            _localizationService.GetString("GlobalSettings.Update.ConfirmTitle"),
-            string.Format(_localizationService.GetString("GlobalSettings.Update.ConfirmMessageFormat"), _latestUpdate.Version, _latestUpdate.Changelog)
-        );
-
-        if (confirmed)
-        {
-            await _updateService.StartUpdateAsync(_latestUpdate);
-        }
-    }
 
     [RelayCommand]
     private async Task ClearCacheAsync()
@@ -411,7 +354,6 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
         var s = _settingsService.Settings;
         s.IsDarkTheme = Settings.IsDarkTheme;
         s.Language = Settings.Language;
-        s.AutoUpdate = Settings.AutoUpdate;
         s.HardwareAcceleration = Settings.HardwareAcceleration;
         s.DiagnosticDataConsent = Settings.DiagnosticDataConsent;
         
@@ -445,9 +387,6 @@ public partial class GlobalSettings : ObservableObject
 
     [ObservableProperty]
     private string _language = "en";
-
-    [ObservableProperty]
-    private bool _autoUpdate = true;
 
     [ObservableProperty]
     private bool _hardwareAcceleration = true;

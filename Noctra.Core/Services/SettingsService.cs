@@ -124,7 +124,6 @@ public class SettingsService : ISettingsService
     {
         target.IsDarkTheme = source.IsDarkTheme;
         target.Language = source.Language;
-        target.AutoUpdate = source.AutoUpdate;
         target.HardwareAcceleration = source.HardwareAcceleration;
         target.AutoSelectLastProfile = source.AutoSelectLastProfile;
         target.PromoCodeConfigUrl = source.PromoCodeConfigUrl;

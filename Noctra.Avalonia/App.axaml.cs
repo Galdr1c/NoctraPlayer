@@ -194,44 +194,10 @@ public partial class App : Application
                             StartupLogger.Log("========= ✅ STARTUP COMPLETE =========");
                         });
 
-                        // 8. Update Check (after transition — dialog won't auto-close with splash)
-                        StartupLogger.Log("Step 8: Checking for updates...");
-                        var packageIdentity = Services.GetRequiredService<IPackageIdentityService>();
-                        if (!packageIdentity.IsPackaged && settingsService.Settings.AutoUpdate)
-                        {
-                            StartupLogger.Log("Step 8: Update check enabled (background)");
-                            _ = Task.Run(async () =>
-                            {
-                                try
-                                {
-                                    var updateService = Services.GetRequiredService<IUpdateService>();
-                                    var update = await updateService.CheckForUpdatesAsync();
-                                    if (update != null)
-                                    {
-                                        var dialogService = Services.GetRequiredService<IDialogService>();
-                                        await Dispatcher.UIThread.InvokeAsync(async () =>
-                                        {
-                                            var confirmed = await dialogService.ShowConfirmationAsync(
-                                                "Yeni Güncelleme Mevcut",
-                                                $"v{update.Version} sürümü yayınlandı. Şimdi indirmek ister misiniz?"
-                                            );
-                                            if (confirmed)
-                                            {
-                                                await updateService.StartUpdateAsync(update);
-                                            }
-                                        });
-                                    }
-                                }
-                                catch (Exception ex)
-                                {
-                                    StartupLogger.LogError("Step 8 (background update check)", ex);
-                                }
-                            });
-                        }
-                        else
-                        {
-                            StartupLogger.Log("Step 8: Update check skipped");
-                        }
+                        // 8. Update check removed — platform-specific store updates only.
+                        // Windows Store handles updates automatically.
+                        // Debug/unpackaged builds: NoOpUpdateService (no popups).
+                        StartupLogger.Log("Step 8: Update check skipped (store-managed)");
                     }
                     catch (Exception ex)
                     {
@@ -339,7 +305,14 @@ public partial class App : Application
         services.AddSingleton<ILicenseService, LicenseService>();
         services.AddSingleton<IPackageIdentityService, PackageIdentityService>();
         services.AddSingleton<INetworkService, NetworkService>();
-        services.AddSingleton<IUpdateService, UpdateService>();
+        services.AddSingleton<IAppVersionService>(sp => new DesktopAppVersionService(sp.GetService<IPackageIdentityService>()));
+        services.AddSingleton<IAppUpdateService>(sp =>
+        {
+            var pkg = sp.GetService<IPackageIdentityService>();
+            return pkg?.IsPackaged == true
+                ? new MicrosoftStoreUpdateService(pkg)
+                : new NoOpUpdateService();
+        });
 
         services.AddSingleton<IDiagnosticReportService, DiagnosticReportService>();
 

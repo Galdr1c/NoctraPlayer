@@ -330,27 +330,6 @@
                                        Foreground="{DynamicResource TextPrimaryBrush}"
                                        Margin="0,0,0,20"/>
 
-                            <!-- Auto-update -->
-                            <Grid Margin="0,0,0,20">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-
-                                <StackPanel>
-                                    <TextBlock Text="{loc:Translate GlobalSettings.General.AutoUpdate.Title}"
-                                               FontSize="16"
-                                               Foreground="{DynamicResource TextPrimaryBrush}"/>
-                                    <TextBlock Text="{loc:Translate GlobalSettings.General.AutoUpdate.Description}"
-                                               FontSize="13"
-                                               Foreground="{DynamicResource TextMutedBrush}"
-                                               Margin="0,4,0,0"/>
-                                </StackPanel>
-
-                                <ToggleSwitch Grid.Column="1"
-                                             IsChecked="{Binding Settings.AutoUpdate}"/>
-                            </Grid>
-
                             <!-- Hardware acceleration -->
                             <Grid Margin="0,0,0,20">
                                 <Grid.ColumnDefinitions>
@@ -657,7 +636,7 @@
                                 </Border>
                             </Border>
                             
-                    <!-- UPDATE SECTION (Enhanced Modern Card) -->
+                    <!-- UPDATE SECTION (Store-managed updates) -->
                     <Border Background="{DynamicResource Surface0Brush}" 
                             CornerRadius="12" 
                             Padding="20,16" 
@@ -673,45 +652,18 @@
                                 <TextBlock Text="{Binding UpdateStatusText}" FontSize="13" Foreground="{DynamicResource TextMutedBrush}"/>
                             </StackPanel>
                             
-                            <!-- Action Area -->
-                            <Panel Grid.Column="2">
-                                <!-- Checking State -->
-                                <StackPanel Orientation="Horizontal" Spacing="10" IsVisible="{Binding IsCheckingUpdates}">
-                                    <materialIcons:MaterialIcon Kind="Refresh" Width="18" Height="18" Classes="Rotating" Foreground="{DynamicResource AccentBrush}">
-                                        <materialIcons:MaterialIcon.RenderTransform>
-                                            <RotateTransform />
-                                        </materialIcons:MaterialIcon.RenderTransform>
-                                    </materialIcons:MaterialIcon>
-                                    <TextBlock Text="{loc:Translate GlobalSettings.Update.Checking}" VerticalAlignment="Center" FontSize="13" Foreground="{DynamicResource TextMutedBrush}"/>
+                            <!-- Check Button -->
+                            <Button Grid.Column="2" 
+                                    Command="{Binding CheckForUpdatesCommand}"
+                                    Padding="16,8"
+                                    Background="{DynamicResource Surface1Brush}"
+                                    CornerRadius="8"
+                                    Cursor="Hand">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <materialIcons:MaterialIcon Kind="Refresh" Width="16" Height="16"/>
+                                    <TextBlock Text="{loc:Translate GlobalSettings.Update.Check}" FontSize="13" FontWeight="SemiBold"/>
                                 </StackPanel>
-
-                                <!-- Idle State -->
-                                <Button Command="{Binding CheckForUpdatesCommand}"
-                                        IsVisible="{Binding IsIdle}"
-                                        Padding="16,8"
-                                        Background="{DynamicResource Surface1Brush}"
-                                        CornerRadius="8"
-                                        Cursor="Hand">
-                                    <StackPanel Orientation="Horizontal" Spacing="8">
-                                        <materialIcons:MaterialIcon Kind="Refresh" Width="16" Height="16"/>
-                                        <TextBlock Text="{loc:Translate GlobalSettings.Update.Check}" FontSize="13" FontWeight="SemiBold"/>
-                                    </StackPanel>
-                                </Button>
-                                
-                                <!-- Update Available State -->
-                                <Button Command="{Binding StartUpdateCommand}"
-                                        IsVisible="{Binding IsUpdateAvailable}"
-                                        Background="{DynamicResource AccentBrush}"
-                                        Foreground="White"
-                                        Padding="18,9"
-                                        CornerRadius="8"
-                                        Cursor="Hand">
-                                    <StackPanel Orientation="Horizontal" Spacing="8">
-                                        <materialIcons:MaterialIcon Kind="RocketLaunch" Width="18" Height="18"/>
-                                        <TextBlock Text="{loc:Translate GlobalSettings.Update.Now}" FontWeight="Bold" FontSize="13"/>
-                                    </StackPanel>
-                                </Button>
-                            </Panel>
+                            </Button>
                         </Grid>
                     </Border>
 

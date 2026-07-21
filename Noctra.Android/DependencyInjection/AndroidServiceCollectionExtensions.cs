@@ -38,7 +38,9 @@ public static class AndroidServiceCollectionExtensions
         services.AddSingleton<IDialogService, AndroidDialogService>();
         services.AddSingleton<IAppEditionService, AppEditionService>();
         services.AddNoctraCoreServices();
-        services.AddSingleton<IUpdateService, AndroidUpdateService>();
+        services.AddSingleton<IAppVersionService, AndroidAppVersionService>();
+        services.AddSingleton<GooglePlayUpdateService>();
+        services.AddSingleton<IAppUpdateService>(sp => sp.GetRequiredService<GooglePlayUpdateService>());
         services.AddSingleton<IPlatformActionService, AndroidPlatformActionService>();
         services.AddSingleton<IThemeService, AndroidThemeService>();
         services.AddSingleton<IDiagnosticReportService, AndroidDiagnosticReportService>();

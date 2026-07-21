@@ -1255,7 +1255,7 @@
                                     <!-- Action Area -->
                                     <Panel Grid.Column="2">
                                         <!-- Checking State -->
-                                        <StackPanel Orientation="Horizontal" Spacing="10" IsVisible="{Binding IsCheckingUpdates}">
+                                        <StackPanel Orientation="Horizontal" Spacing="10" IsVisible="False">
                                             <materialIcons:MaterialIcon Kind="Refresh" Width="18" Height="18" Classes="Rotating" Foreground="{DynamicResource AccentBrush}">
                                                 <materialIcons:MaterialIcon.RenderTransform>
                                                     <RotateTransform />
@@ -1266,7 +1266,7 @@
 
                                         <!-- Idle State -->
                                         <Button Command="{Binding CheckForUpdatesCommand}"
-                                                IsVisible="{Binding IsIdle}"
+                                                IsVisible="True"
                                                 Padding="16,8"
                                                 Background="{DynamicResource Surface1Brush}"
                                                 CornerRadius="8"
@@ -1278,8 +1278,8 @@
                                         </Button>
                                         
                                         <!-- Update Available State -->
-                                        <Button Command="{Binding StartUpdateCommand}"
-                                                IsVisible="{Binding IsUpdateAvailable}"
+                                        <Button Command="{Binding CheckForUpdatesCommand}"
+                                                IsVisible="False"
                                                 Background="{DynamicResource AccentBrush}"
                                                 Foreground="White"
                                                 Padding="18,9"

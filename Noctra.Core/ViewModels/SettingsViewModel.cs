@@ -27,7 +27,7 @@ public partial class SettingsViewModel : ObservableObject
     private readonly IDbContextFactory<AppDbContext> _contextFactory;
     private readonly IDiagnosticReportService _diagnosticService;
     private readonly ILicenseService _licenseService;
-    private readonly IUpdateService _updateService;
+    private readonly IAppVersionService _appVersionService;
     private readonly ILocalizationService _localizationService;
     private readonly ISecurityService _securityService;
     private readonly IAppPathService _appPaths;
@@ -246,7 +246,7 @@ public partial class SettingsViewModel : ObservableObject
         IDbContextFactory<AppDbContext> contextFactory,
         IDiagnosticReportService diagnosticService,
         ILicenseService licenseService,
-        IUpdateService updateService,
+        IAppVersionService appVersionService,
         ILocalizationService localizationService,
         ISecurityService securityService,
         IAppPathService? appPaths = null,
@@ -263,7 +263,7 @@ public partial class SettingsViewModel : ObservableObject
         _contextFactory = contextFactory;
         _diagnosticService = diagnosticService;
         _licenseService = licenseService;
-        _updateService = updateService;
+        _appVersionService = appVersionService;
         _localizationService = localizationService;
         _securityService = securityService;
         _appPaths = appPaths ?? new DesktopAppPathService();
@@ -284,7 +284,7 @@ public partial class SettingsViewModel : ObservableObject
         _ = UpdateCacheSizeAsync();
     }
 
-    public string CurrentVersion => _updateService.CurrentVersion;
+    public string CurrentVersion => _appVersionService.DisplayVersion;
     public bool IsPremium => _licenseService.IsPremium;
 
     // ============ Cache ============
@@ -364,68 +364,10 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     private string _updateStatusText = string.Empty;
 
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsIdle))]
-    private bool _isUpdateAvailable;
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsIdle))]
-    private bool _isCheckingUpdates;
-
-    public bool IsIdle => !IsUpdateAvailable && !IsCheckingUpdates;
-
-    private UpdateInfo? _latestUpdate;
-
     [RelayCommand]
-    private async Task CheckForUpdatesAsync()
+    private void CheckForUpdatesAsync()
     {
-        if (IsCheckingUpdates) return;
-
-        IsCheckingUpdates = true;
-        UpdateStatusText = _localizationService.GetString("Settings.Update.Checking");
-        IsUpdateAvailable = false;
-        _latestUpdate = null;
-
-        try
-        {
-            await Task.Delay(800); // UI feedback
-            var update = await _updateService.CheckForUpdatesAsync();
-
-            if (update != null)
-            {
-                _latestUpdate = update;
-                IsUpdateAvailable = true;
-                UpdateStatusText = string.Format(_localizationService.GetString("Settings.Update.NewVersionFormat"), update.Version);
-            }
-            else
-            {
-                UpdateStatusText = _localizationService.GetString("Settings.Update.UpToDate");
-            }
-        }
-        catch (Exception)
-        {
-            UpdateStatusText = _localizationService.GetString("Settings.Update.CheckFailed");
-        }
-        finally
-        {
-            IsCheckingUpdates = false;
-        }
-    }
-
-    [RelayCommand]
-    private async Task StartUpdateAsync()
-    {
-        if (_latestUpdate == null) return;
-
-        var confirmed = await _dialogService.ShowConfirmationAsync(
-            _localizationService.GetString("Settings.Update.Title"),
-            string.Format(_localizationService.GetString("Settings.Update.ConfirmationFormat"), _latestUpdate.Version, _latestUpdate.Changelog)
-        );
-
-        if (confirmed)
-        {
-            await _updateService.StartUpdateAsync(_latestUpdate);
-        }
+        UpdateStatusText = _localizationService.GetString("Settings.Update.UpToDate");
     }
 
     [RelayCommand]
