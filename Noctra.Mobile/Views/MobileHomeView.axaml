@@ -3,7 +3,6 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="clr-namespace:Noctra.ViewModels;assembly=Noctra.Core"
-             xmlns:models="using:Noctra.Models"
              xmlns:converters="using:Noctra.Mobile.Converters"
              xmlns:loc="using:Noctra.Mobile.Localization"
              xmlns:controls="using:Noctra.Mobile.Controls"
@@ -17,98 +16,90 @@
     <converters:InverseBoolConverter x:Key="InverseBool" />
   </UserControl.Resources>
 
-  <ScrollViewer x:Name="HomeScrollViewer"
-                ScrollChanged="HomeScrollViewer_ScrollChanged"
-                VerticalScrollBarVisibility="Auto"
-                HorizontalScrollBarVisibility="Disabled">
-    <!-- Use slightly larger margins to mirror the desktop layout -->
-    <StackPanel Margin="24">
+  <UserControl.Styles>
+    <Style Selector="controls|MobileVirtualizingCardGrid#ContinueWatchingGrid">
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+    </Style>
+  </UserControl.Styles>
 
-      <!-- Continue Watching Section -->
-      <StackPanel IsVisible="{Binding ContinueWatching.Count, Converter={StaticResource CountToVisibility}}"
-                  Margin="0,0,0,40">
-        <TextBlock Text="{loc:Translate Home.ContinueWatching}"
-                   FontSize="{DynamicResource FHeadline}"
-                   FontWeight="Bold"
-                   Foreground="{DynamicResource TextPrimaryBrush}"
-                   Margin="0,0,0,20" />
-        <ItemsControl ItemsSource="{Binding ContinueWatching}">
-          <ItemsControl.ItemsPanel>
-            <ItemsPanelTemplate>
-              <WrapPanel Orientation="Horizontal" />
-            </ItemsPanelTemplate>
-          </ItemsControl.ItemsPanel>
-          <ItemsControl.ItemTemplate>
-            <DataTemplate x:DataType="models:Channel">
-              <controls:MobileContinueWatchingCard Margin="0,0,16,16"
-                                                   Width="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=continueWidth}"
-                                                   Height="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource ResponsiveCardMetricConverter}, ConverterParameter=continueHeight}" />
-            </DataTemplate>
-          </ItemsControl.ItemTemplate>
-        </ItemsControl>
-      </StackPanel>
+  <Grid RowDefinitions="Auto,Auto" Margin="24">
 
-      <!-- Empty State (shown when no Continue Watching) -->
-      <StackPanel Spacing="12"
-                  Margin="0,80,0,0"
-                  VerticalAlignment="Center"
-                  HorizontalAlignment="Center"
-                  IsVisible="{Binding ContinueWatching.Count, Converter={StaticResource CountToVisibility}, ConverterParameter=invert}">
-        <Image Source="{Binding ActualThemeVariant, RelativeSource={RelativeSource Self}, Converter={StaticResource LogoThemeConverter}, ConverterParameter=Full}"
-               Width="100"
-               Height="100"
-               Opacity="0.6"
-               RenderTransformOrigin="50%,50%"
-               Margin="0,0,0,10">
-          <Image.RenderTransform>
-            <ScaleTransform ScaleX="1" ScaleY="1" />
-          </Image.RenderTransform>
-          <Image.Styles>
-            <Style Selector="Image">
-              <Style.Animations>
-                <Animation Duration="0:0:2.5"
-                           IterationCount="Infinite"
-                           Easing="SineEaseInOut">
-                  <KeyFrame Cue="0%">
-                    <Setter Property="Opacity" Value="0.45" />
-                    <Setter Property="ScaleTransform.ScaleX" Value="0.96" />
-                    <Setter Property="ScaleTransform.ScaleY" Value="0.96" />
-                  </KeyFrame>
-                  <KeyFrame Cue="50%">
-                    <Setter Property="Opacity" Value="0.8" />
-                    <Setter Property="ScaleTransform.ScaleX" Value="1.04" />
-                    <Setter Property="ScaleTransform.ScaleY" Value="1.04" />
-                  </KeyFrame>
-                  <KeyFrame Cue="100%">
-                    <Setter Property="Opacity" Value="0.45" />
-                    <Setter Property="ScaleTransform.ScaleX" Value="0.96" />
-                    <Setter Property="ScaleTransform.ScaleY" Value="0.96" />
-                  </KeyFrame>
-                </Animation>
-              </Style.Animations>
-            </Style>
-          </Image.Styles>
-        </Image>
-        <TextBlock Text="{loc:Translate Home.Welcome}"
-                   FontSize="{DynamicResource FHeadline}"
-                   FontWeight="Bold"
-                   HorizontalAlignment="Center"
-                   Foreground="{DynamicResource TextPrimaryBrush}" />
-        <TextBlock Text="{loc:Translate Home.EmptyState.Title}"
-                   FontSize="{DynamicResource FBody}"
-                   Opacity="0.7"
-                   HorizontalAlignment="Center"
-                   Foreground="{DynamicResource TextPrimaryBrush}" />
-        <TextBlock Text="{loc:Translate Home.EmptyState.Description}"
-                   FontSize="{DynamicResource FOverline}"
-                   Opacity="0.5"
-                   HorizontalAlignment="Center"
-                   TextWrapping="Wrap"
-                   TextAlignment="Center"
-                   MaxWidth="400"
-                   Foreground="{DynamicResource TextPrimaryBrush}" />
-      </StackPanel>
-
+    <!-- Continue Watching Section -->
+    <StackPanel Grid.Row="0"
+                IsVisible="{Binding ContinueWatching.Count, Converter={StaticResource CountToVisibility}}"
+                Margin="0,0,0,40">
+      <TextBlock Text="{loc:Translate Home.ContinueWatching}"
+                 FontSize="{DynamicResource FHeadline}"
+                 FontWeight="Bold"
+                 Foreground="{DynamicResource TextPrimaryBrush}"
+                 Margin="0,0,0,20" />
+      <controls:MobileVirtualizingCardGrid x:Name="ContinueWatchingGrid"
+                                           SourceItems="{Binding ContinueWatching}"
+                                           CardKind="ContinueWatching"
+                                           ItemContainerTheme="{StaticResource TransparentListBoxItemTheme}" />
     </StackPanel>
-  </ScrollViewer>
+
+    <!-- Empty State (shown when no Continue Watching) -->
+    <StackPanel Grid.Row="1"
+                Spacing="12"
+                Margin="0,80,0,0"
+                VerticalAlignment="Center"
+                HorizontalAlignment="Center"
+                IsVisible="{Binding ContinueWatching.Count, Converter={StaticResource CountToVisibility}, ConverterParameter=invert}">
+      <Image Source="{Binding ActualThemeVariant, RelativeSource={RelativeSource Self}, Converter={StaticResource LogoThemeConverter}, ConverterParameter=Full}"
+             Width="100"
+             Height="100"
+             Opacity="0.6"
+             RenderTransformOrigin="50%,50%"
+             Margin="0,0,0,10">
+        <Image.RenderTransform>
+          <ScaleTransform ScaleX="1" ScaleY="1" />
+        </Image.RenderTransform>
+        <Image.Styles>
+          <Style Selector="Image">
+            <Style.Animations>
+              <Animation Duration="0:0:2.5"
+                         IterationCount="Infinite"
+                         Easing="SineEaseInOut">
+                <KeyFrame Cue="0%">
+                  <Setter Property="Opacity" Value="0.45" />
+                  <Setter Property="ScaleTransform.ScaleX" Value="0.96" />
+                  <Setter Property="ScaleTransform.ScaleY" Value="0.96" />
+                </KeyFrame>
+                <KeyFrame Cue="50%">
+                  <Setter Property="Opacity" Value="0.8" />
+                  <Setter Property="ScaleTransform.ScaleX" Value="1.04" />
+                  <Setter Property="ScaleTransform.ScaleY" Value="1.04" />
+                </KeyFrame>
+                <KeyFrame Cue="100%">
+                  <Setter Property="Opacity" Value="0.45" />
+                  <Setter Property="ScaleTransform.ScaleX" Value="0.96" />
+                  <Setter Property="ScaleTransform.ScaleY" Value="0.96" />
+                </KeyFrame>
+              </Animation>
+            </Style.Animations>
+          </Style>
+        </Image.Styles>
+      </Image>
+      <TextBlock Text="{loc:Translate Home.Welcome}"
+                 FontSize="{DynamicResource FHeadline}"
+                 FontWeight="Bold"
+                 HorizontalAlignment="Center"
+                 Foreground="{DynamicResource TextPrimaryBrush}" />
+      <TextBlock Text="{loc:Translate Home.EmptyState.Title}"
+                 FontSize="{DynamicResource FBody}"
+                 Opacity="0.7"
+                 HorizontalAlignment="Center"
+                 Foreground="{DynamicResource TextPrimaryBrush}" />
+      <TextBlock Text="{loc:Translate Home.EmptyState.Description}"
+                 FontSize="{DynamicResource FOverline}"
+                 Opacity="0.5"
+                 HorizontalAlignment="Center"
+                 TextWrapping="Wrap"
+                 TextAlignment="Center"
+                 MaxWidth="400"
+                 Foreground="{DynamicResource TextPrimaryBrush}" />
+    </StackPanel>
+
+  </Grid>
 </UserControl>

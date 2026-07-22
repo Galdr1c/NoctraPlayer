@@ -353,9 +353,19 @@ public sealed class MobileRecentRegressionTests
     {
         var view = File.ReadAllText(ProjectFile("Noctra.Mobile", "Views", "MobileHomeView.axaml"));
         var viewModel = File.ReadAllText(ProjectFile("Noctra.Core", "ViewModels", "MainViewModel.cs"));
+        var control = File.ReadAllText(ProjectFile("Noctra.Mobile", "Controls", "MobileVirtualizingCardGrid.cs"));
+        var presenter = File.ReadAllText(ProjectFile("Noctra.Mobile", "Controls", "MobileCardRowPresenter.cs"));
 
-        Assert.Contains("ItemsSource=\"{Binding ContinueWatching}\"", view, StringComparison.Ordinal);
+        Assert.Contains("<controls:MobileVirtualizingCardGrid", view, StringComparison.Ordinal);
+        Assert.Contains("SourceItems=\"{Binding ContinueWatching}\"", view, StringComparison.Ordinal);
+        Assert.Contains("CardKind=\"ContinueWatching\"", view, StringComparison.Ordinal);
+        Assert.DoesNotContain("<ItemsControl ItemsSource=\"{Binding ContinueWatching}\"", view, StringComparison.Ordinal);
+        Assert.DoesNotContain("<WrapPanel", view, StringComparison.Ordinal);
         Assert.Contains(".Take(10)", viewModel, StringComparison.Ordinal);
+        Assert.Contains("MobileCardGridKind.ContinueWatching", control, StringComparison.Ordinal);
+        Assert.Contains("MobileCardGridKind.ContinueWatching", presenter, StringComparison.Ordinal);
+        Assert.Contains("MobileContinueWatchingCard", presenter, StringComparison.Ordinal);
+        Assert.Contains("0.56", presenter, StringComparison.Ordinal);
     }
 
     [Fact]

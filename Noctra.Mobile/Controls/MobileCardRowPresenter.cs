@@ -54,10 +54,13 @@ internal sealed class MobileCardRowPresenter : WrapPanel
             var item = index < items.Count ? items[index] : null;
             card.DataContext = item;
             card.IsVisible = item != null;
-            card.Width = cardWidth;
-            card.Height = kind is MobileCardGridKind.Vod or MobileCardGridKind.Series
-                ? Math.Round(cardWidth * 1.5)
-                : double.NaN;
+        card.Width = cardWidth;
+        card.Height = kind switch
+        {
+            MobileCardGridKind.Vod or MobileCardGridKind.Series => Math.Round(cardWidth * 1.5),
+            MobileCardGridKind.ContinueWatching => Math.Round(cardWidth * 0.56),
+            _ => double.NaN
+        };
             card.Margin = new Thickness(
                 0,
                 0,
@@ -109,6 +112,7 @@ internal sealed class MobileCardRowPresenter : WrapPanel
         {
             MobileCardGridKind.Live => new MobileLiveTvCard(),
             MobileCardGridKind.Vod => new MobileVodCard(),
+            MobileCardGridKind.ContinueWatching => new MobileContinueWatchingCard(),
             _ => new MobileSeriesCard()
         };
         ApplyPresentationMode(card, mode);

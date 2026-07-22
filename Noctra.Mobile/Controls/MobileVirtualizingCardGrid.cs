@@ -21,7 +21,8 @@ public enum MobileCardGridKind
 {
     Live,
     Vod,
-    Series
+    Series,
+    ContinueWatching
 }
 
 public sealed record MobileCardGridRow(IReadOnlyList<object> Items);
@@ -436,9 +437,12 @@ public sealed class MobileVirtualizingCardGrid : ListBox
             availableWidth = 2;
         }
 
-        var profile = kind == MobileCardGridKind.Live
-            ? new GridProfile(220, 410, 4)
-            : new GridProfile(150, 180, 6);
+        var profile = kind switch
+        {
+            MobileCardGridKind.Live => new GridProfile(220, 410, 4),
+            MobileCardGridKind.ContinueWatching => new GridProfile(220, 410, 4),
+            _ => new GridProfile(150, 180, 6)
+        };
         var columns = Math.Max(
             1,
             (int)Math.Floor((availableWidth + CardGap) / (profile.MinWidth + CardGap)));
