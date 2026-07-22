@@ -479,6 +479,48 @@ public class MobileReleaseGuardTests
     }
 
     [Fact]
+    public void MobileSettings_HiddenCategoryLists_StartCollapsedAndStayHeightBounded()
+    {
+        var settings = ReadProjectFile("Noctra.Mobile", "Views", "MobileSettingsView.axaml");
+
+        Assert.Equal(
+            3,
+            System.Text.RegularExpressions.Regex.Matches(
+                settings,
+                "<Expander\\s+Classes=\"HiddenCategoryExpander\"\\s+IsExpanded=\"False\"")
+                .Count);
+        Assert.Equal(
+            3,
+            System.Text.RegularExpressions.Regex.Matches(
+                settings,
+                "<ScrollViewer MaxHeight=\"260\"")
+                .Count);
+
+        Assert.Contains("ItemsSource=\"{Binding HiddenLiveGroups}\"", settings);
+        Assert.Contains("ItemsSource=\"{Binding HiddenMovieGroups}\"", settings);
+        Assert.Contains("ItemsSource=\"{Binding HiddenSeriesGroups}\"", settings);
+        Assert.Equal(
+            3,
+            System.Text.RegularExpressions.Regex.Matches(settings, "UnhideGroupCommand")
+                .Count);
+    }
+
+    [Fact]
+    public void MobileSettings_HiddenCategoryExpanders_ResetWheneverSettingsViewModelIsAssigned()
+    {
+        var settings = ReadProjectFile("Noctra.Mobile", "Views", "MobileSettingsView.axaml");
+        var codeBehind = ReadProjectFile("Noctra.Mobile", "Views", "MobileSettingsView.axaml.cs");
+
+        Assert.Contains("x:Name=\"HiddenLiveCategoriesExpander\"", settings);
+        Assert.Contains("x:Name=\"HiddenMovieCategoriesExpander\"", settings);
+        Assert.Contains("x:Name=\"HiddenSeriesCategoriesExpander\"", settings);
+        Assert.Contains("ResetHiddenCategoryExpanders();", codeBehind);
+        Assert.Contains("HiddenLiveCategoriesExpander.IsExpanded = false;", codeBehind);
+        Assert.Contains("HiddenMovieCategoriesExpander.IsExpanded = false;", codeBehind);
+        Assert.Contains("HiddenSeriesCategoriesExpander.IsExpanded = false;", codeBehind);
+    }
+
+    [Fact]
     public void MobileCategorySelectionPage_SeparatesSelectionFromHideAction()
     {
         Assert.True(

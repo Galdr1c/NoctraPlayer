@@ -10,6 +10,33 @@
              x:DataType="vm:SettingsViewModel"
              x:CompileBindings="True"
              mc:Ignorable="d">
+  <UserControl.Styles>
+    <Style Selector="Expander.HiddenCategoryExpander">
+      <Setter Property="Background" Value="{DynamicResource Surface1Brush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+    </Style>
+    <Style Selector="Expander.HiddenCategoryExpander /template/ ToggleButton#ExpanderHeader,
+                     Expander.HiddenCategoryExpander:down /template/ ToggleButton#ExpanderHeader,
+                     Expander.HiddenCategoryExpander:up /template/ ToggleButton#ExpanderHeader">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Padding" Value="14,10" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    </Style>
+    <Style Selector="Expander.HiddenCategoryExpander /template/ ToggleButton#ExpanderHeader:pressed">
+      <Setter Property="Background" Value="{DynamicResource InteractivePressedBrush}" />
+    </Style>
+    <Style Selector="Expander.HiddenCategoryExpander /template/ Border#ExpanderContent,
+                     Expander.HiddenCategoryExpander:down /template/ Border#ExpanderContent,
+                     Expander.HiddenCategoryExpander:up /template/ Border#ExpanderContent">
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Padding" Value="12,0,12,12" />
+    </Style>
+  </UserControl.Styles>
   <Grid Background="{DynamicResource Bg0Brush}">
     <ScrollViewer x:Name="SettingsScrollViewer"
                   BringIntoViewOnFocusChange="True"
@@ -575,131 +602,188 @@
             </Grid>
           </Button>
 
-          <Grid ColumnDefinitions="*,Auto">
-            <TextBlock Text="{loc:Translate Settings.Channels.Hidden.Live}"
-                       Foreground="{DynamicResource TextMutedBrush}"
-                       FontSize="{DynamicResource FCaption}" />
-            <TextBlock Grid.Column="1"
-                       Text="{Binding HiddenLiveGroups.Count}"
-                       Foreground="{DynamicResource TextPrimaryBrush}"
-                       FontSize="{DynamicResource FCaption}"
-                       FontWeight="SemiBold" />
-          </Grid>
-          <ItemsControl ItemsSource="{Binding HiddenLiveGroups}">
-            <ItemsControl.ItemTemplate>
-              <DataTemplate>
-                <Border Classes="CategoryRow">
-                  <Grid ColumnDefinitions="*,Auto"
-                        ColumnSpacing="8">
-                    <TextBlock Text="{Binding}"
-                               FontSize="{DynamicResource FBodyM}" 
-                               FontWeight="SemiBold" 
-                               Foreground="{DynamicResource TextPrimaryBrush}"
-                               TextTrimming="CharacterEllipsis"
-                               VerticalAlignment="Center" />
-                    <Button Grid.Column="1"
-                            Command="{Binding $parent[ItemsControl].((vm:SettingsViewModel)DataContext).UnhideGroupCommand}"
-                            CommandParameter="{Binding}"
-                            Width="100"
-                            Theme="{StaticResource RevealBtn}">
-                      <StackPanel Orientation="Horizontal" Spacing="5">
-                        <icons:MaterialIcon Kind="EyeOutline" Width="22" Height="22" />
-                        <TextBlock Text="{loc:Translate Settings.Channels.Hidden.Show}" />
-                      </StackPanel>
-                    </Button>
-                  </Grid>
+          <Expander Classes="HiddenCategoryExpander"
+                    IsExpanded="False"
+                    x:Name="HiddenLiveCategoriesExpander">
+            <Expander.Header>
+              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                <TextBlock Text="{loc:Translate Settings.Channels.Hidden.Live}"
+                           Foreground="{DynamicResource TextPrimaryBrush}"
+                           FontSize="{DynamicResource FCaption}"
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis" />
+                <Border Grid.Column="1" Classes="SettingsStatusBadge" VerticalAlignment="Center" CornerRadius="4">
+                  <TextBlock Text="{Binding HiddenLiveGroups.Count}"
+                             Foreground="{DynamicResource TextMutedBrush}"
+                             FontSize="{DynamicResource FCaption}"
+                             LetterSpacing="1.5"
+                             FontWeight="SemiBold" />
                 </Border>
-              </DataTemplate>
-            </ItemsControl.ItemTemplate>
-          </ItemsControl>
-          <TextBlock Text="{loc:Translate Settings.Channels.Hidden.Empty.Live}"
-                     Foreground="{DynamicResource TextMutedBrush}"
-                     FontSize="{DynamicResource FCaption}"
-                     IsVisible="{Binding !HiddenLiveGroups.Count}" />
+              </Grid>
+            </Expander.Header>
+            <ScrollViewer MaxHeight="260" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+              <StackPanel>
+                <ItemsControl ItemsSource="{Binding HiddenLiveGroups}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <Border Classes="CategoryRow">
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                          <TextBlock Text="{Binding}"
+                                     FontSize="{DynamicResource FBodyM}"
+                                     FontWeight="Light"
+                                     Foreground="{DynamicResource TextPrimaryBrush}"
+                                     TextTrimming="CharacterEllipsis"
+                                     VerticalAlignment="Center" />
+                          <Button Grid.Column="1"
+                                  Command="{Binding $parent[ItemsControl].((vm:SettingsViewModel)DataContext).UnhideGroupCommand}"
+                                  CommandParameter="{Binding}"
+                                  Width="100"
+                                  Theme="{StaticResource RevealBtn}">
+                            <StackPanel Orientation="Horizontal" Spacing="5">
+                              <icons:MaterialIcon Kind="EyeOutline" Width="22" Height="22" />
+                              <TextBlock Text="{loc:Translate Settings.Channels.Hidden.Show}" />
+                            </StackPanel>
+                          </Button>
+                        </Grid>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <Grid Height="80"
+                      IsVisible="{Binding !HiddenLiveGroups.Count}">
+                  <TextBlock Text="{loc:Translate Settings.Channels.Hidden.Empty.Live}"
+                             Foreground="{DynamicResource TextMutedBrush}"
+                             FontSize="{DynamicResource FCaption}"
+                             HorizontalAlignment="Center"
+                             VerticalAlignment="Center"
+                             TextAlignment="Center" />
+                </Grid>
+              </StackPanel>
+            </ScrollViewer>
+          </Expander>
 
-          <Grid ColumnDefinitions="*,Auto">
-            <TextBlock Text="{loc:Translate Settings.Channels.Hidden.Movies}"
-                       Foreground="{DynamicResource TextMutedBrush}"
-                       FontSize="{DynamicResource FCaption}" />
-            <TextBlock Grid.Column="1"
-                       Text="{Binding HiddenMovieGroups.Count}"
-                       Foreground="{DynamicResource TextPrimaryBrush}"
-                       FontSize="{DynamicResource FCaption}"
-                       FontWeight="SemiBold" />
-          </Grid>
-          <ItemsControl ItemsSource="{Binding HiddenMovieGroups}">
-            <ItemsControl.ItemTemplate>
-              <DataTemplate>
-                <Border Classes="CategoryRow">
-                  <Grid ColumnDefinitions="*,Auto"
-                        ColumnSpacing="8">
-                    <TextBlock Text="{Binding}"
-                               FontSize="{DynamicResource FBodyM}" 
-                               FontWeight="SemiBold"  
-                               Foreground="{DynamicResource TextPrimaryBrush}"
-                               TextTrimming="CharacterEllipsis"
-                               VerticalAlignment="Center" />
-                    <Button Grid.Column="1"
-                            Command="{Binding $parent[ItemsControl].((vm:SettingsViewModel)DataContext).UnhideGroupCommand}"
-                            CommandParameter="{Binding}"
-                            Width="100"
-                            Theme="{StaticResource RevealBtn}">
-                      <StackPanel Orientation="Horizontal" Spacing="5">
-                        <icons:MaterialIcon Kind="EyeOutline" Width="22" Height="22" />
-                        <TextBlock Text="{loc:Translate Settings.Channels.Hidden.Show}" />
-                      </StackPanel>
-                    </Button>
-                  </Grid>
+          <Expander Classes="HiddenCategoryExpander"
+                    IsExpanded="False"
+                    x:Name="HiddenMovieCategoriesExpander">
+            <Expander.Header>
+              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                <TextBlock Text="{loc:Translate Settings.Channels.Hidden.Movies}"
+                           Foreground="{DynamicResource TextPrimaryBrush}"
+                           FontSize="{DynamicResource FCaption}"
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis" />
+                <Border Grid.Column="1" Classes="SettingsStatusBadge" VerticalAlignment="Center" CornerRadius="4">
+                  <TextBlock Text="{Binding HiddenMovieGroups.Count}"
+                             Foreground="{DynamicResource TextMutedBrush}"
+                             FontSize="{DynamicResource FCaption}"
+                             LetterSpacing="1.5"
+                             FontWeight="SemiBold" />
                 </Border>
-              </DataTemplate>
-            </ItemsControl.ItemTemplate>
-          </ItemsControl>
-          <TextBlock Text="{loc:Translate Settings.Channels.Hidden.Empty.Movies}"
-                     Foreground="{DynamicResource TextMutedBrush}"
-                     FontSize="{DynamicResource FCaption}"
-                     IsVisible="{Binding !HiddenMovieGroups.Count}" />
+              </Grid>
+            </Expander.Header>
+            <ScrollViewer MaxHeight="260" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+              <StackPanel>
+                <ItemsControl ItemsSource="{Binding HiddenMovieGroups}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <Border Classes="CategoryRow">
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                          <TextBlock Text="{Binding}"
+                                     FontSize="{DynamicResource FBodyM}"
+                                     FontWeight="Light"
+                                     Foreground="{DynamicResource TextPrimaryBrush}"
+                                     TextTrimming="CharacterEllipsis"
+                                     VerticalAlignment="Center" />
+                          <Button Grid.Column="1"
+                                  Command="{Binding $parent[ItemsControl].((vm:SettingsViewModel)DataContext).UnhideGroupCommand}"
+                                  CommandParameter="{Binding}"
+                                  Width="100"
+                                  Theme="{StaticResource RevealBtn}">
+                            <StackPanel Orientation="Horizontal" Spacing="5">
+                              <icons:MaterialIcon Kind="EyeOutline" Width="22" Height="22" />
+                              <TextBlock Text="{loc:Translate Settings.Channels.Hidden.Show}" />
+                            </StackPanel>
+                          </Button>
+                        </Grid>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <Grid Height="80"
+                      IsVisible="{Binding !HiddenMovieGroups.Count}">
+                  <TextBlock Text="{loc:Translate Settings.Channels.Hidden.Empty.Movies}"
+                             Foreground="{DynamicResource TextMutedBrush}"
+                             FontSize="{DynamicResource FCaption}"
+                             HorizontalAlignment="Center"
+                             VerticalAlignment="Center"
+                             TextAlignment="Center" />
+                </Grid>
+              </StackPanel>
+            </ScrollViewer>
+          </Expander>
 
-          <Grid ColumnDefinitions="*,Auto">
-            <TextBlock Text="{loc:Translate Settings.Channels.Hidden.Series}"
-                       Foreground="{DynamicResource TextMutedBrush}"
-                       FontSize="{DynamicResource FCaption}" />
-            <TextBlock Grid.Column="1"
-                       Text="{Binding HiddenSeriesGroups.Count}"
-                       Foreground="{DynamicResource TextPrimaryBrush}"
-                       FontSize="{DynamicResource FCaption}"
-                       FontWeight="SemiBold" />
-          </Grid>
-          <ItemsControl ItemsSource="{Binding HiddenSeriesGroups}">
-            <ItemsControl.ItemTemplate>
-              <DataTemplate>
-                <Border Classes="CategoryRow">
-                  <Grid ColumnDefinitions="*,Auto"
-                        ColumnSpacing="8">
-                    <TextBlock Text="{Binding}"
-                               FontSize="{DynamicResource FBodyM}" 
-                               FontWeight="SemiBold" 
-                               Foreground="{DynamicResource TextPrimaryBrush}"
-                               TextTrimming="CharacterEllipsis"
-                               VerticalAlignment="Center" />
-                    <Button Grid.Column="1"
-                            Command="{Binding $parent[ItemsControl].((vm:SettingsViewModel)DataContext).UnhideGroupCommand}"
-                            CommandParameter="{Binding}"
-                            Width="100"
-                            Theme="{StaticResource RevealBtn}">
-                      <StackPanel Orientation="Horizontal" Spacing="5">
-                        <icons:MaterialIcon Kind="EyeOutline" Width="22" Height="22" />
-                        <TextBlock Text="{loc:Translate Settings.Channels.Hidden.Show}" />
-                      </StackPanel>
-                    </Button>
-                  </Grid>
+          <Expander Classes="HiddenCategoryExpander"
+                    IsExpanded="False"
+                    x:Name="HiddenSeriesCategoriesExpander">
+            <Expander.Header>
+              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                <TextBlock Text="{loc:Translate Settings.Channels.Hidden.Series}"
+                           Foreground="{DynamicResource TextPrimaryBrush}"
+                           FontSize="{DynamicResource FCaption}"
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis" />
+                <Border Grid.Column="1" Classes="SettingsStatusBadge" VerticalAlignment="Center" CornerRadius="4">
+                  <TextBlock Text="{Binding HiddenSeriesGroups.Count}"
+                             Foreground="{DynamicResource TextMutedBrush}"
+                             FontSize="{DynamicResource FCaption}"
+                             LetterSpacing="1.5"
+                             FontWeight="SemiBold" />
                 </Border>
-              </DataTemplate>
-            </ItemsControl.ItemTemplate>
-          </ItemsControl>
-          <TextBlock Text="{loc:Translate Settings.Channels.Hidden.Empty.Series}"
-                     Foreground="{DynamicResource TextMutedBrush}"
-                     FontSize="{DynamicResource FCaption}"
-                     IsVisible="{Binding !HiddenSeriesGroups.Count}" />
+              </Grid>
+            </Expander.Header>
+            <ScrollViewer MaxHeight="260" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+              <StackPanel>
+                <ItemsControl ItemsSource="{Binding HiddenSeriesGroups}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <Border Classes="CategoryRow">
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                          <TextBlock Text="{Binding}"
+                                     FontSize="{DynamicResource FBodyM}"
+                                     FontWeight="Light"
+                                     Foreground="{DynamicResource TextPrimaryBrush}"
+                                     TextTrimming="CharacterEllipsis"
+                                     VerticalAlignment="Center" />
+                          <Button Grid.Column="1"
+                                  Command="{Binding $parent[ItemsControl].((vm:SettingsViewModel)DataContext).UnhideGroupCommand}"
+                                  CommandParameter="{Binding}"
+                                  Width="100"
+                                  Theme="{StaticResource RevealBtn}">
+                            <StackPanel Orientation="Horizontal" Spacing="5">
+                              <icons:MaterialIcon Kind="EyeOutline" Width="22" Height="22" />
+                              <TextBlock Text="{loc:Translate Settings.Channels.Hidden.Show}" />
+                            </StackPanel>
+                          </Button>
+                        </Grid>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <Grid Height="80"
+                      IsVisible="{Binding !HiddenSeriesGroups.Count}">
+                  <TextBlock Text="{loc:Translate Settings.Channels.Hidden.Empty.Series}"
+                             Foreground="{DynamicResource TextMutedBrush}"
+                             FontSize="{DynamicResource FCaption}"
+                             HorizontalAlignment="Center"
+                             VerticalAlignment="Center"
+                             TextAlignment="Center" />
+                </Grid>
+              </StackPanel>
+            </ScrollViewer>
+          </Expander>
           <TextBlock Text="{Binding ChannelStatusMessage}"
                      Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="{DynamicResource FCaption}"

@@ -88,11 +88,19 @@ public partial class MobileSettingsView : UserControl
         _viewModel = DataContext as SettingsViewModel;
         if (_viewModel is not null)
         {
+            ResetHiddenCategoryExpanders();
             _viewModel.EnableAutoSave();
             _viewModel.PropertyChanged += ViewModel_PropertyChanged;
             UpdateThemeSelection(_viewModel.IsDarkTheme);
             UpdateSelectionLabels();
         }
+    }
+
+    private void ResetHiddenCategoryExpanders()
+    {
+        HiddenLiveCategoriesExpander.IsExpanded = false;
+        HiddenMovieCategoriesExpander.IsExpanded = false;
+        HiddenSeriesCategoriesExpander.IsExpanded = false;
     }
 
     protected override void OnDetachedFromVisualTree(Avalonia.VisualTreeAttachmentEventArgs e)
