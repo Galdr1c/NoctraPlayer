@@ -1,5 +1,6 @@
 using System;
 using Microsoft.Extensions.DependencyInjection;
+using Noctra.Services;
 using Noctra.ViewModels;
 using CoreMainViewModel = Noctra.ViewModels.MainViewModel;
 
@@ -23,6 +24,6 @@ public sealed class MobileViewModelResolver
     public ProfilesViewModel GetProfilesViewModel()
         => _services.GetRequiredService<ProfilesViewModel>();
 
-    public SettingsViewModel GetSettingsViewModel()
-        => _services.GetRequiredService<SettingsViewModel>();
+    public ScopedServiceLease<SettingsViewModel> CreateSettingsViewModelScope()
+        => ScopedServiceLease<SettingsViewModel>.Create(_services);
 }

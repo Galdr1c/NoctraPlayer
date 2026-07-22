@@ -36,6 +36,7 @@ public partial class MainView : UserControl
     private CoreMainViewModel? _coreMainViewModel;
     private PlayerViewModel? _playerViewModel;
     private MobileViewModelResolver? _viewModelResolver;
+    private ScopedServiceLease<SettingsViewModel>? _settingsViewModelLease;
     private MobilePlatformServiceResolver? _platformServiceResolver;
     private IPlayerWindowService? _playerWindowService;
     private MobileBackNavigationService? _backNavigationService;
@@ -312,6 +313,10 @@ public partial class MainView : UserControl
 
         var scrollOffset = scrollViewer.Offset.Y;
         var viewportHeight = scrollViewer.Bounds.Height;
+        if (viewportHeight <= 0)
+        {
+            return false;
+        }
 
         // TextBox tamamen viewport içinde mi?
         return top.Y >= scrollOffset && bottom.Y <= scrollOffset + viewportHeight;
@@ -336,6 +341,7 @@ public partial class MainView : UserControl
         CategorySelectionOverlay.TryClose();
 
         _fallbackHandler?.Unregister();
+        ReleaseSettingsViewModel();
 
         base.OnDetachedFromVisualTree(e);
     }
@@ -813,9 +819,15 @@ public partial class MainView : UserControl
             CloseSeriesDetailIfOpen();
         }
 
-        if (destination == "Settings")
+        if (string.Equals(destination, "Settings", StringComparison.Ordinal))
         {
-            MobileSettingsContent.DataContext = resolver.GetSettingsViewModel();
+            ReleaseSettingsViewModel();
+            _settingsViewModelLease = resolver.CreateSettingsViewModelScope();
+            MobileSettingsContent.DataContext = _settingsViewModelLease.Service;
+        }
+        else
+        {
+            ReleaseSettingsViewModel();
         }
 
         // BUG FIX: "More" menüsündeki profil kartı (avatar+ad) Core MainViewModel'e
@@ -861,6 +873,13 @@ public partial class MainView : UserControl
         }
 
         UpdateContentVisibility(destination);
+    }
+
+    private void ReleaseSettingsViewModel()
+    {
+        MobileSettingsContent.DataContext = null;
+        _settingsViewModelLease?.Dispose();
+        _settingsViewModelLease = null;
     }
 
     private void OnProfilesClick(object? sender, RoutedEventArgs e)

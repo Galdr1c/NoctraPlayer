@@ -557,15 +557,15 @@ public class KeyboardVisibilityAndScrollPreventionTests
     {
         var codeBehind = ReadProjectFile("Noctra.Mobile", "Views", "MainView.axaml.cs");
 
-        // When viewport height is 0 (not yet laid out), method should return true
-        // to let BringIntoView handle it rather than blocking it.
+        // When the ScrollViewer is not laid out yet, report the TextBox as not visible
+        // so the caller takes the normal BringIntoView path.
         var match = Regex.Match(
             codeBehind,
-            @"viewportHeight <= 0",
+            @"if\s*\(viewportHeight\s*<=\s*0\)\s*\{\s*return false;\s*\}",
             RegexOptions.Singleline);
 
         Assert.True(match.Success,
-            "IsTextBoxVisibleInViewport must handle zero viewport height by returning true.");
+            "IsTextBoxVisibleInViewport must explicitly treat a zero viewport as not visible.");
     }
 
     // ═══════════════════════════════════════════════════════════════

@@ -8,6 +8,7 @@ using Android.Content.PM;
 using Android.Gms.Extensions;
 using Xamarin.Google.Android.Play.Core.AppUpdate;
 using Xamarin.Google.Android.Play.Core.AppUpdate.Install.Model;
+using Noctra.Services;
 using Noctra.Services.Interfaces;
 
 namespace Noctra.Android.Services;
@@ -35,6 +36,7 @@ public sealed class GooglePlayUpdateService : IAppUpdateService, IDisposable
     private readonly Context _applicationContext;
     private readonly IAppUpdateManager _appUpdateManager;
     private readonly AndroidActivityProvider _activityProvider;
+    private readonly UpdateStatePublisher _statePublisher = new();
     private readonly SemaphoreSlim _operationGate = new(1, 1);
     private readonly object _monitorSync = new();
 
@@ -46,7 +48,11 @@ public sealed class GooglePlayUpdateService : IAppUpdateService, IDisposable
     private WeakReference<global::Android.App.Activity>? _flowActivity;
     private bool _disposed;
 
-    public event EventHandler<UpdateStateChangedEventArgs>? UpdateStateChanged;
+    public event EventHandler<UpdateStateChangedEventArgs>? UpdateStateChanged
+    {
+        add => _statePublisher.UpdateStateChanged += value;
+        remove => _statePublisher.UpdateStateChanged -= value;
+    }
 
     public GooglePlayUpdateService(
         Context context,
@@ -763,21 +769,7 @@ public sealed class GooglePlayUpdateService : IAppUpdateService, IDisposable
         double? progressPercent = null,
         string? errorMessage = null)
     {
-        UpdateStateChangedEventArgs args;
-        if (progressPercent.HasValue)
-        {
-            args = new UpdateStateChangedEventArgs(status, progressPercent.Value);
-        }
-        else if (!string.IsNullOrWhiteSpace(errorMessage))
-        {
-            args = new UpdateStateChangedEventArgs(status, errorMessage);
-        }
-        else
-        {
-            args = new UpdateStateChangedEventArgs(status);
-        }
-
-        UpdateStateChanged?.Invoke(this, args);
+        _statePublisher.Publish(this, status, progressPercent, errorMessage);
     }
 
     private static UpdateCheckResult ErrorResult(string message) =>

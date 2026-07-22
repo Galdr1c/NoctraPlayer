@@ -57,7 +57,7 @@ public sealed class MobileRecentRegressionTests
         Assert.Contains("x:Name=\"ClearCategorySearchButton\"", view, StringComparison.Ordinal);
         Assert.Contains("Click=\"ClearCategorySearch_Click\"", view, StringComparison.Ordinal);
         Assert.Contains("Kind=\"Magnify\"", view, StringComparison.Ordinal);
-        Assert.Contains("Kind=\"Close\"", view, StringComparison.Ordinal);
+        Assert.Contains("Kind=\"CloseCircleOutline\"", view, StringComparison.Ordinal);
 
         Assert.Contains("CategorySearchTextBox.Text?.Trim()", codeBehind, StringComparison.Ordinal);
         Assert.Contains("StringComparison.CurrentCultureIgnoreCase", codeBehind, StringComparison.Ordinal);

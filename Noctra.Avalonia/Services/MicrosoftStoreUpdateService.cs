@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Noctra.Services;
 using Noctra.Services.Interfaces;
 using Windows.Foundation;
 using Windows.Services.Store;
@@ -21,10 +22,15 @@ public sealed class MicrosoftStoreUpdateService : IAppUpdateService, IDisposable
     private readonly IPackageIdentityService _packageIdentityService;
     private readonly IWindowHandleProvider _windowHandleProvider;
     private readonly IDispatcherService _dispatcherService;
+    private readonly UpdateStatePublisher _statePublisher = new();
     private readonly SemaphoreSlim _operationGate = new(1, 1);
     private bool _disposed;
 
-    public event EventHandler<UpdateStateChangedEventArgs>? UpdateStateChanged;
+    public event EventHandler<UpdateStateChangedEventArgs>? UpdateStateChanged
+    {
+        add => _statePublisher.UpdateStateChanged += value;
+        remove => _statePublisher.UpdateStateChanged -= value;
+    }
 
     public MicrosoftStoreUpdateService(
         IPackageIdentityService packageIdentityService,
@@ -254,21 +260,7 @@ public sealed class MicrosoftStoreUpdateService : IAppUpdateService, IDisposable
         string? errorMessage = null,
         double? progressPercent = null)
     {
-        UpdateStateChangedEventArgs args;
-        if (progressPercent.HasValue)
-        {
-            args = new UpdateStateChangedEventArgs(status, progressPercent.Value);
-        }
-        else if (!string.IsNullOrWhiteSpace(errorMessage))
-        {
-            args = new UpdateStateChangedEventArgs(status, errorMessage);
-        }
-        else
-        {
-            args = new UpdateStateChangedEventArgs(status);
-        }
-
-        UpdateStateChanged?.Invoke(this, args);
+        _statePublisher.Publish(this, status, progressPercent, errorMessage);
     }
 
     private static UpdateCheckResult ErrorResult(string message) =>

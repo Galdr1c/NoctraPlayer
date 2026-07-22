@@ -268,7 +268,7 @@ public class MobileReleaseGuardTests
         var view = ReadProjectFile("Noctra.Mobile", "Views", "ProfileSetupView.axaml");
 
         Assert.Contains("ColumnDefinitions=\"*,*,*\"", view);
-        Assert.Contains("Classes=\"ProviderTypeOption\"", view);
+        Assert.Equal(3, CountOccurrences(view, "Theme=\"{StaticResource SegmentedRadioButtonTransparent}\""));
         Assert.DoesNotContain("<StackPanel Orientation=\"Horizontal\"\r\n                          Spacing=\"12\"\r\n                          Margin=\"28,14,28,14\"", view);
     }
 
@@ -290,25 +290,35 @@ public class MobileReleaseGuardTests
     [Fact]
     public void MobileTextBoxes_ExposePurposeSpecificKeyboardHints()
     {
+        var app = ReadProjectFile("Noctra.Mobile", "App.axaml");
         var profile = ReadProjectFile("Noctra.Mobile", "Views", "ProfileSetupView.axaml");
         var search = ReadProjectFile("Noctra.Mobile", "Views", "MobileSearchView.axaml");
         var categories = ReadProjectFile("Noctra.Mobile", "Views", "MobileCategorySelectionView.axaml");
         var settings = ReadProjectFile("Noctra.Mobile", "Views", "MobileSettingsView.axaml");
 
+        Assert.Contains("<Style Selector=\"TextBox.url\">", app);
+        Assert.Contains("TextInputOptions.ContentType\" Value=\"Url\"", app);
+        Assert.Contains("<Style Selector=\"TextBox.search\">", app);
+        Assert.Contains("TextInputOptions.ContentType\" Value=\"Search\"", app);
+        Assert.Contains("TextInputOptions.ReturnKeyType\" Value=\"Search\"", app);
+        Assert.Contains("<Style Selector=\"TextBox.password\">", app);
+        Assert.Contains("TextInputOptions.IsSensitive\" Value=\"True\"", app);
+        Assert.Contains("<Style Selector=\"TextBox.pin\">", app);
+        Assert.Contains("TextInputOptions.ContentType\" Value=\"Digits\"", app);
+
         Assert.Equal(4, CountOccurrences(profile, "TextInputOptions.ReturnKeyType=\"Next\""));
         Assert.Equal(2, CountOccurrences(profile, "TextInputOptions.ReturnKeyType=\"Done\""));
-        Assert.Equal(1, CountOccurrences(profile, "TextInputOptions.ContentType=\"Url\""));
+        Assert.Contains("Classes=\"url\"", profile);
+        Assert.Contains("Classes=\"password\"", profile);
+        Assert.Contains("Classes=\"pin\"", profile);
         Assert.Equal(1, CountOccurrences(profile, "TextInputOptions.ContentType=\"Password\""));
-        Assert.Equal(2, CountOccurrences(profile, "TextInputOptions.ContentType=\"Digits\""));
-        Assert.Equal(3, CountOccurrences(profile, "TextInputOptions.IsSensitive=\"True\""));
 
         foreach (var searchView in new[] { search, categories })
         {
-            Assert.Contains("TextInputOptions.ContentType=\"Search\"", searchView);
-            Assert.Contains("TextInputOptions.ReturnKeyType=\"Search\"", searchView);
+            Assert.Contains("Classes=\"search\"", searchView);
         }
 
-        Assert.Equal(1, CountOccurrences(settings, "TextInputOptions.ContentType=\"Url\""));
+        Assert.Contains("Classes=\"url\"", settings);
         Assert.Equal(3, CountOccurrences(settings, "TextInputOptions.ReturnKeyType=\"Done\""));
     }
 
@@ -325,8 +335,7 @@ public class MobileReleaseGuardTests
         Assert.Contains("<Setter Property=\"CaretBrush\" Value=\"{DynamicResource AccentBrush}\"", app);
         Assert.Contains("<Setter Property=\"SelectionBrush\" Value=\"{DynamicResource TextSelectionBrush}\"", app);
         Assert.Contains("<Setter Property=\"SelectionForegroundBrush\" Value=\"{DynamicResource TextPrimaryBrush}\"", app);
-        Assert.Contains("<ControlTheme x:Key=\"NoctraTextBox\" TargetType=\"TextBox\">", styles);
-        Assert.Contains("<Setter Property=\"MinHeight\" Value=\"48\" />", styles);
+        Assert.DoesNotContain("<ControlTheme x:Key=\"NoctraTextBox\" TargetType=\"TextBox\">", styles);
 
         foreach (var theme in new[] { darkTheme, lightTheme })
         {
