@@ -408,6 +408,7 @@ public class KeyboardVisibilityAndScrollPreventionTests
 
         // UserAgent field should show "Done" key since it's typically the last field
         Assert.Contains("TextInputOptions.ReturnKeyType=\"Done\"", settings);
+        Assert.Contains("PlaceholderText=\"VLC/3.0.18 LibVLC/3.0.18\"", settings);
     }
 
     // ═══════════════════════════════════════════════════════════════

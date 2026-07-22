@@ -354,7 +354,7 @@
                      Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="{DynamicResource FCaption}" />
           <TextBox Text="{Binding UserAgent, Mode=TwoWay}"
-                   PlaceholderText="VLC/3.0.x LibVLC/3.0.x"
+                   PlaceholderText="VLC/3.0.18 LibVLC/3.0.18"
                    TextInputOptions.ReturnKeyType="Done" />
           <Grid ColumnDefinitions="*,Auto">
             <TextBlock Text="{loc:Translate Settings.Playback.AutoPlayNext}"
@@ -1082,6 +1082,8 @@
                   <TextBlock Text="PREMIUM"
                              Foreground="{DynamicResource PremiumBadgeTextBrush}"
                              FontSize="{DynamicResource FOverline}"
+                             VerticalAlignment="Center"
+                             HorizontalAlignment="Center"
                              FontWeight="Bold" />
                 </Border>
               </StackPanel>

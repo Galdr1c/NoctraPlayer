@@ -752,7 +752,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
         var (minBufferMs, maxBufferMs, playbackMs, rebufferMs) = bufferSize switch
         {
             BufferSize.Small => (2_000, 8_000, 750, 1_500),
-            BufferSize.Large => (15_000, 60_000, 1_500, 5_000),
+            BufferSize.Large => (10_000, 60_000, 1_500, 5_000),
             _ => (5_000, 30_000, 1_000, 2_500)
         };
 
