@@ -1161,19 +1161,11 @@
         </Grid>
       </Border>
 
-      <Grid ColumnDefinitions="*,*"
-            ColumnSpacing="10"
-            Margin="0,0,0,24">
-        <Button Classes="SettingsActionButton"
-                Content="{loc:Translate Settings.Action.ResetDefaults}"
-                FontSize="{DynamicResource FCaption}"
-                Command="{Binding ResetToDefaultsCommand}"/>
-        <Button Classes="SettingsPrimaryActionButton"
-                Grid.Column="1"
-                Content="{loc:Translate Settings.Action.SaveSettings}"
-                FontSize="{DynamicResource FCaption}"
-                Command="{Binding SaveSettingsCommand}"/>
-      </Grid>
+      <Button Classes="SettingsActionButton"
+              Margin="0,0,0,24"
+              Content="{loc:Translate Settings.Action.ResetDefaults}"
+              FontSize="{DynamicResource FCaption}"
+              Command="{Binding ResetToDefaultsCommand}"/>
       </StackPanel>
     </ScrollViewer>
 

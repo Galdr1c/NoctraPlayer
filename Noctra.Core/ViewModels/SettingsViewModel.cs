@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System.Globalization;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Threading;
 using Noctra.Core.Services;
 
@@ -36,11 +37,49 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
     private readonly IProfileService _profileService;
     private readonly IAppUpdateService _appUpdateService;
     private readonly IDispatcherService? _dispatcherService;
+    private readonly SettingsAutoSaveCoordinator _autoSaveCoordinator;
     private CancellationTokenSource? _epgRefreshWatchCts;
     
     private int _isRefreshOperationRunning;
     private string? _activeRefreshScope;
     private bool _isLoadingSettings;
+    private bool _autoSaveEnabled;
+
+    private static readonly HashSet<string> AutoSavePropertyNames = new(StringComparer.Ordinal)
+    {
+        nameof(UserAgent),
+        nameof(AutoPlayNext),
+        nameof(IsBufferSmall),
+        nameof(IsBufferNormal),
+        nameof(IsBufferLarge),
+        nameof(SelectedDataUsage),
+        nameof(SubtitleEnabled),
+        nameof(SubtitleLanguage),
+        nameof(SubtitleFontSize),
+        nameof(PreferredAudioLanguage),
+        nameof(SelectedDownloadQuality),
+        nameof(DownloadWifiOnly),
+        nameof(DownloadPath),
+        nameof(ShowDownloadNotification),
+        nameof(AllowBackgroundPlayback),
+        nameof(IsDarkTheme),
+        nameof(AppLanguage),
+        nameof(ChannelListRefreshFrequencyHours),
+        nameof(EpgRefreshFrequencyHours),
+        nameof(CustomEpgUrl),
+        nameof(EpgEnabled),
+        nameof(EpgTimeOffsetHours),
+        nameof(SaveWatchHistory),
+        nameof(ClearHistoryOnExit),
+        nameof(WatchHistoryRetentionIndex)
+    };
+
+    private static readonly HashSet<string> DebouncedAutoSavePropertyNames = new(StringComparer.Ordinal)
+    {
+        nameof(UserAgent),
+        nameof(DownloadPath),
+        nameof(CustomEpgUrl)
+    };
 
     // ============ Oynatma Ayarları ============
     [ObservableProperty]
@@ -181,8 +220,21 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
         if (!_isLoadingSettings && _settingsService.Settings.IsDarkTheme != value)
         {
             _settingsService.Settings.IsDarkTheme = value;
-            _ = _settingsService.SaveAsync();
+            if (!_autoSaveEnabled)
+            {
+                _ = _settingsService.SaveAsync();
+            }
         }
+    }
+
+    partial void OnAppLanguageChanged(string value)
+    {
+        if (_isLoadingSettings || !_autoSaveEnabled)
+        {
+            return;
+        }
+
+        _localizationService.SetLanguage(string.IsNullOrWhiteSpace(value) ? "en" : value);
     }
     
     // ============ EPG & Playlist ============
@@ -277,6 +329,7 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
         _appPaths = appPaths ?? new DesktopAppPathService();
         _cacheService = cacheService ?? new CacheService(_appPaths);
         _profileService = profileService;
+        _autoSaveCoordinator = new SettingsAutoSaveCoordinator(PersistAutoSaveAsync);
         
         _mainViewModel.PropertyChanged += MainViewModel_PropertyChanged;
         _settingsService.SettingsChanged += OnSettingsService_Changed;
@@ -709,6 +762,72 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
         LoadSettings();
     }
 
+    public void EnableAutoSave()
+    {
+        if (_autoSaveEnabled)
+        {
+            return;
+        }
+
+        _autoSaveEnabled = true;
+        AttachCustomEpgHandlers(CustomEpgUrls);
+    }
+
+    protected override void OnPropertyChanged(PropertyChangedEventArgs e)
+    {
+        base.OnPropertyChanged(e);
+        QueueAutoSave(e.PropertyName);
+    }
+
+    private void QueueAutoSave(string? propertyName)
+    {
+        if (!_autoSaveEnabled ||
+            _isLoadingSettings ||
+            string.IsNullOrWhiteSpace(propertyName) ||
+            !AutoSavePropertyNames.Contains(propertyName))
+        {
+            return;
+        }
+
+        var snapshot = CaptureSettingsSnapshot();
+        var activeProfileId = _mainViewModel.CurrentProfile?.Id;
+        if (activeProfileId.HasValue &&
+            activeProfileId.Value > 0 &&
+            _settingsService.Settings.ProfileId == activeProfileId.Value)
+        {
+            snapshot.ApplyTo(_settingsService.Settings);
+        }
+
+        var delay = DebouncedAutoSavePropertyNames.Contains(propertyName)
+            ? TimeSpan.FromMilliseconds(450)
+            : TimeSpan.FromMilliseconds(75);
+        _autoSaveCoordinator.RequestSave(delay);
+    }
+
+    private async Task PersistAutoSaveAsync()
+    {
+        try
+        {
+            var snapshot = CaptureSettingsSnapshot();
+            var saved = await SaveForActiveProfileAsync(
+                _settingsService,
+                _mainViewModel.CurrentProfile?.Id,
+                snapshot.ApplyTo);
+
+            if (saved)
+            {
+                StatusMessage = _localizationService.GetString("Settings.Status.Saved");
+            }
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = string.Format(
+                CultureInfo.CurrentCulture,
+                _localizationService.GetString("Common.ErrorFormat"),
+                ex.Message);
+        }
+    }
+
     private void OnLicenseSubscriptionChanged()
     {
         OnPropertyChanged(nameof(IsPremium));
@@ -982,7 +1101,12 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
         {
             urls = new List<string> { s.CustomEpgUrl };
         }
+        DetachCustomEpgHandlers(CustomEpgUrls);
         CustomEpgUrls = new ObservableCollection<EpgUrlItem>(urls.Select(u => new EpgUrlItem { Url = u }));
+        if (_autoSaveEnabled)
+        {
+            AttachCustomEpgHandlers(CustomEpgUrls);
+        }
 
             // Hidden Groups
             HiddenLiveGroups = new ObservableCollection<string>(s.HiddenLiveGroups);
@@ -998,8 +1122,26 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private async Task SaveSettingsAsync()
     {
-        DownloadPath = NormalizeDownloadPath(DownloadPath);
-        var snapshot = new SettingsFormSnapshot(
+        var snapshot = CaptureSettingsSnapshot();
+
+        var saved = await SaveForActiveProfileAsync(
+            _settingsService,
+            _mainViewModel.CurrentProfile?.Id,
+            snapshot.ApplyTo);
+
+        if (!saved)
+        {
+            return;
+        }
+
+        _themeService.SetTheme(snapshot.IsDarkTheme);
+        StatusMessage = _localizationService.GetString("Settings.Status.Saved");
+    }
+
+    private SettingsFormSnapshot CaptureSettingsSnapshot()
+    {
+        var normalizedDownloadPath = NormalizeDownloadPath(DownloadPath);
+        return new SettingsFormSnapshot(
             UserAgent?.Trim() ?? string.Empty,
             AutoPlayNext,
             IsBufferSmall && IsPremium
@@ -1014,7 +1156,7 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
             PreferredAudioLanguage,
             (DownloadQuality)SelectedDownloadQuality,
             DownloadWifiOnly,
-            DownloadPath,
+            normalizedDownloadPath,
             ShowDownloadNotification,
             AllowBackgroundPlayback,
             IsDarkTheme,
@@ -1038,19 +1180,6 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
                 4 => 30,
                 _ => 0
             });
-
-        var saved = await SaveForActiveProfileAsync(
-            _settingsService,
-            _mainViewModel.CurrentProfile?.Id,
-            snapshot.ApplyTo);
-
-        if (!saved)
-        {
-            return;
-        }
-
-        _themeService.SetTheme(snapshot.IsDarkTheme);
-        StatusMessage = _localizationService.GetString("Settings.Status.Saved");
     }
 
     internal static async Task<bool> SaveForActiveProfileAsync(
@@ -1164,13 +1293,45 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
             return;
         }
 
-        CustomEpgUrls.Add(new EpgUrlItem());
+        var item = new EpgUrlItem();
+        CustomEpgUrls.Add(item);
+        item.PropertyChanged += CustomEpgItem_PropertyChanged;
+        QueueAutoSave(nameof(CustomEpgUrl));
     }
 
     [RelayCommand]
     private void RemoveCustomEpg(EpgUrlItem item)
     {
-        CustomEpgUrls.Remove(item);
+        item.PropertyChanged -= CustomEpgItem_PropertyChanged;
+        if (CustomEpgUrls.Remove(item))
+        {
+            QueueAutoSave(nameof(CustomEpgUrl));
+        }
+    }
+
+    private void AttachCustomEpgHandlers(IEnumerable<EpgUrlItem> items)
+    {
+        foreach (var item in items)
+        {
+            item.PropertyChanged -= CustomEpgItem_PropertyChanged;
+            item.PropertyChanged += CustomEpgItem_PropertyChanged;
+        }
+    }
+
+    private void DetachCustomEpgHandlers(IEnumerable<EpgUrlItem> items)
+    {
+        foreach (var item in items)
+        {
+            item.PropertyChanged -= CustomEpgItem_PropertyChanged;
+        }
+    }
+
+    private void CustomEpgItem_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(EpgUrlItem.Url))
+        {
+            QueueAutoSave(nameof(CustomEpgUrl));
+        }
     }
 
     [RelayCommand]
@@ -1693,6 +1854,9 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
         _mainViewModel.PropertyChanged -= MainViewModel_PropertyChanged;
         _settingsService.SettingsChanged -= OnSettingsService_Changed;
         _licenseService.SubscriptionChanged -= OnLicenseSubscriptionChanged;
+        DetachCustomEpgHandlers(CustomEpgUrls);
+        _autoSaveEnabled = false;
+        _autoSaveCoordinator.Dispose();
 
         _epgRefreshWatchCts?.Cancel();
         _epgRefreshWatchCts?.Dispose();

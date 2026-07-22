@@ -94,6 +94,7 @@ public partial class MobileSettingsView : UserControl
         _viewModel = DataContext as SettingsViewModel;
         if (_viewModel is not null)
         {
+            _viewModel.EnableAutoSave();
             _viewModel.PropertyChanged += ViewModel_PropertyChanged;
             UpdateThemeSelection(_viewModel.IsDarkTheme);
             UpdateSelectionLabels();
