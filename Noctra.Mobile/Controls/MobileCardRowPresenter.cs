@@ -31,6 +31,7 @@ internal sealed class MobileCardRowPresenter : WrapPanel
     {
         Orientation = Orientation.Horizontal;
         HorizontalAlignment = HorizontalAlignment.Stretch;
+        ClipToBounds = true;
     }
 
     public void Populate(
@@ -40,6 +41,12 @@ internal sealed class MobileCardRowPresenter : WrapPanel
         double cardWidth,
         IReadOnlyList<object> items)
     {
+        if (slotCount <= 0 || !double.IsFinite(cardWidth) || cardWidth < 2)
+        {
+            HideAllCards();
+            return;
+        }
+
         EnsureCardSlots(kind, mode, slotCount);
         for (var index = 0; index < _cards.Count; index++)
         {
@@ -56,6 +63,18 @@ internal sealed class MobileCardRowPresenter : WrapPanel
                 0,
                 index < items.Count - 1 ? CardGap : 0,
                 kind == MobileCardGridKind.Live ? 0 : CardGap);
+        }
+    }
+
+    private void HideAllCards()
+    {
+        foreach (var card in _cards)
+        {
+            card.DataContext = null;
+            card.IsVisible = false;
+            card.Width = double.NaN;
+            card.Height = double.NaN;
+            card.Margin = new Thickness(0);
         }
     }
 

@@ -284,7 +284,7 @@ public class MobileReleaseGuardTests
         Assert.False(TryFindProjectFile(
             out _, "Noctra.Mobile", "Behaviors", "MobileTextBoxMenuBehavior.cs"));
         Assert.Contains("<FluentTheme", app);
-        Assert.Contains("<AvaloniaVersion>12.0.4</AvaloniaVersion>", buildProps);
+        Assert.Contains("<AvaloniaVersion>12.1.0</AvaloniaVersion>", buildProps);
     }
 
     [Fact]

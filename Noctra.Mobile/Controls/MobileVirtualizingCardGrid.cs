@@ -2,8 +2,10 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Templates;
@@ -11,6 +13,7 @@ using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Threading;
 using Noctra.Core.Collections;
+using Noctra.Mobile.Services;
 
 namespace Noctra.Mobile.Controls;
 
@@ -32,6 +35,9 @@ public sealed class MobileVirtualizingCardGrid : ListBox
 {
     private const double CardGap = 16;
     private const double FallbackAvailableWidth = 720;
+    private const double MinimumStableWidth = 120;
+    private const int ResumeRecoveryAttempts = 8;
+    private const int ResumeRecoveryDelayMilliseconds = 50;
 
     public static readonly StyledProperty<IEnumerable?> SourceItemsProperty =
         AvaloniaProperty.Register<MobileVirtualizingCardGrid, IEnumerable?>(nameof(SourceItems));
@@ -46,8 +52,11 @@ public sealed class MobileVirtualizingCardGrid : ListBox
     private INotifyCollectionChanged? _observableSource;
     private int _rebuildQueued;
     private int _fullRebuildRequired;
+    private int _resumeRecoveryVersion;
     private int _columns;
     private double _cardWidth;
+    private double _lastStableWidth = FallbackAvailableWidth;
+    private bool _lifecycleSubscribed;
 
     protected override Type StyleKeyOverride => typeof(ListBox);
 
@@ -77,6 +86,8 @@ public sealed class MobileVirtualizingCardGrid : ListBox
             supportsRecycling: true);
         SelectionChanged += ClearTransientSelection;
         SizeChanged += (_, _) => QueueRebuildIfMetricsChanged();
+        AttachedToVisualTree += (_, _) => SubscribeToLifecycle();
+        DetachedFromVisualTree += (_, _) => UnsubscribeFromLifecycle();
         AddHandler(ScrollViewer.ScrollChangedEvent, OnInnerScrollChanged);
     }
 
@@ -92,6 +103,127 @@ public sealed class MobileVirtualizingCardGrid : ListBox
     {
         get => GetValue(CardKindProperty);
         set => SetValue(CardKindProperty, value);
+    }
+
+    /// <summary>
+    /// Revalidates layout after Android recreates or reconnects the render surface.
+    /// Transient resume widths are ignored and retried for a bounded number of frames.
+    /// </summary>
+    public void RefreshAfterResume()
+    {
+        var version = Interlocked.Increment(ref _resumeRecoveryVersion);
+        _ = RecoverAfterResumeAsync(version);
+    }
+
+    private void SubscribeToLifecycle()
+    {
+        if (_lifecycleSubscribed)
+        {
+            return;
+        }
+
+        MobileAppLifecycle.Resumed += OnAppResumed;
+        _lifecycleSubscribed = true;
+        QueueFullRebuild();
+    }
+
+    private void UnsubscribeFromLifecycle()
+    {
+        if (!_lifecycleSubscribed)
+        {
+            return;
+        }
+
+        MobileAppLifecycle.Resumed -= OnAppResumed;
+        _lifecycleSubscribed = false;
+        Interlocked.Increment(ref _resumeRecoveryVersion);
+    }
+
+    private void OnAppResumed(object? sender, EventArgs e)
+        => RefreshAfterResume();
+
+    private async Task RecoverAfterResumeAsync(int version)
+    {
+        try
+        {
+            for (var attempt = 0; attempt < ResumeRecoveryAttempts; attempt++)
+            {
+                if (attempt > 0)
+                {
+                    await Task.Delay(ResumeRecoveryDelayMilliseconds).ConfigureAwait(false);
+                }
+
+                if (version != Volatile.Read(ref _resumeRecoveryVersion))
+                {
+                    return;
+                }
+
+                if (await TryRepairAfterResumeAsync(version).ConfigureAwait(false))
+                {
+                    return;
+                }
+            }
+
+            Debug.WriteLine("[Noctra] Resume layout recovery timed out before a stable width was observed.");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[Noctra] Resume layout recovery failed: {ex}");
+        }
+    }
+
+    private Task<bool> TryRepairAfterResumeAsync(int version)
+    {
+        var completion = new TaskCompletionSource<bool>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+
+        Dispatcher.UIThread.Post(() =>
+        {
+            try
+            {
+                if (version != Volatile.Read(ref _resumeRecoveryVersion) || VisualRoot is null)
+                {
+                    completion.TrySetResult(false);
+                    return;
+                }
+
+                InvalidateLayoutChain();
+                if (!TryGetStableAvailableWidth(out _))
+                {
+                    completion.TrySetResult(false);
+                    return;
+                }
+
+                // A full rebuild repopulates every realized row even when the final
+                // dimensions match the pre-suspend dimensions. This heals recycled
+                // controls that were arranged while Android reported a transient size.
+                ClearPendingAppends();
+                if (!TryRebuildRows())
+                {
+                    Interlocked.Exchange(ref _fullRebuildRequired, 1);
+                    completion.TrySetResult(false);
+                    return;
+                }
+
+                Interlocked.Exchange(ref _fullRebuildRequired, 0);
+                completion.TrySetResult(true);
+            }
+            catch (Exception ex)
+            {
+                completion.TrySetException(ex);
+            }
+        }, DispatcherPriority.Render);
+
+        return completion.Task;
+    }
+
+    private void InvalidateLayoutChain()
+    {
+        for (Control? control = this; control is not null; control = control.Parent as Control)
+        {
+            control.InvalidateMeasure();
+            control.InvalidateArrange();
+        }
     }
 
     private void OnSourceItemsChanged(IEnumerable? oldValue, IEnumerable? newValue)
@@ -174,8 +306,15 @@ public sealed class MobileVirtualizingCardGrid : ListBox
 
     private void QueueRebuildIfMetricsChanged()
     {
-        var metrics = CalculateMetrics(GetAvailableWidth(), CardKind);
-        if (metrics.Columns != _columns || Math.Abs(metrics.CardWidth - _cardWidth) > 8)
+        if (!TryGetStableAvailableWidth(out var availableWidth))
+        {
+            return;
+        }
+
+        var metrics = CalculateMetrics(availableWidth, CardKind);
+        if (Volatile.Read(ref _fullRebuildRequired) == 1 ||
+            metrics.Columns != _columns ||
+            Math.Abs(metrics.CardWidth - _cardWidth) > 8)
         {
             QueueFullRebuild();
         }
@@ -201,27 +340,42 @@ public sealed class MobileVirtualizingCardGrid : ListBox
             if (requiresFullRebuild)
             {
                 ClearPendingAppends();
-                RebuildRows();
+                if (!TryRebuildRows())
+                {
+                    Interlocked.Exchange(ref _fullRebuildRequired, 1);
+                }
+
                 return;
             }
 
             while (TryDequeuePendingAppend(out var append))
             {
-                if (_rowCollection.TryAppend(append.StartingIndex, append.Items, _columns))
+                if (_columns > 0 &&
+                    _cardWidth >= 2 &&
+                    _rowCollection.TryAppend(append.StartingIndex, append.Items, _columns))
                 {
                     continue;
                 }
 
                 ClearPendingAppends();
-                RebuildRows();
+                if (!TryRebuildRows())
+                {
+                    Interlocked.Exchange(ref _fullRebuildRequired, 1);
+                }
+
                 return;
             }
         }, DispatcherPriority.Loaded);
     }
 
-    private void RebuildRows()
+    private bool TryRebuildRows()
     {
-        var metrics = CalculateMetrics(GetAvailableWidth(), CardKind);
+        if (!TryGetStableAvailableWidth(out var availableWidth))
+        {
+            return false;
+        }
+
+        var metrics = CalculateMetrics(availableWidth, CardKind);
         _columns = metrics.Columns;
         _cardWidth = metrics.CardWidth;
 
@@ -230,6 +384,7 @@ public sealed class MobileVirtualizingCardGrid : ListBox
             .Where(item => item != null)
             .Cast<object>() ?? Enumerable.Empty<object>();
         _rowCollection.Rebuild(items, _columns);
+        return true;
     }
 
     private bool TryDequeuePendingAppend(out PendingAppend append)
@@ -258,13 +413,29 @@ public sealed class MobileVirtualizingCardGrid : ListBox
             row?.Items ?? Array.Empty<object>());
     }
 
-    private double GetAvailableWidth()
-        => double.IsFinite(Bounds.Width) && Bounds.Width > 0
-            ? Bounds.Width
-            : FallbackAvailableWidth;
+    private bool TryGetStableAvailableWidth(out double availableWidth)
+    {
+        var currentWidth = Bounds.Width;
+        if (VisualRoot is null ||
+            !double.IsFinite(currentWidth) ||
+            currentWidth < MinimumStableWidth)
+        {
+            availableWidth = _lastStableWidth;
+            return false;
+        }
+
+        _lastStableWidth = currentWidth;
+        availableWidth = currentWidth;
+        return true;
+    }
 
     private static GridMetrics CalculateMetrics(double availableWidth, MobileCardGridKind kind)
     {
+        if (!double.IsFinite(availableWidth) || availableWidth < 2)
+        {
+            availableWidth = 2;
+        }
+
         var profile = kind == MobileCardGridKind.Live
             ? new GridProfile(220, 410, 4)
             : new GridProfile(150, 180, 6);
@@ -274,8 +445,9 @@ public sealed class MobileVirtualizingCardGrid : ListBox
         columns = Math.Min(columns, profile.MaxColumns);
 
         var width = Math.Floor((availableWidth - CardGap * (columns - 1)) / columns);
-        width = Math.Clamp(width, 1, profile.MaxWidth);
-        return new GridMetrics(columns, Math.Floor(width / 2) * 2);
+        width = Math.Clamp(width, 2, profile.MaxWidth);
+        var roundedWidth = Math.Floor(width / 2) * 2;
+        return new GridMetrics(columns, Math.Max(2, roundedWidth));
     }
 
     private readonly record struct GridProfile(double MinWidth, double MaxWidth, int MaxColumns);

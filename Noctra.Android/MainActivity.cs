@@ -138,18 +138,39 @@ public class MainActivity : AvaloniaMainActivity
     protected override void OnResume()
     {
         base.OnResume();
+        PerformanceTrace.Mark("android.activity.resume");
 
-        if (Avalonia.Application.Current is not Noctra.Mobile.App app)
+        if (Avalonia.Application.Current is Noctra.Mobile.App app)
         {
+            app.Services?.GetService<AndroidActivityProvider>()?.SetCurrent(this);
+
+            if (app.Services?.GetService<GooglePlayUpdateService>() is { } updateService)
+            {
+                _ = ResumeUpdateFlowSafelyAsync(updateService);
+            }
+        }
+
+        QueueVisualTreeRecovery();
+    }
+
+    private void QueueVisualTreeRecovery()
+    {
+        void NotifyVisualTree()
+        {
+            PerformanceTrace.Mark("android.activity.resume.visual_tree_recovery");
+            MobileAppLifecycle.NotifyResumed();
+        }
+
+        // OnResume itself is on the Android UI thread. Posting through DecorView lets
+        // the surface/window transition enqueue first; the grid then performs its own
+        // bounded render-priority retries until a stable width is available.
+        if (Window?.DecorView is { } decorView)
+        {
+            decorView.Post(NotifyVisualTree);
             return;
         }
 
-        app.Services?.GetService<AndroidActivityProvider>()?.SetCurrent(this);
-
-        if (app.Services?.GetService<GooglePlayUpdateService>() is { } updateService)
-        {
-            _ = ResumeUpdateFlowSafelyAsync(updateService);
-        }
+        NotifyVisualTree();
     }
 
     private static async Task ResumeUpdateFlowSafelyAsync(GooglePlayUpdateService updateService)
