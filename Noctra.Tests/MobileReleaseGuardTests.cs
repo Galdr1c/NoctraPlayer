@@ -108,17 +108,18 @@ public class MobileReleaseGuardTests
     }
 
     [Fact]
-    public void AndroidNotificationPermission_IsNotDeclaredWithoutRuntimeRequestFlow()
+    public void AndroidNotificationPermission_HasRuntimeRequestFlow()
     {
         var manifest = ReadProjectFile("Noctra.Android", "Properties", "AndroidManifest.xml");
         var activity = ReadProjectFile("Noctra.Android", "MainActivity.cs");
+        var permissionService = ReadProjectFile(
+            "Noctra.Android", "Services", "AndroidNotificationPermissionService.cs");
 
-        var manifestDeclaresPermission = manifest.Contains("android.permission.POST_NOTIFICATIONS", StringComparison.Ordinal);
-        var activityRequestsPermission =
-            activity.Contains("RequestPermissions", StringComparison.Ordinal) &&
-            activity.Contains("android.permission.POST_NOTIFICATIONS", StringComparison.Ordinal);
-
-        Assert.Equal(manifestDeclaresPermission, activityRequestsPermission);
+        Assert.Contains("android.permission.POST_NOTIFICATIONS", manifest, StringComparison.Ordinal);
+        Assert.Contains("RequestPermissions", permissionService, StringComparison.Ordinal);
+        Assert.Contains("android.permission.POST_NOTIFICATIONS", permissionService, StringComparison.Ordinal);
+        Assert.Contains("OnRequestPermissionsResult", activity, StringComparison.Ordinal);
+        Assert.Contains("TryHandleRequestPermissionsResult", activity, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -399,7 +400,7 @@ public class MobileReleaseGuardTests
 
         Assert.DoesNotContain("<ComboBox", settings);
         Assert.Contains("<views:MobileSelectionSheet", settings);
-        Assert.Equal(9, CountOccurrences(settings, "Click=\"OpenSelectionSheet_Click\""));
+        Assert.Equal(8, CountOccurrences(settings, "Click=\"OpenSelectionSheet_Click\""));
         Assert.Contains("Background=\"{DynamicResource AccentSubtleBrush}\"", selectionSheet);
         Assert.Contains("IsVisible=\"{Binding IsSelected}\"", selectionSheet);
         Assert.Equal(2, CountOccurrences(settingsCodeBehind, "SelectionSheetHost.TryClose();"));

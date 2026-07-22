@@ -80,7 +80,8 @@ public static class ServiceCollectionExtensions
                 serviceProvider.GetRequiredService<HttpClient>(),
                 serviceProvider.GetRequiredService<ILocalizationService>(),
                 serviceProvider.GetService<ILogger<ContentDownloadService>>(),
-                serviceProvider.GetRequiredService<IAppPathService>()));
+                serviceProvider.GetRequiredService<IAppPathService>(),
+                serviceProvider.GetService<INetworkService>()));
         services.AddSingleton<LanguageDetectionService>();
         services.AddSingleton<ILocalizationService, LocalizationService>();
         services.AddSingleton<IPlatformActionService, DesktopPlatformActionService>();

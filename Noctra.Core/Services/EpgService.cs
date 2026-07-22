@@ -1093,6 +1093,11 @@ public class EpgService : IEpgService
 
     public async Task<EpgProgram?> GetCurrentProgramAsync(Channel channel)
     {
+        if (!_settingsService.Settings.EpgEnabled)
+        {
+            return null;
+        }
+
         var offset = TimeSpan.FromHours(_settingsService.Settings.EpgTimeOffsetHours);
         var now = DateTime.UtcNow.Add(-offset);
         using var context = await _contextFactory.CreateDbContextAsync();
@@ -1122,6 +1127,11 @@ public class EpgService : IEpgService
 
     public async Task<Dictionary<int, EpgProgram?>> GetCurrentProgramsAsync(IEnumerable<Channel> channels)
     {
+        if (!_settingsService.Settings.EpgEnabled)
+        {
+            return new Dictionary<int, EpgProgram?>();
+        }
+
         var offset = TimeSpan.FromHours(_settingsService.Settings.EpgTimeOffsetHours);
         var now = DateTime.UtcNow.Add(-offset);
         using var context = await _contextFactory.CreateDbContextAsync();

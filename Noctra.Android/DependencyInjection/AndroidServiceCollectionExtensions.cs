@@ -32,6 +32,7 @@ public static class AndroidServiceCollectionExtensions
         services.AddSingleton<INetworkService, AndroidNetworkService>();
         services.AddSingleton<ISecurityService, AndroidSecurityService>();
         services.AddSingleton<AndroidActivityProvider>();
+        services.AddSingleton<AndroidNotificationPermissionService>();
         services.AddSingleton<AndroidFilePickerService>();
         services.AddSingleton<IPlaylistFilePickerService>(serviceProvider =>
             serviceProvider.GetRequiredService<AndroidFilePickerService>());

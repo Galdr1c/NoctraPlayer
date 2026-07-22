@@ -38,6 +38,9 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
     private readonly IAppUpdateService _appUpdateService;
     private readonly IDispatcherService? _dispatcherService;
     private readonly SettingsAutoSaveCoordinator _autoSaveCoordinator;
+    private readonly SettingsChangeOriginGate _settingsChangeOriginGate = new();
+    private readonly object _autoSaveStatusSync = new();
+    private readonly HashSet<SettingsStatusArea> _pendingAutoSaveAreas = [];
     private CancellationTokenSource? _epgRefreshWatchCts;
     
     private int _isRefreshOperationRunning;
@@ -222,7 +225,7 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
             _settingsService.Settings.IsDarkTheme = value;
             if (!_autoSaveEnabled)
             {
-                _ = _settingsService.SaveAsync();
+                _ = _settingsChangeOriginGate.RunOwnedSaveAsync(_settingsService.SaveAsync);
             }
         }
     }
@@ -241,6 +244,36 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
     
     [ObservableProperty]
     private string _statusMessage = string.Empty;
+
+    [ObservableProperty]
+    private string _appearanceStatusMessage = string.Empty;
+
+    [ObservableProperty]
+    private string _playbackStatusMessage = string.Empty;
+
+    [ObservableProperty]
+    private string _audioStatusMessage = string.Empty;
+
+    [ObservableProperty]
+    private string _downloadStatusMessage = string.Empty;
+
+    [ObservableProperty]
+    private string _channelStatusMessage = string.Empty;
+
+    [ObservableProperty]
+    private string _epgStatusMessage = string.Empty;
+
+    [ObservableProperty]
+    private string _customEpgValidationMessage = string.Empty;
+
+    [ObservableProperty]
+    private string _privacyStatusMessage = string.Empty;
+
+    [ObservableProperty]
+    private string _cacheStatusMessage = string.Empty;
+
+    [ObservableProperty]
+    private string _resetStatusMessage = string.Empty;
 
     [ObservableProperty]
     private int _refreshProgressPercent;
@@ -759,7 +792,10 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
 
     private void OnSettingsService_Changed()
     {
-        LoadSettings();
+        if (_settingsChangeOriginGate.ShouldReload)
+        {
+            LoadSettings();
+        }
     }
 
     public void EnableAutoSave()
@@ -771,6 +807,14 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
 
         _autoSaveEnabled = true;
         AttachCustomEpgHandlers(CustomEpgUrls);
+
+        // The shared downloader cannot transcode arbitrary provider streams. Mobile
+        // therefore always downloads the provider's original stream instead of
+        // exposing the desktop-era "Standard" option as if it changed quality.
+        if (SelectedDownloadQuality != (int)DownloadQuality.High)
+        {
+            SelectedDownloadQuality = (int)DownloadQuality.High;
+        }
     }
 
     protected override void OnPropertyChanged(PropertyChangedEventArgs e)
@@ -787,6 +831,11 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
             !AutoSavePropertyNames.Contains(propertyName))
         {
             return;
+        }
+
+        lock (_autoSaveStatusSync)
+        {
+            _pendingAutoSaveAreas.Add(GetAutoSaveArea(propertyName));
         }
 
         var snapshot = CaptureSettingsSnapshot();
@@ -806,32 +855,103 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
 
     private async Task PersistAutoSaveAsync()
     {
+        SettingsStatusArea[] affectedAreas;
+        lock (_autoSaveStatusSync)
+        {
+            affectedAreas = _pendingAutoSaveAreas.ToArray();
+            _pendingAutoSaveAreas.Clear();
+        }
+
         try
         {
             var snapshot = CaptureSettingsSnapshot();
-            var saved = await SaveForActiveProfileAsync(
-                _settingsService,
-                _mainViewModel.CurrentProfile?.Id,
-                snapshot.ApplyTo);
+            var saved = false;
+            await _settingsChangeOriginGate.RunOwnedSaveAsync(async () =>
+            {
+                saved = await SaveForActiveProfileAsync(
+                    _settingsService,
+                    _mainViewModel.CurrentProfile?.Id,
+                    snapshot.ApplyTo);
+            });
 
             if (saved)
             {
-                StatusMessage = _localizationService.GetString("Settings.Status.Saved");
+                CustomEpgSourcePolicy.MarkPersisted(CustomEpgUrls);
             }
         }
         catch (Exception ex)
         {
-            StatusMessage = string.Format(
+            var message = string.Format(
                 CultureInfo.CurrentCulture,
                 _localizationService.GetString("Common.ErrorFormat"),
                 ex.Message);
+            StatusMessage = message;
+            foreach (var area in affectedAreas)
+            {
+                SetPanelStatus(area, message);
+            }
         }
+    }
+
+    private static SettingsStatusArea GetAutoSaveArea(string propertyName) => propertyName switch
+    {
+        nameof(IsDarkTheme) or nameof(AppLanguage) => SettingsStatusArea.Appearance,
+        nameof(SubtitleEnabled) or nameof(SubtitleLanguage) or nameof(SubtitleFontSize) or
+            nameof(PreferredAudioLanguage) => SettingsStatusArea.Audio,
+        nameof(SelectedDownloadQuality) or nameof(DownloadWifiOnly) or nameof(DownloadPath) or
+            nameof(ShowDownloadNotification) => SettingsStatusArea.Download,
+        nameof(ChannelListRefreshFrequencyHours) => SettingsStatusArea.Channel,
+        nameof(EpgRefreshFrequencyHours) or nameof(CustomEpgUrl) or nameof(EpgEnabled) or
+            nameof(EpgTimeOffsetHours) => SettingsStatusArea.Epg,
+        nameof(WatchHistoryRetentionIndex) or nameof(ClearHistoryOnExit) => SettingsStatusArea.Privacy,
+        _ => SettingsStatusArea.Playback
+    };
+
+    private void SetPanelStatus(SettingsStatusArea area, string message)
+    {
+        switch (area)
+        {
+            case SettingsStatusArea.Appearance:
+                AppearanceStatusMessage = message;
+                break;
+            case SettingsStatusArea.Playback:
+                PlaybackStatusMessage = message;
+                break;
+            case SettingsStatusArea.Audio:
+                AudioStatusMessage = message;
+                break;
+            case SettingsStatusArea.Download:
+                DownloadStatusMessage = message;
+                break;
+            case SettingsStatusArea.Channel:
+                ChannelStatusMessage = message;
+                break;
+            case SettingsStatusArea.Epg:
+                EpgStatusMessage = message;
+                break;
+            case SettingsStatusArea.Privacy:
+                PrivacyStatusMessage = message;
+                break;
+            case SettingsStatusArea.Cache:
+                CacheStatusMessage = message;
+                break;
+            case SettingsStatusArea.Reset:
+                ResetStatusMessage = message;
+                break;
+        }
+    }
+
+    private void SetSharedAndPanelStatus(SettingsStatusArea area, string message)
+    {
+        StatusMessage = message;
+        SetPanelStatus(area, message);
     }
 
     private void OnLicenseSubscriptionChanged()
     {
         OnPropertyChanged(nameof(IsPremium));
         OnPropertyChanged(nameof(PremiumStatusText));
+        AddCustomEpgCommand.NotifyCanExecuteChanged();
         PromoCodeStatus = PremiumStatusText;
         IsPromoCodeStatusSuccess = IsPremium;
     }
@@ -856,6 +976,7 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
         else if (e.PropertyName == nameof(MainViewModel.IsGlobalLoading))
         {
             OnPropertyChanged(nameof(IsGlobalLoading));
+            AddCustomEpgCommand.NotifyCanExecuteChanged();
         }
         else if (e.PropertyName == nameof(MainViewModel.GlobalLoadingMessage))
         {
@@ -1014,7 +1135,7 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
 
         if (removed)
         {
-            await _settingsService.SaveAsync();
+            await _settingsChangeOriginGate.RunOwnedSaveAsync(_settingsService.SaveAsync);
             _mainViewModel.ScheduleImmediateFilter();
         }
     }
@@ -1102,11 +1223,16 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
             urls = new List<string> { s.CustomEpgUrl };
         }
         DetachCustomEpgHandlers(CustomEpgUrls);
-        CustomEpgUrls = new ObservableCollection<EpgUrlItem>(urls.Select(u => new EpgUrlItem { Url = u }));
+        CustomEpgUrls = new ObservableCollection<EpgUrlItem>(urls.Select(u => new EpgUrlItem
+        {
+            Url = u,
+            PersistedUrl = u
+        }));
         if (_autoSaveEnabled)
         {
             AttachCustomEpgHandlers(CustomEpgUrls);
         }
+        UpdateCustomEpgEditorState();
 
             // Hidden Groups
             HiddenLiveGroups = new ObservableCollection<string>(s.HiddenLiveGroups);
@@ -1124,18 +1250,26 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
     {
         var snapshot = CaptureSettingsSnapshot();
 
-        var saved = await SaveForActiveProfileAsync(
-            _settingsService,
-            _mainViewModel.CurrentProfile?.Id,
-            snapshot.ApplyTo);
+        var saved = false;
+        await _settingsChangeOriginGate.RunOwnedSaveAsync(async () =>
+        {
+            saved = await SaveForActiveProfileAsync(
+                _settingsService,
+                _mainViewModel.CurrentProfile?.Id,
+                snapshot.ApplyTo);
+        });
 
         if (!saved)
         {
             return;
         }
 
+        CustomEpgSourcePolicy.MarkPersisted(CustomEpgUrls);
         _themeService.SetTheme(snapshot.IsDarkTheme);
-        StatusMessage = _localizationService.GetString("Settings.Status.Saved");
+        if (!_autoSaveEnabled)
+        {
+            StatusMessage = _localizationService.GetString("Settings.Status.Saved");
+        }
     }
 
     private SettingsFormSnapshot CaptureSettingsSnapshot()
@@ -1164,10 +1298,7 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
             Math.Max(0, ChannelListRefreshFrequencyHours),
             Math.Max(0, EpgRefreshFrequencyHours),
             string.IsNullOrWhiteSpace(CustomEpgUrl) ? null : CustomEpgUrl.Trim(),
-            CustomEpgUrls
-                .Where(u => !string.IsNullOrWhiteSpace(u.Url))
-                .Select(u => u.Url.Trim())
-                .ToList(),
+            CustomEpgSourcePolicy.BuildPersistedSources(CustomEpgUrls),
             EpgEnabled,
             EpgTimeOffsetHours,
             SaveWatchHistory,
@@ -1278,26 +1409,36 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     private string? _epgLastError;
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanAddCustomEpg))]
     private void AddCustomEpg()
     {
         if (CustomEpgUrls.Count >= AppSettings.EPG_URL_LIMIT)
         {
-            StatusMessage = string.Format(_localizationService.GetString("Settings.Error.EpgLimitFormat"), AppSettings.EPG_URL_LIMIT);
+            CustomEpgValidationMessage = string.Format(_localizationService.GetString("Settings.Error.EpgLimitFormat"), AppSettings.EPG_URL_LIMIT);
             return;
         }
 
         if (!IsPremium && CustomEpgUrls.Count >= AppSettings.EPG_URL_FREE_LIMIT)
         {
-            StatusMessage = string.Format(_localizationService.GetString("Settings.Error.EpgFreeLimitFormat"), AppSettings.EPG_URL_FREE_LIMIT);
+            CustomEpgValidationMessage = string.Format(_localizationService.GetString("Settings.Error.EpgFreeLimitFormat"), AppSettings.EPG_URL_FREE_LIMIT);
+            return;
+        }
+
+        if (CustomEpgUrls.Any(item => !CustomEpgSourcePolicy.IsValid(item.Url)))
+        {
+            CustomEpgValidationMessage = _localizationService.GetString("Settings.Error.EpgInvalidUrl");
             return;
         }
 
         var item = new EpgUrlItem();
         CustomEpgUrls.Add(item);
         item.PropertyChanged += CustomEpgItem_PropertyChanged;
-        QueueAutoSave(nameof(CustomEpgUrl));
+        UpdateCustomEpgEditorState();
     }
+
+    private bool CanAddCustomEpg() =>
+        !IsGlobalLoading &&
+        CustomEpgSourcePolicy.CanAdd(CustomEpgUrls.Select(item => item.Url), IsPremium);
 
     [RelayCommand]
     private void RemoveCustomEpg(EpgUrlItem item)
@@ -1305,7 +1446,11 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
         item.PropertyChanged -= CustomEpgItem_PropertyChanged;
         if (CustomEpgUrls.Remove(item))
         {
-            QueueAutoSave(nameof(CustomEpgUrl));
+            UpdateCustomEpgEditorState();
+            if (!string.IsNullOrWhiteSpace(item.PersistedUrl))
+            {
+                QueueAutoSave(nameof(CustomEpgUrl));
+            }
         }
     }
 
@@ -1330,8 +1475,21 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
     {
         if (e.PropertyName == nameof(EpgUrlItem.Url))
         {
-            QueueAutoSave(nameof(CustomEpgUrl));
+            UpdateCustomEpgEditorState();
+            if (CustomEpgUrls.All(item => CustomEpgSourcePolicy.IsValid(item.Url)))
+            {
+                QueueAutoSave(nameof(CustomEpgUrl));
+            }
         }
+    }
+
+    private void UpdateCustomEpgEditorState()
+    {
+        var hasInvalidSource = CustomEpgUrls.Any(item => !CustomEpgSourcePolicy.IsValid(item.Url));
+        CustomEpgValidationMessage = hasInvalidSource
+            ? _localizationService.GetString("Settings.Error.EpgInvalidUrl")
+            : string.Empty;
+        AddCustomEpgCommand.NotifyCanExecuteChanged();
     }
 
     [RelayCommand]
@@ -1344,7 +1502,9 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
         {
             if (updateStatusMessage)
             {
-                StatusMessage = _localizationService.GetString("Settings.Status.EpgReading");
+                SetSharedAndPanelStatus(
+                    SettingsStatusArea.Epg,
+                    _localizationService.GetString("Settings.Status.EpgReading"));
             }
 
             using var db = await _contextFactory.CreateDbContextAsync();
@@ -1414,23 +1574,31 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
                 var isWarning = EpgLastError.Contains("eşleşen yayın bilgisi bulunamadı") || EpgLastError.Contains("0 program");
                 if (isWarning)
                 {
-                    StatusMessage = _localizationService.GetString("Settings.Status.EpgUpdated");
+                    SetSharedAndPanelStatus(
+                        SettingsStatusArea.Epg,
+                        _localizationService.GetString("Settings.Status.EpgUpdated"));
                 }
                 else
                 {
-                    StatusMessage = _localizationService.GetString("Settings.Status.EpgError");
+                    SetSharedAndPanelStatus(
+                        SettingsStatusArea.Epg,
+                        _localizationService.GetString("Settings.Status.EpgError"));
                 }
             }
             else if (updateStatusMessage)
             {
-                StatusMessage = _localizationService.GetString("Settings.Status.EpgUpdated");
+                SetSharedAndPanelStatus(
+                    SettingsStatusArea.Epg,
+                    _localizationService.GetString("Settings.Status.EpgUpdated"));
             }
         }
         catch (Exception ex)
         {
             if (updateStatusMessage)
             {
-                StatusMessage = string.Format(_localizationService.GetString("Settings.Status.Stats.ErrorFormat"), UserFriendlyErrorMessage.FromException(ex));
+                SetSharedAndPanelStatus(
+                    SettingsStatusArea.Epg,
+                    string.Format(_localizationService.GetString("Settings.Status.Stats.ErrorFormat"), UserFriendlyErrorMessage.FromException(ex)));
             }
         }
     }
@@ -1445,7 +1613,9 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
         {
             if (updateStatusMessage)
             {
-                StatusMessage = _localizationService.GetString("Settings.Status.ChannelsReading");
+                SetSharedAndPanelStatus(
+                    SettingsStatusArea.Channel,
+                    _localizationService.GetString("Settings.Status.ChannelsReading"));
             }
 
             using var db = await _contextFactory.CreateDbContextAsync();
@@ -1485,7 +1655,9 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
 
             if (updateStatusMessage)
             {
-                StatusMessage = _localizationService.GetString("Settings.Status.ChannelsUpdated");
+                SetSharedAndPanelStatus(
+                    SettingsStatusArea.Channel,
+                    _localizationService.GetString("Settings.Status.ChannelsUpdated"));
             }
         }
         catch
@@ -1493,7 +1665,9 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
             ChannelListLastUpdated = null;
             if (updateStatusMessage)
             {
-                StatusMessage = _localizationService.GetString("Settings.Status.Channel.Error");
+                SetSharedAndPanelStatus(
+                    SettingsStatusArea.Channel,
+                    _localizationService.GetString("Settings.Status.Channel.Error"));
             }
         }
     }
@@ -1573,7 +1747,10 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
         }
 
         var message = _localizationService.GetString("Dialog.Cancel");
-        StatusMessage = message;
+        var cancelledArea = string.Equals(_activeRefreshScope, "EPG", StringComparison.OrdinalIgnoreCase)
+            ? SettingsStatusArea.Epg
+            : SettingsStatusArea.Channel;
+        SetSharedAndPanelStatus(cancelledArea, message);
         _mainViewModel.StatusMessage = message;
         _mainViewModel.IsGlobalLoading = false;
         _mainViewModel.GlobalLoadingMessage = string.Empty;
@@ -1700,14 +1877,24 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
     {
         if (Interlocked.Exchange(ref _isRefreshOperationRunning, 1) == 1)
         {
-            StatusMessage = _localizationService.GetString("Settings.Refresh.OperationInProgress");
+            var busyArea = scope.Equals("EPG", StringComparison.OrdinalIgnoreCase)
+                ? SettingsStatusArea.Epg
+                : SettingsStatusArea.Channel;
+            SetSharedAndPanelStatus(
+                busyArea,
+                _localizationService.GetString("Settings.Refresh.OperationInProgress"));
             return false;
         }
 
         _activeRefreshScope = scope;
         RefreshProgressPercent = 0;
         ChannelListLastError = null;
-        StatusMessage = string.Format(_localizationService.GetString("Settings.Status.Refresh.Label"), operationLabel);
+        var area = scope.Equals("EPG", StringComparison.OrdinalIgnoreCase)
+            ? SettingsStatusArea.Epg
+            : SettingsStatusArea.Channel;
+        SetSharedAndPanelStatus(
+            area,
+            string.Format(_localizationService.GetString("Settings.Status.Refresh.Label"), operationLabel));
         return true;
     }
 
@@ -1751,6 +1938,11 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
             localizedScope,
             message,
             normalized);
+        SetPanelStatus(
+            scope.Equals("EPG", StringComparison.OrdinalIgnoreCase)
+                ? SettingsStatusArea.Epg
+                : SettingsStatusArea.Channel,
+            StatusMessage);
         
         // Settings penceresi kapatılsa bile ana pencerenin sol altındaki bar güncellenmeye devam etsin
         if (updateMainStatus &&
@@ -1778,7 +1970,9 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
     {
         _settingsService.ResetToDefaults();
         LoadSettings();
-        StatusMessage = _localizationService.GetString("Settings.Status.Reset");
+        SetSharedAndPanelStatus(
+            SettingsStatusArea.Reset,
+            _localizationService.GetString("Settings.Status.Reset"));
     }
 
     [RelayCommand]
@@ -1796,12 +1990,16 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
             try
             {
                 await _watchHistoryService.DeleteProfileHistoryAsync(profileId.Value);
-                StatusMessage = _localizationService.GetString("Settings.Privacy.Clear.Success");
+                SetSharedAndPanelStatus(
+                    SettingsStatusArea.Privacy,
+                    _localizationService.GetString("Settings.Privacy.Clear.Success"));
                 _mainViewModel.ResetWatchHistoryUI();
             }
             catch (Exception ex)
             {
-                StatusMessage = string.Format(_localizationService.GetString("Common.ErrorFormat"), ex.Message);
+                SetSharedAndPanelStatus(
+                    SettingsStatusArea.Privacy,
+                    string.Format(_localizationService.GetString("Common.ErrorFormat"), ex.Message));
             }
         }
     }
@@ -1822,7 +2020,7 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
         {
             try
             {
-                await _settingsService.SaveAsync();
+                await _settingsChangeOriginGate.RunOwnedSaveAsync(_settingsService.SaveAsync);
                 await _cacheService.ClearCacheAsync();
 
                 if (_profileService != null)
@@ -1839,11 +2037,15 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
 
                 await UpdateCacheSizeAsync();
 
-                StatusMessage = _localizationService.GetString("GlobalSettings.Cache.Clear.SuccessMessage");
+                SetSharedAndPanelStatus(
+                    SettingsStatusArea.Cache,
+                    _localizationService.GetString("GlobalSettings.Cache.Clear.SuccessMessage"));
             }
             catch (Exception ex)
             {
-                StatusMessage = string.Format(_localizationService.GetString("Common.ErrorFormat"), ex.Message);
+                SetSharedAndPanelStatus(
+                    SettingsStatusArea.Cache,
+                    string.Format(_localizationService.GetString("Common.ErrorFormat"), ex.Message));
             }
         }
     }
@@ -1868,8 +2070,96 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
 /// <summary>
 /// Özel EPG URL öğesi
 /// </summary>
+internal enum SettingsStatusArea
+{
+    Appearance,
+    Playback,
+    Audio,
+    Download,
+    Channel,
+    Epg,
+    Privacy,
+    Cache,
+    Reset
+}
+
+internal sealed class SettingsChangeOriginGate
+{
+    private readonly AsyncLocal<int> _ownedSaveDepth = new();
+
+    internal bool ShouldReload => _ownedSaveDepth.Value == 0;
+
+    internal async Task RunOwnedSaveAsync(Func<Task> saveAsync)
+    {
+        ArgumentNullException.ThrowIfNull(saveAsync);
+        _ownedSaveDepth.Value++;
+        try
+        {
+            await saveAsync();
+        }
+        finally
+        {
+            _ownedSaveDepth.Value--;
+        }
+    }
+}
+
+internal static class CustomEpgSourcePolicy
+{
+    internal static bool IsValid(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value) ||
+            !Uri.TryCreate(value.Trim(), UriKind.Absolute, out var uri) ||
+            string.IsNullOrWhiteSpace(uri.Host))
+        {
+            return false;
+        }
+
+        return uri.Scheme.Equals(Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase) ||
+               uri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase);
+    }
+
+    internal static bool CanAdd(IEnumerable<string?> values, bool isPremium)
+    {
+        var sources = values.ToList();
+        var limit = isPremium ? AppSettings.EPG_URL_LIMIT : AppSettings.EPG_URL_FREE_LIMIT;
+        return sources.Count < limit && sources.All(IsValid);
+    }
+
+    internal static List<string> BuildPersistedSources(IEnumerable<EpgUrlItem> items)
+    {
+        var result = new List<string>();
+        foreach (var item in items)
+        {
+            if (IsValid(item.Url))
+            {
+                result.Add(item.Url.Trim());
+            }
+            else if (IsValid(item.PersistedUrl))
+            {
+                result.Add(item.PersistedUrl!.Trim());
+            }
+        }
+
+        return result;
+    }
+
+    internal static void MarkPersisted(IEnumerable<EpgUrlItem> items)
+    {
+        foreach (var item in items)
+        {
+            if (IsValid(item.Url))
+            {
+                item.PersistedUrl = item.Url.Trim();
+            }
+        }
+    }
+}
+
 public partial class EpgUrlItem : ObservableObject
 {
     [ObservableProperty]
     private string _url = string.Empty;
+
+    internal string? PersistedUrl { get; set; }
 }

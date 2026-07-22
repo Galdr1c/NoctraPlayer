@@ -119,6 +119,21 @@ public class MainActivity : AvaloniaMainActivity
         base.OnActivityResult(requestCode, resultCode, data);
     }
 
+    public override void OnRequestPermissionsResult(
+        int requestCode,
+        string[] permissions,
+        Permission[] grantResults)
+    {
+        if (Avalonia.Application.Current is Noctra.Mobile.App app &&
+            app.Services?.GetService<AndroidNotificationPermissionService>() is { } permissionService &&
+            permissionService.TryHandleRequestPermissionsResult(requestCode, grantResults))
+        {
+            return;
+        }
+
+        base.OnRequestPermissionsResult(requestCode, permissions, grantResults);
+    }
+
     /// <summary>
     /// Donanım/jest geri tuşu. Önce MainView'e (oynatıcı/EPG/alt sayfa) devredilir;
     /// olay uygulama içinde tüketilmezse varsayılan davranış (uygulamadan çıkış) uygulanır.

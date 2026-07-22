@@ -27,6 +27,7 @@ public class ContentDownloadService : IContentDownloadService
     private readonly ILocalizationService _localizationService;
     private readonly ILogger<ContentDownloadService>? _logger;
     private readonly IAppPathService _appPaths;
+    private readonly INetworkService? _networkService;
     private readonly SemaphoreSlim _queueSignal = new(0);
     private readonly ConcurrentQueue<int> _pendingIds = new();
     private readonly ConcurrentDictionary<int, byte> _queuedIds = new();
@@ -47,7 +48,8 @@ public class ContentDownloadService : IContentDownloadService
         HttpClient httpClient,
         ILocalizationService localizationService,
         ILogger<ContentDownloadService>? logger = null,
-        IAppPathService? appPaths = null)
+        IAppPathService? appPaths = null,
+        INetworkService? networkService = null)
     {
         _settingsService = settingsService;
         _contextFactory = contextFactory;
@@ -55,6 +57,7 @@ public class ContentDownloadService : IContentDownloadService
         _localizationService = localizationService;
         _logger = logger;
         _appPaths = appPaths ?? new DesktopAppPathService();
+        _networkService = networkService;
 
         // Ensure worker starts on app launch to process pending/interrupted downloads
         EnsureQueueWorkerStarted();
@@ -553,7 +556,7 @@ public class ContentDownloadService : IContentDownloadService
             ? CreateUniquePath(downloadDirectory, safeName, extension + ".part")
             : item.TempFilePath!;
         _activeTempFiles[downloadId] = plainTempPath;
-        var candidates = BuildDownloadCandidates(item.SourceUrl, settings.DownloadQuality);
+        var candidates = BuildDownloadCandidates(item.SourceUrl);
         var resumedBytes = File.Exists(plainTempPath) ? new FileInfo(plainTempPath).Length : 0L;
         if (resumedBytes < 0)
         {
@@ -1241,52 +1244,7 @@ public class ContentDownloadService : IContentDownloadService
                || value.StartsWith("/", StringComparison.Ordinal);
     }
 
-    private static IReadOnlyList<string> BuildDownloadCandidates(string sourceUrl, DownloadQuality quality)
-    {
-        var candidates = new List<string>();
-        if (quality == DownloadQuality.Standard)
-        {
-            var standardCandidate = TryBuildStandardQualityCandidate(sourceUrl);
-            if (!string.IsNullOrWhiteSpace(standardCandidate) &&
-                !string.Equals(standardCandidate, sourceUrl, StringComparison.OrdinalIgnoreCase))
-            {
-                candidates.Add(standardCandidate);
-            }
-        }
-
-        candidates.Add(sourceUrl);
-        return candidates;
-    }
-
-    private static string? TryBuildStandardQualityCandidate(string sourceUrl)
-    {
-        if (!Uri.TryCreate(sourceUrl, UriKind.Absolute, out var uri))
-        {
-            return null;
-        }
-
-        if (!uri.Scheme.StartsWith("http", StringComparison.OrdinalIgnoreCase))
-        {
-            return null;
-        }
-
-        var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
-        var currentOutput = query["output"];
-        if (currentOutput == null)
-        {
-            return null;
-        }
-
-        if (string.IsNullOrWhiteSpace(currentOutput) ||
-            string.Equals(currentOutput, "m3u8", StringComparison.OrdinalIgnoreCase))
-        {
-            return null;
-        }
-
-        query.Set("output", "m3u8");
-        var builder = new UriBuilder(uri) { Query = query.ToString() };
-        return builder.Uri.ToString();
-    }
+    private static IReadOnlyList<string> BuildDownloadCandidates(string sourceUrl) => [sourceUrl];
 
     private static string ResolveExtensionFromSource(string sourceUrl)
     {
@@ -1471,9 +1429,21 @@ public class ContentDownloadService : IContentDownloadService
     private bool TryCheckWifiPolicy(out string? message)
     {
         message = null;
-        if (!_settingsService.Settings.DownloadWifiOnly)
+        var wifiOnly = _settingsService.Settings.DownloadWifiOnly;
+        if (!wifiOnly)
         {
             return true;
+        }
+
+        if (_networkService is not null)
+        {
+            if (IsDownloadNetworkAllowed(wifiOnly, _networkService.CurrentNetworkStatus))
+            {
+                return true;
+            }
+
+            message = _localizationService.GetString("Download.Error.WifiOnly");
+            return false;
         }
 
         var isUnmetered = NetworkInterface.GetAllNetworkInterfaces()
@@ -1488,6 +1458,17 @@ public class ContentDownloadService : IContentDownloadService
         }
 
         return true;
+    }
+
+    internal static bool IsDownloadNetworkAllowed(bool wifiOnly, string? networkStatus)
+    {
+        if (!wifiOnly)
+        {
+            return true;
+        }
+
+        return string.Equals(networkStatus, "Wi-Fi", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(networkStatus, "Ethernet", StringComparison.OrdinalIgnoreCase);
     }
 
     private static void TryDeleteFile(string? path)

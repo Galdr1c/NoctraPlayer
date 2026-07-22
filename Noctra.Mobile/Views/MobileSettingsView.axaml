@@ -21,10 +21,6 @@
                    FontSize="{DynamicResource FDisplaySmall}"
                    FontWeight="Bold"
                    Foreground="{DynamicResource TextPrimaryBrush}" />
-        <TextBlock Text="{Binding StatusMessage}"
-                   Foreground="{DynamicResource TextMutedBrush}"
-                   FontSize="{DynamicResource FCaption}"
-                   TextWrapping="Wrap" />
       </StackPanel>
 
       <Border Classes="SettingsSectionCard">
@@ -310,6 +306,11 @@
                                   Foreground="{DynamicResource TextMutedBrush}" />
             </Grid>
           </Button>
+          <TextBlock Text="{Binding AppearanceStatusMessage}"
+                     Foreground="{DynamicResource ErrorBrush}"
+                     FontSize="{DynamicResource FCaption}"
+                     TextWrapping="Wrap"
+                     IsVisible="{Binding AppearanceStatusMessage, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
         </StackPanel>
       </Border>
 
@@ -399,14 +400,11 @@
                           IsChecked="{Binding AllowBackgroundPlayback}"
                           VerticalAlignment="Center" />
           </Grid>
-          <Grid ColumnDefinitions="*,Auto">
-            <TextBlock Text="{loc:Translate Settings.Privacy.ClearOnExit}"
-                       Foreground="{DynamicResource TextPrimaryBrush}"
-                       VerticalAlignment="Center" />
-            <ToggleSwitch Grid.Column="1"
-                          IsChecked="{Binding ClearHistoryOnExit}"
-                          VerticalAlignment="Center" />
-          </Grid>
+          <TextBlock Text="{Binding PlaybackStatusMessage}"
+                     Foreground="{DynamicResource ErrorBrush}"
+                     FontSize="{DynamicResource FCaption}"
+                     TextWrapping="Wrap"
+                     IsVisible="{Binding PlaybackStatusMessage, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
         </StackPanel>
       </Border>
 
@@ -457,6 +455,11 @@
                                   Foreground="{DynamicResource TextMutedBrush}" />
             </Grid>
           </Button>
+          <TextBlock Text="{Binding AudioStatusMessage}"
+                     Foreground="{DynamicResource ErrorBrush}"
+                     FontSize="{DynamicResource FCaption}"
+                     TextWrapping="Wrap"
+                     IsVisible="{Binding AudioStatusMessage, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
         </StackPanel>
       </Border>
 
@@ -480,24 +483,26 @@
           <TextBlock Text="{loc:Translate Settings.Download.Quality}"
                      Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="{DynamicResource FCaption}" />
-          <Button Classes="SettingsSelectionButton"
-                  Tag="DownloadQuality"
-                  Click="OpenSelectionSheet_Click">
-            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-              <TextBlock x:Name="DownloadQualitySelectionValue"
-                         Foreground="{DynamicResource TextPrimaryBrush}"
-                         TextTrimming="CharacterEllipsis"
-                         VerticalAlignment="Center" />
-              <icons:MaterialIcon Grid.Column="1" Kind="ChevronDown" Width="20" Height="20"
-                                  Foreground="{DynamicResource TextMutedBrush}" />
-            </Grid>
-          </Button>
+          <TextBlock Text="{loc:Translate Mobile.Settings.Download.OriginalQuality}"
+                     Foreground="{DynamicResource TextPrimaryBrush}"
+                     TextWrapping="Wrap" />
           <TextBlock Text="{loc:Translate Settings.Download.Path}"
                      Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="{DynamicResource FCaption}" />
-          <TextBox Classes="readonly"
-                   Text="{Binding DownloadPath}"
-                   TextWrapping="Wrap" />
+          <Border x:Name="DownloadPathDisplay"
+                  MinHeight="52"
+                  Padding="14,12"
+                  Background="{DynamicResource Surface1Brush}"
+                  BorderBrush="{DynamicResource BorderBrush}"
+                  BorderThickness="1"
+                  CornerRadius="6"
+                  Focusable="False"
+                  IsHitTestVisible="False">
+            <TextBlock Text="{Binding DownloadPath}"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
+                       TextWrapping="Wrap"
+                       VerticalAlignment="Center" />
+          </Border>
           <TextBlock Text="{loc:Translate Mobile.Settings.Download.AndroidStorage}"
                      Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="{DynamicResource FCaption}"
@@ -510,6 +515,11 @@
                           IsChecked="{Binding ShowDownloadNotification}"
                           VerticalAlignment="Center" />
           </Grid>
+          <TextBlock Text="{Binding DownloadStatusMessage}"
+                     Foreground="{DynamicResource ErrorBrush}"
+                     FontSize="{DynamicResource FCaption}"
+                     TextWrapping="Wrap"
+                     IsVisible="{Binding DownloadStatusMessage, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
         </StackPanel>
       </Border>
 
@@ -690,6 +700,11 @@
                      Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="{DynamicResource FCaption}"
                      IsVisible="{Binding !HiddenSeriesGroups.Count}" />
+          <TextBlock Text="{Binding ChannelStatusMessage}"
+                     Foreground="{DynamicResource TextMutedBrush}"
+                     FontSize="{DynamicResource FCaption}"
+                     TextWrapping="Wrap"
+                     IsVisible="{Binding ChannelStatusMessage, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
         </StackPanel>
       </Border>
 
@@ -748,6 +763,11 @@
           <TextBlock Text="{Binding EpgLastError}"
                      Foreground="{DynamicResource ErrorBrush}"
                      TextWrapping="Wrap" />
+          <TextBlock Text="{Binding EpgStatusMessage}"
+                     Foreground="{DynamicResource TextMutedBrush}"
+                     FontSize="{DynamicResource FCaption}"
+                     TextWrapping="Wrap"
+                     IsVisible="{Binding EpgStatusMessage, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
           <TextBlock Text="{loc:Translate Settings.Epg.Refresh}"
                      Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="{DynamicResource FCaption}" />
@@ -795,7 +815,6 @@
                 </StackPanel>
                 <Button Grid.Column="1"
                         Command="{Binding AddCustomEpgCommand}"
-                        IsEnabled="{Binding !IsGlobalLoading}"
                         Theme="{StaticResource FilterButtonStyle}">
                   <StackPanel Orientation="Horizontal" Spacing="6">
                     <icons:MaterialIcon Kind="Plus" Width="18" Height="18" />
@@ -842,6 +861,11 @@
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
+              <TextBlock Text="{Binding CustomEpgValidationMessage}"
+                         Foreground="{DynamicResource ErrorBrush}"
+                         FontSize="{DynamicResource FCaption}"
+                         TextWrapping="Wrap"
+                         IsVisible="{Binding CustomEpgValidationMessage, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
             </StackPanel>
           </Border>
         </StackPanel>
@@ -874,6 +898,11 @@
           <Button Theme="{StaticResource DangerButtonStyle}"
                   Content="{loc:Translate Settings.Privacy.ClearAllNow}"
                   Command="{Binding ClearHistoryCommand}"/>
+          <TextBlock Text="{Binding PrivacyStatusMessage}"
+                     Foreground="{DynamicResource TextMutedBrush}"
+                     FontSize="{DynamicResource FCaption}"
+                     TextWrapping="Wrap"
+                     IsVisible="{Binding PrivacyStatusMessage, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
 
           <Grid ColumnDefinitions="*,*" ColumnSpacing="10" Margin="0,4,0,0">
             <Button Classes="SettingsActionButton"
@@ -906,6 +935,7 @@
               Padding="14"
               HorizontalAlignment="Stretch"
               HorizontalContentAlignment="Center"
+              VerticalContentAlignment="Center"
               Click="ShowUpsell_Click"
               IsVisible="{Binding !IsPremium}">
         <Grid ColumnDefinitions="Auto,*,Auto"
@@ -1127,6 +1157,11 @@
               <TextBlock Text="{loc:Translate GlobalSettings.Cache.Clear.Button}" />
             </StackPanel>
           </Button>
+          <TextBlock Text="{Binding CacheStatusMessage}"
+                     Foreground="{DynamicResource TextMutedBrush}"
+                     FontSize="{DynamicResource FCaption}"
+                     TextWrapping="Wrap"
+                     IsVisible="{Binding CacheStatusMessage, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
         </StackPanel>
       </Border>
 
@@ -1162,10 +1197,15 @@
       </Border>
 
       <Button Classes="SettingsActionButton"
-              Margin="0,0,0,24"
               Content="{loc:Translate Settings.Action.ResetDefaults}"
               FontSize="{DynamicResource FCaption}"
               Command="{Binding ResetToDefaultsCommand}"/>
+      <TextBlock Text="{Binding ResetStatusMessage}"
+                 Margin="0,0,0,24"
+                 Foreground="{DynamicResource SuccessBrush}"
+                 FontSize="{DynamicResource FCaption}"
+                 TextWrapping="Wrap"
+                 IsVisible="{Binding ResetStatusMessage, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
       </StackPanel>
     </ScrollViewer>
 

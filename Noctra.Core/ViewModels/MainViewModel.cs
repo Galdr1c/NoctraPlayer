@@ -5403,9 +5403,13 @@ public partial class MainViewModel : ObservableObject
         }
 
         var interval = TimeSpan.FromHours(hours);
+        var due = CalculateInitialRefreshDelay(
+            interval,
+            SelectedPlaylist?.LastUpdated,
+            DateTime.UtcNow);
         if (_channelSyncTimer != null)
         {
-            _channelSyncTimer.Change(interval, interval);
+            _channelSyncTimer.Change(due, interval);
             return;
         }
 
@@ -5424,7 +5428,26 @@ public partial class MainViewModel : ObservableObject
             {
                 Interlocked.Exchange(ref _isBackgroundChannelSyncRunning, 0);
             }
-        }, null, interval, interval);
+        }, null, due, interval);
+    }
+
+    internal static TimeSpan CalculateInitialRefreshDelay(
+        TimeSpan interval,
+        DateTime? lastUpdatedUtc,
+        DateTime nowUtc)
+    {
+        if (interval <= TimeSpan.Zero || !lastUpdatedUtc.HasValue)
+        {
+            return TimeSpan.Zero;
+        }
+
+        var elapsed = nowUtc - lastUpdatedUtc.Value.ToUniversalTime();
+        if (elapsed <= TimeSpan.Zero)
+        {
+            return interval;
+        }
+
+        return elapsed >= interval ? TimeSpan.Zero : interval - elapsed;
     }
 
     private void ApplyRefreshSchedulesFromSettings()

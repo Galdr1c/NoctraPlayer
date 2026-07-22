@@ -46,12 +46,6 @@ public partial class MobileSettingsView : UserControl
         "Settings.Playback.Quality.Auto"
     };
 
-    private static readonly string[] DownloadQualityKeys =
-    {
-        "Settings.Download.Quality.Standard",
-        "Settings.Download.Quality.High"
-    };
-
     private static readonly string[] RefreshFrequencyKeys =
     {
         "Settings.Channels.Frequency.Off",
@@ -176,7 +170,6 @@ public partial class MobileSettingsView : UserControl
             or nameof(SettingsViewModel.SelectedDataUsage)
             or nameof(SettingsViewModel.SubtitleLanguage)
             or nameof(SettingsViewModel.PreferredAudioLanguage)
-            or nameof(SettingsViewModel.SelectedDownloadQuality)
             or nameof(SettingsViewModel.ChannelListRefreshFrequencyIndex)
             or nameof(SettingsViewModel.EpgRefreshFrequencyIndex)
             or nameof(SettingsViewModel.EpgTimeOffsetIndex)
@@ -237,7 +230,6 @@ public partial class MobileSettingsView : UserControl
             SettingsSelectionKind.DataUsage => CreateIndexOptions(DataUsageKeys, viewModel.SelectedDataUsage),
             SettingsSelectionKind.SubtitleLanguage => CreateStringOptions(MediaLanguageOptions, viewModel.SubtitleLanguage),
             SettingsSelectionKind.PreferredAudioLanguage => CreateStringOptions(MediaLanguageOptions, viewModel.PreferredAudioLanguage),
-            SettingsSelectionKind.DownloadQuality => CreateIndexOptions(DownloadQualityKeys, viewModel.SelectedDownloadQuality),
             SettingsSelectionKind.ChannelRefreshFrequency => CreateIndexOptions(
                 RefreshFrequencyKeys,
                 viewModel.ChannelListRefreshFrequencyIndex,
@@ -271,9 +263,6 @@ public partial class MobileSettingsView : UserControl
             case SettingsSelectionKind.PreferredAudioLanguage:
                 viewModel.PreferredAudioLanguage = (string)option.Value;
                 break;
-            case SettingsSelectionKind.DownloadQuality:
-                viewModel.SelectedDownloadQuality = (int)option.Value;
-                break;
             case SettingsSelectionKind.ChannelRefreshFrequency:
                 viewModel.ChannelListRefreshFrequencyIndex = (int)option.Value;
                 break;
@@ -300,7 +289,6 @@ public partial class MobileSettingsView : UserControl
         DataUsageSelectionValue.Text = GetIndexedLabel(DataUsageKeys, _viewModel.SelectedDataUsage);
         SubtitleLanguageSelectionValue.Text = GetLanguageLabel(_viewModel.SubtitleLanguage);
         PreferredAudioLanguageSelectionValue.Text = GetLanguageLabel(_viewModel.PreferredAudioLanguage);
-        DownloadQualitySelectionValue.Text = GetIndexedLabel(DownloadQualityKeys, _viewModel.SelectedDownloadQuality);
         ChannelRefreshFrequencySelectionValue.Text = GetIndexedLabel(RefreshFrequencyKeys, _viewModel.ChannelListRefreshFrequencyIndex);
         EpgRefreshFrequencySelectionValue.Text = GetIndexedLabel(RefreshFrequencyKeys, _viewModel.EpgRefreshFrequencyIndex);
         EpgTimeOffsetSelectionValue.Text = GetEpgOffsetLabel(_viewModel.EpgTimeOffsetIndex);
@@ -358,7 +346,6 @@ public partial class MobileSettingsView : UserControl
         SettingsSelectionKind.DataUsage => Translate("Settings.Playback.Quality"),
         SettingsSelectionKind.SubtitleLanguage => Translate("Settings.Playback.PreferredSubtitle"),
         SettingsSelectionKind.PreferredAudioLanguage => Translate("Settings.Playback.PreferredAudio"),
-        SettingsSelectionKind.DownloadQuality => Translate("Settings.Download.Quality"),
         SettingsSelectionKind.ChannelRefreshFrequency => Translate("Settings.Channels.Frequency"),
         SettingsSelectionKind.EpgRefreshFrequency => Translate("Settings.Epg.Refresh"),
         SettingsSelectionKind.EpgTimeOffset => Translate("Settings.Epg.Timezone"),
@@ -411,7 +398,6 @@ public partial class MobileSettingsView : UserControl
         DataUsage,
         SubtitleLanguage,
         PreferredAudioLanguage,
-        DownloadQuality,
         ChannelRefreshFrequency,
         EpgRefreshFrequency,
         EpgTimeOffset,

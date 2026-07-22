@@ -1,6 +1,10 @@
 using System;
 using System.Threading.Tasks;
 using Android.App;
+using Android.Content;
+using Android.OS;
+using Android.Widget;
+using System.Threading;
 using Noctra.Models;
 using Noctra.Services.Interfaces;
 
@@ -10,13 +14,17 @@ public sealed class AndroidDialogService : IDialogService
 {
     private readonly AndroidActivityProvider _activityProvider;
     private readonly ILocalizationService _localizationService;
+    private readonly AndroidNotificationPermissionService _notificationPermissionService;
+    private static int _nextNotificationId = 7000;
 
     public AndroidDialogService(
         AndroidActivityProvider activityProvider,
-        ILocalizationService localizationService)
+        ILocalizationService localizationService,
+        AndroidNotificationPermissionService notificationPermissionService)
     {
         _activityProvider = activityProvider;
         _localizationService = localizationService;
+        _notificationPermissionService = notificationPermissionService;
     }
 
     public Task ShowMessageAsync(string title, string message) =>
@@ -67,8 +75,61 @@ public sealed class AndroidDialogService : IDialogService
     public Task<string?> ShowAvatarPickerAsync(string? currentAvatar) =>
         Task.FromResult<string?>(null);
 
-    public Task ShowNotificationAsync(string title, string message) =>
-        ShowAlertAsync(title, message);
+    public async Task ShowNotificationAsync(string title, string message)
+    {
+        var activity = GetActivity();
+        if (!await _notificationPermissionService.EnsureNotificationPermissionAsync())
+        {
+            activity.RunOnUiThread(() =>
+                Toast.MakeText(activity.ApplicationContext, $"{title}: {message}", ToastLength.Long)?.Show());
+            return;
+        }
+
+        const string channelId = "noctra_downloads";
+        var manager = activity.GetSystemService(Context.NotificationService) as NotificationManager
+            ?? throw new InvalidOperationException("Android NotificationManager is unavailable.");
+
+        using (var channel = new NotificationChannel(
+                   channelId,
+                   "Downloads",
+                   NotificationImportance.Default)
+        {
+            Description = "Noctra download completion notifications"
+        })
+        {
+            manager.CreateNotificationChannel(channel);
+        }
+
+        var packageName = activity.PackageName ?? "studio.kynora.noctra";
+        var launchIntent = activity.PackageManager?.GetLaunchIntentForPackage(packageName);
+        PendingIntent? contentIntent = null;
+        if (launchIntent is not null)
+        {
+            launchIntent.AddFlags(ActivityFlags.ClearTop | ActivityFlags.SingleTop);
+            contentIntent = PendingIntent.GetActivity(
+                activity,
+                0,
+                launchIntent,
+                PendingIntentFlags.UpdateCurrent | PendingIntentFlags.Immutable);
+        }
+
+        using var builder = new Notification.Builder(activity, channelId);
+        builder
+            .SetSmallIcon(Resource.Drawable.ic_notification_noctra)
+            .SetContentTitle(title)
+            .SetContentText(message)
+            .SetStyle(new Notification.BigTextStyle().BigText(message))
+            .SetAutoCancel(true)
+            .SetOnlyAlertOnce(true);
+
+        if (contentIntent is not null)
+        {
+            builder.SetContentIntent(contentIntent);
+        }
+
+        manager.Notify(Interlocked.Increment(ref _nextNotificationId), builder.Build());
+        contentIntent?.Dispose();
+    }
 
     private Task ShowAlertAsync(string title, string message)
     {
