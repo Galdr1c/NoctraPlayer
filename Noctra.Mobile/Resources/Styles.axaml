@@ -307,26 +307,6 @@
     </Style>
   </ControlTheme>
 
-  <ControlTheme x:Key="FilterButtonStyle" TargetType="Button">
-    <Setter Property="Background" Value="{DynamicResource Surface1Brush}" />
-    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
-    <Setter Property="BorderThickness" Value="1.5" />
-    <Setter Property="Padding" Value="14,0" />
-    <Setter Property="FontSize" Value="14" />
-    <Setter Property="MinHeight" Value="44" />
-    <Setter Property="CornerRadius" Value="6" />
-    <Setter Property="VerticalContentAlignment" Value="Center"/>
-    <Setter Property="HorizontalContentAlignment" Value="Center"/>
-
-    <Style Selector="^:pressed">
-      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
-      <Setter Property="BorderThickness" Value="1.5" />
-      <Setter Property="Background" Value="{DynamicResource InteractivePressedBrush}" />
-    </Style>
-
-  </ControlTheme>
-
   <!-- ==========================================
         GLOBAL TOGGLE SWITCH THEME (Unified Animation)
         ========================================== -->

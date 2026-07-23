@@ -48,6 +48,10 @@ public partial class SettingsViewModel : ObservableObject, IAsyncDisposable
     private bool _isLoadingSettings;
     private bool _autoSaveEnabled;
 
+    // Auto-clear: status mesajları birkaç saniye sonra otomatik temizlenir.
+    private readonly Dictionary<SettingsStatusArea, CancellationTokenSource> _statusAutoClearTokens = new();
+    private static readonly TimeSpan StatusAutoClearDelay = TimeSpan.FromSeconds(7);
+
     private static readonly HashSet<string> AutoSavePropertyNames = new(StringComparer.Ordinal)
     {
         nameof(UserAgent),
@@ -950,6 +954,98 @@ public partial class SettingsViewModel : ObservableObject, IAsyncDisposable
                 ResetStatusMessage = message;
                 break;
         }
+
+        ScheduleStatusAutoClear(area);
+    }
+
+    /// <summary>
+    /// Belirtilen durum alanı için otomatik temizleme zamanlayıcı.
+    /// Yenileme çalışırken askıya alınır, bittikten sonra tekrar aktif olur.
+    /// </summary>
+    private void ScheduleStatusAutoClear(SettingsStatusArea area)
+    {
+        // Önceki zamanlayıcıyı iptal et
+        if (_statusAutoClearTokens.TryGetValue(area, out var oldCts))
+        {
+            oldCts.Cancel();
+            oldCts.Dispose();
+        }
+
+        var cts = new CancellationTokenSource();
+        _statusAutoClearTokens[area] = cts;
+
+        var token = cts.Token;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(StatusAutoClearDelay, token);
+            }
+            catch (TaskCanceledException)
+            {
+                return;
+            }
+
+            // Yenileme çalışıyorsa temizleme yapma
+            if (Volatile.Read(ref _isRefreshOperationRunning) == 1)
+            {
+                return;
+            }
+
+            // UI thread'e geçerek mesajı temizle
+            if (_dispatcherService is not null)
+            {
+                _dispatcherService.BeginInvoke(() => ClearPanelStatus(area));
+            }
+            else
+            {
+                ClearPanelStatus(area);
+            }
+        }, token);
+    }
+
+    private void ClearPanelStatus(SettingsStatusArea area)
+    {
+        switch (area)
+        {
+            case SettingsStatusArea.Appearance:
+                AppearanceStatusMessage = string.Empty;
+                break;
+            case SettingsStatusArea.Playback:
+                PlaybackStatusMessage = string.Empty;
+                break;
+            case SettingsStatusArea.Audio:
+                AudioStatusMessage = string.Empty;
+                break;
+            case SettingsStatusArea.Download:
+                DownloadStatusMessage = string.Empty;
+                break;
+            case SettingsStatusArea.Channel:
+                ChannelStatusMessage = string.Empty;
+                break;
+            case SettingsStatusArea.Epg:
+                EpgStatusMessage = string.Empty;
+                break;
+            case SettingsStatusArea.Privacy:
+                PrivacyStatusMessage = string.Empty;
+                break;
+            case SettingsStatusArea.Cache:
+                CacheStatusMessage = string.Empty;
+                break;
+            case SettingsStatusArea.Reset:
+                ResetStatusMessage = string.Empty;
+                break;
+        }
+    }
+
+    private void CancelAllStatusAutoClears()
+    {
+        foreach (var kvp in _statusAutoClearTokens)
+        {
+            kvp.Value.Cancel();
+            kvp.Value.Dispose();
+        }
+        _statusAutoClearTokens.Clear();
     }
 
     private void SetSharedAndPanelStatus(SettingsStatusArea area, string message)
@@ -2074,6 +2170,8 @@ public partial class SettingsViewModel : ObservableObject, IAsyncDisposable
         _epgRefreshWatchCts?.Cancel();
         _epgRefreshWatchCts?.Dispose();
         _epgRefreshWatchCts = null;
+
+        CancelAllStatusAutoClears();
     }
 
     /// <summary>

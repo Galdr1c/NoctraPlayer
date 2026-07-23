@@ -582,7 +582,8 @@
           </Grid>
           <TextBlock Text="{Binding ChannelListLastError}"
                      Foreground="{DynamicResource ErrorBrush}"
-                     TextWrapping="Wrap" />
+                     TextWrapping="Wrap"
+                     IsVisible="{Binding ChannelListLastError, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
           <TextBlock Text="{loc:Translate Settings.Channels.Frequency}"
                      Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="{DynamicResource FCaption}" />
@@ -843,7 +844,8 @@
           </Button>
           <TextBlock Text="{Binding EpgLastError}"
                      Foreground="{DynamicResource ErrorBrush}"
-                     TextWrapping="Wrap" />
+                     TextWrapping="Wrap"
+                     IsVisible="{Binding EpgLastError, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
           <TextBlock Text="{Binding EpgStatusMessage}"
                      Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="{DynamicResource FCaption}"
@@ -896,7 +898,7 @@
                 </StackPanel>
                 <Button Grid.Column="1"
                         Command="{Binding AddCustomEpgCommand}"
-                        Theme="{StaticResource FilterButtonStyle}">
+                        Classes="SettingsActionButton">
                   <StackPanel Orientation="Horizontal" Spacing="6">
                     <icons:MaterialIcon Kind="Plus" Width="18" Height="18" />
                     <TextBlock Text="{loc:Translate Settings.Epg.AddNew}" />
@@ -933,7 +935,8 @@
                       <Button Grid.Column="1"
                               Command="{Binding $parent[ItemsControl].((vm:SettingsViewModel)DataContext).RemoveCustomEpgCommand}"
                               CommandParameter="{Binding .}"
-                              Theme="{StaticResource FilterButtonStyle}">
+                              BorderThickness="1.5"
+                              Classes="SettingsActionButton">
                         <StackPanel Orientation="Horizontal" Spacing="6">
                           <icons:MaterialIcon Kind="DeleteOutline" Width="18" Height="18" Foreground="{DynamicResource ErrorBrush}" />
                         </StackPanel>
