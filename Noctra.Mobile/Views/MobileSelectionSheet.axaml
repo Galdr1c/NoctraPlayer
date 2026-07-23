@@ -16,8 +16,9 @@
       <Setter Property="HorizontalContentAlignment" Value="Stretch" />
       <Setter Property="HorizontalAlignment" Value="Stretch" />
     </Style>
-    <Style Selector="Button.SelectionSheetOption:pressed">
-      <Setter Property="Background" Value="{DynamicResource AccentSubtleBrush}" />
+    <Style Selector="Button.SelectionSheetOption:pressed /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource InteractivePressedBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
     </Style>
   </UserControl.Styles>
 

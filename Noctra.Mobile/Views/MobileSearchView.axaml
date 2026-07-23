@@ -72,15 +72,23 @@
     </Border>
 
     <!-- Searching indicator -->
-    <StackPanel Grid.Row="2" HorizontalAlignment="Center" VerticalAlignment="Center"
-                Spacing="10" IsVisible="{Binding IsSearching}" ZIndex="49000">
-      <ProgressBar IsIndeterminate="True" Width="36" Height="4"
-                   Foreground="{DynamicResource AccentBrush}" />
-      <TextBlock Text="{loc:Translate Search.Searching}"
-                 HorizontalAlignment="Center"
-                 Foreground="{DynamicResource TextMutedBrush}"
-                 FontSize="{DynamicResource FCaption}" />
-    </StackPanel>
+    <Border Grid.Row="2" HorizontalAlignment="Center" VerticalAlignment="Center"
+            Background="{DynamicResource OverlayPanelBrush}"
+            BorderBrush="{DynamicResource BorderBrush}"
+            BorderThickness="0.5"
+            CornerRadius="8"
+            Padding="20,18"
+            IsVisible="{Binding IsSearching}" ZIndex="49000">
+      <StackPanel HorizontalAlignment="Center" Spacing="14">
+        <controls:PremiumSpinner Width="54" Height="54"
+                                 HorizontalAlignment="Center" />
+        <TextBlock Text="{loc:Translate Search.Searching}"
+                   HorizontalAlignment="Center"
+                   FontWeight="SemiBold"
+                   Foreground="{DynamicResource PremiumBadgeTextBrush}"
+                   FontSize="{DynamicResource FCaption}" />
+      </StackPanel>
+    </Border>
 
     <!-- Idle state: no search performed yet -->
     <StackPanel Grid.Row="2" HorizontalAlignment="Center" VerticalAlignment="Center"

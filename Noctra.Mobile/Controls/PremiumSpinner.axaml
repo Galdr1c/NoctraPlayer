@@ -15,7 +15,7 @@
                     <Arc Width="{TemplateBinding Width}" Height="{TemplateBinding Height}" 
                          Stroke="{DynamicResource BorderBrush}" StrokeThickness="3" 
                          StartAngle="0" SweepAngle="360"
-                         Opacity="0.1"
+                         Opacity="0.25"
                          VerticalAlignment="Center" HorizontalAlignment="Center"/>
 
                     <!-- Rotating Indicator Arc -->

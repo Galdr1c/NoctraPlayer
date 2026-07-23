@@ -22,22 +22,25 @@
     </Style>
   </UserControl.Styles>
 
-  <Grid RowDefinitions="Auto,Auto" Margin="24">
+  <Grid RowDefinitions="Auto,*" Margin="24">
 
-    <!-- Continue Watching Section -->
-    <StackPanel Grid.Row="0"
-                IsVisible="{Binding ContinueWatching.Count, Converter={StaticResource CountToVisibility}}"
-                Margin="0,0,0,40">
-      <TextBlock Text="{loc:Translate Home.ContinueWatching}"
-                 FontSize="{DynamicResource FHeadline}"
-                 FontWeight="Bold"
-                 Foreground="{DynamicResource TextPrimaryBrush}"
-                 Margin="0,0,0,20" />
-      <controls:MobileVirtualizingCardGrid x:Name="ContinueWatchingGrid"
-                                           SourceItems="{Binding ContinueWatching}"
-                                           CardKind="ContinueWatching"
-                                           ItemContainerTheme="{StaticResource TransparentListBoxItemTheme}" />
-    </StackPanel>
+    <!-- Continue Watching Title (stays in row 0, always reserved) -->
+    <TextBlock Grid.Row="0"
+               Text="{loc:Translate Home.ContinueWatching}"
+               FontSize="{DynamicResource FHeadline}"
+               FontWeight="Bold"
+               Foreground="{DynamicResource TextPrimaryBrush}"
+               Margin="0,0,0,20"
+               IsVisible="{Binding ContinueWatching.Count, Converter={StaticResource CountToVisibility}}" />
+
+    <!-- Continue Watching Grid (row 1, bounded by * height) -->
+    <controls:MobileVirtualizingCardGrid Grid.Row="1"
+                                        x:Name="ContinueWatchingGrid"
+                                        SourceItems="{Binding ContinueWatching}"
+                                        CardKind="ContinueWatching"
+                                        Margin="0,0,0,40"
+                                        IsVisible="{Binding ContinueWatching.Count, Converter={StaticResource CountToVisibility}}"
+                                        ItemContainerTheme="{StaticResource TransparentListBoxItemTheme}" />
 
     <!-- Empty State (shown when no Continue Watching) -->
     <StackPanel Grid.Row="1"

@@ -875,11 +875,28 @@ public partial class MainView : UserControl
         UpdateContentVisibility(destination);
     }
 
-    private void ReleaseSettingsViewModel()
+    private async void ReleaseSettingsViewModel()
     {
+        if (_settingsViewModelLease?.Service is { } viewModel)
+        {
+            try
+            {
+                await viewModel.FlushPendingAutoSaveAsync();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[MainView] FlushPendingAutoSave failed: {ex.Message}");
+            }
+        }
+
         MobileSettingsContent.DataContext = null;
-        _settingsViewModelLease?.Dispose();
-        _settingsViewModelLease = null;
+        // Use async disposal — SettingsViewModel only implements IAsyncDisposable,
+        // so synchronous Dispose() would throw from the DI container.
+        var lease = Interlocked.Exchange(ref _settingsViewModelLease, null);
+        if (lease is not null)
+        {
+            await lease.DisposeAsync().ConfigureAwait(false);
+        }
     }
 
     private void OnProfilesClick(object? sender, RoutedEventArgs e)

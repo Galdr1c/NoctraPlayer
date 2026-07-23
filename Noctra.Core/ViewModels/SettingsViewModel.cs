@@ -17,7 +17,7 @@ namespace Noctra.ViewModels;
 /// <summary>
 /// Ayarlar view model
 /// </summary>
-public partial class SettingsViewModel : ObservableObject, IDisposable
+public partial class SettingsViewModel : ObservableObject, IAsyncDisposable
 {
     private readonly IPlaylistService _playlistService;
     private readonly ISettingsService _settingsService;
@@ -881,6 +881,15 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
         }
         catch (Exception ex)
         {
+            // Re-queue pending areas so the next save attempt retries them.
+            lock (_autoSaveStatusSync)
+            {
+                foreach (var area in affectedAreas)
+                {
+                    _pendingAutoSaveAreas.Add(area);
+                }
+            }
+
             var message = string.Format(
                 CultureInfo.CurrentCulture,
                 _localizationService.GetString("Common.ErrorFormat"),
@@ -890,6 +899,8 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
             {
                 SetPanelStatus(area, message);
             }
+
+            throw;
         }
     }
 
@@ -2050,7 +2061,7 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
         }
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
         _appUpdateService.UpdateStateChanged -= OnUpdateStateChanged;
         _mainViewModel.PropertyChanged -= MainViewModel_PropertyChanged;
@@ -2058,11 +2069,20 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
         _licenseService.SubscriptionChanged -= OnLicenseSubscriptionChanged;
         DetachCustomEpgHandlers(CustomEpgUrls);
         _autoSaveEnabled = false;
-        _autoSaveCoordinator.Dispose();
+        await _autoSaveCoordinator.DisposeAsync().ConfigureAwait(false);
 
         _epgRefreshWatchCts?.Cancel();
         _epgRefreshWatchCts?.Dispose();
         _epgRefreshWatchCts = null;
+    }
+
+    /// <summary>
+    /// Flushes any pending auto-save before the DI scope is disposed.
+    /// Must be called while all dependencies are still alive.
+    /// </summary>
+    public async Task FlushPendingAutoSaveAsync()
+    {
+        await _autoSaveCoordinator.DisposeAsync().ConfigureAwait(false);
     }
 
 }

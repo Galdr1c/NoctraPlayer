@@ -11,7 +11,7 @@
     <!-- Icon circle with subtle background -->
     <Border Width="80"
             Height="80"
-            CornerRadius="40"
+            CornerRadius="8"
             Background="{DynamicResource Surface1Brush}"
             HorizontalAlignment="Center"
             Margin="0,0,0,8">

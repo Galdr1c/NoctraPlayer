@@ -1,6 +1,6 @@
 namespace Noctra.ViewModels;
 
-internal sealed class SettingsAutoSaveCoordinator : IDisposable
+internal sealed class SettingsAutoSaveCoordinator : IAsyncDisposable
 {
     private readonly Func<Task> _saveAsync;
     private readonly SemaphoreSlim _saveGate = new(1, 1);
@@ -84,7 +84,7 @@ internal sealed class SettingsAutoSaveCoordinator : IDisposable
         }
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
         CancellationTokenSource? pendingDelay;
         long flushVersion;
@@ -109,7 +109,7 @@ internal sealed class SettingsAutoSaveCoordinator : IDisposable
 
         if (flushVersion > 0)
         {
-            _ = FlushAfterDisposeAsync(flushVersion);
+            await FlushAfterDisposeAsync(flushVersion).ConfigureAwait(false);
         }
     }
 

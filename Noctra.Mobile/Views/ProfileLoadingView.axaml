@@ -8,8 +8,6 @@
              x:DataType="vm:ProfileLoadingViewModel"
              x:CompileBindings="False"
              mc:Ignorable="d"
-             d:DesignWidth="390"
-             d:DesignHeight="844"
              Background="{DynamicResource Bg0Brush}">
 
   <!--
@@ -32,10 +30,10 @@
                 Spacing="0">
 
       <!-- PremiumSpinner içinde aktif profil avatarı -->
-      <controls:PremiumSpinner Width="90" Height="90"
+      <controls:PremiumSpinner Width="110" Height="110"
                                HorizontalAlignment="Center">
         <Border Width="54" Height="54"
-                CornerRadius="12"
+                CornerRadius="8"
                 ClipToBounds="True"
                 Background="{DynamicResource Surface1Brush}"
                 HorizontalAlignment="Center"
@@ -89,7 +87,7 @@
       <Border Background="#1AFFA500"
               BorderBrush="#80FFA500"
               BorderThickness="1"
-              CornerRadius="10"
+              CornerRadius="8"
               Padding="14,10"
               IsVisible="{Binding LoadingWarningMessage,
                                   Converter={StaticResource StringNotEmptyToVisibilityConverter}}">
@@ -111,7 +109,7 @@
       <Border Background="{DynamicResource Surface1Brush}"
               BorderBrush="{DynamicResource BorderBrush}"
               BorderThickness="1"
-              CornerRadius="14"
+              CornerRadius="8"
               Padding="14,12"
               IsVisible="{Binding HasActiveImportJob}">
         <StackPanel Spacing="10">

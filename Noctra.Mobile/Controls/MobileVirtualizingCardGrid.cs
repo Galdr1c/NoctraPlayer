@@ -112,6 +112,11 @@ public sealed class MobileVirtualizingCardGrid : ListBox
     /// </summary>
     public void RefreshAfterResume()
     {
+        // Force a full rebuild even if the width later returns to the same value.
+        // Without this, a timeout (350 ms) followed by the same width would skip
+        // rebuild and leave a corrupted or blank visual tree.
+        Interlocked.Exchange(ref _fullRebuildRequired, 1);
+
         var version = Interlocked.Increment(ref _resumeRecoveryVersion);
         _ = RecoverAfterResumeAsync(version);
     }

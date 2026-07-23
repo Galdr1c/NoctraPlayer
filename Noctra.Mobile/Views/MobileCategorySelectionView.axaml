@@ -18,8 +18,8 @@
       <Setter Property="HorizontalAlignment" Value="Stretch" />
       <Setter Property="HorizontalContentAlignment" Value="Stretch" />
     </Style>
-    <Style Selector="Button.CategorySelectionRow:pressed">
-      <Setter Property="Background" Value="{DynamicResource AccentSubtleBrush}" />
+    <Style Selector="Button.CategorySelectionRow:pressed /template/ ContentPresenter">
+      <Setter Property="Background" Value="Transparent" />
     </Style>
     <Style Selector="Button.CategoryHideButton">
       <Setter Property="Width" Value="28" />

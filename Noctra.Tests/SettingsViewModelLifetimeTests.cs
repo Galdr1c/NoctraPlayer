@@ -36,7 +36,7 @@ public sealed class SettingsViewModelLifetimeTests
 
         Assert.Contains("ReleaseSettingsViewModel();", mobileMain, StringComparison.Ordinal);
         Assert.Contains("CreateSettingsViewModelScope()", mobileMain, StringComparison.Ordinal);
-        Assert.Contains("_settingsViewModelLease?.Dispose();", mobileMain, StringComparison.Ordinal);
+        Assert.Contains("DisposeAsync()", mobileMain, StringComparison.Ordinal);
     }
 
     private static string ReadProjectFile(params string[] parts)

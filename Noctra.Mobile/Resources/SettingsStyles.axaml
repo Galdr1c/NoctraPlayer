@@ -41,7 +41,7 @@
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="6" />
   </Style>
-  <Style Selector="Button.SettingsActionButton:pressed">
+  <Style Selector="Button.SettingsActionButton:pressed /template/ ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource InteractivePressedBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
   </Style>
@@ -57,10 +57,6 @@
     <Setter Property="HorizontalAlignment" Value="Stretch" />
     <Setter Property="HorizontalContentAlignment" Value="Stretch" />
     <Setter Property="VerticalContentAlignment" Value="Center" />
-  </Style>
-  <Style Selector="Button.SettingsSelectionButton:pressed">
-    <Setter Property="Background" Value="{DynamicResource AccentSubtleBrush}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
   </Style>
 
   <Style Selector="Button.SortIconButton">
@@ -94,7 +90,12 @@
     <Setter Property="HorizontalContentAlignment" Value="Center" />
     <Setter Property="VerticalContentAlignment" Value="Center" />
   </Style>
-  <Style Selector="Button.SettingsPrimaryActionButton:pressed">
-    <Setter Property="Opacity" Value="0.82" />
+  <Style Selector="Button.SettingsPrimaryActionButton:pressed /template/ ContentPresenter">
+    <Setter Property="Opacity" Value="0.80" />
+    <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+  </Style>
+  <Style Selector="Button.UpgradeButton:pressed /template/ ContentPresenter">
+    <Setter Property="Opacity" Value="0.80" />
+    <Setter Property="Background" Value="{DynamicResource PremiumBadgeBrush}" />
   </Style>
 </Styles>
