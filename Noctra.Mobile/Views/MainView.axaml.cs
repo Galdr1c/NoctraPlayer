@@ -17,6 +17,7 @@ using HotAvalonia;
 
 using Microsoft.Extensions.DependencyInjection;
 using Noctra.Mobile.Behaviors;
+using Noctra.Mobile.Controls;
 using Noctra.Models;
 using Noctra.Mobile.Localization;
 using Noctra.Mobile.Services;
@@ -52,6 +53,8 @@ public partial class MainView : UserControl
     private bool _startupFlowStarted;
     private readonly Stack<string> _navigationHistory = new();
     private bool _isNavigatingBack;
+    private MobileCollapsibleNavigationRail? _navigationRailController;
+    private readonly MobileScrollEdgeFeedbackController _scrollEdgeFeedbackController;
 
     // Holds the currently active profiles view model when showing the profiles overlay.
     private ProfilesViewModel? _activeProfilesViewModel;
@@ -70,6 +73,21 @@ public partial class MainView : UserControl
         OverlayProfileList.ProfileLoaded -= OverlayProfileList_ProfileLoaded;
         OverlayProfileList.ProfileLoaded += OverlayProfileList_ProfileLoaded;
         WireCategorySelectionEvents();
+
+        if (_navigationRailController is null ||
+            !_navigationRailController.IsAttachedTo(NavigationRail))
+        {
+            var isExpanded = _navigationRailController?.IsExpanded ?? true;
+            _navigationRailController = new MobileCollapsibleNavigationRail(
+                NavigationRail,
+                isExpanded);
+        }
+        else
+        {
+            _navigationRailController.ApplyCurrentState();
+        }
+
+        _scrollEdgeFeedbackController.RefreshVisualTree();
 
         UpdateNavigationMode(Bounds.Width);
         UpdateContentVisibility(_currentDestination);
@@ -93,6 +111,9 @@ public partial class MainView : UserControl
         // Safe-area hesaplaması için temel (tasarım) padding değerlerini sakla.
         _headerBasePadding = HeaderBar.Padding;
         _bottomNavBasePadding = BottomNavigation.Padding;
+
+        _navigationRailController = new MobileCollapsibleNavigationRail(NavigationRail);
+        _scrollEdgeFeedbackController = new MobileScrollEdgeFeedbackController(this);
     }
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
@@ -338,6 +359,7 @@ public partial class MainView : UserControl
 
         OverlayProfileList.ProfileLoaded -= OverlayProfileList_ProfileLoaded;
         _backExitToastTimer.Stop();
+        _scrollEdgeFeedbackController.Hide();
         CategorySelectionOverlay.TryClose();
 
         _fallbackHandler?.Unregister();
@@ -577,6 +599,11 @@ public partial class MainView : UserControl
         var canShowNavigation = CanShowNavigationChrome();
         NavigationRail.IsVisible = useNavigationRail && canShowNavigation;
         BottomNavigation.IsVisible = !useNavigationRail && canShowNavigation;
+
+        if (useNavigationRail)
+        {
+            _navigationRailController?.ApplyCurrentState();
+        }
     }
 
     private bool CanShowNavigationChrome()

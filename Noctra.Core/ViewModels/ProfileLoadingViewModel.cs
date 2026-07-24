@@ -27,24 +27,6 @@ public partial class ProfileLoadingViewModel : ObservableObject
     private bool _isIndeterminate = true;
 
     [ObservableProperty]
-    private bool _hasActiveImportJob;
-
-    [ObservableProperty]
-    private string _activeImportJobStage = string.Empty;
-
-    [ObservableProperty]
-    private int _activeImportJobLiveCount;
-
-    [ObservableProperty]
-    private int _activeImportJobVodCount;
-
-    [ObservableProperty]
-    private int _activeImportJobSeriesCount;
-
-    [ObservableProperty]
-    private int _activeImportJobFailedCategoryCount;
-
-    [ObservableProperty]
     private string _profileName = string.Empty;
 
     [ObservableProperty]
