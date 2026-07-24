@@ -1013,11 +1013,6 @@
       <!-- Upgrade to Premium Banner (shown when not premium, placed after Account card) -->
       <Button Background="{DynamicResource PremiumBadgeBrush}"
               Classes="UpgradeButton"
-              CornerRadius="8"
-              Padding="14"
-              HorizontalAlignment="Stretch"
-              HorizontalContentAlignment="Center"
-              VerticalContentAlignment="Center"
               Click="ShowUpsell_Click"
               IsVisible="{Binding !IsPremium}">
         <Grid ColumnDefinitions="Auto,*,Auto"

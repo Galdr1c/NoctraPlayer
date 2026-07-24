@@ -785,7 +785,7 @@ public partial class MainView : UserControl
     ///   button. Player IS closed on profile selection (ShowProfileSelection) since
     ///   switching profiles resets the playback context.
     /// </summary>
-    internal void NavigateToDestination(string destination)
+    internal async void NavigateToDestination(string destination)
     {
         if (DataContext is not MobileMainViewModel viewModel)
         {
@@ -821,7 +821,7 @@ public partial class MainView : UserControl
 
         if (string.Equals(destination, "Settings", StringComparison.Ordinal))
         {
-            ReleaseSettingsViewModel();
+            await ReleaseSettingsViewModelAsync();
             _settingsViewModelLease = resolver.CreateSettingsViewModelScope();
             MobileSettingsContent.DataContext = _settingsViewModelLease.Service;
         }
@@ -875,28 +875,40 @@ public partial class MainView : UserControl
         UpdateContentVisibility(destination);
     }
 
-    private async void ReleaseSettingsViewModel()
+    private async Task ReleaseSettingsViewModelAsync()
     {
-        if (_settingsViewModelLease?.Service is { } viewModel)
+        // Atomically snapshot and clear the field FIRST so that a concurrent
+        // NavigateToDestination("Settings") call cannot capture and dispose our
+        // brand-new lease.
+        var lease = Interlocked.Exchange(ref _settingsViewModelLease, null);
+        MobileSettingsContent.DataContext = null;
+
+        if (lease is null)
         {
-            try
-            {
-                await viewModel.FlushPendingAutoSaveAsync();
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"[MainView] FlushPendingAutoSave failed: {ex.Message}");
-            }
+            return;
         }
 
-        MobileSettingsContent.DataContext = null;
-        // Use async disposal — SettingsViewModel only implements IAsyncDisposable,
-        // so synchronous Dispose() would throw from the DI container.
-        var lease = Interlocked.Exchange(ref _settingsViewModelLease, null);
-        if (lease is not null)
+        try
+        {
+            if (lease.Service is { } viewModel)
+            {
+                await viewModel.FlushPendingAutoSaveAsync().ConfigureAwait(false);
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[MainView] FlushPendingAutoSave failed: {ex.Message}");
+        }
+        finally
         {
             await lease.DisposeAsync().ConfigureAwait(false);
         }
+    }
+
+    private void ReleaseSettingsViewModel()
+    {
+        // Fire-and-forget for non-navigational callers (OnDetachedFromVisualTree, etc.)
+        _ = ReleaseSettingsViewModelAsync();
     }
 
     private void OnProfilesClick(object? sender, RoutedEventArgs e)

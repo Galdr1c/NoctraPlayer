@@ -62,14 +62,28 @@ internal sealed class SettingsAutoSaveCoordinator : IAsyncDisposable
                     _activeVersion = version;
                 }
 
-                await _saveAsync();
-
-                lock (_sync)
+                try
                 {
-                    _completedVersion = Math.Max(_completedVersion, version);
-                    if (_activeVersion == version)
+                    await _saveAsync();
+
+                    lock (_sync)
                     {
-                        _activeVersion = 0;
+                        _completedVersion = Math.Max(_completedVersion, version);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[SettingsAutoSaveCoordinator] Save failed (v{version}): {ex.Message}");
+                    // Do NOT advance _completedVersion — allow DisposeAsync to retry.
+                }
+                finally
+                {
+                    lock (_sync)
+                    {
+                        if (_activeVersion == version)
+                        {
+                            _activeVersion = 0;
+                        }
                     }
                 }
             }
@@ -87,7 +101,6 @@ internal sealed class SettingsAutoSaveCoordinator : IAsyncDisposable
     public async ValueTask DisposeAsync()
     {
         CancellationTokenSource? pendingDelay;
-        long flushVersion;
 
         lock (_sync)
         {
@@ -99,29 +112,38 @@ internal sealed class SettingsAutoSaveCoordinator : IAsyncDisposable
             _disposed = true;
             pendingDelay = _delayCts;
             _delayCts = null;
-            flushVersion = _requestedVersion > Math.Max(_completedVersion, _activeVersion)
-                ? _requestedVersion
-                : 0;
         }
 
         pendingDelay?.Cancel();
         pendingDelay?.Dispose();
 
-        if (flushVersion > 0)
-        {
-            await FlushAfterDisposeAsync(flushVersion).ConfigureAwait(false);
-        }
-    }
-
-    private async Task FlushAfterDisposeAsync(long version)
-    {
-        await _saveGate.WaitAsync();
+        // Always wait behind the gate so any in-flight save completes and
+        // scoped services are still alive when _saveAsync finishes.
+        await _saveGate.WaitAsync().ConfigureAwait(false);
         try
         {
-            await _saveAsync();
+            long flushVersion;
             lock (_sync)
             {
-                _completedVersion = Math.Max(_completedVersion, version);
+                flushVersion = _requestedVersion > _completedVersion
+                    ? _requestedVersion
+                    : 0;
+            }
+
+            if (flushVersion > 0)
+            {
+                try
+                {
+                    await _saveAsync().ConfigureAwait(false);
+                    lock (_sync)
+                    {
+                        _completedVersion = Math.Max(_completedVersion, flushVersion);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[SettingsAutoSaveCoordinator] Flush save failed (v{flushVersion}): {ex.Message}");
+                }
             }
         }
         finally
@@ -129,4 +151,5 @@ internal sealed class SettingsAutoSaveCoordinator : IAsyncDisposable
             _saveGate.Release();
         }
     }
+
 }

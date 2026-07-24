@@ -227,7 +227,7 @@ public partial class MainWindow : Window
     {
         try
         {
-            using var scope = ((App)Application.Current!).Services.CreateScope();
+            await using var scope = ((App)Application.Current!).Services.CreateAsyncScope();
             var settingsWindow = scope.ServiceProvider.GetRequiredService<Views.SettingsWindow>();
             await settingsWindow.ShowDialog(this);
         }

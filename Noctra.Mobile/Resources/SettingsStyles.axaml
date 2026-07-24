@@ -93,6 +93,17 @@
   <Style Selector="Button.SettingsPrimaryActionButton:pressed /template/ ContentPresenter">
     <Setter Property="Opacity" Value="0.80" />
     <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+    <Setter Property="Foreground" Value="White" />
+  </Style>
+  <Style Selector="Button.UpgradeButton">
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Padding" Value="14" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Background" Value="{DynamicResource PremiumBadgeBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource PremiumBadgeTextBrush}" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
   </Style>
   <Style Selector="Button.UpgradeButton:pressed /template/ ContentPresenter">
     <Setter Property="Opacity" Value="0.80" />

@@ -11,7 +11,7 @@
              mc:Ignorable="d">
 
   <Grid RowDefinitions="Auto,*">
-    <Grid Grid.Row="0" Margin="20,16,20,4" ColumnDefinitions="*,Auto">
+    <Grid Grid.Row="0" Margin="24,24,24,0" ColumnDefinitions="*,Auto">
       <TextBlock Text="{loc:Translate MyList.Title}"
                  FontSize="{DynamicResource FDisplaySmall}" FontWeight="Bold"
                  Foreground="{DynamicResource TextPrimaryBrush}"

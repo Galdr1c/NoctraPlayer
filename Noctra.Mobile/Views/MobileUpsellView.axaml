@@ -5,23 +5,6 @@
              x:Class="Noctra.Mobile.Views.MobileUpsellView"
              x:CompileBindings="False">
 
-  <UserControl.Styles>
-      <!-- Buy Button -->
-      <Style Selector="Button.BuyBtn">
-          <Setter Property="Background" Value="{DynamicResource PremiumBadgeBrush}"/>
-          <Setter Property="Foreground" Value="{DynamicResource PremiumBadgeTextBrush}"/>
-          <Setter Property="CornerRadius" Value="6"/>
-          <Setter Property="Cursor" Value="Hand"/>
-          <Setter Property="BorderThickness" Value="0"/>
-          <Setter Property="HorizontalContentAlignment" Value="Center"/>
-          <Setter Property="VerticalContentAlignment" Value="Center"/>
-          <Setter Property="HorizontalAlignment" Value="Stretch"/>
-      </Style>
-      <Style Selector="Button.BuyBtn:pressed">
-          <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
-      </Style>
-  </UserControl.Styles>
-
   <Grid Background="{DynamicResource OverlayDimBrush}">
     <Border Background="{DynamicResource BackgroundGradientBrush}"
             BorderBrush="{DynamicResource PremiumBadgeBrush}"
@@ -131,7 +114,7 @@
               </StackPanel>
             </Border>
 
-            <Button Classes="BuyBtn"
+            <Button Classes="UpgradeButton"
                     MinHeight="52"
                     Click="Buy_Click">
               <StackPanel Orientation="Horizontal"

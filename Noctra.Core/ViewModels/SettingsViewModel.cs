@@ -2009,6 +2009,31 @@ public partial class SettingsViewModel : ObservableObject, IAsyncDisposable
     {
         _activeRefreshScope = null;
         Interlocked.Exchange(ref _isRefreshOperationRunning, 0);
+
+        // Refresh sırasında süresi dolan auto-clear'lar atlandı. Şimdi yeniden
+        // planlayarak mesajların ekranda yapışmasını önle.
+        RescheduleExpiredStatusMessages();
+    }
+
+    private void RescheduleExpiredStatusMessages()
+    {
+        // Mevcut (süresi dolmuş/iptal edilmiş) token'ları temizle
+        foreach (var kvp in _statusAutoClearTokens)
+        {
+            kvp.Value.Cancel();
+            kvp.Value.Dispose();
+        }
+        _statusAutoClearTokens.Clear();
+
+        // Dolu olan her panel durumu için yeni bir auto-clear zamanla
+        if (!string.IsNullOrEmpty(ChannelStatusMessage))
+        {
+            ScheduleStatusAutoClear(SettingsStatusArea.Channel);
+        }
+        if (!string.IsNullOrEmpty(EpgStatusMessage))
+        {
+            ScheduleStatusAutoClear(SettingsStatusArea.Epg);
+        }
     }
 
     private void SyncChannelProgressFromMain(int minimumPercent = 0, string? fallbackMessage = null)

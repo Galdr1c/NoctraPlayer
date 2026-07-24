@@ -8,11 +8,10 @@
              x:Class="Noctra.Mobile.Views.MobileFavoritesView"
              x:DataType="vm:MainViewModel"
              x:CompileBindings="False"
-             mc:Ignorable="d"
-             d:DesignWidth="390" d:DesignHeight="844">
+             mc:Ignorable="d">
 
   <Grid RowDefinitions="Auto,*">
-    <Grid Grid.Row="0" Margin="20,16,20,4" ColumnDefinitions="*,Auto">
+    <Grid Grid.Row="0" Margin="24,24,24,0" ColumnDefinitions="*,Auto">
       <TextBlock Text="{loc:Translate Favorites.Title}"
                  FontSize="{DynamicResource FDisplaySmall}" FontWeight="Bold"
                  Foreground="{DynamicResource TextPrimaryBrush}"
