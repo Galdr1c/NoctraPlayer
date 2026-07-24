@@ -56,6 +56,7 @@ public partial class MainView : UserControl
     private MobileCollapsibleNavigationRail? _navigationRailController;
     private readonly MobileScrollEdgeFeedbackController _scrollEdgeFeedbackController;
     private long _navigationVersion;
+    private readonly object _settingsReleaseSync = new();
     private Task _pendingSettingsRelease = Task.CompletedTask;
 
     // Holds the currently active profiles view model when showing the profiles overlay.
@@ -857,15 +858,12 @@ public partial class MainView : UserControl
 
         if (string.Equals(destination, "Settings", StringComparison.Ordinal))
         {
-            // Wait for any pending previous Settings release before creating a new scope.
-            await _pendingSettingsRelease;
-            if (version != Volatile.Read(ref _navigationVersion))
-            {
-                return;
-            }
-
-            _pendingSettingsRelease = ReleaseSettingsViewModelAsync();
-            await _pendingSettingsRelease;
+            // Snapshot the current lease on the UI thread and join the serialized
+            // release chain. A newer navigation request can supersede this await,
+            // but a new Settings scope is never created before the old one is fully
+            // flushed and disposed.
+            var settingsRelease = QueueSettingsRelease();
+            await settingsRelease;
             if (version != Volatile.Read(ref _navigationVersion))
             {
                 return;
@@ -876,8 +874,9 @@ public partial class MainView : UserControl
         }
         else
         {
-            // Fire-and-forget for non-Settings navigation.
-            _ = ReleaseSettingsViewModelAsync();
+            // Non-Settings navigation does not block the page transition, but the
+            // returned task remains in the release chain for a later Settings open.
+            QueueSettingsRelease();
         }
 
         if (version != Volatile.Read(ref _navigationVersion))
@@ -930,17 +929,43 @@ public partial class MainView : UserControl
         UpdateContentVisibility(destination);
     }
 
-    private async Task ReleaseSettingsViewModelAsync()
+    private Task QueueSettingsRelease()
     {
-        // Atomically snapshot and clear the field FIRST so that a concurrent
-        // NavigateToDestination("Settings") call cannot capture and dispose our
-        // brand-new lease.
-        var lease = Interlocked.Exchange(ref _settingsViewModelLease, null);
-        MobileSettingsContent.DataContext = null;
-
-        if (lease is null)
+        lock (_settingsReleaseSync)
         {
-            return;
+            // Capture and disconnect the lease synchronously while we are still on
+            // the Avalonia UI thread. The asynchronous continuation below never
+            // touches UI.
+            var lease = Interlocked.Exchange(ref _settingsViewModelLease, null);
+            MobileSettingsContent.DataContext = null;
+
+            if (lease is null)
+            {
+                return _pendingSettingsRelease;
+            }
+
+            _pendingSettingsRelease = ReleaseSettingsLeaseAfterAsync(
+                _pendingSettingsRelease,
+                lease);
+
+            return _pendingSettingsRelease;
+        }
+    }
+
+    private static async Task ReleaseSettingsLeaseAfterAsync(
+        Task previousRelease,
+        ScopedServiceLease<SettingsViewModel> lease)
+    {
+        try
+        {
+            await previousRelease.ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            // A previous release must not poison the chain and permanently block
+            // reopening Settings.
+            System.Diagnostics.Debug.WriteLine(
+                $"[MainView] Previous Settings release failed: {ex}");
         }
 
         try
@@ -952,18 +977,27 @@ public partial class MainView : UserControl
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[MainView] FlushPendingAutoSave failed: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine(
+                $"[MainView] FlushPendingAutoSave failed: {ex}");
         }
-        finally
+
+        try
         {
             await lease.DisposeAsync().ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            // Keep the serialized task successfully completed so a disposal failure
+            // cannot lock the user out of Settings on the next navigation.
+            System.Diagnostics.Debug.WriteLine(
+                $"[MainView] Settings scope disposal failed: {ex}");
         }
     }
 
     private void ReleaseSettingsViewModel()
     {
-        // Fire-and-forget for non-navigational callers (OnDetachedFromVisualTree, etc.)
-        _ = ReleaseSettingsViewModelAsync();
+        // Queue the current lease instead of launching an untracked release task.
+        QueueSettingsRelease();
     }
 
     private void OnProfilesClick(object? sender, RoutedEventArgs e)

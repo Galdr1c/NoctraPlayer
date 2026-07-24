@@ -47,28 +47,28 @@ public sealed class MobileNavigationBehaviorTests
     }
 
     [Fact]
-    public void NavigateToDestination_SettingsAwaitsPendingRelease()
+    public void NavigateToDestination_SettingsAwaitsQueuedRelease()
     {
         var mainView = ReadProjectFile("Noctra.Mobile", "Views", "MainView.axaml.cs");
 
-        // Settings navigation must wait for previous settings release
         Assert.Contains("_pendingSettingsRelease", mainView);
-        Assert.Contains("await _pendingSettingsRelease;", mainView);
+        Assert.Contains("var settingsRelease = QueueSettingsRelease();", mainView);
+        Assert.Contains("await settingsRelease;", mainView);
     }
 
     [Fact]
-    public void SettingsRelease_IsAtomicBeforeAwait()
+    public void SettingsRelease_SnapshotsLeaseBeforeQueueingAsyncWork()
     {
         var mainView = ReadProjectFile("Noctra.Mobile", "Views", "MainView.axaml.cs");
 
-        // Interlocked.Exchange must happen BEFORE the first await in ReleaseSettingsViewModelAsync
-        var releaseMethod = ExtractMethod(mainView, "ReleaseSettingsViewModelAsync");
-        var exchangePos = releaseMethod.IndexOf("Interlocked.Exchange", StringComparison.Ordinal);
-        var awaitPos = releaseMethod.IndexOf("await", StringComparison.Ordinal);
+        var queueMethod = ExtractMethod(mainView, "QueueSettingsRelease");
+        var exchangePos = queueMethod.IndexOf("Interlocked.Exchange", StringComparison.Ordinal);
+        var chainPos = queueMethod.IndexOf("ReleaseSettingsLeaseAfterAsync", StringComparison.Ordinal);
 
-        Assert.True(exchangePos >= 0, "ReleaseSettingsViewModelAsync must use Interlocked.Exchange");
-        Assert.True(exchangePos < awaitPos,
-            "Interlocked.Exchange must happen before the first await to prevent lease capture");
+        Assert.True(exchangePos >= 0, "QueueSettingsRelease must use Interlocked.Exchange");
+        Assert.True(chainPos >= 0, "QueueSettingsRelease must append the captured lease to the release chain");
+        Assert.True(exchangePos < chainPos,
+            "The Settings lease must be captured before asynchronous release work is queued");
     }
 
     // ──────────────────────────────────────────────────────────────
@@ -80,12 +80,12 @@ public sealed class MobileNavigationBehaviorTests
     {
         var mainView = ReadProjectFile("Noctra.Mobile", "Views", "MainView.axaml.cs");
 
-        // Non-settings navigation should fire-and-forget the release
-        Assert.Contains("_ = ReleaseSettingsViewModelAsync();", mainView);
-
-        // Settings navigation should await the pending release then create new scope
-        Assert.Contains("await ReleaseSettingsViewModelAsync();", mainView);
+        Assert.Contains("var settingsRelease = QueueSettingsRelease();", mainView);
+        Assert.Contains("await settingsRelease;", mainView);
+        Assert.Contains("_pendingSettingsRelease = ReleaseSettingsLeaseAfterAsync(", mainView);
+        Assert.Contains("await previousRelease.ConfigureAwait(false);", mainView);
         Assert.Contains("resolver.CreateSettingsViewModelScope()", mainView);
+        Assert.DoesNotContain("_ = ReleaseSettingsViewModelAsync();", mainView);
     }
 
     // ──────────────────────────────────────────────────────────────
@@ -385,6 +385,33 @@ public sealed class MobileNavigationBehaviorTests
         // Both styles must exist and be mutually exclusive
         Assert.Contains("Border#NavigationRail:not(.compact)", mainView);
         Assert.Contains("Border#NavigationRail.compact", mainView);
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    //  12. Personal-state actions do not restart visible content grids
+    // ──────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void ToggleFavorite_RebuildsVisibleContentOnlyForFavoritesFilter()
+    {
+        var mainViewModel = ReadProjectFile("Noctra.Core", "ViewModels", "MainViewModel.cs");
+        var toggleMethod = ExtractMethod(mainViewModel, "ToggleFavoriteAsync");
+        var refreshMethod = ExtractMethod(mainViewModel, "RefreshVisibleContentAfterFavoriteChange");
+
+        Assert.Contains("RefreshVisibleContentAfterFavoriteChange();", toggleMethod);
+        Assert.DoesNotContain("ScheduleImmediateFilter();", toggleMethod);
+        Assert.Contains("if (ShowOnlyFavorites)", refreshMethod);
+        Assert.Contains("favorite-filter-membership", refreshMethod);
+    }
+
+    [Fact]
+    public void AddToMyList_DoesNotRebuildVisibleContentGrid()
+    {
+        var mainViewModel = ReadProjectFile("Noctra.Core", "ViewModels", "MainViewModel.cs");
+        var addToMyListMethod = ExtractMethod(mainViewModel, "AddToMyList");
+
+        Assert.DoesNotContain("ScheduleImmediateFilter", addToMyListMethod);
+        Assert.Contains("RefreshPersonalListsFromDatabaseAsync", addToMyListMethod);
     }
 
     // ──────────────────────────────────────────────────────────────

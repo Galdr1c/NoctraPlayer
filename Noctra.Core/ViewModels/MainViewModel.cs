@@ -4573,7 +4573,23 @@ public partial class MainViewModel : ObservableObject
         UpdateFavoriteChannels();
         UpdateHistoryChannels();
         await RefreshPersonalListsFromDatabaseAsync();
-        ScheduleImmediateFilter();
+        RefreshVisibleContentAfterFavoriteChange();
+    }
+
+    private void RefreshVisibleContentAfterFavoriteChange()
+    {
+        // IsFavorite is observable, so Live/Movie/Series cards update in place.
+        // Re-running the incremental filter here used to replace FilteredChannels
+        // (and briefly show the loading state), which reset the grid and scroll
+        // position after every favorite tap. A rebuild is only required when the
+        // current view is explicitly filtered to favorites because membership then
+        // changes.
+        if (ShowOnlyFavorites)
+        {
+            ScheduleImmediateFilter(
+                "favorite-filter-membership",
+                nameof(ToggleFavoriteAsync));
+        }
     }
 
     [RelayCommand]
@@ -8060,7 +8076,10 @@ public partial class MainViewModel : ObservableObject
         UpdateFavoriteChannels();
         UpdateHistoryChannels();
         await RefreshPersonalListsFromDatabaseAsync();
-        ScheduleImmediateFilter();
+
+        // IsInMyList is observable and does not participate in the Live/Movie/Series
+        // content query. Do not rebuild FilteredChannels: doing so replaces the
+        // virtualized grid source and makes the page appear to restart.
     }
 
     [RelayCommand]
