@@ -197,6 +197,17 @@
       <Setter Property="Background" Value="Transparent" />
     </Style>
 
+    <!-- ── NAVIGATION RAIL EXPANDED MODE ── -->
+    <Style Selector="Border#NavigationRail:not(.compact)">
+      <Setter Property="Width" Value="{DynamicResource NavRailWidth}" />
+    </Style>
+
+    <!-- ── NAVIGATION RAIL COMPACT MODE ── -->
+    <Style Selector="Border#NavigationRail.compact">
+      <Setter Property="Width" Value="56" />
+      <Setter Property="Padding" Value="8,20" />
+    </Style>
+
   </UserControl.Styles>
 
   <Grid RowDefinitions="Auto,*,Auto" ColumnDefinitions="Auto,*">
@@ -239,7 +250,7 @@
     <Border x:Name="NavigationRail"
             Grid.Row="1"
             Grid.Column="0"
-            Width="{DynamicResource NavRailWidth}"
+            MinWidth="48"
             Padding="12,20"
             Background="{DynamicResource Bg1Brush}"
             IsVisible="False">
@@ -331,15 +342,6 @@
             <StackPanel Orientation="Horizontal" Spacing="10" Margin="8,0,0,0">
               <icons:MaterialIcon Kind="CogOutline" Width="20" Height="20" />
               <TextBlock Text="{loc:Translate Settings.Title}" />
-            </StackPanel>
-          </DockPanel>
-        </Button>
-        <Button Classes="navRail" Tag="More" Click="OnDestinationClick">
-          <DockPanel>
-            <Border Classes="RailIndicator" DockPanel.Dock="Left" />
-            <StackPanel Orientation="Horizontal" Spacing="10" Margin="8,0,0,0">
-              <icons:MaterialIcon Kind="DotsHorizontal" Width="20" Height="20" />
-              <TextBlock Text="{loc:Translate Mobile.Nav.More}" />
             </StackPanel>
           </DockPanel>
         </Button>

@@ -106,6 +106,9 @@ internal sealed class MobileScrollEdgeFeedbackController
 
     public void Hide()
     {
+        _isScrollGestureActive = false;
+        _lastFeedbackUtc = DateTime.MinValue;
+
         _fadeTimer.Stop();
         HideFeedback(_topFeedback);
         HideFeedback(_bottomFeedback);

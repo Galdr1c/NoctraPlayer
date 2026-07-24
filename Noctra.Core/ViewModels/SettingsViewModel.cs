@@ -2025,16 +2025,30 @@ public partial class SettingsViewModel : ObservableObject, IAsyncDisposable
         }
         _statusAutoClearTokens.Clear();
 
-        // Dolu olan her panel durumu için yeni bir auto-clear zamanla
-        if (!string.IsNullOrEmpty(ChannelStatusMessage))
+        // Dolu olan HER panel durumu için yeni bir auto-clear zamanla.
+        // Yalnızca Channel/EPG değil, Appearance, Playback, Audio vs. de dahil.
+        foreach (var area in Enum.GetValues<SettingsStatusArea>())
         {
-            ScheduleStatusAutoClear(SettingsStatusArea.Channel);
-        }
-        if (!string.IsNullOrEmpty(EpgStatusMessage))
-        {
-            ScheduleStatusAutoClear(SettingsStatusArea.Epg);
+            if (!string.IsNullOrEmpty(GetPanelStatus(area)))
+            {
+                ScheduleStatusAutoClear(area);
+            }
         }
     }
+
+    private string GetPanelStatus(SettingsStatusArea area) => area switch
+    {
+        SettingsStatusArea.Appearance => AppearanceStatusMessage,
+        SettingsStatusArea.Playback => PlaybackStatusMessage,
+        SettingsStatusArea.Audio => AudioStatusMessage,
+        SettingsStatusArea.Download => DownloadStatusMessage,
+        SettingsStatusArea.Channel => ChannelStatusMessage,
+        SettingsStatusArea.Epg => EpgStatusMessage,
+        SettingsStatusArea.Privacy => PrivacyStatusMessage,
+        SettingsStatusArea.Cache => CacheStatusMessage,
+        SettingsStatusArea.Reset => ResetStatusMessage,
+        _ => string.Empty
+    };
 
     private void SyncChannelProgressFromMain(int minimumPercent = 0, string? fallbackMessage = null)
     {

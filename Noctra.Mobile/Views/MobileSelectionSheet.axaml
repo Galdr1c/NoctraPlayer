@@ -29,8 +29,9 @@
     <Border x:Name="SheetSurface"
             Background="{DynamicResource Bg0Color}"
             BorderBrush="{DynamicResource BorderBrush}"
-            BorderThickness="0,1,0,0"
-            CornerRadius="0"
+            BorderThickness="1,1,1,0"
+            CornerRadius="8,8,0,0"
+            Margin="100,0,100,0"
             Padding="12,8"
             VerticalAlignment="Bottom"
             BoxShadow="{DynamicResource OverlaySheetShadow}">

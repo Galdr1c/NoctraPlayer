@@ -35,11 +35,13 @@
       <Setter Property="Background" Value="Transparent" />
       <Setter Property="BorderThickness" Value="0" />
       <Setter Property="Padding" Value="16,14" />
+      <Setter Property="CornerRadius" Value="8" />
       <Setter Property="HorizontalAlignment" Value="Stretch" />
       <Setter Property="HorizontalContentAlignment" Value="Stretch" />
     </Style>
     <Style Selector="Button.SectionRow:pressed /template/ ContentPresenter">
       <Setter Property="Background" Value="{DynamicResource Surface1Brush}" />
+      <Setter Property="CornerRadius" Value="8" />
     </Style>
 
     <!-- Header aksiyon butonu (İptal / Kaydet) — 48dp dokunma alanı -->
@@ -655,7 +657,7 @@
                   <icons:MaterialIcon Kind="ChevronRight"
                                       Width="20" Height="20"
                                       Foreground="{DynamicResource TextMutedBrush}"
-                                      VerticalAlignment="Center" />
+                                      HorizontalAlignment="Right" />
                 </Grid>
               </Button>
 

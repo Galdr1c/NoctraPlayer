@@ -55,6 +55,8 @@ public partial class MainView : UserControl
     private bool _isNavigatingBack;
     private MobileCollapsibleNavigationRail? _navigationRailController;
     private readonly MobileScrollEdgeFeedbackController _scrollEdgeFeedbackController;
+    private long _navigationVersion;
+    private Task _pendingSettingsRelease = Task.CompletedTask;
 
     // Holds the currently active profiles view model when showing the profiles overlay.
     private ProfilesViewModel? _activeProfilesViewModel;
@@ -812,12 +814,19 @@ public partial class MainView : UserControl
     ///   button. Player IS closed on profile selection (ShowProfileSelection) since
     ///   switching profiles resets the playback context.
     /// </summary>
-    internal async void NavigateToDestination(string destination)
+    internal void NavigateToDestination(string destination)
+    {
+        _ = NavigateToDestinationAsync(destination);
+    }
+
+    private async Task NavigateToDestinationAsync(string destination)
     {
         if (DataContext is not MobileMainViewModel viewModel)
         {
             return;
         }
+
+        var version = Interlocked.Increment(ref _navigationVersion);
 
         // Navigation history management: push when navigating from More to a sub-page,
         // clear when switching tabs. Skip during back navigation to avoid double-pushing.
@@ -848,13 +857,32 @@ public partial class MainView : UserControl
 
         if (string.Equals(destination, "Settings", StringComparison.Ordinal))
         {
-            await ReleaseSettingsViewModelAsync();
+            // Wait for any pending previous Settings release before creating a new scope.
+            await _pendingSettingsRelease;
+            if (version != Volatile.Read(ref _navigationVersion))
+            {
+                return;
+            }
+
+            _pendingSettingsRelease = ReleaseSettingsViewModelAsync();
+            await _pendingSettingsRelease;
+            if (version != Volatile.Read(ref _navigationVersion))
+            {
+                return;
+            }
+
             _settingsViewModelLease = resolver.CreateSettingsViewModelScope();
             MobileSettingsContent.DataContext = _settingsViewModelLease.Service;
         }
         else
         {
-            ReleaseSettingsViewModel();
+            // Fire-and-forget for non-Settings navigation.
+            _ = ReleaseSettingsViewModelAsync();
+        }
+
+        if (version != Volatile.Read(ref _navigationVersion))
+        {
+            return;
         }
 
         // BUG FIX: "More" menüsündeki profil kartı (avatar+ad) Core MainViewModel'e

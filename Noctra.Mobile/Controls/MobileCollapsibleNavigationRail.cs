@@ -19,14 +19,10 @@ namespace Noctra.Mobile.Controls;
 /// </summary>
 internal sealed class MobileCollapsibleNavigationRail
 {
-    private const double CompactWidth = 56;
-    private const double FallbackExpandedWidth = 180;
     private const string RuntimeLayoutName = "NavigationRailRuntimeLayout";
 
     private readonly Border _navigationRail;
     private readonly List<NavigationItemVisualState> _items = new();
-    private readonly double _expandedWidth;
-    private readonly Thickness _expandedPadding;
     private Button? _toggleButton;
     private MaterialIcon? _toggleIcon;
 
@@ -37,12 +33,6 @@ internal sealed class MobileCollapsibleNavigationRail
         _navigationRail = navigationRail ??
             throw new ArgumentNullException(nameof(navigationRail));
         IsExpanded = isExpanded;
-        _expandedWidth = double.IsFinite(navigationRail.Width) &&
-            navigationRail.Width > CompactWidth + 20
-                ? navigationRail.Width
-                : FallbackExpandedWidth;
-        _expandedPadding = navigationRail.Padding;
-
         Initialize();
     }
 
@@ -58,16 +48,9 @@ internal sealed class MobileCollapsibleNavigationRail
             return;
         }
 
-        _navigationRail.Width = IsExpanded
-            ? _expandedWidth
-            : CompactWidth;
-        _navigationRail.Padding = IsExpanded
-            ? _expandedPadding
-            : new Thickness(
-                8,
-                _expandedPadding.Top,
-                8,
-                _expandedPadding.Bottom);
+        // Use CSS class for compact mode instead of hardcoded Width/Padding.
+        // This preserves the DynamicResource NavRailWidth when expanded.
+        _navigationRail.Classes.Set("compact", !IsExpanded);
 
         foreach (var item in _items)
         {
