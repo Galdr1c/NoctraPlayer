@@ -1,79 +1,27 @@
-<UserControl x:CompileBindings="True" xmlns="https://github.com/avaloniaui"
+<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:Noctra.ViewModels"
-             xmlns:models="using:Noctra.Models"
              xmlns:controls="using:Noctra.Avalonia.Controls"
-             xmlns:views="using:Noctra.Avalonia.Views"
-             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              xmlns:loc="using:Noctra.Avalonia.Localization"
-             mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="600"
+             xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="Noctra.Avalonia.Views.HistoryView"
-             x:DataType="vm:MainViewModel">
-    <ScrollViewer x:Name="HistoryScrollViewer" 
-                  ScrollChanged="HistoryScrollViewer_ScrollChanged"
-                  IsVisible="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.History}}">
-          <StackPanel Margin="24">
-            <TextBlock Text="{loc:Translate History.Title}" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,24"/>
-            
-            <!-- Canlı TV Bölümü -->
-            <TextBlock Text="{loc:Translate History.LiveTv}" FontSize="20" LetterSpacing="1" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,12"
-                       IsVisible="{Binding HistoryLiveChannels.Count, Converter={StaticResource CountToVisibilityConverter}}"/>
-            <ItemsControl ItemsSource="{Binding HistoryLiveChannels}" Margin="0,0,-16,-16" IsVisible="{Binding HistoryLiveChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
-              <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate>
-                  <UniformGrid Columns="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource WidthToColumnsConverter}}"/>
-                </ItemsPanelTemplate>
-              </ItemsControl.ItemsPanel>
-              <ItemsControl.ItemTemplate>
-                <DataTemplate x:DataType="models:Channel">
-                  <controls:LiveTvCard Margin="0,0,16,16">
-                    <controls:LiveTvCard.ContextMenu>
-                      <ContextMenu>
-                        <MenuItem Header="{loc:Translate History.Remove}" Click="Context_RemoveFromHistory_Click">
-                          <MenuItem.Icon>
-                            <materialIcons:MaterialIcon Kind="DeleteOutline" />
-                          </MenuItem.Icon>
-                        </MenuItem>
-                      </ContextMenu>
-                    </controls:LiveTvCard.ContextMenu>
-                  </controls:LiveTvCard>
-                </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
-
-            <!-- Diziler Bölümü (SeriesCard ile) -->
-            <TextBlock Text="{loc:Translate History.Series}" FontSize="20" LetterSpacing="1" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,8,0,12"
-                       IsVisible="{Binding HistorySeriesItems.Count, Converter={StaticResource CountToVisibilityConverter}}"/>
-            <ItemsControl ItemsSource="{Binding HistorySeriesItems}" IsVisible="{Binding HistorySeriesItems.Count, Converter={StaticResource CountToVisibilityConverter}}">
-              <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
-              <ItemsControl.ItemTemplate>
-                <DataTemplate x:DataType="models:Series">
-                  <controls:SeriesCard Margin="0,0,16,16" ShowHistoryMenu="True" />
-                </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
-
-            <!-- Filmler Bölümü -->
-            <TextBlock Text="{loc:Translate History.Movies}" FontSize="20" LetterSpacing="1" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,8,0,12"
-                       IsVisible="{Binding HistoryVodChannels.Count, Converter={StaticResource CountToVisibilityConverter}}"/>
-            <ItemsControl ItemsSource="{Binding HistoryVodChannels}" IsVisible="{Binding HistoryVodChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
-              <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
-              <ItemsControl.ItemTemplate>
-                <DataTemplate x:DataType="models:Channel">
-                  <controls:VodCard Margin="0,0,16,16" ShowHistoryMenu="True" />
-                </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
-
-            <!-- Boş Durum (Empty State) -->
-            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,96,0,0"
-                        IsVisible="{Binding ShowHistoryEmptyState, Converter={StaticResource BoolToVisibilityConverter}}">
-              <materialIcons:MaterialIcon Kind="History" Width="64" Height="64" Foreground="{DynamicResource TextMutedBrush}" Opacity="0.5"/>
-              <TextBlock Text="{loc:Translate History.Empty.Title}" FontSize="20" LetterSpacing="1" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,16,0,4" TextAlignment="Center"/>
-              <TextBlock Text="{loc:Translate History.Empty.Description}" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" TextAlignment="Center"/>
-            </StackPanel>
-          </StackPanel>
-        </ScrollViewer>
+             x:CompileBindings="False">
+  <Grid IsVisible="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.History}}">
+    <Grid Margin="24,24,24,0" RowDefinitions="Auto,*" RowSpacing="{DynamicResource DesktopHeaderGap}">
+      <TextBlock Text="{loc:Translate History.Title}" Classes="DesktopPageTitle" />
+      <controls:DesktopSectionedCardFeed Grid.Row="1" ScrollChanged="HistoryScrollViewer_ScrollChanged">
+        <controls:DesktopSectionedCardFeed.Sections>
+          <controls:DesktopCardSection Header="{loc:Translate History.LiveTv}" CardKind="Live" PresentationMode="History" SourceItems="{Binding HistoryLiveChannels}" />
+          <controls:DesktopCardSection Header="{loc:Translate History.Series}" CardKind="Series" PresentationMode="History" SourceItems="{Binding HistorySeriesItems}" />
+          <controls:DesktopCardSection Header="{loc:Translate History.Movies}" CardKind="Vod" PresentationMode="History" SourceItems="{Binding HistoryVodChannels}" />
+        </controls:DesktopSectionedCardFeed.Sections>
+      </controls:DesktopSectionedCardFeed>
+      <StackPanel Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center"
+                  IsVisible="{Binding ShowHistoryEmptyState}">
+        <icons:MaterialIcon Kind="History" Width="64" Height="64" Foreground="{DynamicResource TextMutedBrush}" Opacity="0.5" />
+        <TextBlock Text="{loc:Translate History.Empty.Title}" FontSize="20" FontWeight="Bold" Margin="0,16,0,4" TextAlignment="Center" />
+        <TextBlock Text="{loc:Translate History.Empty.Description}" Foreground="{DynamicResource TextMutedBrush}" TextAlignment="Center" />
+      </StackPanel>
+    </Grid>
+  </Grid>
 </UserControl>

@@ -366,6 +366,7 @@
                                                Foreground="{DynamicResource TextPrimaryBrush}"/>
                                     <TextBlock Text="{loc:Translate GlobalSettings.General.Diagnostics.Description}"
                                                FontSize="13"
+                                               TextWrapping="Wrap"
                                                Foreground="{DynamicResource TextMutedBrush}"
                                                Margin="0,4,0,0"/>
                                 </StackPanel>

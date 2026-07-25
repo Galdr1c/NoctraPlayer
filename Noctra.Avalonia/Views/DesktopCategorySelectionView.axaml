@@ -1,0 +1,130 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:loc="using:Noctra.Avalonia.Localization"
+             xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             x:Class="Noctra.Avalonia.Views.DesktopCategorySelectionView"
+             x:Name="CategorySelectionRoot"
+             x:CompileBindings="False"
+             Background="{DynamicResource Bg0Brush}"
+             IsVisible="False">
+  <Grid RowDefinitions="Auto,*" Background="{DynamicResource Bg0Brush}">
+    <Border Grid.Row="0"
+            Background="{DynamicResource Surface0Brush}"
+            BorderBrush="{DynamicResource BorderBrush}"
+            BorderThickness="0,0,0,1"
+            Padding="24,12">
+      <Grid ColumnDefinitions="48,*" ColumnSpacing="10" MaxWidth="{DynamicResource DesktopCategoryMaxWidth}" HorizontalAlignment="Stretch">
+        <Button Width="44" Height="44" Classes="iconBtn" Click="Back_Click"
+                AutomationProperties.Name="{loc:Translate Player.Overlay.Back}">
+          <icons:MaterialIcon Kind="ArrowLeft" Width="24" Height="24" />
+        </Button>
+        <TextBlock x:Name="TitleTextBlock" Grid.Column="1"
+                   Classes="DesktopPageTitle" FontSize="22" VerticalAlignment="Center" />
+      </Grid>
+    </Border>
+
+    <Grid Grid.Row="1"
+          MaxWidth="{DynamicResource DesktopCategoryMaxWidth}"
+          Margin="24,20,24,0"
+          RowDefinitions="Auto,*"
+          HorizontalAlignment="Stretch">
+      <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10" Margin="0,0,0,12">
+        <Button x:Name="AllCategoriesButton"
+                Classes="DesktopFilterButton"
+                MinWidth="126"
+                HorizontalContentAlignment="Center"
+                Click="SelectCategory_Click">
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+            <TextBlock Text="{loc:Translate Common.All}" FontWeight="SemiBold" VerticalAlignment="Center" />
+            <icons:MaterialIcon x:Name="AllCategoriesCheck" Grid.Column="1"
+                                Kind="RadioboxMarked" Width="20" Height="20"
+                                Foreground="{DynamicResource AccentBrush}" />
+          </Grid>
+        </Button>
+        <Border Grid.Column="1" Classes="DesktopSearchBox">
+          <Grid ColumnDefinitions="Auto,*,Auto">
+            <icons:MaterialIcon Kind="Magnify" Width="22" Height="22" Margin="12,0,4,0"
+                                VerticalAlignment="Center" Foreground="{DynamicResource TextMutedBrush}" />
+            <TextBox x:Name="CategorySearchTextBox" Grid.Column="1"
+                     Theme="{StaticResource ModernTextBox}"
+                     PlaceholderText="{loc:Translate Shell.Search.Tooltip}"
+                     VerticalContentAlignment="Center"
+                     KeyDown="CategorySearchTextBox_KeyDown"
+                     TextChanged="CategorySearchTextBox_TextChanged" />
+            <Button x:Name="ClearCategorySearchButton" Grid.Column="2"
+                    Background="Transparent" Width="40" Height="40"
+                    IsVisible="False" Click="ClearCategorySearch_Click">
+              <icons:MaterialIcon Kind="CloseCircleOutline" Width="20" Height="20" />
+            </Button>
+          </Grid>
+        </Border>
+      </Grid>
+
+      <StackPanel x:Name="EmptyStatePanel" Grid.Row="1"
+                  HorizontalAlignment="Center" VerticalAlignment="Center"
+                  Spacing="8" IsVisible="False">
+        <icons:MaterialIcon Kind="MagnifyRemoveOutline" Width="52" Height="52"
+                            Foreground="{DynamicResource TextMutedBrush}" />
+        <TextBlock Text="{loc:Translate Mobile.Categories.EmptyTitle}"
+                   FontSize="20" FontWeight="SemiBold" HorizontalAlignment="Center" />
+        <TextBlock Text="{loc:Translate Mobile.Categories.EmptySubtitle}"
+                   Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center" />
+      </StackPanel>
+
+      <ListBox x:Name="CategoryListBox" Grid.Row="1"
+               ItemsSource="{Binding Categories}"
+               Classes="DesktopCategoryList"
+               SelectionChanged="ClearTransientSelection"
+               ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+               ScrollViewer.VerticalScrollBarVisibility="Auto">
+        <ListBox.ItemsPanel>
+          <ItemsPanelTemplate>
+            <VirtualizingStackPanel CacheLength="1.5" />
+          </ItemsPanelTemplate>
+        </ListBox.ItemsPanel>
+        <ListBox.ItemTemplate>
+          <DataTemplate>
+            <Grid ColumnDefinitions="*,Auto">
+              <Button Grid.Column="0" Classes="DesktopCategoryRow"
+                      Tag="{Binding}" Click="SelectCategory_Click">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                  <TextBlock Text="{Binding Name}" FontSize="15" TextWrapping="Wrap" VerticalAlignment="Center" />
+                  <icons:MaterialIcon Grid.Column="1" Kind="RadioboxMarked"
+                                      Width="20" Height="20"
+                                      Foreground="{DynamicResource AccentBrush}"
+                                      IsVisible="{Binding IsSelected}" />
+                </Grid>
+              </Button>
+              <Button Grid.Column="1" Classes="DesktopRevealButton"
+                      Tag="{Binding}" Click="HideCategory_Click"
+                      ToolTip.Tip="{loc:Translate Mobile.Categories.Hide}">
+                <icons:MaterialIcon Kind="EyeOffOutline" Width="20" Height="20" />
+              </Button>
+            </Grid>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+
+      <Border x:Name="UndoSnackbar" Grid.RowSpan="2" ZIndex="49000"
+              Classes="DesktopSnackbar" HorizontalAlignment="Center"
+              VerticalAlignment="Bottom" Margin="20,0,20,24" IsVisible="False">
+        <StackPanel Orientation="Horizontal" Spacing="12">
+          <TextBlock x:Name="UndoSnackbarText" FontWeight="SemiBold" VerticalAlignment="Center" />
+          <Button Click="UndoHide_Click" Classes="DesktopSnackbarAction">
+            <TextBlock Text="{loc:Translate Common.Undo}" FontWeight="Bold" />
+          </Button>
+        </StackPanel>
+      </Border>
+
+      <Border x:Name="ErrorSnackbar" Grid.RowSpan="2" ZIndex="49001"
+              Classes="DesktopSnackbar" HorizontalAlignment="Center"
+              VerticalAlignment="Bottom" Margin="20,0,20,24" IsVisible="False">
+        <StackPanel Orientation="Horizontal" Spacing="10">
+          <icons:MaterialIcon Kind="AlertCircleOutline" Width="20" Height="20"
+                              Foreground="{DynamicResource ErrorBrush}" />
+          <TextBlock x:Name="ErrorSnackbarText" FontWeight="SemiBold" VerticalAlignment="Center" />
+        </StackPanel>
+      </Border>
+    </Grid>
+  </Grid>
+</UserControl>

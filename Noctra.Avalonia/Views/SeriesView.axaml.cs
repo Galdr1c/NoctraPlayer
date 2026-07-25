@@ -1,23 +1,102 @@
+using System;
+using System.ComponentModel;
+using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
-using Noctra.ViewModels;
+using Noctra.Avalonia.Localization;
 using Noctra.Models;
+using Noctra.ViewModels;
 
 namespace Noctra.Avalonia.Views;
 
 public partial class SeriesView : UserControl
 {
+    private MainViewModel? _observedViewModel;
+
     public SeriesView()
     {
         InitializeComponent();
+        CategorySelectionHost.CloseRequested += (_, _) => CategorySelectionHost.TryClose();
     }
 
     private MainViewModel? ViewModel => DataContext as MainViewModel;
 
-    private void ClearGroupSelection_Click(object? sender, RoutedEventArgs e)
+    protected override void OnDataContextChanged(EventArgs e)
     {
-        if (ViewModel != null) ViewModel.SelectedGroup = null;
+        SelectionSheetHost.TryClose();
+        CategorySelectionHost.TryClose();
+        if (_observedViewModel is not null)
+        {
+            _observedViewModel.PropertyChanged -= ViewModel_PropertyChanged;
+        }
+        base.OnDataContextChanged(e);
+        _observedViewModel = ViewModel;
+        if (_observedViewModel is not null)
+        {
+            _observedViewModel.PropertyChanged += ViewModel_PropertyChanged;
+            UpdateSortSelection();
+            UpdateCategorySelection();
+        }
+    }
+
+    private void OpenSortSelectionSheet_Click(object? sender, RoutedEventArgs e)
+    {
+        var viewModel = ViewModel;
+        if (viewModel is null) return;
+        SelectionSheetHost.Show(
+            LocalizationSource.Instance["Main.Sort.Title"],
+            DesktopContentSortSelection.BuildOptions(viewModel),
+            option =>
+            {
+                if (option.Value is ChannelSortOrder sortOrder)
+                {
+                    viewModel.SelectedSortOrder = sortOrder;
+                    UpdateSortSelection();
+                }
+            });
+    }
+
+    private void OpenCategorySelection_Click(object? sender, RoutedEventArgs e)
+    {
+        if (ViewModel is { } viewModel)
+        {
+            SelectionSheetHost.TryClose();
+            CategorySelectionHost.Show(viewModel, LocalizationSource.Instance["Mobile.Categories.SeriesTitle"]);
+        }
+    }
+
+    private void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(MainViewModel.SelectedSortOrder) or nameof(MainViewModel.SortOptions))
+        {
+            UpdateSortSelection();
+        }
+        if (e.PropertyName == nameof(MainViewModel.SelectedGroup))
+        {
+            UpdateCategorySelection();
+        }
+    }
+
+    private void UpdateSortSelection()
+    {
+        if (_observedViewModel is null) return;
+        var label = DesktopContentSortSelection.GetSelectedLabel(_observedViewModel);
+        SortSelectionIcon.Kind = DesktopContentSortSelection.GetIcon(_observedViewModel.SelectedSortOrder);
+        ToolTip.SetTip(SortSelectionButton, label);
+        AutomationProperties.SetName(SortSelectionButton, label);
+    }
+
+    private void UpdateCategorySelection()
+    {
+        var selected = ViewModel?.SelectedGroup;
+        var label = string.IsNullOrWhiteSpace(selected)
+            ? LocalizationSource.Instance["Common.All"]
+            : selected;
+        CategorySelectionValue.Text = label;
+        ToolTip.SetTip(CategorySelectionButton, label);
+        AutomationProperties.SetName(CategorySelectionButton, label);
     }
 
     private async void SeriesView_ScrollChanged(object? sender, ScrollChangedEventArgs e)
@@ -28,91 +107,29 @@ public partial class SeriesView : UserControl
         }
         catch (Exception ex)
         {
-            if (ViewModel != null) ViewModel.StatusMessage = $"Kaydırma hatası: {ex.Message}";
+            if (ViewModel is { } vm) vm.StatusMessage = $"Kaydırma hatası: {ex.Message}";
         }
     }
 
-    private void SeriesView_PointerWheelChanged(object? sender, PointerWheelEventArgs e)
+    protected override void OnKeyDown(KeyEventArgs e)
     {
-        ScrollPaging.QueueLoadMoreAfterWheel(ViewModel, sender, e);
+        if (e.Key == Key.Escape && (CategorySelectionHost.TryClose() || SelectionSheetHost.TryClose()))
+        {
+            e.Handled = true;
+            return;
+        }
+        base.OnKeyDown(e);
     }
 
-    
-    private async void Context_AddToMyList_Click(object? sender, RoutedEventArgs e)
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
-        try
+        if (_observedViewModel is not null)
         {
-            if (sender is not MenuItem menuItem) return;
-            var media = ResolveContextMedia(menuItem);
-            if (media != null && ViewModel != null) await ViewModel.AddToMyListCommand.ExecuteAsync(media);
+            _observedViewModel.PropertyChanged -= ViewModel_PropertyChanged;
+            _observedViewModel = null;
         }
-        catch (Exception ex)
-        {
-            if (ViewModel != null) ViewModel.StatusMessage = $"Hata: {ex.Message}";
-        }
-    }
-
-    private async void Context_ToggleFavorite_Click(object? sender, RoutedEventArgs e)
-    {
-        try
-        {
-            if (sender is not MenuItem menuItem) return;
-            var media = ResolveContextMedia(menuItem);
-            if (media != null && ViewModel != null) await ViewModel.ToggleFavoriteCommand.ExecuteAsync(media);
-        }
-        catch (Exception ex)
-        {
-            if (ViewModel != null) ViewModel.StatusMessage = $"Hata: {ex.Message}";
-        }
-    }
-
-    private async void Context_RemoveFromMyList_Click(object? sender, RoutedEventArgs e)
-    {
-        try
-        {
-            if (sender is not MenuItem menuItem) return;
-            var media = ResolveContextMedia(menuItem);
-            if (media != null && ViewModel != null) await ViewModel.RemoveFromMyListCommand.ExecuteAsync(media);
-        }
-        catch (Exception ex)
-        {
-            if (ViewModel != null) ViewModel.StatusMessage = $"Hata: {ex.Message}";
-        }
-    }
-
-    private async void Context_RemoveFromFavorites_Click(object? sender, RoutedEventArgs e)
-    {
-        try
-        {
-            if (sender is not MenuItem menuItem) return;
-            var media = ResolveContextMedia(menuItem);
-            if (media != null && ViewModel != null) await ViewModel.RemoveFromFavoritesCommand.ExecuteAsync(media);
-        }
-        catch (Exception ex)
-        {
-            if (ViewModel != null) ViewModel.StatusMessage = $"Hata: {ex.Message}";
-        }
-    }
-
-    private static object? ResolveContextMedia(MenuItem menuItem)
-    {
-        if (menuItem.CommandParameter is Channel || menuItem.CommandParameter is Series) return menuItem.CommandParameter;
-        if (menuItem.Tag is Channel || menuItem.Tag is Series) return menuItem.Tag;
-        if (menuItem.DataContext is Channel || menuItem.DataContext is Series) return menuItem.DataContext;
-        if (menuItem.Parent is ContextMenu contextMenu &&
-            contextMenu.PlacementTarget is global::Avalonia.StyledElement placementTarget &&
-            (placementTarget.DataContext is Channel || placementTarget.DataContext is Series))
-            return placementTarget.DataContext;
-        if (menuItem.Parent is ContextMenu ownerMenu &&
-            ownerMenu.PlacementTarget is Control placementControl)
-        {
-            var parent = placementControl.Parent;
-            while (parent != null)
-            {
-                if (parent is global::Avalonia.StyledElement styled && (styled.DataContext is Channel || styled.DataContext is Series)) return styled.DataContext;
-                parent = parent.Parent;
-            }
-        }
-        return null;
+        SelectionSheetHost.TryClose();
+        CategorySelectionHost.TryClose();
+        base.OnDetachedFromVisualTree(e);
     }
 }

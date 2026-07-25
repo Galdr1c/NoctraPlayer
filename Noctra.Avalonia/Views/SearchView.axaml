@@ -1,112 +1,39 @@
-<UserControl x:CompileBindings="True" xmlns="https://github.com/avaloniaui"
+<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:Noctra.ViewModels"
-             xmlns:models="using:Noctra.Models"
              xmlns:controls="using:Noctra.Avalonia.Controls"
-             xmlns:views="using:Noctra.Avalonia.Views"
-             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              xmlns:loc="using:Noctra.Avalonia.Localization"
-             mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="600"
+             xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="Noctra.Avalonia.Views.SearchView"
-             x:DataType="vm:MainViewModel">
-    <ScrollViewer x:Name="SearchScrollViewer" IsVisible="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.Search}}"
-                  VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
-                  ScrollChanged="SearchView_ScrollChanged"
-                  PointerWheelChanged="SearchView_PointerWheelChanged">
-          <ScrollViewer.Resources>
-            <DataTemplate x:Key="SearchLiveCardTemplate" x:DataType="models:Channel">
-              <controls:LiveTvCard Margin="0,0,16,16"/>
-            </DataTemplate>
-            <DataTemplate x:Key="SearchVodCardTemplate" x:DataType="models:Channel">
-              <controls:VodCard Margin="0,0,16,16"/>
-            </DataTemplate>
-            <DataTemplate x:Key="SearchSeriesCardTemplate" x:DataType="models:Series">
-              <controls:SeriesCard Margin="0,0,16,16"/>
-            </DataTemplate>
-          </ScrollViewer.Resources>
-
-          <StackPanel Margin="24">
-            <TextBlock Text="{loc:Translate Search.Results}" FontSize="24" LetterSpacing="1" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,24"/>
-            <!-- Search Suggestion -->
-            <Border Margin="0,0,0,20" Padding="12,10" Background="{DynamicResource Surface0Brush}" CornerRadius="{DynamicResource RadiusSmall}"
-                    IsVisible="{Binding SearchSuggestion, Converter={StaticResource StringNotEmptyToVisibilityConverter}}">
-              <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                <TextBlock Text="{loc:Translate Search.DidYouMean}" Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center"/>
-                <Button Content="{Binding SearchSuggestion}" Margin="10,0,0,0" Padding="10,4" Command="{Binding ApplySearchSuggestionCommand}"
-                        Background="{DynamicResource Surface1Brush}" Foreground="{DynamicResource TextPrimaryBrush}" BorderThickness="0" Cursor="Hand"/>
-              </StackPanel>
-            </Border>
-
-            <!-- Live results -->
-            <StackPanel Margin="0,0,0,24" IsVisible="{Binding SearchLiveChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
-              <TextBlock Text="{loc:Translate History.LiveTv}" FontSize="20" LetterSpacing="1" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,12"/>
-              <ItemsControl ItemsSource="{Binding SearchLiveChannels}" ItemTemplate="{StaticResource SearchLiveCardTemplate}" Margin="0,0,-16,-16">
-                <ItemsControl.ItemsPanel>
-                  <ItemsPanelTemplate>
-                    <UniformGrid Columns="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource WidthToColumnsConverter}}"/>
-                  </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-              </ItemsControl>
-            </StackPanel>
-
-            <!-- Series results -->
-            <StackPanel Margin="0,0,0,24" IsVisible="{Binding SearchSeriesChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
-              <TextBlock Text="{loc:Translate History.Series}" FontSize="20" LetterSpacing="1" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,12"/>
-              <ItemsControl ItemsSource="{Binding SearchSeriesChannels}" ItemTemplate="{StaticResource SearchSeriesCardTemplate}">
-                <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
-              </ItemsControl>
-            </StackPanel>
-
-            <!-- VOD results -->
-            <StackPanel Margin="0,0,0,24" IsVisible="{Binding SearchVodChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
-              <TextBlock Text="{loc:Translate History.Movies}" FontSize="20" LetterSpacing="1"  FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,12"/>
-              <ItemsControl ItemsSource="{Binding SearchVodChannels}" ItemTemplate="{StaticResource SearchVodCardTemplate}">
-                <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
-              </ItemsControl>
-            </StackPanel>
-
-            <!-- Similar Results -->
-            <StackPanel Margin="0,8,0,24" IsVisible="{Binding ShowSearchSimilarSection}">
-              <TextBlock Text="{loc:Translate Search.SimilarResults}" FontSize="20" LetterSpacing="1"  FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,12"/>
-
-              <!-- Similar Live -->
-              <StackPanel Margin="0,0,0,20" IsVisible="{Binding SearchSimilarLiveChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
-                <TextBlock Text="{loc:Translate History.LiveTv}" FontSize="16" LetterSpacing="1"  FontWeight="SemiBold" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,8"/>
-                <ItemsControl ItemsSource="{Binding SearchSimilarLiveChannels}" ItemTemplate="{StaticResource SearchLiveCardTemplate}" Margin="0,0,-16,-16">
-                  <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate>
-                      <UniformGrid Columns="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource WidthToColumnsConverter}}"/>
-                    </ItemsPanelTemplate>
-                  </ItemsControl.ItemsPanel>
-                </ItemsControl>
-              </StackPanel>
-
-              <!-- Similar Series -->
-              <StackPanel Margin="0,0,0,20" IsVisible="{Binding SearchSimilarSeriesChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
-                <TextBlock Text="{loc:Translate History.Series}" FontSize="16" LetterSpacing="1"  FontWeight="SemiBold" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,8"/>
-                <ItemsControl ItemsSource="{Binding SearchSimilarSeriesChannels}" ItemTemplate="{StaticResource SearchSeriesCardTemplate}">
-                  <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
-                </ItemsControl>
-              </StackPanel>
-
-              <!-- Similar VOD -->
-              <StackPanel Margin="0,0,0,8" IsVisible="{Binding SearchSimilarVodChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
-                <TextBlock Text="{loc:Translate History.Movies}" FontSize="16" LetterSpacing="1"  FontWeight="SemiBold" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,8"/>
-                <ItemsControl ItemsSource="{Binding SearchSimilarVodChannels}" ItemTemplate="{StaticResource SearchVodCardTemplate}">
-                  <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
-                </ItemsControl>
-              </StackPanel>
-            </StackPanel>
-
-            <!-- Empty search -->
-            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,96,0,0"
-                        IsVisible="{Binding ShowSearchEmptyState, Converter={StaticResource BoolToVisibilityConverter}}">
-              <materialIcons:MaterialIcon Kind="Magnify" Width="64" Height="64" Foreground="{DynamicResource TextMutedBrush}" Opacity="0.5"/>
-              <TextBlock Text="{loc:Translate Search.Empty.Title}" FontSize="20" LetterSpacing="1" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,16,0,4" TextAlignment="Center"/>
-              <TextBlock Text="{loc:Translate Search.Empty.Description}" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" TextAlignment="Center"/>
-            </StackPanel>
-          </StackPanel>
-        </ScrollViewer>
+             x:CompileBindings="False">
+  <Grid IsVisible="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.Search}}">
+    <Grid Margin="24,24,24,0" RowDefinitions="Auto,Auto,*" RowSpacing="{DynamicResource DesktopHeaderGap}">
+      <TextBlock Text="{loc:Translate Search.Results}" Classes="DesktopPageTitle" />
+      <Border Grid.Row="1" Padding="14,10" Background="{DynamicResource Surface0Brush}"
+              BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="10"
+              IsVisible="{Binding SearchSuggestion, Converter={StaticResource StringNotEmptyToVisibilityConverter}}">
+        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+          <TextBlock Text="{loc:Translate Search.DidYouMean}" Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center" />
+          <Button Content="{Binding SearchSuggestion}" Margin="10,0,0,0" Padding="10,5"
+                  Command="{Binding ApplySearchSuggestionCommand}" Classes="DesktopFilterButton" />
+        </StackPanel>
+      </Border>
+      <controls:DesktopSectionedCardFeed Grid.Row="2" ScrollChanged="SearchView_ScrollChanged">
+        <controls:DesktopSectionedCardFeed.Sections>
+          <controls:DesktopCardSection Header="{loc:Translate History.LiveTv}" CardKind="Live" SourceItems="{Binding SearchLiveChannels}" />
+          <controls:DesktopCardSection Header="{loc:Translate History.Series}" CardKind="Series" SourceItems="{Binding SearchSeriesChannels}" />
+          <controls:DesktopCardSection Header="{loc:Translate History.Movies}" CardKind="Vod" SourceItems="{Binding SearchVodChannels}" />
+          <controls:DesktopCardSection GroupHeader="{loc:Translate Search.SimilarResults}" Header="{loc:Translate History.LiveTv}" CardKind="Live" SourceItems="{Binding SearchSimilarLiveChannels}" />
+          <controls:DesktopCardSection GroupHeader="{loc:Translate Search.SimilarResults}" Header="{loc:Translate History.Series}" CardKind="Series" SourceItems="{Binding SearchSimilarSeriesChannels}" />
+          <controls:DesktopCardSection GroupHeader="{loc:Translate Search.SimilarResults}" Header="{loc:Translate History.Movies}" CardKind="Vod" SourceItems="{Binding SearchSimilarVodChannels}" />
+        </controls:DesktopSectionedCardFeed.Sections>
+      </controls:DesktopSectionedCardFeed>
+      <StackPanel Grid.Row="2" HorizontalAlignment="Center" VerticalAlignment="Center"
+                  IsVisible="{Binding ShowSearchEmptyState}">
+        <icons:MaterialIcon Kind="Magnify" Width="64" Height="64" Foreground="{DynamicResource TextMutedBrush}" Opacity="0.5" />
+        <TextBlock Text="{loc:Translate Search.Empty.Title}" FontSize="20" FontWeight="Bold" Margin="0,16,0,4" TextAlignment="Center" />
+        <TextBlock Text="{loc:Translate Search.Empty.Description}" Foreground="{DynamicResource TextMutedBrush}" TextAlignment="Center" />
+      </StackPanel>
+    </Grid>
+  </Grid>
 </UserControl>

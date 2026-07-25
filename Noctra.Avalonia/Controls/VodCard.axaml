@@ -3,30 +3,23 @@
              xmlns:models="using:Noctra.Models"
              xmlns:controls="using:Noctra.Avalonia.Controls"
              xmlns:vm="using:Noctra.ViewModels"
-             xmlns:converters="using:Noctra.Avalonia.Converters"
              xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              xmlns:loc="using:Noctra.Avalonia.Localization"
              x:Class="Noctra.Avalonia.Controls.VodCard"
              x:Name="VodCardControl"
              x:DataType="models:Channel"
-             Width="160" Height="240"
+             MinWidth="148" MinHeight="222"
              ClipToBounds="False">
   <UserControl.Styles>
-    <Style Selector="Button.CardContainer:pointerover">
-      <Setter Property="ZIndex" Value="10"/>
-      <Setter Property="RenderTransform" Value="scale(1.05)"/>
-    </Style>
-    <Style Selector="Button.CardContainer:pointerover Border.HoverOverlay">
-      <Setter Property="Opacity" Value="1"/>
-    </Style>
-    <Style Selector="Border.HoverOverlay">
-      <Setter Property="Opacity" Value="0"/>
-    </Style>
+    <Style Selector="Button.CardContainer"><Setter Property="RenderTransformOrigin" Value="50%,50%"/></Style>
+    <Style Selector="Button.CardContainer:pointerover"><Setter Property="ZIndex" Value="10"/><Setter Property="RenderTransform" Value="scale(1.035)"/></Style>
+    <Style Selector="Button.CardContainer:pointerover Border.HoverOverlay"><Setter Property="Opacity" Value="1"/></Style>
+    <Style Selector="Border.HoverOverlay"><Setter Property="Opacity" Value="0"/></Style>
   </UserControl.Styles>
-
   <Button Classes="CardContainer" Padding="0" Background="Transparent" BorderThickness="0" Cursor="Hand"
-          Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}" CommandParameter="{Binding}">
-    
+          HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+          Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}"
+          CommandParameter="{Binding}">
     <Button.ContextFlyout>
       <MenuFlyout>
         <MenuItem Header="{loc:Translate Context.MyList.Toggle}" Click="Context_AddToMyList_Click"
@@ -35,48 +28,40 @@
                   IsVisible="{Binding ., Converter={StaticResource MediaSupportsFavoriteConverter}}"/>
         <MenuItem Header="{loc:Translate History.Remove}" Click="Context_RemoveFromHistory_Click"
                   IsVisible="{Binding #VodCardControl.ShowHistoryMenu}">
-          <MenuItem.Icon>
-            <materialIcons:MaterialIcon Kind="DeleteOutline" />
-          </MenuItem.Icon>
+          <MenuItem.Icon><materialIcons:MaterialIcon Kind="DeleteOutline"/></MenuItem.Icon>
+        </MenuItem>
+        <MenuItem Header="{loc:Translate History.Remove}" Click="Context_RemoveFromFavorites_Click"
+                  IsVisible="{Binding #VodCardControl.ShowRemoveFavoriteMenu}">
+          <MenuItem.Icon><materialIcons:MaterialIcon Kind="DeleteOutline"/></MenuItem.Icon>
+        </MenuItem>
+        <MenuItem Header="{loc:Translate History.Remove}" Click="Context_RemoveFromMyList_Click"
+                  IsVisible="{Binding #VodCardControl.ShowRemoveMyListMenu}">
+          <MenuItem.Icon><materialIcons:MaterialIcon Kind="DeleteOutline"/></MenuItem.Icon>
         </MenuItem>
       </MenuFlyout>
     </Button.ContextFlyout>
-
-    <Border CornerRadius="8" ClipToBounds="True" Background="{DynamicResource Surface0Brush}">
+    <Border CornerRadius="0" ClipToBounds="True" Background="{DynamicResource PlaceHolderBrush}"
+            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0">
       <Grid>
-        <!-- Poster Area Placeholder -->
-        <Border x:Name="PlaceholderBorder" Width="160" Height="240" Background="{DynamicResource SurfaceLightBrush}">
-          <Border.IsVisible>
-            <Binding Path="#PosterImage.IsImageLoaded" Converter="{StaticResource InverseBoolConverter}"/>
-          </Border.IsVisible>
+        <Border Background="{DynamicResource PlaceHolderBrush}">
+          <Border.IsVisible><Binding Path="#PosterImage.IsImageLoaded" Converter="{StaticResource InverseBoolConverter}"/></Border.IsVisible>
         </Border>
-
         <controls:RemoteImage x:Name="PosterImage" Stretch="UniformToFill" Url="{Binding CoverUrl}" RenderOptions.BitmapInterpolationMode="MediumQuality"/>
-        
-        <!-- Hover Overlay -->
-        <Border Classes="HoverOverlay" Background="#4D000000" />
-        
-        <!-- Bottom Section: Info + Progress -->
+        <Border Classes="HoverOverlay" Background="#45000000"/>
         <StackPanel VerticalAlignment="Bottom">
-          <!-- Bottom Solid Overlay -->
-          <Border Background="#CC000000" Padding="8">
-            <StackPanel Spacing="2">
-              <TextBlock Text="{Binding Name}" Foreground="White" FontSize="12" FontWeight="Bold" TextTrimming="CharacterEllipsis" />
+          <Border Background="#D9000000" Padding="10,9">
+            <StackPanel Spacing="3">
+              <TextBlock Text="{Binding Name}" Foreground="White" FontSize="13" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
               <StackPanel Orientation="Horizontal" Spacing="6">
-                <TextBlock Text="{Binding ReleaseYear}" Foreground="#A6FFFFFF" FontSize="10" IsVisible="{Binding ReleaseYear, Converter={x:Static ObjectConverters.IsNotNull}}"/>
-                <Ellipse Width="3" Height="3" Fill="#66FFFFFF" VerticalAlignment="Center" IsVisible="{Binding ReleaseYear, Converter={x:Static ObjectConverters.IsNotNull}}"/>
-                <TextBlock Text="{Binding GroupTitle}" Foreground="#A6FFFFFF" FontSize="10" TextTrimming="CharacterEllipsis"/>
+                <TextBlock Text="{Binding ReleaseYear}" Foreground="#B3FFFFFF" FontSize="10" IsVisible="{Binding ReleaseYear, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                <TextBlock Text="{Binding GroupTitle}" Foreground="#B3FFFFFF" FontSize="10" TextTrimming="CharacterEllipsis"/>
               </StackPanel>
             </StackPanel>
           </Border>
-
-          <!-- Progress Bar -->
           <ProgressBar Height="5" CornerRadius="0" Minimum="0" Maximum="100" Value="{Binding WatchedPercentage}"
                        Foreground="{DynamicResource AccentBrush}" Background="#4D000000" BorderThickness="0"
-                       IsVisible="{Binding ., Converter={StaticResource WatchedProgressVisibilityConverter}}" />
+                       IsVisible="{Binding ., Converter={StaticResource WatchedProgressVisibilityConverter}}"/>
         </StackPanel>
-
-
       </Grid>
     </Border>
   </Button>

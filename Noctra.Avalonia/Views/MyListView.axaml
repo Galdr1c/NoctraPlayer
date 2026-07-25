@@ -1,68 +1,27 @@
-<UserControl x:CompileBindings="True" xmlns="https://github.com/avaloniaui"
+<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:Noctra.ViewModels"
-             xmlns:models="using:Noctra.Models"
              xmlns:controls="using:Noctra.Avalonia.Controls"
-             xmlns:views="using:Noctra.Avalonia.Views"
-             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              xmlns:loc="using:Noctra.Avalonia.Localization"
-             mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="600"
+             xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="Noctra.Avalonia.Views.MyListView"
-             x:DataType="vm:MainViewModel">
-    <ScrollViewer x:Name="MyListScrollViewer" IsVisible="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.MyList}}"
-                  VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
-                  ScrollChanged="MyListView_ScrollChanged"
-                  PointerWheelChanged="MyListView_PointerWheelChanged">
-          <StackPanel Margin="24">
-            <TextBlock Text="{loc:Translate MyList.Title}" FontSize="24" LetterSpacing="1" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,24"/>
-
-            <StackPanel Margin="0,0,0,24" IsVisible="{Binding MyListLiveChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
-              <TextBlock Text="{loc:Translate History.LiveTv}" FontSize="20" LetterSpacing="1" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,12"/>
-              <ItemsControl ItemsSource="{Binding MyListLiveChannels}" Margin="0,0,-16,-16">
-                <ItemsControl.ItemsPanel>
-                  <ItemsPanelTemplate>
-                    <UniformGrid Columns="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource WidthToColumnsConverter}}"/>
-                  </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-                <ItemsControl.ItemTemplate>
-                  <DataTemplate x:DataType="models:Channel">
-                    <controls:LiveTvCard Margin="0,0,16,16"/>
-                  </DataTemplate>
-                </ItemsControl.ItemTemplate>
-              </ItemsControl>
-            </StackPanel>
-
-            <StackPanel Margin="0,0,0,24" IsVisible="{Binding MyListSeriesItems.Count, Converter={StaticResource CountToVisibilityConverter}}">
-              <TextBlock Text="{loc:Translate History.Series}" FontSize="20" LetterSpacing="1" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,12"/>
-              <ItemsControl ItemsSource="{Binding MyListSeriesItems}">
-                <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
-                <ItemsControl.ItemTemplate>
-                  <DataTemplate x:DataType="models:Series">
-                    <controls:SeriesCard Margin="0,0,16,16"/>
-                  </DataTemplate>
-                </ItemsControl.ItemTemplate>
-              </ItemsControl>
-            </StackPanel>
-
-            <StackPanel Margin="0,0,0,24" IsVisible="{Binding MyListVodChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
-              <TextBlock Text="{loc:Translate History.Movies}" FontSize="20" LetterSpacing="1" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,12"/>
-              <ItemsControl ItemsSource="{Binding MyListVodChannels}">
-                <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
-                <ItemsControl.ItemTemplate>
-                  <DataTemplate x:DataType="models:Channel">
-                    <controls:VodCard Margin="0,0,16,16"/>
-                  </DataTemplate>
-                </ItemsControl.ItemTemplate>
-              </ItemsControl>
-            </StackPanel>
-
-            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,96,0,0" IsVisible="{Binding ShowMyListEmptyState, Converter={StaticResource BoolToVisibilityConverter}}">
-              <materialIcons:MaterialIcon Kind="BookmarkOutline" Width="64" Height="64" Foreground="{DynamicResource TextMutedBrush}" Opacity="0.5"/>
-              <TextBlock Text="{loc:Translate MyList.Empty.Title}" FontSize="20" LetterSpacing="1" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" TextAlignment="Center" Margin="0,16,0,4"/>
-              <TextBlock Text="{loc:Translate MyList.Empty.Description}" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" TextAlignment="Center"/>
-            </StackPanel>
-          </StackPanel>
-        </ScrollViewer>
+             x:CompileBindings="False">
+  <Grid IsVisible="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.MyList}}">
+    <Grid Margin="24,24,24,0" RowDefinitions="Auto,*" RowSpacing="{DynamicResource DesktopHeaderGap}">
+      <TextBlock Text="{loc:Translate MyList.Title}" Classes="DesktopPageTitle" />
+      <controls:DesktopSectionedCardFeed Grid.Row="1" ScrollChanged="MyListView_ScrollChanged">
+        <controls:DesktopSectionedCardFeed.Sections>
+          <controls:DesktopCardSection Header="{loc:Translate History.LiveTv}" CardKind="Live" PresentationMode="MyList" SourceItems="{Binding MyListLiveChannels}" />
+          <controls:DesktopCardSection Header="{loc:Translate History.Series}" CardKind="Series" PresentationMode="MyList" SourceItems="{Binding MyListSeriesItems}" />
+          <controls:DesktopCardSection Header="{loc:Translate History.Movies}" CardKind="Vod" PresentationMode="MyList" SourceItems="{Binding MyListVodChannels}" />
+        </controls:DesktopSectionedCardFeed.Sections>
+      </controls:DesktopSectionedCardFeed>
+      <StackPanel Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center"
+                  IsVisible="{Binding ShowMyListEmptyState}">
+        <icons:MaterialIcon Kind="BookmarkOutline" Width="64" Height="64" Foreground="{DynamicResource TextMutedBrush}" Opacity="0.5" />
+        <TextBlock Text="{loc:Translate MyList.Empty.Title}" FontSize="20" FontWeight="Bold" Margin="0,16,0,4" TextAlignment="Center" />
+        <TextBlock Text="{loc:Translate MyList.Empty.Description}" Foreground="{DynamicResource TextMutedBrush}" TextAlignment="Center" />
+      </StackPanel>
+    </Grid>
+  </Grid>
 </UserControl>
