@@ -11,16 +11,33 @@
              MinWidth="260" MinHeight="85"
              HorizontalAlignment="Stretch" ClipToBounds="False">
   <UserControl.Styles>
-    <Style Selector="Button.CardContainer">
-      <Setter Property="Background" Value="{DynamicResource Surface0Brush}"/>
+    <Style Selector="Border.CardContainer">
+      <Setter Property="Background" Value="Transparent"/>
       <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
       <Setter Property="BorderThickness" Value="0"/>
       <Setter Property="CornerRadius" Value="8"/>
-      <Setter Property="Padding" Value="12,8"/>
+      <Setter Property="Padding" Value="10,6"/>
     </Style>
-      <Style Selector="Button.CardContainer:pointerover /template/ ContentPresenter">
+    <Style Selector="Border.CardContainer:pointerover">
       <Setter Property="Background" Value="{DynamicResource Surface1Brush}"/>
       <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+    </Style>
+    <Style Selector="Button.CardContentBtn">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="Padding" Value="12,8"/>
+      <Setter Property="CornerRadius" Value="8"/>
+      <Setter Property="HorizontalAlignment" Value="Stretch"/>
+      <Setter Property="VerticalAlignment" Value="Stretch"/>
+      <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+      <Setter Property="VerticalContentAlignment" Value="Stretch"/>
+    </Style>
+    <Style Selector="Button.CardContentBtn:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource Surface1Brush}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+    </Style>
+    <Style Selector="Button.CardContentBtn:pressed /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource Surface2Brush}"/>
     </Style>
     <Style Selector="Button.FavoriteBtn">
       <Setter Property="Opacity" Value="0.55"/>
@@ -33,10 +50,8 @@
       <Setter Property="Opacity" Value="1"/>
     </Style>
   </UserControl.Styles>
-  <Button Classes="CardContainer" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-          Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}"
-          CommandParameter="{Binding}">
-    <Button.ContextFlyout>
+  <Border Classes="CardContainer" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+    <Border.ContextFlyout>
       <MenuFlyout>
         <MenuItem Header="{loc:Translate Context.MyList.Toggle}" Click="Context_AddToMyList_Click"/>
         <MenuItem Header="{loc:Translate Context.Favorite.Toggle}" Click="Context_ToggleFavorite_Click"/>
@@ -47,7 +62,7 @@
         <MenuItem Header="{loc:Translate History.Remove}" Click="Context_RemoveFromMyList_Click"
                   IsVisible="{Binding #LiveTvCardControl.ShowRemoveMyListMenu}"/>
       </MenuFlyout>
-    </Button.ContextFlyout>
+    </Border.ContextFlyout>
     <Grid RowDefinitions="*,Auto,Auto">
       <Grid Grid.Row="0" ColumnDefinitions="48,*,Auto" VerticalAlignment="Center">
         <Border Grid.Column="0" Width="46" Height="46" Background="{DynamicResource PlaceHolderBrush}">
@@ -60,10 +75,16 @@
             <controls:RemoteImage x:Name="ChannelLogo" Width="46" Height="46" Stretch="Uniform" Url="{Binding CoverUrl}" RenderOptions.BitmapInterpolationMode="MediumQuality"/>
           </Grid>
         </Border>
-        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="14,0" Spacing="3">
-          <TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
-          <TextBlock Text="{Binding GroupTitle}" Foreground="{DynamicResource TextMutedBrush}" FontSize="11" TextTrimming="CharacterEllipsis"/>
-        </StackPanel>
+        <!-- Main content button (SelectMediaCommand) as sibling to FavoriteBtn -->
+        <Button Grid.Column="1" Classes="CardContentBtn" Margin="14,0,0,0"
+                Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}"
+                CommandParameter="{Binding}">
+          <StackPanel VerticalAlignment="Center" Spacing="3">
+            <TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+            <TextBlock Text="{Binding GroupTitle}" Foreground="{DynamicResource TextMutedBrush}" FontSize="11" TextTrimming="CharacterEllipsis"/>
+          </StackPanel>
+        </Button>
+        <!-- Favorite button as sibling (not nested) -->
         <Button Grid.Column="2" Classes="FavoriteBtn" Background="Transparent" BorderThickness="0" Padding="7"
                 Classes.active="{Binding IsFavorite}"
                 Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).ToggleFavoriteCommand}"
@@ -75,11 +96,11 @@
         </Button>
       </Grid>
       <TextBlock Grid.Row="1" Text="{Binding CurrentProgramTitle}" Foreground="{DynamicResource TextMutedBrush}"
-                 FontSize="11.5" TextTrimming="CharacterEllipsis" Margin="0,4,0,4"
+                 FontSize="11.5" TextTrimming="CharacterEllipsis" Margin="0,2,0,0" Opacity="0.85"
                  IsVisible="{Binding CurrentProgramTitle, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
       <ProgressBar Grid.Row="2" Value="{Binding EpgProgress}" Minimum="0" Maximum="100" Height="3"
-                   Background="{DynamicResource SurfaceLightBrush}" Foreground="{DynamicResource AccentBrush}" CornerRadius="1"
+                   Background="{DynamicResource SurfaceLightBrush}" Foreground="{DynamicResource AccentBrush}" CornerRadius="1.5"
                    IsVisible="{Binding CurrentProgramTitle, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
     </Grid>
-  </Button>
+  </Border>
 </UserControl>

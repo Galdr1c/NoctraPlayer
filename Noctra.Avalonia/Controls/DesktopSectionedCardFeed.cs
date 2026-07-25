@@ -16,7 +16,7 @@ using Noctra.Core.Collections;
 
 namespace Noctra.Avalonia.Controls;
 
-public sealed class DesktopCardSection : AvaloniaObject
+public sealed class DesktopCardSection : StyledElement
 {
     public static readonly StyledProperty<string?> HeaderProperty =
         AvaloniaProperty.Register<DesktopCardSection, string?>(nameof(Header));
@@ -44,6 +44,7 @@ public sealed class DesktopCardSection : AvaloniaObject
 public sealed class DesktopSectionedCardFeed : ListBox
 {
     private const double FallbackAvailableWidth = 1180;
+    private const double MinimumStableWidth = 240;
     private readonly SectionedIncrementalRowCollection<DesktopCardSection, object> _rows = new();
     private readonly HashSet<DesktopCardSection> _observedSections = new();
     private readonly Dictionary<DesktopCardSection, INotifyCollectionChanged> _observedSources = new();
@@ -51,6 +52,7 @@ public sealed class DesktopSectionedCardFeed : ListBox
     private readonly object _pendingLock = new();
     private int _refreshQueued;
     private int _fullRebuildRequired;
+    private double _lastStableWidth = FallbackAvailableWidth;
     private double _lastAvailableWidth;
 
     protected override Type StyleKeyOverride => typeof(ListBox);
@@ -77,8 +79,36 @@ public sealed class DesktopSectionedCardFeed : ListBox
     public AvaloniaList<DesktopCardSection> Sections { get; } = new();
     public event EventHandler<ScrollChangedEventArgs>? ScrollChanged;
 
+    protected override void OnDataContextChanged(EventArgs e)
+    {
+        base.OnDataContextChanged(e);
+        PropagateDataContextToSections();
+    }
+
+    private void PropagateDataContextToSections()
+    {
+        foreach (var section in Sections)
+        {
+            section.DataContext = DataContext;
+        }
+    }
+
     private void Sections_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
+        if (e.NewItems is not null)
+        {
+            foreach (var item in e.NewItems.Cast<DesktopCardSection>())
+            {
+                item.DataContext = DataContext;
+            }
+        }
+        if (e.OldItems is not null)
+        {
+            foreach (var item in e.OldItems.Cast<DesktopCardSection>())
+            {
+                item.DataContext = null;
+            }
+        }
         RefreshSubscriptions();
         QueueFullRebuild();
     }
@@ -172,7 +202,11 @@ public sealed class DesktopSectionedCardFeed : ListBox
 
     private void QueueRebuildIfMetricsChanged()
     {
-        var width = GetAvailableWidth();
+        if (!TryGetStableWidth(out var width))
+        {
+            return;
+        }
+
         if (Math.Abs(width - _lastAvailableWidth) > 8)
         {
             QueueFullRebuild();
@@ -198,38 +232,53 @@ public sealed class DesktopSectionedCardFeed : ListBox
             if (Interlocked.Exchange(ref _fullRebuildRequired, 0) == 1)
             {
                 ClearPendingAppends();
-                RebuildRows();
+                if (!TryRebuildRows())
+                {
+                    Interlocked.Exchange(ref _fullRebuildRequired, 1);
+                }
                 return;
             }
 
             while (TryDequeue(out var append))
             {
+                if (!TryGetStableWidth(out var width))
+                {
+                    Interlocked.Exchange(ref _fullRebuildRequired, 1);
+                    return;
+                }
+
                 var columns = DesktopVirtualizingCardGrid.CalculateMetrics(
-                    GetAvailableWidth(), append.Section.CardKind).Columns;
+                    width, append.Section.CardKind).Columns;
                 if (_rows.TryAppend(append.Section, append.StartingIndex, append.Items, columns))
                 {
                     continue;
                 }
 
                 ClearPendingAppends();
-                RebuildRows();
+                TryRebuildRows();
                 return;
             }
         }, DispatcherPriority.Loaded);
     }
 
-    private void RebuildRows()
+    private bool TryRebuildRows()
     {
-        _lastAvailableWidth = GetAvailableWidth();
+        if (!TryGetStableWidth(out var width))
+        {
+            return false;
+        }
+
+        _lastAvailableWidth = width;
         var sources = Sections.Select(section =>
         {
             var columns = DesktopVirtualizingCardGrid.CalculateMetrics(
-                _lastAvailableWidth, section.CardKind).Columns;
+                width, section.CardKind).Columns;
             var items = section.SourceItems?.Cast<object?>().Where(x => x is not null).Cast<object>()
                 ?? Enumerable.Empty<object>();
             return new SectionedRowSource<DesktopCardSection, object>(section, items, columns);
         });
         _rows.Rebuild(sources);
+        return true;
     }
 
     private void PopulateRow(
@@ -237,7 +286,7 @@ public sealed class DesktopSectionedCardFeed : ListBox
         SectionedCollectionRow<DesktopCardSection, object> row)
     {
         var metrics = DesktopVirtualizingCardGrid.CalculateMetrics(
-            GetAvailableWidth(), row.Section.CardKind);
+            _lastAvailableWidth, row.Section.CardKind);
         presenter.Populate(
             row.Section.CardKind,
             row.Section.PresentationMode,
@@ -246,8 +295,19 @@ public sealed class DesktopSectionedCardFeed : ListBox
             row.Items);
     }
 
-    private double GetAvailableWidth()
-        => double.IsFinite(Bounds.Width) && Bounds.Width > 0 ? Bounds.Width : FallbackAvailableWidth;
+    private bool TryGetStableWidth(out double width)
+    {
+        var current = Bounds.Width;
+        if (VisualRoot is null || !double.IsFinite(current) || current < MinimumStableWidth)
+        {
+            width = _lastStableWidth;
+            return false;
+        }
+
+        _lastStableWidth = current;
+        width = current;
+        return true;
+    }
 
     private bool ShouldShowGroupHeader(DesktopCardSection section)
     {

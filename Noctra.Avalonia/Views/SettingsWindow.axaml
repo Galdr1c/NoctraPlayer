@@ -85,7 +85,8 @@
         </Style>
 
         <Style Selector="TabItem.SettingsTab:selected">
-            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
         </Style>
         <Style Selector="TabItem.SettingsTab:selected /template/ Border#SelectionIndicator">
             <Setter Property="IsVisible" Value="True"/>

@@ -40,6 +40,7 @@ public sealed class DesktopVirtualizingCardGrid : ListBox
     private INotifyCollectionChanged? _observableSource;
     private int _refreshQueued;
     private int _fullRebuildRequired;
+    private int _rebuildRetryCount;
     private int _columns;
     private double _cardWidth;
     private double _lastStableWidth = FallbackAvailableWidth;
@@ -199,7 +200,22 @@ public sealed class DesktopVirtualizingCardGrid : ListBox
                 ClearPendingAppends();
                 if (!TryRebuildRows())
                 {
-                    Interlocked.Exchange(ref _fullRebuildRequired, 1);
+                    var retries = Interlocked.Increment(ref _rebuildRetryCount);
+                    if (retries < 8)
+                    {
+                        Interlocked.Exchange(ref _fullRebuildRequired, 1);
+                        Interlocked.Exchange(ref _refreshQueued, 0);
+                        Dispatcher.UIThread.Post(() => QueueRefresh(), DispatcherPriority.Background);
+                    }
+                    else
+                    {
+                        Interlocked.Exchange(ref _rebuildRetryCount, 0);
+                        Interlocked.Exchange(ref _fullRebuildRequired, 1);
+                    }
+                }
+                else
+                {
+                    Interlocked.Exchange(ref _rebuildRetryCount, 0);
                 }
                 return;
             }

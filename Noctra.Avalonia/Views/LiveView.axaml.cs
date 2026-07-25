@@ -23,6 +23,19 @@ public partial class LiveView : UserControl
 
     private MainViewModel? ViewModel => DataContext as MainViewModel;
 
+    private void AttachViewModelObserver()
+    {
+        if (_observedViewModel is not null)
+            return;
+        var vm = ViewModel;
+        if (vm is null)
+            return;
+        _observedViewModel = vm;
+        _observedViewModel.PropertyChanged += ViewModel_PropertyChanged;
+        UpdateSortSelection();
+        UpdateCategorySelection();
+    }
+
     protected override void OnDataContextChanged(EventArgs e)
     {
         SelectionSheetHost.TryClose();
@@ -30,15 +43,10 @@ public partial class LiveView : UserControl
         if (_observedViewModel is not null)
         {
             _observedViewModel.PropertyChanged -= ViewModel_PropertyChanged;
+            _observedViewModel = null;
         }
         base.OnDataContextChanged(e);
-        _observedViewModel = ViewModel;
-        if (_observedViewModel is not null)
-        {
-            _observedViewModel.PropertyChanged += ViewModel_PropertyChanged;
-            UpdateSortSelection();
-            UpdateCategorySelection();
-        }
+        AttachViewModelObserver();
     }
 
     private void OpenSortSelectionSheet_Click(object? sender, RoutedEventArgs e)
@@ -119,6 +127,12 @@ public partial class LiveView : UserControl
             return;
         }
         base.OnKeyDown(e);
+    }
+
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+        AttachViewModelObserver();
     }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
