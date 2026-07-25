@@ -46,7 +46,7 @@
             <icons:MaterialIcon Kind="Magnify" Width="22" Height="22" Margin="12,0,4,0"
                                 VerticalAlignment="Center" Foreground="{DynamicResource TextMutedBrush}" />
             <TextBox x:Name="CategorySearchTextBox" Grid.Column="1"
-                     Theme="{StaticResource ModernTextBox}"
+                     Classes="search"
                      PlaceholderText="{loc:Translate Shell.Search.Tooltip}"
                      VerticalContentAlignment="Center"
                      KeyDown="CategorySearchTextBox_KeyDown"

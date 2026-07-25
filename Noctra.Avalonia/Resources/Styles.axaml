@@ -374,77 +374,8 @@
     </ControlTheme>
 
     <!-- ==========================================
-         INPUT STYLES
-         ========================================== -->
-
-    <!-- Modern TextBox (Premium Input) -->
-    <ControlTheme x:Key="ModernTextBox" TargetType="TextBox">
-        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
-        <Setter Property="CaretBrush" Value="{DynamicResource TextPrimaryBrush}"/>
-        <Setter Property="Padding" Value="16,12"/>
-        <Setter Property="Background" Value="{DynamicResource Surface1Brush}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
-        <Setter Property="BorderThickness" Value="1.5"/>
-        <Setter Property="VerticalContentAlignment" Value="Center"/>
-        <Setter Property="FontSize" Value="15"/>
-        <Setter Property="CornerRadius" Value="6"/>
-        <Setter Property="Template">
-            <ControlTemplate TargetType="TextBox">
-                <Border x:Name="PART_BorderElement"
-                        Background="{TemplateBinding Background}"
-                        BorderBrush="{TemplateBinding BorderBrush}"
-                        BorderThickness="{TemplateBinding BorderThickness}"
-                        CornerRadius="{TemplateBinding CornerRadius}">
-                    <Grid>
-                        <TextBlock x:Name="PART_Watermark"
-                                   Text="{TemplateBinding Watermark}"
-                                   Foreground="{DynamicResource TextDisabledBrush}"
-                                   VerticalAlignment="Center"
-                                   Margin="16,0,0,0"
-                                   IsHitTestVisible="False"
-                                   IsVisible="False"
-                                   FontWeight="Normal"/>
-                        <ScrollViewer x:Name="PART_ScrollViewer"
-                                      HorizontalScrollBarVisibility="{TemplateBinding (ScrollViewer.HorizontalScrollBarVisibility)}"
-                                      VerticalScrollBarVisibility="{TemplateBinding (ScrollViewer.VerticalScrollBarVisibility)}">
-                            <TextPresenter x:Name="PART_TextPresenter"
-                                           Text="{TemplateBinding Text, Mode=TwoWay}"
-                                           CaretBrush="{TemplateBinding CaretBrush}"
-                                           CaretIndex="{TemplateBinding CaretIndex}"
-                                           TextBlock.Foreground="{TemplateBinding Foreground}"
-                                           TextBlock.FontSize="{TemplateBinding FontSize}"
-                                           TextWrapping="{TemplateBinding TextWrapping}"
-                                           PasswordChar="{TemplateBinding PasswordChar}"
-                                           RevealPassword="{TemplateBinding RevealPassword}"
-                                           SelectionBrush="{TemplateBinding SelectionBrush}"
-                                           SelectionForegroundBrush="{TemplateBinding SelectionForegroundBrush}"
-                                           VerticalAlignment="Center"
-                                           Margin="{TemplateBinding Padding}"/>
-                        </ScrollViewer>
-                    </Grid>
-                </Border>
-            </ControlTemplate>
-        </Setter>
-
-        <!-- Show watermark when empty -->
-        <Style Selector="^:empty /template/ TextBlock#PART_Watermark">
-            <Setter Property="IsVisible" Value="True"/>
-        </Style>
-        <Style Selector="^:focus /template/ Border#PART_BorderElement">
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="BorderBrush" Value="Transparent" />
-            <Setter Property="BorderThickness" Value="1.5"/>
-        </Style>
-        <Style Selector="^:pointerover /template/ Border#PART_BorderElement">
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="BorderBrush" Value="Transparent" />
-            <Setter Property="BorderThickness" Value="1.5"/>
-        </Style>
-    </ControlTheme>
-
-    <!-- ==========================================
          TAB / RADIO BUTTON STYLE
-         ========================================== -->
+         ========================================= -->
 
     <!-- Modern RadioButton (Square indicator, ToggleSwitch-harmonious) -->
     <ControlTheme x:Key="{x:Type RadioButton}" TargetType="RadioButton">

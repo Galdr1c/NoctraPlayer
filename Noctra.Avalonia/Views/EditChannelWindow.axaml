@@ -113,8 +113,8 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <TextBox Text="{Binding MetadataSearchQuery}"
-                                         PlaceholderText="{loc:Translate Channels.Edit.TmdbPlaceholder}"
-                                         Theme="{StaticResource ModernTextBox}"/>
+                                         Classes="search"
+                                         PlaceholderText="{loc:Translate Channels.Edit.TmdbPlaceholder}"/>
                                 <Button Grid.Column="1" Command="{Binding SearchMetadataCommand}"
                                         Classes="EditPrimaryBtn"
                                         Margin="8,0,0,0"
@@ -153,20 +153,20 @@
                     </Border>
 
                     <TextBlock Text="{loc:Translate Channels.Edit.Name}" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
-                    <TextBox Text="{Binding Name}" Margin="0,0,0,16" Theme="{StaticResource ModernTextBox}"/>
+                    <TextBox Text="{Binding Name}" Margin="0,0,0,16"/>
 
                     <TextBlock Text="{loc:Translate Channels.Edit.Group}" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
-                    <TextBox Text="{Binding GroupTitle}" Margin="0,0,0,16" Theme="{StaticResource ModernTextBox}"/>
+                    <TextBox Text="{Binding GroupTitle}" Margin="0,0,0,16"/>
 
                     <TextBlock Text="{loc:Translate Channels.Edit.Type}" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
                     <ComboBox SelectedItem="{Binding Type}" ItemsSource="{Binding ChannelTypes}" Margin="0,0,0,16"
                               HorizontalAlignment="Stretch"/>
 
                     <TextBlock Text="{loc:Translate Channels.Edit.LogoUrl}" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
-                    <TextBox Text="{Binding LogoUrl}" Margin="0,0,0,16" Theme="{StaticResource ModernTextBox}"/>
+                    <TextBox Text="{Binding LogoUrl}" Classes="url" Margin="0,0,0,16"/>
 
                     <TextBlock Text="{loc:Translate Channels.Edit.TvgId}" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
-                    <TextBox Text="{Binding TvgId}" Margin="0,0,0,16" Theme="{StaticResource ModernTextBox}"/>
+                    <TextBox Text="{Binding TvgId}" Margin="0,0,0,16"/>
 
                 </StackPanel>
             </ScrollViewer>

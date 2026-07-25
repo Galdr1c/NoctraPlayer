@@ -122,6 +122,11 @@
   <SolidColorBrush x:Key="DangerSubtleBrush" Color="#1AE50914" />
   <SolidColorBrush x:Key="DangerBrush" Color="{StaticResource ErrorColor}" />
 
+  <!-- Semantic surface brushes for status/kind system -->
+  <SolidColorBrush x:Key="SuccessSurfaceBrush" Color="#1A10B981" />
+  <SolidColorBrush x:Key="WarningSurfaceBrush" Color="#1AF59E0B" />
+  <SolidColorBrush x:Key="ErrorSurfaceBrush" Color="#1AE50914" />
+
   <!-- Player overlays intentionally stay dark in every app theme for video readability. -->
   <SolidColorBrush x:Key="PlayerSurfaceBrush" Color="#000000" />
   <SolidColorBrush x:Key="PlayerOverlayPanelBrush" Color="#E60A0A0A" />

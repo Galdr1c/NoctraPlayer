@@ -597,16 +597,11 @@
                                             
                                             <Grid ColumnDefinitions="*,Auto">
                                                 <TextBox Text="{Binding PromoCodeInput, Mode=TwoWay}" 
+                                                         Classes="url"
                                                          PlaceholderText="{loc:Translate GlobalSettings.Promo.Placeholder}"
-                                                         Padding="16,12"
-                                                         CornerRadius="8"
-                                                         BorderThickness="1.5"
-                                                         BorderBrush="{DynamicResource BorderBrush}"
-                                                         Background="{DynamicResource Surface1Brush}"
                                                          VerticalContentAlignment="Center"
                                                          FontSize="15"
-                                                         LetterSpacing="1"
-                                                         Theme="{StaticResource ModernTextBox}"/>
+                                                         LetterSpacing="1"/>
                                                 <Button Grid.Column="1"
                                                         Command="{Binding ApplyPromoCodeCommand}"
                                                         Theme="{StaticResource PrimaryButtonStyle}"

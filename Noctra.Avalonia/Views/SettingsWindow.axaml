@@ -321,7 +321,7 @@
                                             <TextBlock Text="{loc:Translate Settings.Playback.UserAgent}" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}"/>
                                         </StackPanel>
                                     </Grid>
-                                    <TextBox Text="{Binding UserAgent, Mode=TwoWay}" PlaceholderText="VLC/3.0.x LibVLC/3.0.x" Padding="12" Margin="0,12,0,0" Theme="{StaticResource ModernTextBox}"/>
+                                    <TextBox Text="{Binding UserAgent, Mode=TwoWay}" PlaceholderText="VLC/3.0.x LibVLC/3.0.x" Margin="0,12,0,0"/>
                                 </StackPanel>
                             </Border>
 
@@ -458,7 +458,7 @@
                                     <TextBlock Text="{loc:Translate Settings.Download.Path}" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
                                     <Grid>
                                         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                                        <TextBox Text="{Binding DownloadPath}" IsReadOnly="True" Padding="12" Theme="{StaticResource ModernTextBox}"/>
+                                        <TextBox Text="{Binding DownloadPath}" Classes="readonly" Padding="12"/>
                                         <Button Grid.Column="1" Content="{loc:Translate Settings.Download.Change}" Click="ChangeDownloadPath_Click" Margin="12,0,0,0" Padding="20,10"/>
                                     </Grid>
                                 </StackPanel>
@@ -892,11 +892,11 @@
                                             <DataTemplate>
                                                 <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,8">
                                                     <TextBox Text="{Binding Url, Mode=TwoWay}"
+                                                             Classes="url"
                                                              PlaceholderText="{loc:Translate Settings.Epg.UrlPlaceholder}"
                                                              Padding="12"
                                                              Height="45"
-                                                             VerticalContentAlignment="Center"
-                                                             Theme="{StaticResource ModernTextBox}"/>
+                                                             VerticalContentAlignment="Center"/>
                                                     <Button Grid.Column="1" 
                                                             Theme="{StaticResource SettingsActionButton}"
                                                             Command="{Binding $parent[Window].DataContext.RemoveCustomEpgCommand}"
