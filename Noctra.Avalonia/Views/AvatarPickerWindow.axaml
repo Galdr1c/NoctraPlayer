@@ -16,7 +16,7 @@
         CanResize="False"
         TransparencyLevelHint="Transparent"
         Background="Transparent"
-        FontFamily="{StaticResource DefaultFontFamily}">
+>
 
     <Window.Styles>
         <Style Selector="Button.CloseBtn">

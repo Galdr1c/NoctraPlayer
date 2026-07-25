@@ -18,7 +18,7 @@
         CanResize="False"
         TransparencyLevelHint="Transparent"
         Background="Transparent"
-        FontFamily="{StaticResource DefaultFontFamily}">
+>
 
     <Window.Resources>
     </Window.Resources>
@@ -242,9 +242,7 @@
                                                Margin="0,0,0,14"/>
                                     <Button Content="{loc:Translate Settings.Profile.BackToProfiles}"
                                             Click="BackToProfiles_Click"
-                                            HorizontalAlignment="Left"
-                                            CornerRadius="4"
-                                            Padding="18,10"/>
+                                            Theme="{StaticResource SettingsActionButton}"/>
                                 </StackPanel>
                             </Border>
 
@@ -491,9 +489,7 @@
                                     <Button Content="{loc:Translate Settings.Channels.RefreshNow}"
                                             Command="{Binding RefreshChannelListNowCommand}"
                                             IsEnabled="{Binding !_mainViewModel.IsGlobalLoading}"
-                                            HorizontalAlignment="Left"
-                                            Padding="20,10"
-                                            Margin="0,0,0,20"/>
+                                            Theme="{StaticResource SettingsActionButton}"/>
 
                                     <Grid Margin="0,0,0,8">
                                         <Grid.ColumnDefinitions>
@@ -606,7 +602,7 @@
                                                             <Grid ColumnDefinitions="*,Auto">
                                                                 <TextBlock Text="{Binding}" VerticalAlignment="Center" FontSize="14" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="Medium" TextTrimming="CharacterEllipsis"/>
                                                                 <Button Grid.Column="1" 
-                                                                        Theme="{StaticResource FilterButtonStyle}"
+                                                                        Theme="{StaticResource SettingsActionButton}"
                                                                         Command="{Binding $parent[Window].DataContext.UnhideGroupCommand}"
                                                                         CommandParameter="{Binding}"
                                                                         Padding="20,4" CornerRadius="4" Cursor="Hand">
@@ -653,7 +649,7 @@
                                                             <Grid ColumnDefinitions="*,Auto">
                                                                 <TextBlock Text="{Binding}" VerticalAlignment="Center" FontSize="14" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="Medium" TextTrimming="CharacterEllipsis"/>
                                                                 <Button Grid.Column="1" 
-                                                                        Theme="{StaticResource FilterButtonStyle}"
+                                                                        Theme="{StaticResource SettingsActionButton}"
                                                                         Command="{Binding $parent[Window].DataContext.UnhideGroupCommand}"
                                                                         CommandParameter="{Binding}"
                                                                         Padding="20,4" CornerRadius="4" Cursor="Hand">
@@ -700,7 +696,7 @@
                                                             <Grid ColumnDefinitions="*,Auto">
                                                                 <TextBlock Text="{Binding}" VerticalAlignment="Center" FontSize="14" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="Medium" TextTrimming="CharacterEllipsis"/>
                                                                 <Button Grid.Column="1" 
-                                                                        Theme="{StaticResource FilterButtonStyle}"
+                                                                        Theme="{StaticResource SettingsActionButton}"
                                                                         Command="{Binding $parent[Window].DataContext.UnhideGroupCommand}"
                                                                         CommandParameter="{Binding}"
                                                                         Padding="20,4" CornerRadius="4" Cursor="Hand">
@@ -783,9 +779,7 @@
                                     <Button Content="{loc:Translate Settings.Epg.RefreshNow}"
                                             Command="{Binding RefreshEpgNowCommand}"
                                             IsEnabled="{Binding !_mainViewModel.IsGlobalLoading}"
-                                            HorizontalAlignment="Left"
-                                            Padding="20,10"
-                                            Margin="0,0,0,20"/>
+                                            Theme="{StaticResource SettingsActionButton}"/>
 
                                     <TextBlock Text="{loc:Translate Settings.Channels.Frequency}" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
                                     <ComboBox Theme="{StaticResource ModernComboBox}"
@@ -874,10 +868,10 @@
                                                        FontSize="12" Foreground="{DynamicResource TextMutedBrush}" Margin="0,2,0,0"/>
                                         </StackPanel>
                                         <Button Grid.Column="1" 
-                                                Theme="{StaticResource FilterButtonStyle}"
+                                                Theme="{StaticResource SettingsActionButton}"
                                                 Command="{Binding AddCustomEpgCommand}"
                                                 IsEnabled="{Binding !_mainViewModel.IsGlobalLoading}"
-                                                Padding="12,6" CornerRadius="6" Cursor="Hand">
+                                                Cursor="Hand">
                                             <StackPanel Orientation="Horizontal" Spacing="6">
                                                 <materialIcons:MaterialIcon Kind="Plus" Width="18" Height="18"/>
                                                 <TextBlock Text="{loc:Translate Settings.Epg.AddNew}" FontSize="13" FontWeight="SemiBold"/>
@@ -893,9 +887,9 @@
                                             Padding="10" 
                                             Margin="0,4,0,8">
                                         <StackPanel Orientation="Horizontal" Spacing="8">
-                                            <materialIcons:MaterialIcon Kind="AlertCircleOutline" Width="16" Height="16" Foreground="#FFA500" VerticalAlignment="Top" Margin="0,2,0,0"/>
+                                            <materialIcons:MaterialIcon Kind="AlertCircleOutline" Width="16" Height="16" Foreground="{DynamicResource WarningBrush}" Margin="0,2,0,0"/>
                                             <TextBlock Text="{loc:Translate Settings.Epg.PerformanceWarning}"
-                                                       TextWrapping="Wrap" FontSize="12" Foreground="#FFA500" Opacity="0.9"/>
+                                                       TextWrapping="Wrap" FontSize="{DynamicResource FCaption}" Foreground="{DynamicResource WarningBrush}"/>
                                         </StackPanel>
                                     </Border>
 
@@ -910,12 +904,11 @@
                                                              VerticalContentAlignment="Center"
                                                              Theme="{StaticResource ModernTextBox}"/>
                                                     <Button Grid.Column="1" 
-                                                            Theme="{StaticResource FilterButtonStyle}"
+                                                            Theme="{StaticResource SettingsActionButton}"
                                                             Command="{Binding $parent[Window].DataContext.RemoveCustomEpgCommand}"
                                                             CommandParameter="{Binding .}"
                                                             Margin="10,0,0,0"
-                                                            Width="45" Height="45"
-                                                            Padding="0"
+                                                            BorderThickness="1.5"
                                                             ToolTip.Tip="{loc:Translate Settings.Epg.RemoveSource.Tooltip}">
                                                         <materialIcons:MaterialIcon Kind="DeleteOutline" Width="20" Height="20" Foreground="{DynamicResource ErrorBrush}"/>
                                                     </Button>
@@ -928,13 +921,7 @@
                                      <!-- Tüm EPG Kaynaklarını Yenile -->
                                      <Button Command="{Binding RefreshEpgNowCommand}"
                                              IsEnabled="{Binding !_mainViewModel.IsGlobalLoading}"
-                                             HorizontalAlignment="Left"
-                                             Padding="20,10"
-                                             Margin="0,0,0,20"
-                                             Background="{DynamicResource Surface1Brush}"
-                                             BorderBrush="{DynamicResource BorderBrush}"
-                                             BorderThickness="1"
-                                             CornerRadius="6"
+                                             Theme="{StaticResource SettingsActionButton}"
                                              Cursor="Hand">
                                          <StackPanel Orientation="Horizontal" Spacing="10">
                                              <materialIcons:MaterialIcon Kind="Refresh" Width="18" Height="18" Foreground="{DynamicResource AccentBrush}"/>
@@ -1216,26 +1203,34 @@
                                                 <TextBlock Text="Noctra" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"/>
                                                 <TextBlock Text="{Binding CurrentVersion, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.About.VersionFormat'}" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0"/>
                                             </StackPanel>
-
-                                            <!-- UPGRADE BUTTON -->
-                                            <Button Grid.Column="2" 
-                                                    Command="{Binding ShowUpsellCommand}"
-                                                    Padding="16,8"
-                                                    Background="{DynamicResource PremiumBadgeBrush}"
-                                                    Foreground="White"
-                                                    CornerRadius="8"
-                                                    VerticalAlignment="Center"
-                                                    Cursor="Hand">
-                                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                                    <materialIcons:MaterialIcon Kind="Crown" Width="16" Height="16" Foreground="{DynamicResource PremiumBadgeTextBrush}"/>
-                                                    <TextBlock Text="{loc:Translate Settings.About.UpgradeToPremium}" FontWeight="SemiBold" Foreground="{DynamicResource PremiumBadgeTextBrush}"/>
-                                                </StackPanel>
-                                            </Button>
                                         </Grid>
                                     </StackPanel>
                                 </Border>
                             </Panel>
-
+                            <!-- Upgrade to Premium Banner (shown when not premium, placed after Account card) -->
+                            <Button Theme="{StaticResource UpgradeButton}"
+                                    Command="{Binding ShowUpsellCommand}"
+                                    IsVisible="{Binding !IsPremium}">
+                                <Grid ColumnDefinitions="Auto,*,Auto"
+                                    ColumnSpacing="12">
+                                <materialIcons:MaterialIcon Kind="Crown"
+                                                            Width="32"
+                                                            Height="32"
+                                                            Foreground="{DynamicResource PremiumBadgeTextBrush}"
+                                                            VerticalAlignment="Center" />
+                                <StackPanel Grid.Column="1"
+                                            VerticalAlignment="Center"
+                                            Spacing="2">
+                                    <TextBlock Text="{loc:Translate GlobalSettings.About.Upgrade}"
+                                            Foreground="{DynamicResource PremiumBadgeTextBrush}"
+                                            FontWeight="SemiBold"
+                                            FontSize="{DynamicResource FBody}" />
+                                    <TextBlock Text="{loc:Translate Upsell.Headline}"
+                                            Foreground="{DynamicResource PremiumBadgeTextBrush}"
+                                            FontSize="{DynamicResource FCaption}" />
+                                </StackPanel>
+                                </Grid>
+                            </Button>
                             <!-- UPDATE SECTION (Enhanced Modern Card) -->
                             <Border Background="{DynamicResource Surface0Brush}" 
                                     CornerRadius="8" 
@@ -1267,10 +1262,7 @@
                                         <!-- Idle State -->
                                         <Button Command="{Binding CheckForUpdatesCommand}"
                                                 IsVisible="True"
-                                                Padding="16,8"
-                                                Background="{DynamicResource Surface1Brush}"
-                                                CornerRadius="8"
-                                                Cursor="Hand">
+                                                Theme="{StaticResource SettingsActionButton}">
                                             <StackPanel Orientation="Horizontal" Spacing="8">
                                                 <materialIcons:MaterialIcon Kind="Refresh" Width="16" Height="16"/>
                                                 <TextBlock Text="{loc:Translate Settings.Update.CheckNow}" FontSize="13" FontWeight="SemiBold"/>
@@ -1304,7 +1296,7 @@
                     <!-- Left Actions -->
                     <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="12">
                         <Button Content="{loc:Translate Settings.Action.ResetDefaults}" Command="{Binding ResetToDefaultsCommand}" 
-                                HorizontalAlignment="Left" Padding="12,8"/>
+                                Theme="{StaticResource SettingsActionButton}" HorizontalAlignment="Left" Padding="12,8"/>
                         
                         <Button Command="{Binding ReportBugCommand}" 
                                 Theme="{StaticResource ErrorButton}">
@@ -1330,9 +1322,7 @@
                     <Button Grid.Column="2" 
                             Content="{loc:Translate Settings.Action.SaveSettings}" 
                             Command="{Binding SaveSettingsCommand}" 
-                            Padding="20,10" 
-                            FontSize="15"
-                            HorizontalAlignment="Right"/>
+                            Theme="{StaticResource PrimaryButtonStyle}"/>
                 </Grid>
             </Border>
 
@@ -1387,10 +1377,7 @@
                         <Button Command="{Binding CancelRefreshOperationCommand}"
                                 HorizontalAlignment="Center"
                                 Padding="18,9"
-                                Background="{DynamicResource Surface1Brush}"
-                                BorderBrush="{DynamicResource BorderBrush}"
-                                BorderThickness="1"
-                                CornerRadius="8"
+                                Theme="{StaticResource SettingsActionButton}"
                                 Cursor="Hand">
                             <StackPanel Orientation="Horizontal" Spacing="8">
                                 <materialIcons:MaterialIcon Kind="CloseCircleOutline" Width="18" Height="18" Foreground="{DynamicResource TextMutedBrush}"/>

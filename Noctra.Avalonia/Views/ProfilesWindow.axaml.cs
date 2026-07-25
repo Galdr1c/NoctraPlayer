@@ -178,6 +178,24 @@ public partial class ProfilesWindow : Window
         }
     }
 
+    private void ToggleManage_Click(object? sender, RoutedEventArgs e)
+    {
+        if (_viewModel?.ToggleManageModeCommand.CanExecute(null) == true)
+        {
+            _viewModel.ToggleManageModeCommand.Execute(null);
+        }
+    }
+
+    private void AddProfile_Click(object? sender, RoutedEventArgs e)
+    {
+        var viewModel = _viewModel ?? DataContext as ProfilesViewModel;
+        if (viewModel?.AddProfileCommand.CanExecute(null) == true)
+        {
+            viewModel.AddProfileCommand.Execute(null);
+            e.Handled = true;
+        }
+    }
+
     private async void SelectProfile_Click(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not ProfilesViewModel vm || sender is not Control control || control.DataContext is not Profile profile)
@@ -216,20 +234,6 @@ public partial class ProfilesWindow : Window
         }
 
         vm.SelectProfileCommand.Execute(profile);
-    }
-
-    private async void DeleteProfile_Click(object? sender, RoutedEventArgs e)
-    {
-        if (DataContext is not ProfilesViewModel vm || sender is not Control control || control.DataContext is not Profile profile)
-        {
-            return;
-        }
-
-        // PIN kontrolü — silme için
-        if (!await VerifyPinIfRequired(profile, "Profiles.Pin.Purpose.Delete"))
-            return;
-
-        vm.DeleteProfileCommand.Execute(profile);
     }
 
     private async void ProfilesWindow_Opened(object? sender, EventArgs e)

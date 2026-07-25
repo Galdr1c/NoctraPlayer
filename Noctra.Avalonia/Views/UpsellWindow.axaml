@@ -14,20 +14,9 @@
         CanResize="False"
         TransparencyLevelHint="Transparent"
         Background="Transparent"
-        FontFamily="{StaticResource DefaultFontFamily}">
+>
 
     <Window.Styles>
-        <!-- Buy Button -->
-        <Style Selector="Button.BuyBtn">
-            <Setter Property="Background" Value="{DynamicResource PremiumBadgeBrush}"/>
-            <Setter Property="Foreground" Value="{DynamicResource PremiumBadgeTextBrush}"/>
-            <Setter Property="CornerRadius" Value="6"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="BorderThickness" Value="0"/>
-        </Style>
-        <Style Selector="Button.BuyBtn:pointerover">
-            <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
-        </Style>
 
         <!-- Close Button Style (Matching ProfilesWindow) -->
         <Style Selector="Button.CloseButtonStyle">
@@ -197,8 +186,8 @@
                     </Border>
                 </Grid>
 
-                <StackPanel Grid.Row="2" HorizontalAlignment="Center">
-                    <Button Click="Buy_Click" Width="290" Height="44" Classes="BuyBtn">
+                <StackPanel Grid.Row="2" HorizontalAlignment="Stretch">
+                    <Button Click="Buy_Click" Theme="{StaticResource UpgradeButton}">
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
                             <materialIcons:MaterialIcon Kind="Crown" Width="17" Height="17" Margin="0,0,7,0"/>
                             <TextBlock Text="{Binding [Upsell.Action.Buy], Source={x:Static loc:LocalizationSource.Instance}}"

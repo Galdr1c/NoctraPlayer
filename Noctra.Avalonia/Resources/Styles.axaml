@@ -40,13 +40,16 @@
 
     <!-- Primary Button (Gradient Background) -->
     <ControlTheme x:Key="PrimaryButtonStyle" TargetType="Button">
-        <Setter Property="Background" Value="{DynamicResource PrimaryGradientBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
         <Setter Property="Foreground" Value="White"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
         <Setter Property="Padding" Value="24,12"/>
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="Cursor" Value="Hand"/>
-        <Setter Property="CornerRadius" Value="{DynamicResource RadiusMedium}"/>
+        <Setter Property="CornerRadius" Value="6"/>
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
         <Setter Property="Template">
             <ControlTemplate TargetType="Button">
                 <Border x:Name="PART_Border"
@@ -65,6 +68,7 @@
         </Style>
         <Style Selector="^:pressed /template/ Border#PART_Border">
             <Setter Property="Opacity" Value="0.8"/>
+            <Setter Property="RenderTransform" Value="scale(0.97)" />
         </Style>
         <Style Selector="^:disabled /template/ Border#PART_Border">
             <Setter Property="Opacity" Value="0.5"/>
@@ -141,7 +145,33 @@
             <Setter Property="BorderBrush" Value="{DynamicResource ErrorBrush}"/>
         </Style>
     </ControlTheme>
+    <ControlTheme x:Key="UpgradeButton" TargetType="Button">
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="Padding" Value="14" />
+        <Setter Property="Margin" Value="0,0,0,16" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Background" Value="{DynamicResource PremiumBadgeBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource PremiumBadgeTextBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
 
+        <Style Selector="^:pointerover /template/ ContentPresenter">
+            <Setter Property="Opacity" Value="0.80" />
+            <Setter Property="Background" Value="{DynamicResource PremiumBadgeBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+
+        <Style Selector="^:pressed /template/ ContentPresenter">
+            <Setter Property="Opacity" Value="0.80" />
+            <Setter Property="Background" Value="{DynamicResource PremiumBadgeBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+    </ControlTheme>
     <!-- Text Button (Transparent, text only) -->
     <ControlTheme x:Key="TextButtonStyle" TargetType="Button">
         <Setter Property="Background" Value="Transparent"/>
@@ -164,38 +194,26 @@
     </ControlTheme>
 
     <!-- Filter Button Style (Matches ModernComboBox) -->
-    <ControlTheme x:Key="FilterButtonStyle" TargetType="Button">
-        <Setter Property="Background" Value="{DynamicResource Surface1Brush}"/>
-        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
-        <Setter Property="BorderThickness" Value="1.5"/>
-        <Setter Property="Padding" Value="16,0"/>
-        <Setter Property="FontSize" Value="15"/>
-        <Setter Property="FontWeight" Value="Normal"/>
-        <Setter Property="Cursor" Value="Hand"/>
-        <Setter Property="CornerRadius" Value="6"/>
-        <Setter Property="Template">
-            <ControlTemplate TargetType="Button">
-                <Border x:Name="PART_Border"
-                        Background="{TemplateBinding Background}"
-                        BorderBrush="{TemplateBinding BorderBrush}"
-                        BorderThickness="{TemplateBinding BorderThickness}"
-                        CornerRadius="{TemplateBinding CornerRadius}"
-                        Padding="{TemplateBinding Padding}">
-                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
-                                      Content="{TemplateBinding Content}"
-                                      ContentTemplate="{TemplateBinding ContentTemplate}"/>
-                </Border>
-            </ControlTemplate>
-        </Setter>
+    <ControlTheme x:Key="SettingsActionButton" TargetType="Button">
+        <Setter Property="MinHeight" Value="44" />
+        <Setter Property="Padding" Value="14,0" />
+        <Setter Property="Background" Value="{DynamicResource Surface1Brush}" />
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="6" />
 
-        <Style Selector="^:pointerover /template/ Border#PART_Border">
-            <Setter Property="BorderBrush" Value="{DynamicResource TextDisabledBrush}"/>
-            <Setter Property="Background" Value="{DynamicResource InteractiveHoverBrush}"/>
+        <Style Selector="^:pointerover">
+            <Setter Property="Background" Value="{DynamicResource InteractivePressedBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
         </Style>
-        <Style Selector="^:pressed /template/ Border#PART_Border">
-            <Setter Property="Background" Value="{DynamicResource InteractivePressedBrush}"/>
-            <Setter Property="Opacity" Value="0.8"/>
+        <Style Selector="^:pressed">
+            <Setter Property="Background" Value="{DynamicResource InteractivePressedBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+            <Setter Property="RenderTransform" Value="scale(0.97)"/>
         </Style>
     </ControlTheme>
 
@@ -491,7 +509,7 @@
     </ControlTheme>
 
     <ControlTheme x:Key="ErrorButton" TargetType="Button">
-        <Setter Property="MinHeight" Value="36" />
+        <Setter Property="MinHeight" Value="44" />
         <Setter Property="Padding" Value="14,0" />
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="Foreground" Value="{DynamicResource ErrorBrush}" />
@@ -523,6 +541,7 @@
         </Style>
         <Style Selector="^:pressed /template/ Border#PART_Border">
             <Setter Property="Background" Value="#33FF3333" />
+            <Setter Property="RenderTransform" Value="scale(0.97)" />
         </Style>
         <Style Selector="^:disabled">
             <Setter Property="Opacity" Value="0.5"/>

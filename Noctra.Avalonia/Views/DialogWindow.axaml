@@ -15,7 +15,7 @@
         CanResize="False"
         TransparencyLevelHint="Transparent"
         Background="Transparent"
-        FontFamily="{StaticResource DefaultFontFamily}">
+>
 
     <Window.Styles>
         <!-- Primary Button (Action) -->

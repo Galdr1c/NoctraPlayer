@@ -13,10 +13,18 @@
         CanResize="False"
         TransparencyLevelHint="Transparent"
         Background="Transparent"
-        FontFamily="{StaticResource DefaultFontFamily}"
         xmlns:materialIcons="using:Material.Icons.Avalonia">
 
     <Window.Styles>
+       <Style Selector="Border.SettingsSectionCard">
+            <Setter Property="Background" Value="{DynamicResource Surface0Brush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="16" />
+            <Setter Property="Margin" Value="0,0,0,16" />
+            <Setter Property="BoxShadow" Value="{DynamicResource DefaultShadow}" />
+        </Style>
         <!-- Close Button Style -->
         <Style Selector="Button.CloseButtonStyle">
             <Setter Property="Width" Value="48"/>
@@ -151,10 +159,7 @@
                 <StackPanel MaxWidth="650" Margin="0,0,0,40">
 
                     <!-- APPEARANCE SECTION -->
-                    <Border Background="{DynamicResource Surface0Brush}" 
-                            CornerRadius="8" 
-                            Padding="24"
-                            Margin="0,0,0,16">
+                    <Border Classes="SettingsSectionCard">
                         <StackPanel>
                             <TextBlock Text="{loc:Translate GlobalSettings.Appearance.Title}" 
                                        FontSize="20" 
@@ -319,10 +324,7 @@
                     </Border>
 
                     <!-- GENERAL SECTION -->
-                    <Border Background="{DynamicResource Surface0Brush}" 
-                            CornerRadius="8" 
-                            Padding="24"
-                            Margin="0,0,0,16">
+                    <Border Classes="SettingsSectionCard">
                         <StackPanel>
                             <TextBlock Text="{loc:Translate GlobalSettings.General.Title}" 
                                        FontSize="20" 
@@ -375,10 +377,7 @@
                     </Border>
 
                     <!-- DATA & CACHE SECTION -->
-                    <Border Background="{DynamicResource Surface0Brush}" 
-                            CornerRadius="8" 
-                            Padding="24"
-                            Margin="0,0,0,16">
+                    <Border Classes="SettingsSectionCard">
                         <StackPanel>
                             <TextBlock Text="{loc:Translate GlobalSettings.Cache.Title}" 
                                        FontSize="20" 
@@ -507,11 +506,8 @@
                         </Border>
 
                         <!-- FREE CARD (Standard Refined) -->
-                        <Border Background="{DynamicResource Surface0Brush}" 
-                                CornerRadius="8" 
-                                Padding="24"
-                                IsVisible="{Binding !IsPremium}"
-                                Margin="0,0,0,24">
+                        <Border Classes="SettingsSectionCard"
+                                IsVisible="{Binding !IsPremium}">
                             <StackPanel>
                                 <Grid ColumnDefinitions="Auto,*,Auto">
                                     <!-- App Icon -->
@@ -532,20 +528,6 @@
                                             <TextBlock Text="{Binding CurrentVersion}" FontSize="14" Foreground="{DynamicResource TextMutedBrush}"/>
                                         </StackPanel>
                                     </StackPanel>
-
-                                    <!-- UPGRADE BUTTON -->
-                                    <Button Grid.Column="2" 
-                                            Command="{Binding ShowUpsellCommand}"
-                                            Padding="16,8"
-                                            Background="{DynamicResource PremiumBadgeBrush}"
-                                            CornerRadius="8"
-                                            VerticalAlignment="Center"
-                                            Cursor="Hand">
-                                        <StackPanel Orientation="Horizontal" Spacing="8">
-                                            <materialIcons:MaterialIcon Kind="Crown" Width="16" Height="16" Foreground="{DynamicResource PremiumBadgeTextBrush}"/>
-                                            <TextBlock Text="{loc:Translate GlobalSettings.About.Upgrade}" FontWeight="SemiBold" Foreground="{DynamicResource PremiumBadgeTextBrush}"/>
-                                        </StackPanel>
-                                    </Button>
                                 </Grid>
 
                                 <Border Height="1" Background="{DynamicResource BorderBrush}" Margin="0,20,0,16" Opacity="0.5"/>
@@ -557,10 +539,33 @@
                             </StackPanel>
                         </Border>
                     </Panel>
-
+                    <!-- Upgrade to Premium Banner (shown when not premium, placed after Account card) -->
+                    <Button Theme="{StaticResource UpgradeButton}"
+                            Command="{Binding ShowUpsellCommand}"
+                            IsVisible="{Binding !IsPremium}">
+                        <Grid ColumnDefinitions="Auto,*,Auto"
+                            ColumnSpacing="12">
+                        <materialIcons:MaterialIcon Kind="Crown"
+                                                    Width="32"
+                                                    Height="32"
+                                                    Foreground="{DynamicResource PremiumBadgeTextBrush}"
+                                                    VerticalAlignment="Center" />
+                        <StackPanel Grid.Column="1"
+                                    VerticalAlignment="Center"
+                                    Spacing="2">
+                            <TextBlock Text="{loc:Translate GlobalSettings.About.Upgrade}"
+                                    Foreground="{DynamicResource PremiumBadgeTextBrush}"
+                                    FontWeight="SemiBold"
+                                    FontSize="{DynamicResource FBody}" />
+                            <TextBlock Text="{loc:Translate Upsell.Headline}"
+                                    Foreground="{DynamicResource PremiumBadgeTextBrush}"
+                                    FontSize="{DynamicResource FCaption}" />
+                        </StackPanel>
+                        </Grid>
+                    </Button>
                     
                             <!-- Global Promo Code Section -->
-                            <Border Padding="20,16" Margin="0,0,0,16" CornerRadius="8">
+                            <Border Classes="SettingsSectionCard">
                                 <Border.Background>
                                     <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
                                         <GradientStop Color="#1A6D28D9" Offset="0.0"/>
@@ -603,10 +608,7 @@
                                                          Theme="{StaticResource ModernTextBox}"/>
                                                 <Button Grid.Column="1"
                                                         Command="{Binding ApplyPromoCodeCommand}"
-                                                        Background="{DynamicResource AccentBrush}"
-                                                        Foreground="White"
-                                                        CornerRadius="8"
-                                                        Padding="24,10"
+                                                        Theme="{StaticResource PrimaryButtonStyle}"
                                                         Margin="12,0,0,0"
                                                         Cursor="Hand"
                                                         VerticalAlignment="Stretch">
@@ -637,10 +639,7 @@
                             </Border>
                             
                     <!-- UPDATE SECTION (Store-managed updates) -->
-                    <Border Background="{DynamicResource Surface0Brush}" 
-                            CornerRadius="12" 
-                            Padding="20,16" 
-                            Margin="0,0,0,16">
+                    <Border Classes="SettingsSectionCard">
                         <StackPanel Spacing="12">
                             <!-- Header Row: Icon + Text + Check Button -->
                             <Grid ColumnDefinitions="Auto,*,Auto">
@@ -658,9 +657,7 @@
                                 <Button Grid.Column="2" 
                                         Command="{Binding CheckForUpdatesCommand}"
                                         IsVisible="{Binding ShowUpdateCheckButton}"
-                                        Padding="16,8"
-                                        Background="{DynamicResource Surface1Brush}"
-                                        CornerRadius="8"
+                                        Theme="{StaticResource SettingsActionButton}"
                                         Cursor="Hand">
                                     <StackPanel Orientation="Horizontal" Spacing="8">
                                         <materialIcons:MaterialIcon Kind="Refresh" Width="16" Height="16"
@@ -712,13 +709,15 @@
                     </Border>
 
                     <!-- BUG REPORT (Common for both) -->
-                    <Border Background="#1AE50914" BorderBrush="#E50914" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,20">
-                        <Grid ColumnDefinitions="*,Auto">
+                    <Border Background="{DynamicResource DangerSubtleBrush}"
+                            BorderBrush="{DynamicResource ErrorBrush}"
+                            BorderThickness="1" CornerRadius="8" Padding="14">
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
                             <StackPanel VerticalAlignment="Center">
                                 <TextBlock Text="{loc:Translate GlobalSettings.Support.Question}" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
                                 <TextBlock Text="{loc:Translate GlobalSettings.Support.Description}" FontSize="12" Foreground="{DynamicResource TextMutedBrush}" Margin="0,2,0,0"/>
                             </StackPanel>
-                            <Button Grid.Column="1" Content="{loc:Translate GlobalSettings.Support.Report}" Command="{Binding ReportBugCommand}" Padding="16,8" Background="#E50914" Foreground="White" CornerRadius="8"/>
+                            <Button Grid.Column="1" Content="{loc:Translate GlobalSettings.Support.Report}" Command="{Binding ReportBugCommand}" Theme="{StaticResource ErrorButton}"/>
                         </Grid>
                     </Border>
 

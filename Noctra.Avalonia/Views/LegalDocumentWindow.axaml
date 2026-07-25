@@ -17,23 +17,7 @@
         CanResize="True"
         TransparencyLevelHint="Transparent"
         Background="Transparent"
-        FontFamily="{StaticResource DefaultFontFamily}">
-
-    <Window.Styles>
-        <Style Selector="Button.LegalPrimary">
-            <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="CornerRadius" Value="8"/>
-            <Setter Property="Padding" Value="24,10"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="FontSize" Value="14"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="BorderThickness" Value="0"/>
-        </Style>
-        <Style Selector="Button.LegalPrimary:pointerover">
-            <Setter Property="Background" Value="{DynamicResource AccentLightBrush}"/>
-        </Style>
-    </Window.Styles>
+>
 
     <Border Background="{DynamicResource BackgroundGradientBrush}"
             BorderBrush="{DynamicResource BorderBrush}"
@@ -47,7 +31,7 @@
                                             Kind="FileDocumentOutline"
                                             Width="28"
                                             Height="28"
-                                            Foreground="{DynamicResource AccentLightBrush}"
+                                            Foreground="{DynamicResource AccentBrush}"
                                             VerticalAlignment="Center"/>
                 <TextBlock Grid.Column="1"
                            Text="{Binding TitleText}"
@@ -90,10 +74,9 @@
 
             <Button Grid.Row="2"
                     Content="{Binding CloseButtonText}"
-                    Classes="LegalPrimary"
+                    Theme="{StaticResource PrimaryButtonStyle}"
                     HorizontalAlignment="Right"
                     Margin="0,18,0,0"
-                    CornerRadius="6"
                     Click="Close_Click"/>
         </Grid>
     </Border>

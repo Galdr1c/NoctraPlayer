@@ -22,6 +22,7 @@
         </ResourceDictionary>
       </ResourceDictionary.ThemeDictionaries>
       <ResourceDictionary.MergedDictionaries>
+        <ResourceInclude Source="avares://Noctra/Resources/Tokens.axaml" />
         <ResourceInclude Source="avares://Noctra/Resources/Colors.axaml" />
         <ResourceInclude Source="avares://Noctra/Resources/Converters.axaml" />
         <ResourceInclude Source="avares://Noctra/Resources/Styles.axaml" />

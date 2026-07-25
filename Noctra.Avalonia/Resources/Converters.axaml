@@ -72,4 +72,5 @@
   <converters:BoolToTranslateYConverter      x:Key="BoolToTranslateYConverter" />
   <converters:BoolToEpgPanelMarginConverter  x:Key="BoolToEpgPanelMarginConverter" />
   <converters:LogoThemeConverter x:Key="LogoThemeConverter" />
+  <converters:ResponsiveCardMetricConverter x:Key="ResponsiveCardMetricConverter" />
 </ResourceDictionary>

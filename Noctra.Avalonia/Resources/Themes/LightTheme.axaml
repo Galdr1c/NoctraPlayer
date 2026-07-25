@@ -33,7 +33,9 @@
   <SolidColorBrush x:Key="AccentHoverBrush" Color="{StaticResource Accent600Color}" />
   <SolidColorBrush x:Key="AccentLightBrush" Color="{StaticResource Accent300Color}" />
   <SolidColorBrush x:Key="GlowBrush" Color="{StaticResource GlowColor}" />
+  <SolidColorBrush x:Key="TextSelectionBrush" Color="#997C3AED" />
   <SolidColorBrush x:Key="NavActiveBackgroundBrush" Color="#338B5CF6" />
+  <SolidColorBrush x:Key="PlaceHolderBrush" Color="#E9E9E9" />
 
   <SolidColorBrush x:Key="TextPrimaryBrush" Color="{StaticResource TextPrimaryColor}" />
   <SolidColorBrush x:Key="TextSecondaryBrush" Color="{StaticResource TextSecondaryColor}" />
@@ -57,10 +59,16 @@
   <SolidColorBrush x:Key="InteractivePressedBrush" Color="#E0E0E0" />
   <SolidColorBrush x:Key="ScrollBarThumbBrush" Color="#CCCCCC" Opacity="0.6" />
   <SolidColorBrush x:Key="ScrollBarHoverBrush" Color="{StaticResource AccentBrush}" />
+  <SolidColorBrush x:Key="TextControlSelectionHighlightColor" Color="#8B5CF6" />
 
   <LinearGradientBrush x:Key="PrimaryGradientBrush" StartPoint="0,0" EndPoint="1,1">
     <GradientStop Color="#8B5CF6" Offset="0.0" />
     <GradientStop Color="#7C3AED" Offset="1.0" />
+  </LinearGradientBrush>
+
+  <LinearGradientBrush x:Key="IconGradientBrush" StartPoint="0,0" EndPoint="1,1">
+    <GradientStop Color="#F1EDFF" Offset="0.0" />
+    <GradientStop Color="#E5D9FF" Offset="1.0" />
   </LinearGradientBrush>
 
   <LinearGradientBrush x:Key="BackgroundGradientBrush" StartPoint="0%,0%" EndPoint="100%,100%">
@@ -68,27 +76,6 @@
     <GradientStop Color="#FAFAFA" Offset="0.4" />
     <GradientStop Color="#F5F5F5" Offset="0.7" />
     <GradientStop Color="#F0F0F0" Offset="1.0" />
-  </LinearGradientBrush>
-
-  <LinearGradientBrush x:Key="HeaderGradientBrush" StartPoint="0,0" EndPoint="1,0">
-    <GradientStop Color="#FFFFFF" Offset="0.0" />
-    <GradientStop Color="#F5F5F5" Offset="1.0" />
-  </LinearGradientBrush>
-
-  <LinearGradientBrush x:Key="GlowGradientBrush" StartPoint="0,0" EndPoint="1,0">
-    <GradientStop Color="{StaticResource GlowColor}" Offset="0.0" />
-    <GradientStop Color="{StaticResource Accent500Color}" Offset="1.0" />
-  </LinearGradientBrush>
-
-  <LinearGradientBrush x:Key="HeroOverlayBrush" StartPoint="0,0" EndPoint="0,1">
-    <GradientStop Color="Transparent" Offset="0.0" />
-    <GradientStop Color="#99F7F6FF" Offset="0.5" />
-    <GradientStop Color="#F7F6FF" Offset="1.0" />
-  </LinearGradientBrush>
-
-  <LinearGradientBrush x:Key="IconGradientBrush" StartPoint="0,0" EndPoint="1,1">
-    <GradientStop Color="{StaticResource Accent600Color}" Offset="0.0" />
-    <GradientStop Color="{StaticResource GlowColor}" Offset="1.0" />
   </LinearGradientBrush>
 
   <LinearGradientBrush x:Key="CardHoverGradientBrush" StartPoint="0,0" EndPoint="1,0">
@@ -101,39 +88,8 @@
     <GradientStop Color="#EDE9FE" Offset="1.0" />
   </LinearGradientBrush>
   <SolidColorBrush x:Key="PremiumCardForegroundBrush" Color="{StaticResource Accent700Color}" />
-
-  <BoxShadows x:Key="DefaultShadow">0 2 10 0 #15000000</BoxShadows>
-  <BoxShadows x:Key="CardShadow">0 4 15 0 #1A000000</BoxShadows>
-  <BoxShadows x:Key="HeroShadow">0 8 24 0 #20000000</BoxShadows>
-  <BoxShadows x:Key="AccentGlow">0 0 10 0 #258B5CF6</BoxShadows>
-  <BoxShadows x:Key="FocusGlow">0 0 6 0 #208B5CF6</BoxShadows>
-
-  <FontFamily x:Key="DefaultFontFamily">Inter</FontFamily>
-
-  <x:Double x:Key="FontSizeH1">32</x:Double>
-  <x:Double x:Key="FontSizeH2">24</x:Double>
-  <x:Double x:Key="FontSizeH3">20</x:Double>
-  <x:Double x:Key="FontSizeBody">14</x:Double>
-  <x:Double x:Key="FontSizeBodyLarge">16</x:Double>
-  <x:Double x:Key="FontSizeCaption">12</x:Double>
-  <x:Double x:Key="FontSizeSmall">11</x:Double>
-
-  <Thickness x:Key="PagePadding">32</Thickness>
-  <Thickness x:Key="SectionPadding">24</Thickness>
-  <Thickness x:Key="CardPadding">16</Thickness>
-  <Thickness x:Key="ItemPadding">12</Thickness>
-  <Thickness x:Key="SmallPadding">8</Thickness>
-  <x:Double x:Key="CardGap">16</x:Double>
-  <x:Double x:Key="RailGap">24</x:Double>
-
-  <CornerRadius x:Key="RadiusSmall">8</CornerRadius>
-  <CornerRadius x:Key="RadiusMedium">12</CornerRadius>
-  <CornerRadius x:Key="RadiusLarge">16</CornerRadius>
-  <CornerRadius x:Key="RadiusXLarge">24</CornerRadius>
-  <CornerRadius x:Key="RadiusPill">100</CornerRadius>
-
-
-  <!-- Premium Badge - Base -->
+  
+    <!-- Premium Badge - Base -->
   <LinearGradientBrush x:Key="PremiumBadgeBrush"
                       StartPoint="0%,0%"
                       EndPoint="100%,100%">
@@ -149,7 +105,6 @@
   <SolidColorBrush x:Key="PremiumBadgeMutedTextBrush" Color="#F3E8FF" />
   <SolidColorBrush x:Key="PremiumBadgeGlowBrush" Color="#A855F7" />
 
-
   <!-- Overlay brushes for semi-transparent panels -->
   <SolidColorBrush x:Key="OverlayBackgroundBrush" Color="#0A000000" />
   <SolidColorBrush x:Key="OverlayTextBrush" Color="#CC1A1535" />
@@ -163,7 +118,24 @@
   <SolidColorBrush x:Key="DangerSubtleBrush" Color="#1AEF4444" />
   <SolidColorBrush x:Key="DangerBrush" Color="{StaticResource ErrorColor}" />
 
-  <!-- Theme Selection Preview Resources -->
+  <!-- Player overlays intentionally stay dark in every app theme for video readability. -->
+  <SolidColorBrush x:Key="PlayerSurfaceBrush" Color="#000000" />
+  <SolidColorBrush x:Key="PlayerOverlayPanelBrush" Color="#E60A0A0A" />
+  <SolidColorBrush x:Key="PlayerOverlaySheetBrush" Color="#F20A0A0A" />
+  <SolidColorBrush x:Key="PlayerOverlayButtonBrush" Color="#99000000" />
+  <SolidColorBrush x:Key="PlayerOverlayStrongBrush" Color="#E6000000" />
+  <SolidColorBrush x:Key="PlayerOverlayShieldBrush" Color="#B3000000" />
+  <SolidColorBrush x:Key="PlayerOverlayTextBrush" Color="#FFFFFFFF" />
+  <SolidColorBrush x:Key="PlayerOverlaySecondaryTextBrush" Color="#CCFFFFFF" />
+  <SolidColorBrush x:Key="PlayerOverlayBorderBrush" Color="#40FFFFFF" />
+  <LinearGradientBrush x:Key="PlayerTopGradientBrush" StartPoint="0%,0%" EndPoint="0%,100%">
+    <GradientStop Color="#CC000000" Offset="0" />
+    <GradientStop Color="#00000000" Offset="1" />
+  </LinearGradientBrush>
+  <LinearGradientBrush x:Key="PlayerBottomGradientBrush" StartPoint="0%,100%" EndPoint="0%,0%">
+    <GradientStop Color="#D9000000" Offset="0" />
+    <GradientStop Color="#00000000" Offset="1" />
+  </LinearGradientBrush>
   <SolidColorBrush x:Key="ThemePreviewDarkBg" Color="#141414" />
   <SolidColorBrush x:Key="ThemePreviewDarkInnerBg" Color="#1A1A1A" />
   <SolidColorBrush x:Key="ThemePreviewDarkText" Color="#404040" />
@@ -172,5 +144,30 @@
   <SolidColorBrush x:Key="ThemePreviewLightText" Color="#CCCCCC" />
   <SolidColorBrush x:Key="ThemePreviewDarkLabelBrush" Color="White" />
   <SolidColorBrush x:Key="ThemePreviewLightLabelBrush" Color="#666666" />
-</ResourceDictionary>
 
+  <BoxShadows x:Key="DefaultShadow">0 2 10 0 #15000000</BoxShadows>
+  <BoxShadows x:Key="CardShadow">0 4 15 0 #1A000000</BoxShadows>
+  <BoxShadows x:Key="FocusGlow">0 0 6 0 #208B5CF6</BoxShadows>
+  <BoxShadows x:Key="OverlaySheetShadow">0 -10 35 0 #80000000</BoxShadows>
+
+  <x:Double x:Key="FontSizeH1">32</x:Double>
+  <x:Double x:Key="FontSizeH2">24</x:Double>
+  <x:Double x:Key="FontSizeH3">20</x:Double>
+  <x:Double x:Key="FontSizeBody">14</x:Double>
+  <x:Double x:Key="FontSizeBodyLarge">16</x:Double>
+  <x:Double x:Key="FontSizeCaption">12</x:Double>
+  <x:Double x:Key="FontSizeSmall">11</x:Double>
+
+  <Thickness x:Key="PagePadding">16</Thickness>
+  <Thickness x:Key="SectionPadding">16</Thickness>
+  <Thickness x:Key="CardPadding">12</Thickness>
+  <Thickness x:Key="ItemPadding">8</Thickness>
+  <Thickness x:Key="SmallPadding">6</Thickness>
+  <x:Double x:Key="CardGap">12</x:Double>
+
+  <CornerRadius x:Key="RadiusSmall">8</CornerRadius>
+  <CornerRadius x:Key="RadiusMedium">12</CornerRadius>
+  <CornerRadius x:Key="RadiusLarge">16</CornerRadius>
+  <CornerRadius x:Key="RadiusXLarge">24</CornerRadius>
+  <CornerRadius x:Key="RadiusPill">100</CornerRadius>
+</ResourceDictionary>

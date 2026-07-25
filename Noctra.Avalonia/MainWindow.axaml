@@ -196,7 +196,7 @@
   <Grid RowDefinitions="64,*,48" Focusable="True">
 
     <!-- ========== HEADER BAR ========== -->
-    <Border x:Name="HeaderBar" Grid.Row="0" Background="{DynamicResource HeaderGradientBrush}" 
+    <Border x:Name="HeaderBar" Grid.Row="0" Background="{DynamicResource Bg1Brush}" 
             Padding="24,0" PointerPressed="HeaderBar_PointerPressed" Focusable="True">
       <Grid ColumnDefinitions="Auto,*,Auto">
         <!-- Spacer for Logo removal -->
