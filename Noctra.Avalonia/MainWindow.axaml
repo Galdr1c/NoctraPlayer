@@ -148,18 +148,11 @@
       </Style>
   
       <!-- HEADER SEARCH STYLES -->
-      <Style Selector="TextBox.headerSearch">
+      <Style Selector="TextBox.search.headerSearch">
         <Setter Property="Height" Value="40"/>
         <Setter Property="Width" Value="40"/>
         <Setter Property="MinWidth" Value="40"/>
-        <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}"/>
-        <Setter Property="BorderThickness" Value="1.5"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource InputBorderBrush}"/>
-        <Setter Property="CornerRadius" Value="8"/>
         <Setter Property="Padding" Value="0"/>
-        <Setter Property="VerticalContentAlignment" Value="Center"/>
-        <Setter Property="FontSize" Value="13"/>
-        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
         <Setter Property="Watermark" Value=""/>
         <Setter Property="HorizontalAlignment" Value="Right"/>
         <Setter Property="Transitions">
@@ -178,7 +171,7 @@
         <Setter Property="Background" Value="{DynamicResource Surface0Brush}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="Width" Value="300"/>
+        <Setter Property="Width" Value="400"/>
         <Setter Property="Padding" Value="12,6"/>
 
         <Setter Property="Watermark" Value="{loc:Translate Shell.Search.Placeholder}"/>
@@ -188,6 +181,7 @@
       <Style Selector="TextBox.headerSearch:focus /template/ Border#PART_BorderElement, TextBox.headerSearch.notEmpty /template/ Border#PART_BorderElement, TextBox.headerSearch.isSearchView /template/ Border#PART_BorderElement">
         <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="8"/>
       </Style>
 
 
@@ -201,8 +195,8 @@
       <Grid ColumnDefinitions="Auto,*,Auto">
         <!-- Spacer for Logo removal -->
         <Border Width="1" Height="64" Margin="8,0,0,0"/>
-        <!-- New Expanding Search -->
-        <TextBox x:Name="HeaderSearchBox" Classes="headerSearch" 
+        <!-- New Expanding Search --> 
+        <TextBox x:Name="HeaderSearchBox" Classes="search headerSearch" 
                  Classes.notEmpty="{Binding SearchQuery, Converter={StaticResource StringNotEmptyToBoolConverter}}"
                  Classes.isSearchView="{Binding ActiveView, Converter={StaticResource EqualityToBoolConverter}, ConverterParameter=Search}"
                  Grid.Column="1" HorizontalAlignment="Right"
@@ -216,7 +210,20 @@
                                            Foreground="{DynamicResource TextMutedBrush}"/>
             </Border>
           </TextBox.InnerLeftContent>
-        </TextBox>
+           <TextBox.InnerRightContent>
+             <Button x:Name="ClearSearchButton"
+                     Width="32" Height="32"
+                     Background="Transparent"
+                     BorderThickness="0"
+                     Padding="0"
+                     IsVisible="{Binding SearchQuery, Converter={StaticResource StringNotEmptyToBoolConverter}}"
+                     Click="ClearSearchButton_Click"
+                     ToolTip.Tip="{loc:Translate Common.Clear}">
+               <materialIcons:MaterialIcon Kind="CloseCircleOutline" Width="18" Height="18"
+                                   Foreground="{DynamicResource TextMutedBrush}"/>
+             </Button>
+           </TextBox.InnerRightContent>
+         </TextBox>
 
         <!-- Header Actions -->
         <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">

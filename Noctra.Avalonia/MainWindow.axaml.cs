@@ -240,6 +240,11 @@ public partial class MainWindow : Window
 
 
     // === Search Overlay Keyboard ===
+    private void ClearSearchButton_Click(object? sender, RoutedEventArgs e)
+    {
+        _mainViewModel.SearchQuery = string.Empty;
+    }
+
     private void SearchInput_KeyDown(object? sender, KeyEventArgs e)
     {
         if (e.Key == Key.Enter)
