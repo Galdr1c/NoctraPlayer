@@ -11,7 +11,7 @@
              mc:Ignorable="d" d:DesignWidth="390" d:DesignHeight="844"
              x:Class="Noctra.Mobile.Views.MainView"
              x:DataType="vm:MainViewModel"
-             Background="{DynamicResource Bg0Brush}">
+             Background="Transparent">
   <Design.DataContext>
     <vm:MainViewModel />
   </Design.DataContext>
@@ -211,6 +211,12 @@
   </UserControl.Styles>
 
   <Grid RowDefinitions="Auto,*,Auto" ColumnDefinitions="Auto,*">
+    <Grid x:Name="ShellLayer"
+          Grid.RowSpan="3"
+          Grid.ColumnSpan="2"
+          RowDefinitions="Auto,*,Auto"
+          ColumnDefinitions="Auto,*"
+          Background="{DynamicResource Bg0Brush}">
     <Border x:Name="HeaderBar"
             Grid.Row="0"
             Grid.ColumnSpan="2"
@@ -608,12 +614,13 @@
                                        Grid.ColumnSpan="2"
                                        ZIndex="47000"
                                        IsVisible="False" />
+    </Grid>
 
     <Border x:Name="PlayerHost"
             Grid.RowSpan="3"
             Grid.ColumnSpan="2"
             ZIndex="48000"
-            Background="Black"
+            Background="Transparent"
             IsVisible="False">
       <views:MobilePlayerView x:Name="MobilePlayerContent"
                               HorizontalAlignment="Stretch"

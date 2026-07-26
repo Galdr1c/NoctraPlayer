@@ -24,6 +24,7 @@ namespace Noctra.Android.Services;
 public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerService
 {
     private const string DefaultUserAgent = "Noctra.Mobile/1.0";
+    private const int PositionUpdateIntervalMs = 500;
 
     private readonly AndroidVideoSurfaceService _videoSurfaceService;
     private readonly Context _applicationContext;
@@ -53,6 +54,8 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
     private DataUsageLevel _lastDataUsage = DataUsageLevel.Auto;
     private CancellationTokenSource? _reinitializeCts;
     private bool _requiresPlayerRebuild;
+    private readonly Timer _positionUpdateTimer;
+    private int _positionUpdateQueued;
 
     // Cached values to avoid cross-thread calls when queried outside main thread
     private bool _isPlaying;
@@ -138,6 +141,11 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
         _settingsService = settingsService;
         _networkService = networkService;
         _localizationService = localizationService;
+        _positionUpdateTimer = new Timer(
+            _ => QueuePositionUpdate(),
+            null,
+            Timeout.Infinite,
+            Timeout.Infinite);
 
         ApplySettingsSnapshot(_settingsService.Settings, updateAudioState: false);
         _settingsService.SettingsChanged += OnSettingsChanged;
@@ -429,6 +437,8 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
     {
         RunOnMainThread(() =>
         {
+            StopPositionUpdates();
+
             if (_exoPlayer is null)
             {
                 _state = PlaybackState.Stopped;
@@ -552,6 +562,9 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
     {
         if (!_isDisposed)
         {
+            _isDisposed = true;
+            StopPositionUpdates();
+            _positionUpdateTimer.Dispose();
             _settingsService.SettingsChanged -= OnSettingsChanged;
             _videoSurfaceService.SurfaceAvailable -= VideoSurfaceService_SurfaceAvailable;
             _videoSurfaceService.SurfaceDestroyed -= VideoSurfaceService_SurfaceDestroyed;
@@ -562,8 +575,6 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
             {
                 ReleasePlayer();
             });
-
-            _isDisposed = true;
         }
 
         base.Dispose(disposing);
@@ -723,6 +734,8 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
 
     private void ReleasePlayer()
     {
+        StopPositionUpdates();
+
         if (_exoPlayer is null)
         {
             return;
@@ -744,6 +757,68 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
         finally
         {
             _exoPlayer = null;
+        }
+    }
+
+    private void StartPositionUpdates()
+    {
+        if (_isDisposed)
+        {
+            return;
+        }
+
+        _positionUpdateTimer.Change(0, PositionUpdateIntervalMs);
+    }
+
+    private void StopPositionUpdates()
+    {
+        try
+        {
+            _positionUpdateTimer.Change(Timeout.Infinite, Timeout.Infinite);
+        }
+        catch (ObjectDisposedException)
+        {
+            // A late player callback can race with service disposal.
+        }
+    }
+
+    private void QueuePositionUpdate()
+    {
+        if (_isDisposed || !_isPlaying ||
+            Interlocked.Exchange(ref _positionUpdateQueued, 1) != 0)
+        {
+            return;
+        }
+
+        RunOnMainThread(() =>
+        {
+            try
+            {
+                PublishPlaybackPosition();
+            }
+            finally
+            {
+                Volatile.Write(ref _positionUpdateQueued, 0);
+            }
+        });
+    }
+
+    private void PublishPlaybackPosition()
+    {
+        if (_isDisposed || !_isPlaying || _exoPlayer is null)
+        {
+            return;
+        }
+
+        try
+        {
+            _currentTimeMs = Math.Max(0, _exoPlayer.CurrentPosition);
+            _duration = NormalizeDurationSeconds(_exoPlayer.Duration);
+            PositionChanged?.Invoke(this, _currentTimeMs / 1000d);
+        }
+        catch (Exception ex)
+        {
+            LogDebug($"Failed to publish playback position: {ex.Message}");
         }
     }
 
@@ -1273,12 +1348,14 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
             switch (playbackState)
             {
                 case BasePlayer.InterfaceConsts.StateIdle:
+                    _service.StopPositionUpdates();
                     _service._state = PlaybackState.Stopped;
                     _service._hasLoadedMedia = false;
                     _service._isPlaying = false;
                     _service.PlayingChanged?.Invoke(_service, false);
                     break;
                 case BasePlayer.InterfaceConsts.StateBuffering:
+                    _service.StopPositionUpdates();
                     _service._state = PlaybackState.Buffering;
                     _service.BufferingChanged?.Invoke(_service, 0);
                     break;
@@ -1298,11 +1375,17 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
                     {
                         AndroidVideoPlayerService.LogDebug($"Failed to read player position on ready: {ex.Message}");
                     }
+                    _service.BufferingChanged?.Invoke(_service, 100f);
                     _service.PlayerReady?.Invoke(_service, EventArgs.Empty);
                     _service.PlayingChanged?.Invoke(_service, _service._isPlaying);
+                    if (_service._isPlaying)
+                    {
+                        _service.StartPositionUpdates();
+                    }
                     _service.UpdateStreamQuality();
                     break;
                 case BasePlayer.InterfaceConsts.StateEnded:
+                    _service.StopPositionUpdates();
                     _service._state = PlaybackState.Stopped;
                     _service._isPlaying = false;
                     _service.PlayingChanged?.Invoke(_service, false);
@@ -1318,11 +1401,20 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
             {
                 _service._state = isPlaying ? PlaybackState.Playing : PlaybackState.Paused;
             }
+            if (isPlaying)
+            {
+                _service.StartPositionUpdates();
+            }
+            else
+            {
+                _service.StopPositionUpdates();
+            }
             _service.PlayingChanged?.Invoke(_service, isPlaying);
         }
 
         public void OnPlayerError(PlaybackException error)
         {
+            _service.StopPositionUpdates();
             _service._state = PlaybackState.Error;
             _service._isPlaying = false;
             _service.ErrorOccurred?.Invoke(_service, error.Message ?? "ExoPlayer error");

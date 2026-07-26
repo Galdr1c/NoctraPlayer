@@ -24,10 +24,10 @@ public class PlayerPlaybackController
             {
                 _vm._isContentTransitioning = false;
                 _vm._isPlaybackEnded = false;
-                if (_vm.BufferingProgress >= 99f)
-                {
-                    _vm.IsBuffering = false;
-                }
+                // A playing callback is authoritative: decoded media is flowing,
+                // even if a backend did not emit a final 100% buffering callback.
+                _vm.BufferingProgress = 100f;
+                _vm.IsBuffering = false;
                 _vm.UpdateMediaInfo();
                 _ = _vm.RefreshTracksWithRetryAsync();
                 _vm.RestartAutoHideTimer();

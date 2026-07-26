@@ -9,6 +9,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.Platform;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Media;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 #if DEBUG
@@ -131,6 +132,19 @@ public partial class MainView : UserControl
 
         // Çentik / sistem çubukları (safe-area) padding'lerini uygula ve değişimleri dinle.
         var topLevel = TopLevel.GetTopLevel(this);
+        if (OperatingSystem.IsAndroid() && topLevel is not null)
+        {
+            // The native TextureView lives below Avalonia's SurfaceView so player
+            // controls can stay above the video. Transparent top-level composition
+            // lets pixels not painted by the player overlay reveal that native view.
+            topLevel.TransparencyLevelHint =
+            [
+                WindowTransparencyLevel.Transparent,
+                WindowTransparencyLevel.None
+            ];
+            topLevel.Background = Brushes.Transparent;
+        }
+
         if (topLevel?.InsetsManager is { } insets)
         {
             insets.SafeAreaChanged -= OnSafeAreaChanged;
@@ -1317,6 +1331,7 @@ public partial class MainView : UserControl
         var isPlayerVisible = PlayerHost.IsVisible;
         _isPlayerFullScreen = isPlayerVisible && _playerViewModel?.IsFullScreen == true;
 
+        ShellLayer.IsVisible = !isPlayerVisible;
         HeaderBar.IsVisible = !isPlayerVisible;
         if (isPlayerVisible)
         {

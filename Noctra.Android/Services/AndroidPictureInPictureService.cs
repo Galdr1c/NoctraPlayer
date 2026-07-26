@@ -38,22 +38,41 @@ public sealed class AndroidPictureInPictureService : IPictureInPictureService
 
     public bool IsInPictureInPictureMode => _activityProvider.CurrentActivity?.IsInPictureInPictureMode == true;
 
-    public Task<bool> EnterPictureInPictureAsync()
+    public async Task<bool> EnterPictureInPictureAsync()
     {
         var activity = _activityProvider.CurrentActivity;
         if (!IsSupported || activity is null || !_state.CanEnterPictureInPicture)
         {
-            return Task.FromResult(false);
+            return false;
         }
 
         var parameters = BuildParams(autoEnterEnabled: false);
         if (parameters is null)
         {
-            return Task.FromResult(false);
+            return false;
         }
 
-        var entered = activity.EnterPictureInPictureMode(parameters);
-        return Task.FromResult(entered);
+        var mainActivity = activity as MainActivity;
+        if (mainActivity is not null)
+        {
+            await mainActivity.PrepareVideoSurfaceForPictureInPictureAsync();
+        }
+
+        try
+        {
+            var entered = activity.EnterPictureInPictureMode(parameters);
+            if (!entered)
+            {
+                mainActivity?.RestoreAvaloniaSurfaceAfterFailedPictureInPictureEntry();
+            }
+
+            return entered;
+        }
+        catch
+        {
+            mainActivity?.RestoreAvaloniaSurfaceAfterFailedPictureInPictureEntry();
+            return false;
+        }
     }
 
     public Task<bool> TryEnterAutoPictureInPictureAsync()

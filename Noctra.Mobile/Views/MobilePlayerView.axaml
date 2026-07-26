@@ -21,7 +21,7 @@
     </Style>
   </UserControl.Styles>
 
-  <Grid Background="{DynamicResource PlayerSurfaceBrush}"
+  <Grid Background="Transparent"
         ClipToBounds="True"
         Tapped="OnPlayerBackgroundTapped">
     <!-- Double tap and gesture zones split the visible player area into left/right halves. -->

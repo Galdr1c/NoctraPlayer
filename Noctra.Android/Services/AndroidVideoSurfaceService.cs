@@ -13,6 +13,7 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurface
 {
     private readonly AndroidActivityProvider _activityProvider;
     private readonly object _surfaceLock = new();
+    private View? _backdropView;
     private TextureView? _textureView;
     private Surface? _currentSurface;
     private TaskCompletionSource<Surface>? _surfaceReady;
@@ -81,12 +82,19 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurface
                 parent.RemoveView(_textureView);
             }
 
+            if (_backdropView?.Parent is ViewGroup backdropParent)
+            {
+                backdropParent.RemoveView(_backdropView);
+            }
+
             if (_textureView is not null)
             {
                 _textureView.SurfaceTextureListener = null;
             }
             _textureView?.Dispose();
             _textureView = null;
+            _backdropView?.Dispose();
+            _backdropView = null;
 
             lock (_surfaceLock)
             {
@@ -104,12 +112,25 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurface
 
     public void SetBounds(int x, int y, int width, int height)
     {
-        _boundsX = x;
-        _boundsY = y;
-        _boundsW = width;
-        _boundsH = height;
-
         var activity = _activityProvider.CurrentActivity;
+        if (activity?.IsInPictureInPictureMode == true)
+        {
+            // PiP resizes the Avalonia tree through transient 1x1 measurements.
+            // The native video surface must fill the PiP activity window instead
+            // of accepting those placeholder dimensions.
+            _boundsX = 0;
+            _boundsY = 0;
+            _boundsW = -1;
+            _boundsH = -1;
+        }
+        else
+        {
+            _boundsX = x;
+            _boundsY = y;
+            _boundsW = width;
+            _boundsH = height;
+        }
+
         if (activity is null)
         {
             return;
@@ -474,6 +495,9 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurface
                 _textureView?.Dispose();
                 _textureView = null;
             }
+
+            _backdropView?.Dispose();
+            _backdropView = null;
         }
 
         base.Dispose(disposing);
@@ -497,17 +521,33 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurface
             _surfaceReady = new TaskCompletionSource<Surface>(TaskCreationOptions.RunContinuationsAsynchronously);
         }
 
+        // TextureView does not support background drawables. A separate black
+        // regular view supplies the letterbox/pillarbox colour without touching
+        // the decoded-video surface.
+        _backdropView = new View(activity);
+        _backdropView.SetBackgroundColor(Color.Black);
+        _backdropView.Clickable = false;
+        _backdropView.Focusable = false;
+        _backdropView.ImportantForAccessibility = ImportantForAccessibility.No;
+        content.AddView(
+            _backdropView,
+            content.ChildCount,
+            new WidgetFrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MatchParent,
+                ViewGroup.LayoutParams.MatchParent));
+
         _textureView = new TextureView(activity);
         _textureView.SurfaceTextureListener = this;
         _textureView.Clickable = false;
         _textureView.Focusable = false;
         _textureView.ImportantForAccessibility = ImportantForAccessibility.No;
 
-        // TextureView'i content root'un en altına ekle (z-index 0) ki Avalonia
-        // overlay kontrolleri her zaman native view'ın önünde kalsın.
+        // TextureView is the last regular Android view so its decoded pixels are
+        // preserved in the window buffer. Avalonia's translucent SurfaceView is
+        // composed above that window and keeps the player controls on top.
         content.AddView(
             _textureView,
-            0,
+            content.ChildCount,
             new WidgetFrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MatchParent,
                 ViewGroup.LayoutParams.MatchParent));

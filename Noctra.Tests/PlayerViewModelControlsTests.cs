@@ -1224,6 +1224,20 @@ namespace Noctra.Tests
         }
 
         [Fact]
+        public void PlayingChanged_TrueEvent_CompletesBufferingAndAllowsOverlayAutoHide()
+        {
+            var ctx = new PlayerTestContext();
+            ctx.VM.IsBuffering = true;
+            ctx.VM.BufferingProgress = 0;
+
+            ctx.VideoService.SimulatePlayingChanged(true);
+
+            Assert.False(ctx.VM.IsBuffering);
+            Assert.Equal(100f, ctx.VM.BufferingProgress);
+            Assert.True(ctx.VM.OverlayManager.CanAutoHideOverlay());
+        }
+
+        [Fact]
         public void PlayingChanged_FalseEvent_SetsIsPlayingFalse()
         {
             var ctx = new PlayerTestContext();

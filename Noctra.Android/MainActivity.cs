@@ -5,6 +5,7 @@ using Android.App;
 using Android.Content;
 using Android.Content.PM;
 using Android.Content.Res;
+using Android.Graphics;
 using Android.OS;
 using Android.Util;
 using Android.Views;
@@ -27,7 +28,11 @@ namespace Noctra.Android;
     SupportsPictureInPicture = true,
     ResizeableActivity = true,
     WindowSoftInputMode = SoftInput.AdjustResize,
-    ConfigurationChanges = ConfigChanges.Orientation | ConfigChanges.ScreenSize | ConfigChanges.SmallestScreenSize | ConfigChanges.UiMode)]
+    ConfigurationChanges = ConfigChanges.Orientation |
+                           ConfigChanges.ScreenSize |
+                           ConfigChanges.SmallestScreenSize |
+                           ConfigChanges.ScreenLayout |
+                           ConfigChanges.UiMode)]
 public class MainActivity : AvaloniaMainActivity
 {
     // OnStop'ta bizim duraklattığımız oynatmayı OnStart'ta devam ettirmek için işaret.
@@ -57,6 +62,7 @@ public class MainActivity : AvaloniaMainActivity
         try
         {
             base.OnCreate(savedInstanceState);
+            ConfigureAvaloniaOverlaySurface();
         }
         catch (Exception ex)
         {
@@ -97,6 +103,129 @@ public class MainActivity : AvaloniaMainActivity
 #endif
 
         Window?.DecorView?.Post(() => PerformanceTrace.Mark("android.first_ui_turn"));
+    }
+
+    private void ConfigureAvaloniaOverlaySurface(int remainingAttempts = 2)
+    {
+        var decorView = Window?.DecorView;
+        var content = decorView?
+            .FindViewById(global::Android.Resource.Id.Content) as ViewGroup;
+        var surfaceView = FindSurfaceView(content);
+        if (surfaceView is null)
+        {
+            if (remainingAttempts > 0 && decorView is not null)
+            {
+                decorView.Post(() => ConfigureAvaloniaOverlaySurface(remainingAttempts - 1));
+            }
+
+            return;
+        }
+
+        // The native video TextureView is drawn into the activity window. Avalonia's
+        // surface needs an alpha channel and must be composed above that window so
+        // decoded video and player controls remain visible together.
+        surfaceView.SetZOrderOnTop(true);
+        surfaceView.Holder.SetFormat(Format.Translucent);
+        surfaceView.SetBackgroundColor(Color.Transparent);
+    }
+
+    private static SurfaceView? FindSurfaceView(View? view)
+    {
+        if (view is SurfaceView surfaceView)
+        {
+            return surfaceView;
+        }
+
+        if (view is not ViewGroup group)
+        {
+            return null;
+        }
+
+        for (var index = 0; index < group.ChildCount; index++)
+        {
+            if (FindSurfaceView(group.GetChildAt(index)) is { } childSurface)
+            {
+                return childSurface;
+            }
+        }
+
+        return null;
+    }
+
+    private void SetAvaloniaSurfaceVisibilityForPictureInPicture(
+        bool isInPictureInPictureMode)
+    {
+        var content = Window?.DecorView?
+            .FindViewById(global::Android.Resource.Id.Content) as ViewGroup;
+        var surfaceView = FindSurfaceView(content);
+        if (surfaceView is null)
+        {
+            return;
+        }
+
+        // Android PiP captures the activity window. Avalonia's translucent
+        // SurfaceView is useful for full-screen controls, but in PiP it can
+        // contribute a stale UI buffer above the native video TextureView.
+        // PiP uses Android's own controls, so expose the video window directly.
+        surfaceView.Visibility = isInPictureInPictureMode
+            ? ViewStates.Gone
+            : ViewStates.Visible;
+
+        if (!isInPictureInPictureMode)
+        {
+            ConfigureAvaloniaOverlaySurface();
+            surfaceView.RequestLayout();
+            surfaceView.Invalidate();
+        }
+    }
+
+    internal Task PrepareVideoSurfaceForPictureInPictureAsync()
+    {
+        var completion = new TaskCompletionSource<bool>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+
+        RunOnUiThread(() =>
+        {
+            SetAvaloniaSurfaceVisibilityForPictureInPicture(
+                isInPictureInPictureMode: true);
+
+            var decorView = Window?.DecorView;
+            if (decorView is null)
+            {
+                completion.TrySetResult(true);
+                return;
+            }
+
+            decorView.RequestLayout();
+            decorView.Invalidate();
+
+            // PiP takes its source frame while EnterPictureInPictureMode runs.
+            // Let Android commit two UI turns after removing Avalonia's overlay
+            // surface so the source frame contains the native video, not a stale
+            // Avalonia buffer.
+            void CompleteAfterSecondUiTurn() => completion.TrySetResult(true);
+            void QueueSecondUiTurn()
+            {
+                if (!decorView.Post(CompleteAfterSecondUiTurn))
+                {
+                    completion.TrySetResult(true);
+                }
+            }
+
+            if (!decorView.Post(QueueSecondUiTurn))
+            {
+                completion.TrySetResult(true);
+            }
+        });
+
+        return completion.Task;
+    }
+
+    internal void RestoreAvaloniaSurfaceAfterFailedPictureInPictureEntry()
+    {
+        RunOnUiThread(() =>
+            SetAvaloniaSurfaceVisibilityForPictureInPicture(
+                isInPictureInPictureMode: false));
     }
 
     protected override void OnActivityResult(int requestCode, Result resultCode, Intent? data)
@@ -254,9 +383,17 @@ public class MainActivity : AvaloniaMainActivity
         Configuration? newConfig)
     {
         base.OnPictureInPictureModeChanged(isInPictureInPictureMode, newConfig);
+        SetAvaloniaSurfaceVisibilityForPictureInPicture(isInPictureInPictureMode);
 
         if (Avalonia.Application.Current is Noctra.Mobile.App app)
         {
+            if (isInPictureInPictureMode)
+            {
+                app.Services?
+                    .GetService<AndroidVideoSurfaceService>()?
+                    .SetBounds(0, 0, -1, -1);
+            }
+
             app.Services?
                 .GetService<AndroidPictureInPictureService>()?
                 .NotifyPictureInPictureModeChanged(isInPictureInPictureMode);
