@@ -135,7 +135,7 @@ public sealed class MobileNavigationBehaviorTests
         var controller = ReadProjectFile("Noctra.Mobile", "Behaviors", "MobileScrollEdgeFeedbackController.cs");
 
         // Hide() must reset _isScrollGestureActive and _lastFeedbackUtc
-        var hideMethod = ExtractMethod(controller, "Hide()");
+        var hideMethod = ExtractMethod(controller, "Hide");
         Assert.Contains("_isScrollGestureActive = false", hideMethod);
         Assert.Contains("_lastFeedbackUtc = DateTime.MinValue", hideMethod);
     }
@@ -182,7 +182,9 @@ public sealed class MobileNavigationBehaviorTests
 
         // Expanded mode must use DynamicResource NavRailWidth
         Assert.Contains("Border#NavigationRail:not(.compact)", mainView);
-        Assert.Contains("Width=\"{DynamicResource NavRailWidth}\"", mainView);
+        Assert.Contains(
+            "<Setter Property=\"Width\" Value=\"{DynamicResource NavRailWidth}\"",
+            mainView);
     }
 
     [Fact]
@@ -192,7 +194,7 @@ public sealed class MobileNavigationBehaviorTests
 
         // Compact mode must set Width=56
         Assert.Contains("Border#NavigationRail.compact", mainView);
-        Assert.Contains("Width=\"56\"", mainView);
+        Assert.Contains("<Setter Property=\"Width\" Value=\"56\"", mainView);
     }
 
     [Fact]
@@ -224,7 +226,7 @@ public sealed class MobileNavigationBehaviorTests
         var railBorder = Regex.Match(mainView,
             @"<Border x:Name=""NavigationRail""[\s\S]*?>" );
         Assert.True(railBorder.Success);
-        Assert.DoesNotContain("Width=", railBorder.Value);
+        Assert.DoesNotMatch(@"(?<!Min)Width=", railBorder.Value);
     }
 
     [Fact]
@@ -240,24 +242,22 @@ public sealed class MobileNavigationBehaviorTests
     // ──────────────────────────────────────────────────────────────
 
     [Fact]
-    public void BottomNav_MoreButton_IsHiddenByDefault()
+    public void BottomNav_HasVisibleMoreDestination()
     {
         var mainView = ReadProjectFile("Noctra.Mobile", "Views", "MainView.axaml");
 
-        // More button in bottom nav must have IsVisible=False by default
-        Assert.Contains("x:Name=\"BottomNavMoreButton\"", mainView);
-        Assert.Matches(
-            @"x:Name=""BottomNavMoreButton""[\s\S]*?IsVisible=""False""",
-            mainView);
+        Assert.Contains("ColumnDefinitions=\"*,*,*,*,*\"", mainView);
+        Assert.Contains("Tag=\"More\"", mainView);
     }
 
     [Fact]
-    public void UpdateNavigationMode_HidesMoreButtonInPortrait()
+    public void UpdateNavigationMode_ShowsBottomNavigationInPortrait()
     {
         var mainViewCs = ReadProjectFile("Noctra.Mobile", "Views", "MainView.axaml.cs");
 
-        // More button must be explicitly hidden in UpdateNavigationMode
-        Assert.Contains("BottomNavMoreButton.IsVisible = false;", mainViewCs);
+        Assert.Contains(
+            "BottomNavigation.IsVisible = !useNavigationRail && canShowNavigation;",
+            mainViewCs);
     }
 
     [Fact]

@@ -51,6 +51,25 @@
     <Setter Property="Background" Value="{DynamicResource InteractivePressedBrush}" />
   </Style>
 
+  <Style Selector="Button.DesktopSettingsSelectionButton">
+    <Setter Property="MinHeight" Value="{DynamicResource DesktopControlHeight}" />
+    <Setter Property="Padding" Value="14,0" />
+    <Setter Property="Background" Value="{DynamicResource Surface1Brush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="4" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="Cursor" Value="Hand" />
+  </Style>
+  <Style Selector="Button.DesktopSettingsSelectionButton:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource InteractiveHoverBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+  </Style>
+  <Style Selector="Button.DesktopSettingsSelectionButton:pressed /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource InteractivePressedBrush}" />
+  </Style>
+
   <Style Selector="Border.DesktopSearchBox">
     <Setter Property="MinHeight" Value="{DynamicResource DesktopControlHeight}" />
     <Setter Property="Background" Value="{DynamicResource Surface1Brush}" />
@@ -64,7 +83,7 @@
     <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
     <Setter Property="BorderThickness" Value="1,1,1,0" />
     <Setter Property="CornerRadius" Value="8,8,0,0" />
-    <Setter Property="Margin" Value="300,0,300,0" />
+    <Setter Property="Margin" Value="0" />
     <Setter Property="Padding" Value="12,8" />
     <Setter Property="BoxShadow" Value="{DynamicResource OverlaySheetShadow}" />
   </Style>

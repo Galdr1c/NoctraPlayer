@@ -53,54 +53,86 @@
   <Border Classes="CardContainer" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
     <Border.ContextFlyout>
       <MenuFlyout>
-        <MenuItem Header="{loc:Translate Context.MyList.Toggle}" Click="Context_AddToMyList_Click"/>
-        <MenuItem Header="{loc:Translate Context.Favorite.Toggle}" Click="Context_ToggleFavorite_Click"/>
+        <MenuItem Header="{loc:Translate Context.Favorite.Toggle}"
+                  Click="Context_ToggleFavorite_Click"
+                  IsVisible="{Binding #LiveTvCardControl.ShowRemoveFavoriteMenu,
+                                      Converter={StaticResource InverseBoolConverter}}"/>
+        <MenuItem Header="{loc:Translate Context.Favorite.Toggle}"
+                  Click="Context_RemoveFromFavorites_Click"
+                  IsVisible="{Binding #LiveTvCardControl.ShowRemoveFavoriteMenu}"/>
+        <MenuItem Header="{loc:Translate MyList.Remove}"
+                  Click="Context_RemoveFromMyList_Click"
+                  IsVisible="{Binding #LiveTvCardControl.ShowRemoveMyListMenu}"/>
         <MenuItem Header="{loc:Translate History.Remove}" Click="Context_RemoveFromHistory_Click"
                   IsVisible="{Binding #LiveTvCardControl.ShowHistoryMenu}"/>
-        <MenuItem Header="{loc:Translate History.Remove}" Click="Context_RemoveFromFavorites_Click"
-                  IsVisible="{Binding #LiveTvCardControl.ShowRemoveFavoriteMenu}"/>
-        <MenuItem Header="{loc:Translate History.Remove}" Click="Context_RemoveFromMyList_Click"
-                  IsVisible="{Binding #LiveTvCardControl.ShowRemoveMyListMenu}"/>
       </MenuFlyout>
     </Border.ContextFlyout>
     <Grid RowDefinitions="*,Auto,Auto">
-      <Grid Grid.Row="0" ColumnDefinitions="48,*,Auto" VerticalAlignment="Center">
-        <Border Grid.Column="0" Width="46" Height="46" Background="{DynamicResource PlaceHolderBrush}">
-          <Grid>
-            <Border Background="{DynamicResource PlaceHolderBrush}">
-              <Border.IsVisible>
-                <Binding Path="#ChannelLogo.IsImageLoaded" Converter="{StaticResource InverseBoolConverter}"/>
-              </Border.IsVisible>
-            </Border>
-            <controls:RemoteImage x:Name="ChannelLogo" Width="46" Height="46" Stretch="Uniform" Url="{Binding CoverUrl}" RenderOptions.BitmapInterpolationMode="MediumQuality"/>
-          </Grid>
-        </Border>
-        <!-- Main content button (SelectMediaCommand) as sibling to FavoriteBtn -->
-        <Button Grid.Column="1" Classes="CardContentBtn" Margin="14,0,0,0"
-                Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}"
-                CommandParameter="{Binding}">
-          <StackPanel VerticalAlignment="Center" Spacing="3">
+      <Button x:Name="PlaybackButton"
+              Grid.RowSpan="3"
+              Classes="CardContentBtn"
+              Margin="0"
+              Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}"
+              CommandParameter="{Binding}"/>
+
+      <Grid Grid.RowSpan="3"
+            RowDefinitions="*,Auto,Auto"
+            IsHitTestVisible="False">
+        <Grid Grid.Row="0"
+              ColumnDefinitions="48,*,48"
+              VerticalAlignment="Center">
+          <Border Grid.Column="0"
+                  Width="46"
+                  Height="46"
+                  Background="{DynamicResource PlaceHolderBrush}">
+            <Grid>
+              <Border Background="{DynamicResource PlaceHolderBrush}">
+                <Border.IsVisible>
+                  <Binding Path="#ChannelLogo.IsImageLoaded"
+                           Converter="{StaticResource InverseBoolConverter}"/>
+                </Border.IsVisible>
+              </Border>
+              <controls:RemoteImage x:Name="ChannelLogo"
+                                    Width="46"
+                                    Height="46"
+                                    Stretch="Uniform"
+                                    Url="{Binding CoverUrl}"
+                                    RenderOptions.BitmapInterpolationMode="MediumQuality"/>
+            </Grid>
+          </Border>
+          <StackPanel Grid.Column="1"
+                      Margin="14,0,0,0"
+                      VerticalAlignment="Center"
+                      Spacing="3">
             <TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
             <TextBlock Text="{Binding GroupTitle}" Foreground="{DynamicResource TextMutedBrush}" FontSize="11" TextTrimming="CharacterEllipsis"/>
           </StackPanel>
-        </Button>
-        <!-- Favorite button as sibling (not nested) -->
-        <Button Grid.Column="2" Classes="FavoriteBtn" Background="Transparent" BorderThickness="0" Padding="7"
-                Classes.active="{Binding IsFavorite}"
-                Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).ToggleFavoriteCommand}"
-                CommandParameter="{Binding}">
-          <Panel>
-            <materialIcons:MaterialIcon Kind="Heart" Width="20" Height="20" Foreground="#E50914" IsVisible="{Binding IsFavorite}"/>
-            <materialIcons:MaterialIcon Kind="HeartOutline" Width="20" Height="20" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding !IsFavorite}"/>
-          </Panel>
-        </Button>
-      </Grid>
-      <TextBlock Grid.Row="1" Text="{Binding CurrentProgramTitle}" Foreground="{DynamicResource TextMutedBrush}"
-                 FontSize="11.5" TextTrimming="CharacterEllipsis" Margin="0,2,0,0" Opacity="0.85"
-                 IsVisible="{Binding CurrentProgramTitle, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
-      <ProgressBar Grid.Row="2" Value="{Binding EpgProgress}" Minimum="0" Maximum="100" Height="3"
-                   Background="{DynamicResource SurfaceLightBrush}" Foreground="{DynamicResource AccentBrush}" CornerRadius="1.5"
+        </Grid>
+        <TextBlock Grid.Row="1" Text="{Binding CurrentProgramTitle}" Foreground="{DynamicResource TextMutedBrush}"
+                   FontSize="11.5" TextTrimming="CharacterEllipsis" Margin="0,2,0,0" Opacity="0.85"
                    IsVisible="{Binding CurrentProgramTitle, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
+        <ProgressBar Grid.Row="2" Value="{Binding EpgProgress}" Minimum="0" Maximum="100" Height="3"
+                     Background="{DynamicResource SurfaceLightBrush}" Foreground="{DynamicResource AccentBrush}" CornerRadius="1.5"
+                     IsVisible="{Binding CurrentProgramTitle, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
+      </Grid>
+
+      <Button Grid.Row="0"
+              Classes="FavoriteBtn"
+              Width="44"
+              Height="44"
+              HorizontalAlignment="Right"
+              VerticalAlignment="Center"
+              Background="Transparent"
+              BorderThickness="0"
+              Padding="7"
+              Classes.active="{Binding IsFavorite}"
+              Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).ToggleFavoriteCommand}"
+              CommandParameter="{Binding}">
+        <Panel>
+          <materialIcons:MaterialIcon Kind="Heart" Width="20" Height="20" Foreground="#E50914" IsVisible="{Binding IsFavorite}"/>
+          <materialIcons:MaterialIcon Kind="HeartOutline" Width="20" Height="20" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding !IsFavorite}"/>
+        </Panel>
+      </Button>
     </Grid>
   </Border>
 </UserControl>

@@ -32,7 +32,7 @@ public sealed class MobileSettingsAutoSaveRegressionTests
             return Task.CompletedTask;
         };
 
-        using var coordinator = (IDisposable?)Activator.CreateInstance(
+        await using var coordinator = (IAsyncDisposable?)Activator.CreateInstance(
             coordinatorType!,
             BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
             binder: null,
@@ -81,7 +81,7 @@ public sealed class MobileSettingsAutoSaveRegressionTests
             Interlocked.Decrement(ref concurrentSaves);
         }
 
-        using var coordinator = (IDisposable?)Activator.CreateInstance(
+        await using var coordinator = (IAsyncDisposable?)Activator.CreateInstance(
             coordinatorType!,
             BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
             binder: null,

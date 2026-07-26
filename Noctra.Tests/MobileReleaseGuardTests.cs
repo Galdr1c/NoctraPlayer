@@ -400,7 +400,7 @@ public class MobileReleaseGuardTests
 
         Assert.DoesNotContain("<ComboBox", settings);
         Assert.Contains("<views:MobileSelectionSheet", settings);
-        Assert.Equal(8, CountOccurrences(settings, "Tapped=\"OpenSelectionSheet_Tapped\""));
+        Assert.Equal(8, CountOccurrences(settings, "Click=\"OpenSelectionSheet_Click\""));
         Assert.Contains("Background=\"{DynamicResource AccentSubtleBrush}\"", selectionSheet);
         Assert.Contains("IsVisible=\"{Binding IsSelected}\"", selectionSheet);
         Assert.Equal(2, CountOccurrences(settingsCodeBehind, "SelectionSheetHost.TryClose();"));

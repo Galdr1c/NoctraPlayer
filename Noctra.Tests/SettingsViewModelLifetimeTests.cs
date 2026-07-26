@@ -27,7 +27,7 @@ public sealed class SettingsViewModelLifetimeTests
         var mobileResolver = ReadProjectFile("Noctra.Mobile", "Services", "MobileViewModelResolver.cs");
         var mobileMain = ReadProjectFile("Noctra.Mobile", "Views", "MainView.axaml.cs");
 
-        Assert.Contains("CreateScope()", desktopMain, StringComparison.Ordinal);
+        Assert.Contains("CreateAsyncScope()", desktopMain, StringComparison.Ordinal);
         Assert.Contains("scope.ServiceProvider.GetRequiredService<Views.SettingsWindow>()", desktopMain, StringComparison.Ordinal);
 
         Assert.Contains("ScopedServiceLease<SettingsViewModel>", mobileResolver, StringComparison.Ordinal);

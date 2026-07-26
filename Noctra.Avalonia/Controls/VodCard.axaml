@@ -23,18 +23,20 @@
     <Button.ContextFlyout>
       <MenuFlyout>
         <MenuItem Header="{loc:Translate Context.MyList.Toggle}" Click="Context_AddToMyList_Click"
-                  IsVisible="{Binding ., Converter={StaticResource MediaSupportsMyListConverter}}"/>
+                  IsVisible="{Binding #VodCardControl.ShowRemoveMyListMenu,
+                                      Converter={StaticResource InverseBoolConverter}}"/>
         <MenuItem Header="{loc:Translate Context.Favorite.Toggle}" Click="Context_ToggleFavorite_Click"
-                  IsVisible="{Binding ., Converter={StaticResource MediaSupportsFavoriteConverter}}"/>
+                  IsVisible="{Binding #VodCardControl.ShowRemoveFavoriteMenu,
+                                      Converter={StaticResource InverseBoolConverter}}"/>
         <MenuItem Header="{loc:Translate History.Remove}" Click="Context_RemoveFromHistory_Click"
                   IsVisible="{Binding #VodCardControl.ShowHistoryMenu}">
           <MenuItem.Icon><materialIcons:MaterialIcon Kind="DeleteOutline"/></MenuItem.Icon>
         </MenuItem>
-        <MenuItem Header="{loc:Translate History.Remove}" Click="Context_RemoveFromFavorites_Click"
+        <MenuItem Header="{loc:Translate Context.Favorite.Toggle}" Click="Context_RemoveFromFavorites_Click"
                   IsVisible="{Binding #VodCardControl.ShowRemoveFavoriteMenu}">
           <MenuItem.Icon><materialIcons:MaterialIcon Kind="DeleteOutline"/></MenuItem.Icon>
         </MenuItem>
-        <MenuItem Header="{loc:Translate History.Remove}" Click="Context_RemoveFromMyList_Click"
+        <MenuItem Header="{loc:Translate MyList.Remove}" Click="Context_RemoveFromMyList_Click"
                   IsVisible="{Binding #VodCardControl.ShowRemoveMyListMenu}">
           <MenuItem.Icon><materialIcons:MaterialIcon Kind="DeleteOutline"/></MenuItem.Icon>
         </MenuItem>

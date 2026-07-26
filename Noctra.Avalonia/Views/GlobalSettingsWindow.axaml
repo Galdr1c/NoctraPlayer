@@ -1,6 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:Noctra.ViewModels"
+        xmlns:views="using:Noctra.Avalonia.Views"
         xmlns:loc="using:Noctra.Avalonia.Localization"
         x:Class="Noctra.Avalonia.Views.GlobalSettingsWindow"
         x:DataType="vm:GlobalSettingsViewModel"
@@ -309,16 +310,21 @@
                                                Margin="0,4,0,0"/>
                                 </StackPanel>
 
-                                <ComboBox Grid.Column="1"
-                                          SelectedValue="{Binding Settings.Language, Mode=TwoWay}"
-                                          SelectedValueBinding="{Binding Tag}"
-                                          Width="180">
-                                    <ComboBoxItem Content="{loc:Translate Language.Turkish}" Tag="tr"/>
-                                    <ComboBoxItem Content="{loc:Translate Language.English}" Tag="en"/>
-                                    <ComboBoxItem Content="{loc:Translate Language.German}" Tag="de"/>
-                                    <ComboBoxItem Content="{loc:Translate Language.French}" Tag="fr"/>
-                                    <ComboBoxItem Content="{loc:Translate Language.Spanish}" Tag="es"/>
-                                </ComboBox>
+                                <Button x:Name="GlobalLanguageSelectionButton"
+                                        Grid.Column="1"
+                                        Classes="DesktopSettingsSelectionButton"
+                                        Width="180"
+                                        Click="OpenGlobalLanguageSelection_Click">
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                        <TextBlock x:Name="GlobalLanguageSelectionValue"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   VerticalAlignment="Center"/>
+                                        <materialIcons:MaterialIcon Grid.Column="1"
+                                                                    Kind="ChevronDown"
+                                                                    Width="20"
+                                                                    Height="20"/>
+                                    </Grid>
+                                </Button>
                             </Grid>
                         </StackPanel>
                     </Border>
@@ -796,6 +802,10 @@
 
                 </StackPanel>
             </ScrollViewer>
+
+            <views:DesktopSelectionSheet x:Name="GlobalSettingsSelectionSheet"
+                                         Grid.RowSpan="2"
+                                         ZIndex="50000"/>
         </Grid>
     </Border>
 

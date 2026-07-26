@@ -3,50 +3,130 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Input;
 using Avalonia.Media;
+using Avalonia.Threading;
 using Microsoft.Extensions.DependencyInjection;
+using Noctra.Avalonia.Localization;
 using Noctra.ViewModels;
 
 namespace Noctra.Avalonia.Views;
 
 public partial class GlobalSettingsWindow : Window
 {
+    private GlobalSettingsViewModel? _viewModel;
+    private GlobalSettings? _subscribedSettings;
+
     public GlobalSettingsWindow()
         : this(((App)Application.Current!).Services.GetRequiredService<GlobalSettingsViewModel>())
     {
     }
-
-    private GlobalSettingsViewModel? _viewModel;
 
     public GlobalSettingsWindow(GlobalSettingsViewModel viewModel)
     {
         InitializeComponent();
         DataContext = viewModel;
         _viewModel = viewModel;
-        
+
+        AttachSettings(viewModel.Settings);
         UpdateThemeSelection(viewModel.Settings.IsDarkTheme);
+        RefreshSelectionLabels();
 
-        // İsimlendirilmiş metotlarla abone ol
         _viewModel.PropertyChanged += ViewModel_PropertyChanged;
-        if (_viewModel.Settings != null)
-        {
-            _viewModel.Settings.PropertyChanged += Settings_PropertyChanged;
-        }
+        LocalizationSource.Instance.PropertyChanged += LocalizationSource_PropertyChanged;
     }
 
-    private void ViewModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    private void ViewModel_PropertyChanged(
+        object? sender,
+        System.ComponentModel.PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(GlobalSettingsViewModel.Settings))
+        if (e.PropertyName != nameof(GlobalSettingsViewModel.Settings) || _viewModel is null)
         {
-            global::Avalonia.Threading.Dispatcher.UIThread.Post(() => UpdateThemeSelection(_viewModel!.Settings.IsDarkTheme));
+            return;
         }
+
+        AttachSettings(_viewModel.Settings);
+        Dispatcher.UIThread.Post(() =>
+        {
+            UpdateThemeSelection(_viewModel.Settings.IsDarkTheme);
+            RefreshSelectionLabels();
+        });
     }
 
-    private void Settings_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    private void Settings_PropertyChanged(
+        object? sender,
+        System.ComponentModel.PropertyChangedEventArgs e)
     {
+        if (_viewModel is null)
+        {
+            return;
+        }
+
         if (e.PropertyName == nameof(GlobalSettings.IsDarkTheme))
         {
-            global::Avalonia.Threading.Dispatcher.UIThread.Post(() => UpdateThemeSelection(_viewModel!.Settings.IsDarkTheme));
+            Dispatcher.UIThread.Post(
+                () => UpdateThemeSelection(_viewModel.Settings.IsDarkTheme));
         }
+
+        if (e.PropertyName is null or nameof(GlobalSettings.Language))
+        {
+            Dispatcher.UIThread.Post(RefreshSelectionLabels);
+        }
+    }
+
+    private void LocalizationSource_PropertyChanged(
+        object? sender,
+        System.ComponentModel.PropertyChangedEventArgs e)
+        => Dispatcher.UIThread.Post(RefreshSelectionLabels);
+
+    private void AttachSettings(GlobalSettings settings)
+    {
+        if (ReferenceEquals(_subscribedSettings, settings))
+        {
+            return;
+        }
+
+        if (_subscribedSettings is not null)
+        {
+            _subscribedSettings.PropertyChanged -= Settings_PropertyChanged;
+        }
+
+        _subscribedSettings = settings;
+        _subscribedSettings.PropertyChanged += Settings_PropertyChanged;
+    }
+
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        if (e.Key == Key.Escape && GlobalSettingsSelectionSheet.TryClose())
+        {
+            e.Handled = true;
+            return;
+        }
+
+        base.OnKeyDown(e);
+    }
+
+    private void RefreshSelectionLabels()
+    {
+        if (_viewModel is null)
+        {
+            return;
+        }
+
+        GlobalLanguageSelectionValue.Text =
+            DesktopSettingsSelectionCatalog.GetAppLanguageLabel(
+                _viewModel.Settings.Language);
+    }
+
+    private void OpenGlobalLanguageSelection_Click(object? sender, RoutedEventArgs e)
+    {
+        if (_viewModel is null)
+        {
+            return;
+        }
+
+        GlobalSettingsSelectionSheet.Show(
+            DesktopSettingsSelectionCatalog.Text("GlobalSettings.Language.Title"),
+            DesktopSettingsSelectionCatalog.BuildAppLanguages(_viewModel.Settings.Language),
+            option => _viewModel.Settings.Language = (string)option.Value);
     }
 
     private void Header_PointerPressed(object? sender, PointerPressedEventArgs e)
@@ -106,15 +186,20 @@ public partial class GlobalSettingsWindow : Window
 
     protected override void OnClosed(EventArgs e)
     {
-        // Pencere kapanırken abonelikleri KESİNLİKLE kaldır
+        GlobalSettingsSelectionSheet.TryClose();
+        LocalizationSource.Instance.PropertyChanged -= LocalizationSource_PropertyChanged;
+
         if (_viewModel != null)
         {
             _viewModel.PropertyChanged -= ViewModel_PropertyChanged;
-            if (_viewModel.Settings != null)
-            {
-                _viewModel.Settings.PropertyChanged -= Settings_PropertyChanged;
-            }
         }
+
+        if (_subscribedSettings is not null)
+        {
+            _subscribedSettings.PropertyChanged -= Settings_PropertyChanged;
+            _subscribedSettings = null;
+        }
+
         base.OnClosed(e);
     }
 }

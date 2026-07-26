@@ -11,7 +11,9 @@
             PointerPressed="Scrim_PointerPressed" />
     <Border x:Name="SheetSurface"
             Classes="DesktopSheetSurface"
+            MaxWidth="{DynamicResource DesktopSheetMaxWidth}"
             MaxHeight="620"
+            HorizontalAlignment="Center"
             VerticalAlignment="Bottom">
       <Border.RenderTransform>
         <TranslateTransform />

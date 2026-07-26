@@ -54,21 +54,20 @@ public class ModernComboBoxStyleTests
     }
 
     [Fact]
-    public void SettingsRefreshFrequencyItems_DoNotUseFixedWidthContent()
+    public void SettingsRefreshFrequencyButtons_DoNotUseFixedWidthContent()
     {
         var settings = LoadProjectXaml("Noctra.Avalonia", "Views", "SettingsWindow.axaml");
-        var refreshComboboxes = settings.Descendants()
-            .Where(e => e.Name.LocalName == "ComboBox"
-                        && ((string?)e.Attribute("SelectedIndex") ?? string.Empty) is var selectedIndex
-                        && (selectedIndex.Contains("ChannelListRefreshFrequencyIndex")
-                            || selectedIndex.Contains("EpgRefreshFrequencyIndex")))
+        var refreshButtons = settings.Descendants()
+            .Where(e => e.Name.LocalName == "Button"
+                        && (string?)e.Attribute(XamlNamespace + "Name") is
+                            "ChannelRefreshSelectionButton" or "EpgRefreshSelectionButton")
             .ToList();
 
-        Assert.Equal(2, refreshComboboxes.Count);
+        Assert.Equal(2, refreshButtons.Count);
 
-        foreach (var comboBox in refreshComboboxes)
+        foreach (var button in refreshButtons)
         {
-            var fixedWidthGrids = comboBox.Descendants()
+            var fixedWidthGrids = button.Descendants()
                 .Where(e => e.Name.LocalName == "Grid"
                             && (string?)e.Attribute("ColumnDefinitions") == "*,Auto"
                             && e.Attribute("Width") is not null)

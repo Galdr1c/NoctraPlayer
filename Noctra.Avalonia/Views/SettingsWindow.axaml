@@ -6,6 +6,7 @@
         xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
         xmlns:controls="using:Noctra.Avalonia.Controls"
         xmlns:behaviors="using:Noctra.Avalonia.Behaviors"
+        xmlns:views="using:Noctra.Avalonia.Views"
         xmlns:loc="using:Noctra.Avalonia.Localization"
         mc:Ignorable="d"
         x:Class="Noctra.Avalonia.Views.SettingsWindow"
@@ -345,12 +346,21 @@
                                 <StackPanel>
                                     <TextBlock Text="{loc:Translate Settings.Playback.Quality}" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,20"/>
                                     <TextBlock Text="{loc:Translate Settings.Playback.QualityDescription}" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,12"/>
-                                    <ComboBox Theme="{StaticResource ModernComboBox}" SelectedIndex="{Binding SelectedDataUsage}" Width="250" HorizontalAlignment="Left">
-                                        <ComboBoxItem Content="{loc:Translate Settings.Playback.Quality.Low}"/>
-                                        <ComboBoxItem Content="{loc:Translate Settings.Playback.Quality.Medium}"/>
-                                        <ComboBoxItem Content="{loc:Translate Settings.Playback.Quality.High}"/>
-                                        <ComboBoxItem Content="{loc:Translate Settings.Playback.Quality.Auto}"/>
-                                    </ComboBox>
+                                    <Button x:Name="DataUsageSelectionButton"
+                                            Classes="DesktopSettingsSelectionButton"
+                                            Width="250"
+                                            HorizontalAlignment="Left"
+                                            Click="OpenDataUsageSelection_Click">
+                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                            <TextBlock x:Name="DataUsageSelectionValue"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       VerticalAlignment="Center"/>
+                                            <materialIcons:MaterialIcon Grid.Column="1"
+                                                                        Kind="ChevronDown"
+                                                                        Width="20"
+                                                                        Height="20"/>
+                                        </Grid>
+                                    </Button>
                                 </StackPanel>
                             </Border>
 
@@ -409,32 +419,33 @@
                                     </Grid>
 
                                     <TextBlock Text="{loc:Translate Settings.Playback.PreferredSubtitle}" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,8"/>
-                                    <ComboBox Theme="{StaticResource ModernComboBox}" SelectedValue="{Binding SubtitleLanguage, Mode=TwoWay}" SelectedValueBinding="{Binding Tag}" Width="250" HorizontalAlignment="Left" Margin="0,0,0,18">
-                                        <ComboBoxItem Content="Turkish" Tag="tr"/>
-                                        <ComboBoxItem Content="English" Tag="en"/>
-                                        <ComboBoxItem Content="Deutsch" Tag="de"/>
-                                        <ComboBoxItem Content="Français" Tag="fr"/>
-                                        <ComboBoxItem Content="Español" Tag="es"/>
-                                        <ComboBoxItem Content="Italiano" Tag="it"/>
-                                        <ComboBoxItem Content="Português" Tag="pt"/>
-                                        <ComboBoxItem Content="Русский" Tag="ru"/>
-                                        <ComboBoxItem Content="العربية" Tag="ar"/>
-                                        <ComboBoxItem Content="Nederlands" Tag="nl"/>
-                                    </ComboBox>
+                                    <Button x:Name="SubtitleLanguageSelectionButton"
+                                            Classes="DesktopSettingsSelectionButton"
+                                            Width="250"
+                                            HorizontalAlignment="Left"
+                                            Margin="0,0,0,18"
+                                            Click="OpenSubtitleLanguageSelection_Click">
+                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                            <TextBlock x:Name="SubtitleLanguageSelectionValue"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       VerticalAlignment="Center"/>
+                                            <materialIcons:MaterialIcon Grid.Column="1" Kind="ChevronDown" Width="20" Height="20"/>
+                                        </Grid>
+                                    </Button>
 
                                     <TextBlock Text="{loc:Translate Settings.Playback.PreferredAudio}" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,8"/>
-                                    <ComboBox Theme="{StaticResource ModernComboBox}" SelectedValue="{Binding PreferredAudioLanguage, Mode=TwoWay}" SelectedValueBinding="{Binding Tag}" Width="250" HorizontalAlignment="Left">
-                                        <ComboBoxItem Content="Turkish" Tag="tr"/>
-                                        <ComboBoxItem Content="English" Tag="en"/>
-                                        <ComboBoxItem Content="Deutsch" Tag="de"/>
-                                        <ComboBoxItem Content="Français" Tag="fr"/>
-                                        <ComboBoxItem Content="Español" Tag="es"/>
-                                        <ComboBoxItem Content="Italiano" Tag="it"/>
-                                        <ComboBoxItem Content="Português" Tag="pt"/>
-                                        <ComboBoxItem Content="Русский" Tag="ru"/>
-                                        <ComboBoxItem Content="العربية" Tag="ar"/>
-                                        <ComboBoxItem Content="Nederlands" Tag="nl"/>
-                                    </ComboBox>
+                                    <Button x:Name="AudioLanguageSelectionButton"
+                                            Classes="DesktopSettingsSelectionButton"
+                                            Width="250"
+                                            HorizontalAlignment="Left"
+                                            Click="OpenAudioLanguageSelection_Click">
+                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                            <TextBlock x:Name="AudioLanguageSelectionValue"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       VerticalAlignment="Center"/>
+                                            <materialIcons:MaterialIcon Grid.Column="1" Kind="ChevronDown" Width="20" Height="20"/>
+                                        </Grid>
+                                    </Button>
                                 </StackPanel>
                             </Border>
 
@@ -452,10 +463,19 @@
                                         <ToggleSwitch Grid.Column="1" IsChecked="{Binding DownloadWifiOnly}"/>
                                     </Grid>
                                     <TextBlock Text="{loc:Translate Settings.Download.Quality}" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,8"/>
-                                    <ComboBox Theme="{StaticResource ModernComboBox}" SelectedIndex="{Binding SelectedDownloadQuality}" Width="250" HorizontalAlignment="Left" Margin="0,0,0,18">
-                                        <ComboBoxItem Content="{loc:Translate Settings.Download.Quality.Standard}"/>
-                                        <ComboBoxItem Content="{loc:Translate Settings.Download.Quality.High}"/>
-                                    </ComboBox>
+                                    <Button x:Name="DownloadQualitySelectionButton"
+                                            Classes="DesktopSettingsSelectionButton"
+                                            Width="250"
+                                            HorizontalAlignment="Left"
+                                            Margin="0,0,0,18"
+                                            Click="OpenDownloadQualitySelection_Click">
+                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                            <TextBlock x:Name="DownloadQualitySelectionValue"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       VerticalAlignment="Center"/>
+                                            <materialIcons:MaterialIcon Grid.Column="1" Kind="ChevronDown" Width="20" Height="20"/>
+                                        </Grid>
+                                    </Button>
                                     <TextBlock Text="{loc:Translate Settings.Download.Path}" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
                                     <Grid>
                                         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
@@ -528,54 +548,18 @@
                                     </Border>
 
                                     <TextBlock Text="{loc:Translate Settings.Channels.Frequency}" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
-                                    <ComboBox Theme="{StaticResource ModernComboBox}"
-                                              SelectedIndex="{Binding ChannelListRefreshFrequencyIndex, Mode=TwoWay}"
-                                              Width="200"
-                                              HorizontalAlignment="Left">
-                                        <ComboBoxItem Content="{loc:Translate Settings.Channels.Frequency.Off}" Tag="0"/>
-                                        <ComboBoxItem Tag="1" IsEnabled="{Binding IsPremium}">
-                                            <Grid ColumnDefinitions="*,Auto">
-                                                <TextBlock Text="{loc:Translate Settings.Channels.Frequency.1h}" VerticalAlignment="Center"/>
-                                                <materialIcons:MaterialIcon Grid.Column="1" Kind="Lock" Width="18" Height="18" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding !IsPremium}" VerticalAlignment="Center"/>
-                                            </Grid>
-                                        </ComboBoxItem>
-                                        <ComboBoxItem Tag="3" IsEnabled="{Binding IsPremium}">
-                                            <Grid ColumnDefinitions="*,Auto">
-                                                <TextBlock Text="{loc:Translate Settings.Channels.Frequency.3h}" VerticalAlignment="Center"/>
-                                                <materialIcons:MaterialIcon Grid.Column="1" Kind="Lock" Width="18" Height="18" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding !IsPremium}" VerticalAlignment="Center"/>
-                                            </Grid>
-                                        </ComboBoxItem>
-                                        <ComboBoxItem Tag="12" IsEnabled="{Binding IsPremium}">
-                                            <Grid ColumnDefinitions="*,Auto">
-                                                <TextBlock Text="{loc:Translate Settings.Channels.Frequency.12h}" VerticalAlignment="Center"/>
-                                                <materialIcons:MaterialIcon Grid.Column="1" Kind="Lock" Width="18" Height="18" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding !IsPremium}" VerticalAlignment="Center"/>
-                                            </Grid>
-                                        </ComboBoxItem>
-                                        <ComboBoxItem Tag="24" IsEnabled="{Binding IsPremium}">
-                                            <Grid ColumnDefinitions="*,Auto">
-                                                <TextBlock Text="{loc:Translate Settings.Channels.Frequency.24h}" VerticalAlignment="Center"/>
-                                                <materialIcons:MaterialIcon Grid.Column="1" Kind="Lock" Width="18" Height="18" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding !IsPremium}" VerticalAlignment="Center"/>
-                                            </Grid>
-                                        </ComboBoxItem>
-                                        <ComboBoxItem Tag="48" IsEnabled="{Binding IsPremium}">
-                                            <Grid ColumnDefinitions="*,Auto">
-                                                <TextBlock Text="{loc:Translate Settings.Channels.Frequency.2d}" VerticalAlignment="Center"/>
-                                                <materialIcons:MaterialIcon Grid.Column="1" Kind="Lock" Width="18" Height="18" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding !IsPremium}" VerticalAlignment="Center"/>
-                                            </Grid>
-                                        </ComboBoxItem>
-                                        <ComboBoxItem Tag="72" IsEnabled="{Binding IsPremium}">
-                                            <Grid ColumnDefinitions="*,Auto">
-                                                <TextBlock Text="{loc:Translate Settings.Channels.Frequency.3d}" VerticalAlignment="Center"/>
-                                                <materialIcons:MaterialIcon Grid.Column="1" Kind="Lock" Width="18" Height="18" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding !IsPremium}" VerticalAlignment="Center"/>
-                                            </Grid>
-                                        </ComboBoxItem>
-                                        <ComboBoxItem Tag="168" IsEnabled="{Binding IsPremium}">
-                                            <Grid ColumnDefinitions="*,Auto">
-                                                <TextBlock Text="{loc:Translate Settings.Channels.Frequency.7d}" VerticalAlignment="Center"/>
-                                                <materialIcons:MaterialIcon Grid.Column="1" Kind="Lock" Width="18" Height="18" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding !IsPremium}" VerticalAlignment="Center"/>
-                                            </Grid>
-                                        </ComboBoxItem>
-                                    </ComboBox>
+                                    <Button x:Name="ChannelRefreshSelectionButton"
+                                            Classes="DesktopSettingsSelectionButton"
+                                            Width="250"
+                                            HorizontalAlignment="Left"
+                                            Click="OpenChannelRefreshSelection_Click">
+                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                            <TextBlock x:Name="ChannelRefreshSelectionValue"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       VerticalAlignment="Center"/>
+                                            <materialIcons:MaterialIcon Grid.Column="1" Kind="ChevronDown" Width="20" Height="20"/>
+                                        </Grid>
+                                    </Button>
                                 </StackPanel>
                             </Border>
 
@@ -783,84 +767,34 @@
                                             Theme="{StaticResource SettingsActionButton}"/>
 
                                     <TextBlock Text="{loc:Translate Settings.Channels.Frequency}" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
-                                    <ComboBox Theme="{StaticResource ModernComboBox}"
-                                              SelectedIndex="{Binding EpgRefreshFrequencyIndex, Mode=TwoWay}"
-                                              Width="200"
-                                              HorizontalAlignment="Left"
-                                              Margin="0,0,0,20">
-                                        <ComboBoxItem Content="{loc:Translate Settings.Channels.Frequency.Off}" Tag="0"/>
-                                        <ComboBoxItem Tag="1" IsEnabled="{Binding IsPremium}">
-                                            <Grid ColumnDefinitions="*,Auto">
-                                                <TextBlock Text="{loc:Translate Settings.Channels.Frequency.1h}" VerticalAlignment="Center"/>
-                                                <materialIcons:MaterialIcon Grid.Column="1" Kind="Lock" Width="18" Height="18" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding !IsPremium}" VerticalAlignment="Center"/>
-                                            </Grid>
-                                        </ComboBoxItem>
-                                        <ComboBoxItem Tag="3" IsEnabled="{Binding IsPremium}">
-                                            <Grid ColumnDefinitions="*,Auto">
-                                                <TextBlock Text="{loc:Translate Settings.Channels.Frequency.3h}" VerticalAlignment="Center"/>
-                                                <materialIcons:MaterialIcon Grid.Column="1" Kind="Lock" Width="18" Height="18" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding !IsPremium}" VerticalAlignment="Center"/>
-                                            </Grid>
-                                        </ComboBoxItem>
-                                        <ComboBoxItem Tag="12" IsEnabled="{Binding IsPremium}">
-                                            <Grid ColumnDefinitions="*,Auto">
-                                                <TextBlock Text="{loc:Translate Settings.Channels.Frequency.12h}" VerticalAlignment="Center"/>
-                                                <materialIcons:MaterialIcon Grid.Column="1" Kind="Lock" Width="18" Height="18" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding !IsPremium}" VerticalAlignment="Center"/>
-                                            </Grid>
-                                        </ComboBoxItem>
-                                        <ComboBoxItem Tag="24" IsEnabled="{Binding IsPremium}">
-                                            <Grid ColumnDefinitions="*,Auto">
-                                                <TextBlock Text="{loc:Translate Settings.Channels.Frequency.24h}" VerticalAlignment="Center"/>
-                                                <materialIcons:MaterialIcon Grid.Column="1" Kind="Lock" Width="18" Height="18" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding !IsPremium}" VerticalAlignment="Center"/>
-                                            </Grid>
-                                        </ComboBoxItem>
-                                        <ComboBoxItem Tag="48" IsEnabled="{Binding IsPremium}">
-                                            <Grid ColumnDefinitions="*,Auto">
-                                                <TextBlock Text="{loc:Translate Settings.Channels.Frequency.2d}" VerticalAlignment="Center"/>
-                                                <materialIcons:MaterialIcon Grid.Column="1" Kind="Lock" Width="18" Height="18" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding !IsPremium}" VerticalAlignment="Center"/>
-                                            </Grid>
-                                        </ComboBoxItem>
-                                        <ComboBoxItem Tag="72" IsEnabled="{Binding IsPremium}">
-                                            <Grid ColumnDefinitions="*,Auto">
-                                                <TextBlock Text="{loc:Translate Settings.Channels.Frequency.3d}" VerticalAlignment="Center"/>
-                                                <materialIcons:MaterialIcon Grid.Column="1" Kind="Lock" Width="18" Height="18" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding !IsPremium}" VerticalAlignment="Center"/>
-                                            </Grid>
-                                        </ComboBoxItem>
-                                        <ComboBoxItem Tag="168" IsEnabled="{Binding IsPremium}">
-                                            <Grid ColumnDefinitions="*,Auto">
-                                                <TextBlock Text="{loc:Translate Settings.Channels.Frequency.7d}" VerticalAlignment="Center"/>
-                                                <materialIcons:MaterialIcon Grid.Column="1" Kind="Lock" Width="18" Height="18" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding !IsPremium}" VerticalAlignment="Center"/>
-                                            </Grid>
-                                        </ComboBoxItem>
-                                    </ComboBox>
+                                    <Button x:Name="EpgRefreshSelectionButton"
+                                            Classes="DesktopSettingsSelectionButton"
+                                            Width="250"
+                                            HorizontalAlignment="Left"
+                                            Margin="0,0,0,20"
+                                            Click="OpenEpgRefreshSelection_Click">
+                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                            <TextBlock x:Name="EpgRefreshSelectionValue"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       VerticalAlignment="Center"/>
+                                            <materialIcons:MaterialIcon Grid.Column="1" Kind="ChevronDown" Width="20" Height="20"/>
+                                        </Grid>
+                                    </Button>
 
                                     <TextBlock Text="{loc:Translate Settings.Epg.Timezone}" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
-                                    <ComboBox SelectedIndex="{Binding EpgTimeOffsetIndex, Mode=TwoWay}" Theme="{StaticResource ModernComboBox}" Width="200" HorizontalAlignment="Left" Margin="0,0,0,20">
-                                        <ComboBoxItem Content="{Binding Source=-12, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Negative'}"/>
-                                        <ComboBoxItem Content="{Binding Source=-11, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Negative'}"/>
-                                        <ComboBoxItem Content="{Binding Source=-10, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Negative'}"/>
-                                        <ComboBoxItem Content="{Binding Source=-9, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Negative'}"/>
-                                        <ComboBoxItem Content="{Binding Source=-8, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Negative'}"/>
-                                        <ComboBoxItem Content="{Binding Source=-7, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Negative'}"/>
-                                        <ComboBoxItem Content="{Binding Source=-6, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Negative'}"/>
-                                        <ComboBoxItem Content="{Binding Source=-5, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Negative'}"/>
-                                        <ComboBoxItem Content="{Binding Source=-4, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Negative'}"/>
-                                        <ComboBoxItem Content="{Binding Source=-3, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Negative'}"/>
-                                        <ComboBoxItem Content="{Binding Source=-2, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Negative'}"/>
-                                        <ComboBoxItem Content="{Binding Source=-1, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Negative'}"/>
-                                        <ComboBoxItem Content="{loc:Translate Settings.Epg.Timezone.Auto}"/>
-                                        <ComboBoxItem Content="{Binding Source=1, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Positive'}"/>
-                                        <ComboBoxItem Content="{Binding Source=2, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Positive'}"/>
-                                        <ComboBoxItem Content="{Binding Source=3, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Positive'}"/>
-                                        <ComboBoxItem Content="{Binding Source=4, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Positive'}"/>
-                                        <ComboBoxItem Content="{Binding Source=5, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Positive'}"/>
-                                        <ComboBoxItem Content="{Binding Source=6, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Positive'}"/>
-                                        <ComboBoxItem Content="{Binding Source=7, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Positive'}"/>
-                                        <ComboBoxItem Content="{Binding Source=8, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Positive'}"/>
-                                        <ComboBoxItem Content="{Binding Source=9, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Positive'}"/>
-                                        <ComboBoxItem Content="{Binding Source=10, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Positive'}"/>
-                                        <ComboBoxItem Content="{Binding Source=11, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Positive'}"/>
-                                        <ComboBoxItem Content="{Binding Source=12, Converter={StaticResource StringFormatConverter}, ConverterParameter='Settings.Epg.Timezone.Format.Positive'}"/>
-                                    </ComboBox>
+                                    <Button x:Name="EpgTimezoneSelectionButton"
+                                            Classes="DesktopSettingsSelectionButton"
+                                            Width="250"
+                                            HorizontalAlignment="Left"
+                                            Margin="0,0,0,20"
+                                            Click="OpenEpgTimezoneSelection_Click">
+                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                            <TextBlock x:Name="EpgTimezoneSelectionValue"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       VerticalAlignment="Center"/>
+                                            <materialIcons:MaterialIcon Grid.Column="1" Kind="ChevronDown" Width="20" Height="20"/>
+                                        </Grid>
+                                    </Button>
 
                                     <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,4">
                                         <StackPanel VerticalAlignment="Center">
@@ -990,17 +924,19 @@
                                     </Grid>
 
                                     <TextBlock Text="{loc:Translate Settings.Privacy.Retention}" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
-                                    <ComboBox Theme="{StaticResource ModernComboBox}"
-                                              SelectedIndex="{Binding WatchHistoryRetentionIndex}"
-                                              Width="260"
-                                              HorizontalAlignment="Left"
-                                              Margin="0,0,0,20">
-                                        <ComboBoxItem Content="{loc:Translate Settings.Privacy.Retention.Forever}"/>
-                                        <ComboBoxItem Content="{loc:Translate Settings.Privacy.Retention.3d}"/>
-                                        <ComboBoxItem Content="{loc:Translate Settings.Privacy.Retention.7d}"/>
-                                        <ComboBoxItem Content="{loc:Translate Settings.Privacy.Retention.14d}"/>
-                                        <ComboBoxItem Content="{loc:Translate Settings.Privacy.Retention.30d}"/>
-                                    </ComboBox>
+                                    <Button x:Name="HistoryRetentionSelectionButton"
+                                            Classes="DesktopSettingsSelectionButton"
+                                            Width="260"
+                                            HorizontalAlignment="Left"
+                                            Margin="0,0,0,20"
+                                            Click="OpenHistoryRetentionSelection_Click">
+                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                            <TextBlock x:Name="HistoryRetentionSelectionValue"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       VerticalAlignment="Center"/>
+                                            <materialIcons:MaterialIcon Grid.Column="1" Kind="ChevronDown" Width="20" Height="20"/>
+                                        </Grid>
+                                    </Button>
 
                                     <Separator Height="1" Background="{DynamicResource ErrorBrush}" Margin="0,10,0,10"/>
 
@@ -1099,17 +1035,18 @@
                                             <TextBlock Text="{loc:Translate Settings.Language.Description}" FontSize="13" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0"/>
                                         </StackPanel>
 
-                                        <ComboBox Grid.Column="1"
-                                                  Theme="{StaticResource ModernComboBox}"
-                                                  SelectedValue="{Binding AppLanguage, Mode=TwoWay}"
-                                                  SelectedValueBinding="{Binding Tag}"
-                                                  Width="180">
-                                            <ComboBoxItem Content="{loc:Translate Language.Turkish}" Tag="tr"/>
-                                            <ComboBoxItem Content="{loc:Translate Language.English}" Tag="en"/>
-                                            <ComboBoxItem Content="{loc:Translate Language.German}" Tag="de"/>
-                                            <ComboBoxItem Content="{loc:Translate Language.French}" Tag="fr"/>
-                                            <ComboBoxItem Content="{loc:Translate Language.Spanish}" Tag="es"/>
-                                        </ComboBox>
+                                        <Button x:Name="AppLanguageSelectionButton"
+                                                Grid.Column="1"
+                                                Classes="DesktopSettingsSelectionButton"
+                                                Width="180"
+                                                Click="OpenAppLanguageSelection_Click">
+                                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                                <TextBlock x:Name="AppLanguageSelectionValue"
+                                                           TextTrimming="CharacterEllipsis"
+                                                           VerticalAlignment="Center"/>
+                                                <materialIcons:MaterialIcon Grid.Column="1" Kind="ChevronDown" Width="20" Height="20"/>
+                                            </Grid>
+                                        </Button>
                                     </Grid>
 
                                 </StackPanel>
@@ -1382,6 +1319,10 @@
                     </StackPanel>
                 </Border>
             </Grid>
+
+            <views:DesktopSelectionSheet x:Name="SettingsSelectionSheet"
+                                         Grid.RowSpan="3"
+                                         ZIndex="50000"/>
         </Grid>
     </Border>
 

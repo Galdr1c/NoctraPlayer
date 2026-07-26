@@ -8,20 +8,19 @@ public class ContentFilterLayoutTests
     [InlineData("LiveView.axaml")]
     [InlineData("MoviesView.axaml")]
     [InlineData("SeriesView.axaml")]
-    public void ContentFilterComboboxes_AreWideEnoughForCategoryAndSortLabels(string viewFile)
+    public void ContentFilterButtons_UseCategoryAndCompactSortPresentations(string viewFile)
     {
         var view = LoadProjectXaml("Noctra.Avalonia", "Views", viewFile);
-        var comboBoxes = view.Descendants()
-            .Where(e => e.Name.LocalName == "ComboBox")
-            .ToList();
+        XNamespace x = "http://schemas.microsoft.com/winfx/2006/xaml";
 
-        var groupComboBox = comboBoxes.Single(e =>
-            ((string?)e.Attribute("SelectedItem") ?? string.Empty).Contains("SelectedGroup"));
-        var sortComboBox = comboBoxes.Single(e =>
-            ((string?)e.Attribute("SelectedValue") ?? string.Empty).Contains("SelectedSortOrder"));
+        var categoryButton = view.Descendants()
+            .Single(e => (string?)e.Attribute(x + "Name") == "CategorySelectionButton");
+        var sortButton = view.Descendants()
+            .Single(e => (string?)e.Attribute(x + "Name") == "SortSelectionButton");
 
-        Assert.Equal("320", (string?)groupComboBox.Attribute("Width"));
-        Assert.Equal("300", (string?)sortComboBox.Attribute("Width"));
+        Assert.Contains("DesktopFilterButton", (string?)categoryButton.Attribute("Classes") ?? string.Empty);
+        Assert.Equal("44", (string?)sortButton.Attribute("Width"));
+        Assert.Equal("44", (string?)sortButton.Attribute("Height"));
     }
 
     private static XDocument LoadProjectXaml(params string[] relativeParts)
