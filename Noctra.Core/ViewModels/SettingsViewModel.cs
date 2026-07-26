@@ -39,6 +39,9 @@ public partial class SettingsViewModel : ObservableObject, IAsyncDisposable
     private readonly IDispatcherService? _dispatcherService;
     private readonly SettingsAutoSaveCoordinator _autoSaveCoordinator;
     private readonly SettingsChangeOriginGate _settingsChangeOriginGate = new();
+    private readonly CancellationTokenSource _lifetimeCts = new();
+    private readonly SemaphoreSlim _statisticsScanGate = new(1, 1);
+    private Task _initialStatisticsTask = Task.CompletedTask;
     private readonly object _autoSaveStatusSync = new();
     private readonly HashSet<SettingsStatusArea> _pendingAutoSaveAreas = [];
     private CancellationTokenSource? _epgRefreshWatchCts;
@@ -47,6 +50,16 @@ public partial class SettingsViewModel : ObservableObject, IAsyncDisposable
     private string? _activeRefreshScope;
     private bool _isLoadingSettings;
     private bool _autoSaveEnabled;
+
+    private sealed record ChannelListStatistics(
+        DateTime? LastUpdated,
+        int TotalChannels);
+
+    private sealed record EpgStatistics(
+        int TotalPrograms,
+        int TotalChannels,
+        DateTime? LastUpdated,
+        string? LastError);
 
     // Auto-clear: status mesajları birkaç saniye sonra otomatik temizlenir.
     private readonly Dictionary<SettingsStatusArea, CancellationTokenSource> _statusAutoClearTokens = new();
@@ -377,13 +390,27 @@ public partial class SettingsViewModel : ObservableObject, IAsyncDisposable
         
         LoadSettings();
         LoadProfileInfo();
-        _ = ScanChannelListStatsCoreAsync(updateStatusMessage: false);
-        _ = ScanEpgStatsCoreAsync(updateStatusMessage: false);
+        _initialStatisticsTask = LoadInitialStatisticsAsync();
         _ = _mainViewModel.RefreshCurrentProfileExpirationAsync();
         _ = UpdateCacheSizeAsync();
         // Bekleyen flexible update kontrolü
         _ = CheckPendingUpdateAsync();
     }
+
+    private async Task LoadInitialStatisticsAsync()
+    {
+        await ScanChannelListStatsCoreAsync(updateStatusMessage: false);
+        await ScanEpgStatsCoreAsync(updateStatusMessage: false);
+    }
+
+    private bool EpgSelectionStillMatches(int? profileId)
+        => !_lifetimeCts.IsCancellationRequested &&
+           _mainViewModel.CurrentProfile?.Id == profileId;
+
+    private bool ChannelSelectionStillMatches(int? profileId, int? playlistId)
+        => !_lifetimeCts.IsCancellationRequested &&
+           _mainViewModel.CurrentProfile?.Id == profileId &&
+           _mainViewModel.SelectedPlaylist?.Id == playlistId;
 
     private void OnUpdateStateChanged(object? sender, UpdateStateChangedEventArgs e)
     {
@@ -1605,8 +1632,13 @@ public partial class SettingsViewModel : ObservableObject, IAsyncDisposable
 
     private async Task ScanEpgStatsCoreAsync(bool updateStatusMessage)
     {
-        try 
+        var cancellationToken = _lifetimeCts.Token;
+        var gateEntered = false;
+        try
         {
+            await _statisticsScanGate.WaitAsync(cancellationToken);
+            gateEntered = true;
+
             if (updateStatusMessage)
             {
                 SetSharedAndPanelStatus(
@@ -1614,57 +1646,97 @@ public partial class SettingsViewModel : ObservableObject, IAsyncDisposable
                     _localizationService.GetString("Settings.Status.EpgReading"));
             }
 
-            using var db = await _contextFactory.CreateDbContextAsync();
-
             var profileId = _mainViewModel.CurrentProfile?.Id;
-            if (profileId.HasValue)
+            var statistics = await Task.Run(
+                async () =>
+                {
+                    await using var db = await _contextFactory
+                        .CreateDbContextAsync(cancellationToken)
+                        .ConfigureAwait(false);
+
+                    var totalPrograms = 0;
+                    var totalChannels = 0;
+                    DateTime? lastUpdated = null;
+
+                    if (profileId.HasValue)
+                    {
+                        var activeChannels = await db.Channels
+                            .AsNoTracking()
+                            .Where(c =>
+                                c.Playlist != null &&
+                                c.Playlist.ProfileId == profileId.Value &&
+                                c.Playlist.IsActive)
+                            .Select(c => new { c.Id, c.TvgId })
+                            .ToListAsync(cancellationToken)
+                            .ConfigureAwait(false);
+
+                        var searchIds = activeChannels
+                            .Select(c => c.TvgId)
+                            .Where(id => !string.IsNullOrEmpty(id))
+                            .Concat(activeChannels.Select(c => c.Id.ToString()))
+                            .Distinct()
+                            .ToList();
+
+                        totalPrograms = await db.EpgPrograms
+                            .CountAsync(
+                                p => searchIds.Contains(p.ChannelId),
+                                cancellationToken)
+                            .ConfigureAwait(false);
+
+                        totalChannels = await db.EpgPrograms
+                            .Where(p => searchIds.Contains(p.ChannelId))
+                            .Select(p => p.ChannelId)
+                            .Distinct()
+                            .CountAsync(cancellationToken)
+                            .ConfigureAwait(false);
+
+                        lastUpdated = await db.Playlists
+                            .AsNoTracking()
+                            .Where(p =>
+                                p.ProfileId == profileId.Value &&
+                                p.IsActive &&
+                                p.EpgLastUpdated != null)
+                            .OrderByDescending(p => p.EpgLastUpdated)
+                            .Select(p => p.EpgLastUpdated)
+                            .FirstOrDefaultAsync(cancellationToken)
+                            .ConfigureAwait(false);
+                    }
+
+                    var errorQuery = db.Playlists
+                        .AsNoTracking()
+                        .Where(p =>
+                            p.IsActive &&
+                            !string.IsNullOrWhiteSpace(p.EpgLastError));
+                    if (profileId.HasValue)
+                    {
+                        errorQuery = errorQuery.Where(
+                            p => p.ProfileId == profileId.Value);
+                    }
+
+                    var lastError = await errorQuery
+                        .OrderByDescending(
+                            p => p.EpgLastUpdated ?? p.LastUpdated ?? p.CreatedAt)
+                        .Select(p => p.EpgLastError)
+                        .FirstOrDefaultAsync(cancellationToken)
+                        .ConfigureAwait(false);
+
+                    return new EpgStatistics(
+                        totalPrograms,
+                        totalChannels,
+                        lastUpdated,
+                        lastError);
+                },
+                cancellationToken);
+
+            if (!EpgSelectionStillMatches(profileId))
             {
-                var activeChannels = await db.Channels
-                    .AsNoTracking()
-                    .Where(c => c.Playlist != null && c.Playlist.ProfileId == profileId.Value && c.Playlist.IsActive)
-                    .Select(c => new { c.Id, c.TvgId })
-                    .ToListAsync();
-
-                var searchIds = activeChannels
-                    .Select(c => c.TvgId)
-                    .Where(id => !string.IsNullOrEmpty(id))
-                    .Concat(activeChannels.Select(c => c.Id.ToString()))
-                    .Distinct()
-                    .ToList();
-
-                TotalEpgPrograms = await db.EpgPrograms
-                    .CountAsync(p => searchIds.Contains(p.ChannelId));
-
-                TotalEpgChannels = await db.EpgPrograms
-                    .Where(p => searchIds.Contains(p.ChannelId))
-                    .Select(p => p.ChannelId)
-                    .Distinct()
-                    .CountAsync();
-
-                LastEpgUpdate = await db.Playlists
-                    .AsNoTracking()
-                    .Where(p => p.ProfileId == profileId.Value && p.IsActive && p.EpgLastUpdated != null)
-                    .OrderByDescending(p => p.EpgLastUpdated)
-                    .Select(p => p.EpgLastUpdated)
-                    .FirstOrDefaultAsync();
-            }
-            else
-            {
-                TotalEpgPrograms = 0;
-                TotalEpgChannels = 0;
-                LastEpgUpdate = null;
+                return;
             }
 
-            var errorQuery = db.Playlists.AsNoTracking().Where(p => p.IsActive && !string.IsNullOrWhiteSpace(p.EpgLastError));
-            if (profileId.HasValue)
-            {
-                errorQuery = errorQuery.Where(p => p.ProfileId == profileId.Value);
-            }
-
-            EpgLastError = await errorQuery
-                .OrderByDescending(p => p.EpgLastUpdated ?? p.LastUpdated ?? p.CreatedAt)
-                .Select(p => p.EpgLastError)
-                .FirstOrDefaultAsync();
+            TotalEpgPrograms = statistics.TotalPrograms;
+            TotalEpgChannels = statistics.TotalChannels;
+            LastEpgUpdate = statistics.LastUpdated;
+            EpgLastError = statistics.LastError;
 
             if (string.IsNullOrWhiteSpace(EpgLastError))
             {
@@ -1699,6 +1771,10 @@ public partial class SettingsViewModel : ObservableObject, IAsyncDisposable
                     _localizationService.GetString("Settings.Status.EpgUpdated"));
             }
         }
+        catch (OperationCanceledException) when (_lifetimeCts.IsCancellationRequested)
+        {
+            // The Settings scope was closed while its initial statistics were loading.
+        }
         catch (Exception ex)
         {
             if (updateStatusMessage)
@@ -1706,6 +1782,13 @@ public partial class SettingsViewModel : ObservableObject, IAsyncDisposable
                 SetSharedAndPanelStatus(
                     SettingsStatusArea.Epg,
                     string.Format(_localizationService.GetString("Settings.Status.Stats.ErrorFormat"), UserFriendlyErrorMessage.FromException(ex)));
+            }
+        }
+        finally
+        {
+            if (gateEntered)
+            {
+                _statisticsScanGate.Release();
             }
         }
     }
@@ -1716,8 +1799,13 @@ public partial class SettingsViewModel : ObservableObject, IAsyncDisposable
 
     private async Task ScanChannelListStatsCoreAsync(bool updateStatusMessage)
     {
+        var cancellationToken = _lifetimeCts.Token;
+        var gateEntered = false;
         try
         {
+            await _statisticsScanGate.WaitAsync(cancellationToken);
+            gateEntered = true;
+
             if (updateStatusMessage)
             {
                 SetSharedAndPanelStatus(
@@ -1725,40 +1813,72 @@ public partial class SettingsViewModel : ObservableObject, IAsyncDisposable
                     _localizationService.GetString("Settings.Status.ChannelsReading"));
             }
 
-            using var db = await _contextFactory.CreateDbContextAsync();
-
-            if (_mainViewModel.SelectedPlaylist != null)
-            {
-                ChannelListLastUpdated = await db.Playlists
-                    .AsNoTracking()
-                    .Where(p => p.Id == _mainViewModel.SelectedPlaylist.Id)
-                    .Select(p => p.LastUpdated)
-                    .FirstOrDefaultAsync();
-
-                TotalChannels = await db.Channels
-                    .CountAsync(c => c.PlaylistId == _mainViewModel.SelectedPlaylist.Id);
-            }
-            else
-            {
-                var profileId = _mainViewModel.CurrentProfile?.Id;
-                if (profileId.HasValue)
+            var playlistId = _mainViewModel.SelectedPlaylist?.Id;
+            var profileId = _mainViewModel.CurrentProfile?.Id;
+            var statistics = await Task.Run(
+                async () =>
                 {
-                    ChannelListLastUpdated = await db.Playlists
-                        .AsNoTracking()
-                        .Where(p => p.IsActive && p.ProfileId == profileId.Value)
-                        .OrderByDescending(p => p.LastUpdated)
-                        .Select(p => p.LastUpdated)
-                        .FirstOrDefaultAsync();
+                    await using var db = await _contextFactory
+                        .CreateDbContextAsync(cancellationToken)
+                        .ConfigureAwait(false);
 
-                    TotalChannels = await db.Channels
-                        .CountAsync(c => c.Playlist != null && c.Playlist.ProfileId == profileId.Value && c.Playlist.IsActive);
-                }
-                else
-                {
-                    ChannelListLastUpdated = null;
-                    TotalChannels = 0;
-                }
+                    if (playlistId.HasValue)
+                    {
+                        var lastUpdated = await db.Playlists
+                            .AsNoTracking()
+                            .Where(p => p.Id == playlistId.Value)
+                            .Select(p => p.LastUpdated)
+                            .FirstOrDefaultAsync(cancellationToken)
+                            .ConfigureAwait(false);
+
+                        var totalChannels = await db.Channels
+                            .CountAsync(
+                                c => c.PlaylistId == playlistId.Value,
+                                cancellationToken)
+                            .ConfigureAwait(false);
+
+                        return new ChannelListStatistics(
+                            lastUpdated,
+                            totalChannels);
+                    }
+
+                    if (profileId.HasValue)
+                    {
+                        var lastUpdated = await db.Playlists
+                            .AsNoTracking()
+                            .Where(p =>
+                                p.IsActive &&
+                                p.ProfileId == profileId.Value)
+                            .OrderByDescending(p => p.LastUpdated)
+                            .Select(p => p.LastUpdated)
+                            .FirstOrDefaultAsync(cancellationToken)
+                            .ConfigureAwait(false);
+
+                        var totalChannels = await db.Channels
+                            .CountAsync(
+                                c =>
+                                    c.Playlist != null &&
+                                    c.Playlist.ProfileId == profileId.Value &&
+                                    c.Playlist.IsActive,
+                                cancellationToken)
+                            .ConfigureAwait(false);
+
+                        return new ChannelListStatistics(
+                            lastUpdated,
+                            totalChannels);
+                    }
+
+                    return new ChannelListStatistics(null, 0);
+                },
+                cancellationToken);
+
+            if (!ChannelSelectionStillMatches(profileId, playlistId))
+            {
+                return;
             }
+
+            ChannelListLastUpdated = statistics.LastUpdated;
+            TotalChannels = statistics.TotalChannels;
 
             if (updateStatusMessage)
             {
@@ -1766,6 +1886,10 @@ public partial class SettingsViewModel : ObservableObject, IAsyncDisposable
                     SettingsStatusArea.Channel,
                     _localizationService.GetString("Settings.Status.ChannelsUpdated"));
             }
+        }
+        catch (OperationCanceledException) when (_lifetimeCts.IsCancellationRequested)
+        {
+            // The Settings scope was closed while its initial statistics were loading.
         }
         catch
         {
@@ -1775,6 +1899,13 @@ public partial class SettingsViewModel : ObservableObject, IAsyncDisposable
                 SetSharedAndPanelStatus(
                     SettingsStatusArea.Channel,
                     _localizationService.GetString("Settings.Status.Channel.Error"));
+            }
+        }
+        finally
+        {
+            if (gateEntered)
+            {
+                _statisticsScanGate.Release();
             }
         }
     }
@@ -2198,11 +2329,17 @@ public partial class SettingsViewModel : ObservableObject, IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
+        _lifetimeCts.Cancel();
         _appUpdateService.UpdateStateChanged -= OnUpdateStateChanged;
         _mainViewModel.PropertyChanged -= MainViewModel_PropertyChanged;
         _settingsService.SettingsChanged -= OnSettingsService_Changed;
         _licenseService.SubscriptionChanged -= OnLicenseSubscriptionChanged;
         DetachCustomEpgHandlers(CustomEpgUrls);
+
+        await _initialStatisticsTask.ConfigureAwait(false);
+        await _statisticsScanGate.WaitAsync().ConfigureAwait(false);
+        _statisticsScanGate.Release();
+
         _autoSaveEnabled = false;
         await _autoSaveCoordinator.DisposeAsync().ConfigureAwait(false);
 
