@@ -97,12 +97,9 @@ public partial class MobilePlayerView : UserControl
 
     // ── Swipe (kaydırma) jest durumu ───────────────────────────────────────
     // Sağ yarı dikey = ses, sol yarı dikey = parlaklık, yatay = ileri/geri sarma.
-    private const double SwipeThreshold = 14;   // yön kararı için minimum hareket (px)
     private bool _isSwiping;
-    private bool _swipeDirectionDecided;
-    private bool _swipeIsVertical;
     private bool _swipeIsLeftZone;
-    private Point _swipeStart;
+    private double _swipeStartY;
     private int _swipeStartVolume;
     private double _swipeStartBrightness;
 
@@ -116,9 +113,6 @@ public partial class MobilePlayerView : UserControl
     private double _currentPanY;
 
     // Yatay sarma önizlemesi: sürükleme sırasında hedef pozisyonu canlı göster.
-    private double _horizontalSeekDeltaSeconds;
-    private bool _isHorizontalSeekPreviewActive;
-
     private readonly DispatcherTimer _volumeToastTimer;
     private readonly DispatcherTimer _seekToastTimer;
     private readonly DispatcherTimer _downloadToastTimer;
@@ -608,7 +602,6 @@ public partial class MobilePlayerView : UserControl
         if (DataContext is not PlayerViewModel vm)
             return;
 
-        // Kilitliyken jestler devre dışı.
         if (vm.IsLocked)
             return;
 
@@ -622,9 +615,7 @@ public partial class MobilePlayerView : UserControl
         }
 
         _isSwiping = true;
-        _swipeDirectionDecided = false;
-        _swipeIsVertical = false;
-        _swipeStart = point.Position;
+        _swipeStartY = point.Position.Y;
         _swipeIsLeftZone = ReferenceEquals(sender, LeftZone);
         _swipeStartVolume = vm.Volume;
         _swipeStartBrightness = GetPlayerWindowService()?.GetBrightness() ?? 0.5;
@@ -648,34 +639,10 @@ public partial class MobilePlayerView : UserControl
         if (!_isSwiping || DataContext is not PlayerViewModel vm)
             return;
 
-        var pos = point.Position;
-        var dx = pos.X - _swipeStart.X;
-        var dy = pos.Y - _swipeStart.Y;
-
-        if (!_swipeDirectionDecided)
-        {
-            if (Math.Abs(dx) < SwipeThreshold && Math.Abs(dy) < SwipeThreshold)
-                return;
-            _swipeIsVertical = Math.Abs(dy) >= Math.Abs(dx);
-            _swipeDirectionDecided = true;
-        }
-
-        if (!_swipeIsVertical)
-        {
-            // Yatay sarma önizlemesi: sürükleme sırasında hedef delta'yı canlı göster.
-            // Asıl seek parmak kalkınca uygulanır (tek sıçrama), ama kullanıcı ışıklı feedback alır.
-            if (!vm.IsLiveContent)
-            {
-                ShowHorizontalSeekPreview(vm, dx);
-            }
-            return;
-        }
-
-        // Dikey jest başladıysa bekleyen yatay seek önizlemesini temizle.
-        HideHorizontalSeekPreview();
+        var dy = point.Position.Y - _swipeStartY;
 
         var height = Bounds.Height > 1 ? Bounds.Height : 1;
-        var fraction = -dy / height; // yukarı kaydırma = artış
+        var fraction = -dy / height;
 
         if (_swipeIsLeftZone)
         {
@@ -703,56 +670,13 @@ public partial class MobilePlayerView : UserControl
             {
                 _isPinchZooming = false;
                 _isSwiping = false;
-                _swipeDirectionDecided = false;
             }
 
             e.Handled = true;
             return;
         }
 
-        if (!_isSwiping || DataContext is not PlayerViewModel vm)
-        {
-            _isSwiping = false;
-            return;
-        }
-
-        var pos = point.Position;
-        var dx = pos.X - _swipeStart.X;
-
-        // Yatay kaydırma -> ileri/geri sarma. Canlı yayında seek yok; sessiz no-op yerine açık feedback ver.
-        if (_swipeDirectionDecided && !_swipeIsVertical && Math.Abs(dx) >= SwipeThreshold)
-        {
-            if (vm.IsLiveContent)
-            {
-                ShowGestureToast(TranslateOrDefault("Player.Mobile.Toast.LiveSeekUnavailable", "Canlı yayında ileri/geri sarma kullanılamaz"));
-                e.Handled = true;
-            }
-            else
-            {
-                var seconds = (int)Math.Clamp(Math.Abs(dx) / 6.0, 5, 90);
-                var param = seconds.ToString(CultureInfo.InvariantCulture);
-
-                if (dx > 0)
-                {
-                    SeekToastIcon = MaterialIconKind.FastForward10;
-                    if (vm.SkipForwardCommand.CanExecute(param))
-                        vm.SkipForwardCommand.Execute(param);
-                }
-                else if (vm.SkipBackwardCommand.CanExecute(param))
-                {
-                    SeekToastIcon = MaterialIconKind.Rewind10;
-                    vm.SkipBackwardCommand.Execute(param);
-                }
-
-                e.Handled = true;
-            }
-        }
-
-        // Sürükleme bitti — önizleme toast'unu temizle.
-        _isHorizontalSeekPreviewActive = false;
-        _horizontalSeekDeltaSeconds = 0;
         _isSwiping = false;
-        _swipeDirectionDecided = false;
     }
 
     private void BeginPinchZoom()
@@ -760,8 +684,6 @@ public partial class MobilePlayerView : UserControl
         var (first, second) = GetFirstTwoPointers();
         _isPinchZooming = true;
         _isSwiping = false;
-        _swipeDirectionDecided = false;
-        HideHorizontalSeekPreview();
 
         _pinchStartDistance = Distance(first, second);
         _pinchStartCenter = Midpoint(first, second);
@@ -828,37 +750,6 @@ public partial class MobilePlayerView : UserControl
     /// Yatay sürükleme sırasında hedef sarma miktarını canlı toast olarak gösterir.
     /// Bu yalnızca görsel önizlemedir; asıl seek parmak kalkınca uygulanır.
     /// </summary>
-    private void ShowHorizontalSeekPreview(PlayerViewModel vm, double dx)
-    {
-        if (Math.Abs(dx) < SwipeThreshold)
-        {
-            return;
-        }
-
-        var seconds = (int)Math.Clamp(Math.Abs(dx) / 6.0, 5, 90);
-        _horizontalSeekDeltaSeconds = dx > 0 ? seconds : -seconds;
-        _isHorizontalSeekPreviewActive = true;
-
-        SeekToastIcon = dx > 0 ? MaterialIconKind.FastForward10 : MaterialIconKind.Rewind10;
-        SeekToastText = FormatSeekToast(_horizontalSeekDeltaSeconds);
-
-        IsSeekToastVisible = true;
-        // Önizleme sürdüğü sürece gizleme sayacı çalışmasın.
-        _seekToastTimer.Stop();
-    }
-
-    private void HideHorizontalSeekPreview()
-    {
-        if (!_isHorizontalSeekPreviewActive)
-        {
-            return;
-        }
-
-        _isHorizontalSeekPreviewActive = false;
-        _horizontalSeekDeltaSeconds = 0;
-        IsSeekToastVisible = false;
-    }
-
     private IPlayerWindowService? GetPlayerWindowService()
     {
         if (_playerWindowService is not null)

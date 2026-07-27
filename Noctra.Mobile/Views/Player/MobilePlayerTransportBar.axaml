@@ -32,13 +32,30 @@
     </Style>
   </UserControl.Styles>
 
-  <Grid RowDefinitions="Auto,Auto"
+  <Grid RowDefinitions="Auto,Auto,Auto"
         Margin="16,0,16,14"
         IsVisible="{Binding IsBottomControlsVisible}">
 
-    <player:MobilePlayerTimeline Grid.Row="0" />
+    <StackPanel Grid.Row="0"
+                Spacing="2"
+                Margin="12,4">
+      <TextBlock Text="{Binding CurrentChannel.Name}"
+                 Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                 FontSize="16"
+                 FontWeight="Bold"
+                 TextTrimming="CharacterEllipsis"
+                 MaxLines="1" />
+      <TextBlock Text="{Binding OverlaySecondaryText}"
+                 Foreground="{DynamicResource PlayerOverlaySecondaryTextBrush}"
+                 FontSize="12"
+                 TextTrimming="CharacterEllipsis"
+                 MaxLines="1"
+                 Opacity="0.85" />
+    </StackPanel>
 
-    <Grid Grid.Row="1"
+    <player:MobilePlayerTimeline Grid.Row="1" />
+
+    <Grid Grid.Row="2"
           Height="56"
            ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,*,Auto,Auto,Auto"
           ColumnSpacing="6">
