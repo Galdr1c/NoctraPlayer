@@ -1,0 +1,56 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:Noctra.ViewModels;assembly=Noctra.Core"
+             xmlns:loc="using:Noctra.Mobile.Localization"
+             xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             x:Class="Noctra.Mobile.Views.Player.MobilePlayerSleepSheet"
+             x:DataType="vm:PlayerViewModel"
+             x:CompileBindings="False">
+  <StackPanel Spacing="12">
+    <Grid ColumnDefinitions="*,Auto">
+      <TextBlock Text="{Binding SleepTimerLabel}"
+                 FontSize="16" FontWeight="SemiBold"
+                 Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                 VerticalAlignment="Center" />
+      <Button Grid.Column="1"
+              Command="{Binding BackFromPlayerPanelCommand}"
+              Width="40" Height="40" Padding="0"
+              Background="Transparent" BorderThickness="0">
+        <icons:MaterialIcon Kind="Close" Width="22" Height="22"
+                            Foreground="{DynamicResource TextMutedBrush}" />
+      </Button>
+    </Grid>
+
+    <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="8" RowSpacing="8">
+      <Button Content="{loc:Translate Player.Mobile.Sleep.Off}"
+              Command="{Binding SetSleepTimerCommand}"
+              CommandParameter="{x:Static vm:PlayerViewModel+SleepTimerOption.Off}"
+              MinHeight="44" />
+      <Button Grid.Column="1"
+              Content="{loc:Translate Player.Mobile.Sleep.15min}"
+              Command="{Binding SetSleepTimerCommand}"
+              CommandParameter="{x:Static vm:PlayerViewModel+SleepTimerOption.Minutes15}"
+              MinHeight="44" />
+      <Button Grid.Row="1"
+              Content="{loc:Translate Player.Mobile.Sleep.30min}"
+              Command="{Binding SetSleepTimerCommand}"
+              CommandParameter="{x:Static vm:PlayerViewModel+SleepTimerOption.Minutes30}"
+              MinHeight="44" />
+      <Button Grid.Row="1" Grid.Column="1"
+              Content="{loc:Translate Player.Mobile.Sleep.60min}"
+              Command="{Binding SetSleepTimerCommand}"
+              CommandParameter="{x:Static vm:PlayerViewModel+SleepTimerOption.Minutes60}"
+              MinHeight="44" />
+      <Button Grid.Row="2"
+              Content="{loc:Translate Player.Mobile.Sleep.End}"
+              Command="{Binding SetSleepTimerCommand}"
+              CommandParameter="{x:Static vm:PlayerViewModel+SleepTimerOption.EndOfEpisode}"
+              MinHeight="44" />
+      <Button Grid.Row="2" Grid.Column="1"
+              Content="{loc:Translate Player.Mobile.Sleep.Cancel}"
+              Command="{Binding CancelSleepTimerCommand}"
+              IsVisible="{Binding IsSleepTimerActive}"
+              MinHeight="44" />
+    </Grid>
+  </StackPanel>
+</UserControl>

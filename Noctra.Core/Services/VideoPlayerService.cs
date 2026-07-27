@@ -997,6 +997,21 @@ public class VideoPlayerService : IVideoPlayerService
         currentMedia?.Dispose();
     }
 
+    public Task EndSessionAsync(CancellationToken cancellationToken = default)
+    {
+        Stop();
+        if (_mediaPlayer is not null)
+        {
+            _mediaPlayer.Dispose();
+            _mediaPlayer = null;
+        }
+
+        _libVLC?.Dispose();
+        _libVLC = null;
+
+        return Task.CompletedTask;
+    }
+
     public int Volume
     {
         get => _currentVolume;

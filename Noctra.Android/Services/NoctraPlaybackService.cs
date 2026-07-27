@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Android.App;
 using Android.Content;
@@ -18,6 +19,7 @@ public sealed class NoctraPlaybackService : MediaSessionService
 {
     private static readonly object LifecycleGate = new();
     private static TaskCompletionSource _readySource = CreateReadySource();
+    private static TaskCompletionSource _stoppedSource = CreateCompletedSource();
     private static bool _isReady;
 
     private AndroidVideoPlayerService? _videoPlayerService;
@@ -47,6 +49,31 @@ public sealed class NoctraPlaybackService : MediaSessionService
 
         await readyTask
             .WaitAsync(TimeSpan.FromSeconds(8))
+            .ConfigureAwait(false);
+    }
+
+    public static async Task StopPlaybackServiceAsync(
+        Context context,
+        CancellationToken cancellationToken = default)
+    {
+        Task stoppedTask;
+
+        lock (LifecycleGate)
+        {
+            if (!_isReady)
+                return;
+
+            _stoppedSource = new TaskCompletionSource(
+                TaskCreationOptions.RunContinuationsAsynchronously);
+
+            stoppedTask = _stoppedSource.Task;
+        }
+
+        context.StopService(
+            new Intent(context, typeof(NoctraPlaybackService)));
+
+        await stoppedTask
+            .WaitAsync(TimeSpan.FromSeconds(3), cancellationToken)
             .ConfigureAwait(false);
     }
 
@@ -111,6 +138,7 @@ public sealed class NoctraPlaybackService : MediaSessionService
         {
             _isReady = false;
             _readySource = CreateReadySource();
+            _stoppedSource.TrySetResult();
         }
 
         if (_videoPlayerService is not null)
@@ -139,4 +167,11 @@ public sealed class NoctraPlaybackService : MediaSessionService
 
     private static TaskCompletionSource CreateReadySource()
         => new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    private static TaskCompletionSource CreateCompletedSource()
+    {
+        var source = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        source.TrySetResult();
+        return source;
+    }
 }

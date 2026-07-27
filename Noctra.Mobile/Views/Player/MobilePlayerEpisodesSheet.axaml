@@ -1,0 +1,101 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:models="using:Noctra.Models"
+             xmlns:vm="clr-namespace:Noctra.ViewModels;assembly=Noctra.Core"
+             xmlns:loc="using:Noctra.Mobile.Localization"
+             xmlns:controls="using:Noctra.Mobile.Controls"
+             xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             x:Class="Noctra.Mobile.Views.Player.MobilePlayerEpisodesSheet"
+             x:DataType="vm:PlayerViewModel"
+             x:CompileBindings="False">
+  <StackPanel Spacing="10">
+    <Grid ColumnDefinitions="*,Auto">
+      <StackPanel Spacing="2" VerticalAlignment="Center">
+        <TextBlock Text="{loc:Translate Player.Overlay.Episodes.Tooltip}"
+                   FontSize="11" FontWeight="Bold"
+                   Foreground="{DynamicResource PlayerOverlaySecondaryTextBrush}"
+                   LetterSpacing="1" />
+        <TextBlock Text="{Binding EpisodesPanelTitle}"
+                   FontSize="16" FontWeight="SemiBold"
+                   Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                   TextWrapping="Wrap" />
+      </StackPanel>
+      <Button Grid.Column="1"
+              Command="{Binding BackFromPlayerPanelCommand}"
+              Width="40" Height="40" Padding="0"
+              Background="Transparent" BorderThickness="0"
+              CornerRadius="20">
+        <icons:MaterialIcon Kind="Close" Width="22" Height="22"
+                            Foreground="{DynamicResource TextMutedBrush}" />
+      </Button>
+    </Grid>
+
+    <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                  VerticalScrollBarVisibility="Disabled">
+      <ItemsControl ItemsSource="{Binding EpisodeSeasons}">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate>
+            <StackPanel Orientation="Horizontal" Spacing="8" />
+          </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="models:Season">
+            <Button Command="{Binding #PlayerRoot.DataContext.SelectEpisodeSeasonCommand}"
+                    CommandParameter="{Binding}"
+                    MinHeight="44" Padding="14,8"
+                    BorderThickness="1" CornerRadius="22" />
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </ScrollViewer>
+
+    <ScrollViewer MaxHeight="320"
+                  HorizontalScrollBarVisibility="Disabled"
+                  VerticalScrollBarVisibility="Auto">
+      <ItemsControl ItemsSource="{Binding SelectedEpisodeSeasonEpisodes}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="models:Episode">
+            <Button Command="{Binding #PlayerRoot.DataContext.PlayEpisodeFromOverlayCommand}"
+                    CommandParameter="{Binding}"
+                    MinHeight="92" Margin="0,0,0,10" Padding="0"
+                    Background="Transparent" BorderThickness="0"
+                    HorizontalContentAlignment="Stretch">
+              <Grid ColumnDefinitions="92,*" ColumnSpacing="10" Margin="8">
+                <Border Width="92" Height="64"
+                        CornerRadius="10" ClipToBounds="True"
+                        Background="{DynamicResource Surface0Brush}"
+                        VerticalAlignment="Top">
+                  <Grid>
+                    <controls:RemoteImage Url="{Binding CoverUrl}" Stretch="UniformToFill" />
+                    <Border VerticalAlignment="Bottom"
+                            HorizontalAlignment="Left"
+                            Background="#AA000000"
+                            CornerRadius="0,8,0,0"
+                            Padding="6,3,8,3">
+                      <TextBlock Text="{Binding EpisodeNumber}"
+                                 Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                                 FontSize="11" FontWeight="Bold" />
+                    </Border>
+                  </Grid>
+                </Border>
+                <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
+                  <TextBlock Text="{Binding TmdbEpisodeName}"
+                             Foreground="{DynamicResource AccentBrush}"
+                             FontSize="12" FontStyle="Italic"
+                             TextTrimming="CharacterEllipsis" MaxLines="1" />
+                  <TextBlock Text="{Binding Name}"
+                             Foreground="{DynamicResource TextPrimaryBrush}"
+                             FontSize="12" FontWeight="Bold"
+                             TextWrapping="Wrap" MaxLines="2" />
+                  <TextBlock Text="{Binding EpisodeMetaText}"
+                             Foreground="{DynamicResource TextMutedBrush}"
+                             FontSize="11" />
+                </StackPanel>
+              </Grid>
+            </Button>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </ScrollViewer>
+  </StackPanel>
+</UserControl>

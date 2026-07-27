@@ -343,6 +343,7 @@ public class PlaybackMediaMetadataTests
         public void Pause() => IsPlaying = false;
         public void Resume() => IsPlaying = true;
         public void Stop() { IsPlaying = false; CurrentUrl = null; }
+        public Task EndSessionAsync(CancellationToken cancellationToken = default) { Stop(); return Task.CompletedTask; }
         public Task HardSeekAsync(double seconds) => Task.CompletedTask;
         public void SeekToTime(long milliseconds) { }
         public void PlayLoadedMedia() => Resume();

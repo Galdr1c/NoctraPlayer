@@ -3,21 +3,16 @@
              xmlns:vm="clr-namespace:Noctra.ViewModels;assembly=Noctra.Core"
              xmlns:loc="using:Noctra.Mobile.Localization"
              xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             xmlns:controls="clr-namespace:Noctra.Mobile.Controls"
              x:Class="Noctra.Mobile.Views.MobilePlayerTopOverlay"
              x:DataType="vm:PlayerViewModel"
              x:CompileBindings="False">
-  <!--
-    Mirrors the desktop top bar (Noctra.Avalonia/Views/VideoOverlayView.axaml):
-    back/close + title on the left, network status + live clock on the right.
-    PiP/Fullscreen live in the bottom control row on desktop, so they live in
-    MobilePlayerCompactControls here too - not up here.
-  -->
   <UserControl.Styles>
     <Style Selector="Button.topFlatIcon">
-      <Setter Property="Width" Value="40" />
-      <Setter Property="Height" Value="40" />
+      <Setter Property="Width" Value="48" />
+      <Setter Property="Height" Value="48" />
       <Setter Property="Padding" Value="0" />
-      <Setter Property="CornerRadius" Value="20" />
+      <Setter Property="CornerRadius" Value="8" />
       <Setter Property="Background" Value="Transparent" />
       <Setter Property="BorderThickness" Value="0" />
     </Style>
@@ -26,57 +21,56 @@
     </Style>
   </UserControl.Styles>
 
-  <Grid ColumnDefinitions="Auto,1*,Auto" ColumnSpacing="6" Margin="10,14,16,0">
-    <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6">
-      <Button Classes="topFlatIcon" Command="{Binding CloseCommand}">
-        <icons:MaterialIcon Kind="KeyboardBackspace" Width="24" Height="24" Foreground="{DynamicResource PlayerOverlayTextBrush}" />
-      </Button>
-      <StackPanel VerticalAlignment="Center" Margin="2,0,0,0">
-        <TextBlock Text="{Binding CurrentChannel.Name}"
-                   Foreground="{DynamicResource PlayerOverlayTextBrush}"
-                   FontSize="{DynamicResource FTitleM}"
-                   FontWeight="Bold"
-                   LetterSpacing="0.1"
-                   TextWrapping="NoWrap"
-                   TextTrimming="CharacterEllipsis"
-                   MaxWidth="190"
-                   MaxLines="1" />
-        <!--<TextBlock Text="{Binding QualityResolutionText}"
-                   Foreground="{DynamicResource PlayerOverlaySecondaryTextBrush}"
-                   FontSize="{DynamicResource FCaption}"
-                   FontWeight="SemiBold"
-                   VerticalAlignment="Center" />
-        <TextBlock Text="•"
-                   Foreground="{DynamicResource PlayerOverlaySecondaryTextBrush}"
-                   FontSize="{DynamicResource FCaption}"
-                   VerticalAlignment="Center" />
-        <TextBlock Text="{Binding QualityVideoCodecText}"
-                   Foreground="{DynamicResource PlayerOverlaySecondaryTextBrush}"
-                   FontSize="{DynamicResource FCaption}"
-                   FontWeight="SemiBold"
-                   VerticalAlignment="Center" />-->
-      </StackPanel>
-    </StackPanel>
+  <Grid ColumnDefinitions="Auto,1*,Auto" ColumnSpacing="8" Margin="10,12,12,0">
+    <Button Grid.Column="0"
+            Classes="topFlatIcon"
+            Command="{Binding ClosePlayerCommand}"
+            ToolTip.Tip="{loc:Translate Player.Overlay.Back}">
+      <Grid Width="26" Height="26">
+        <icons:MaterialIcon Kind="ArrowLeft"
+                            Width="26" Height="26"
+                            Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                            IsVisible="{Binding !IsClosingPlayer}" />
+        <controls:PremiumSpinner Width="22" Height="22"
+                                 IsVisible="{Binding IsClosingPlayer}" />
+      </Grid>
+    </Button>
 
-    <!-- Quality badge: mobile-only touch (desktop shows this inline in its quality button instead). -->
     <StackPanel Grid.Column="2"
                 Orientation="Horizontal"
-                Spacing="14"
+                Spacing="8"
                 VerticalAlignment="Center">
-
-      <!-- Network status, same as desktop's top-right cluster. -->
-      <StackPanel Orientation="Horizontal" Spacing="5" VerticalAlignment="Center" Opacity="0.85">
-        <icons:MaterialIcon Kind="{Binding NetworkIcon}" Width="15" Height="15" Foreground="{DynamicResource PlayerOverlayTextBrush}" />
-        <TextBlock Text="{Binding NetworkStatus}"
-                   Foreground="{DynamicResource PlayerOverlayTextBrush}"
-                   FontSize="{DynamicResource FCaption}" FontWeight="Medium" VerticalAlignment="Center" />
-      </StackPanel>
-
-      <!-- Live clock, same as desktop's CurrentTimeStr. -->
-      <TextBlock Text="{Binding CurrentTimeStr}"
-                 Foreground="{DynamicResource PlayerOverlayTextBrush}"
-                 FontSize="{DynamicResource FBodyL}" FontWeight="Bold"
-                 VerticalAlignment="Center" />
+      <Border Background="#33E50914"
+              CornerRadius="8"
+              Width="48"
+              Height="48"
+              Padding="0"
+              IsVisible="{Binding HasNetworkError}">
+        <icons:MaterialIcon Kind="WifiOff"
+                            Width="20" Height="20"
+                            Foreground="{DynamicResource ErrorBrush}" />
+      </Border>
+      <Button Classes="topFlatIcon"
+              Command="{Binding EnterPiPCommand}"
+              ToolTip.Tip="{loc:Translate Player.Overlay.PiP.Tooltip}">
+        <icons:MaterialIcon Kind="PictureInPictureBottomRight"
+                            Width="24" Height="24"
+                            Foreground="{DynamicResource PlayerOverlayTextBrush}" />
+      </Button>
+      <Button Classes="topFlatIcon"
+              Command="{Binding ToggleLockCommand}"
+              ToolTip.Tip="{loc:Translate Player.Overlay.Lock.Tooltip}">
+        <Grid Width="24" Height="24">
+          <icons:MaterialIcon Kind="Lock"
+                              Width="24" Height="24"
+                              Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                              IsVisible="{Binding IsLocked}" />
+          <icons:MaterialIcon Kind="LockOpenVariantOutline"
+                              Width="24" Height="24"
+                              Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                              IsVisible="{Binding IsLocked, Converter={StaticResource InverseBoolConverter}}" />
+        </Grid>
+      </Button>
     </StackPanel>
   </Grid>
 </UserControl>

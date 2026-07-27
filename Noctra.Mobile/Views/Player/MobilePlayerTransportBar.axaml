@@ -1,0 +1,183 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:Noctra.ViewModels;assembly=Noctra.Core"
+             xmlns:loc="using:Noctra.Mobile.Localization"
+             xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             xmlns:player="using:Noctra.Mobile.Views.Player"
+             x:Class="Noctra.Mobile.Views.Player.MobilePlayerTransportBar"
+             x:DataType="vm:PlayerViewModel"
+             x:CompileBindings="False">
+  <UserControl.Styles>
+    <Style Selector="Button.playerTransport">
+      <Setter Property="Width" Value="48" />
+      <Setter Property="Height" Value="48" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="CornerRadius" Value="8" />
+    </Style>
+    <Style Selector="Button.playerTransport:pressed">
+      <Setter Property="Opacity" Value="0.6" />
+    </Style>
+    <Style Selector="Button.playerAction">
+      <Setter Property="Width" Value="48" />
+      <Setter Property="Height" Value="48" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="CornerRadius" Value="8" />
+    </Style>
+    <Style Selector="Button.playerAction:pressed">
+      <Setter Property="Opacity" Value="0.6" />
+    </Style>
+  </UserControl.Styles>
+
+  <Grid RowDefinitions="Auto,Auto"
+        Margin="16,0,16,14"
+        IsVisible="{Binding IsBottomControlsVisible}">
+
+    <player:MobilePlayerTimeline Grid.Row="0" />
+
+    <Grid Grid.Row="1"
+          Height="56"
+           ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,*,Auto,Auto,Auto"
+          ColumnSpacing="6">
+
+      <Button Classes="playerTransport"
+              Command="{Binding SkipBackwardCommand}"
+              CommandParameter="10"
+              IsVisible="{Binding !IsLiveContent}">
+        <icons:MaterialIcon Kind="Rewind10"
+                            Width="24" Height="24"
+                            Foreground="{DynamicResource PlayerOverlayTextBrush}" />
+      </Button>
+      <Button Classes="playerTransport"
+              Command="{Binding PlayPreviousLiveChannelCommand}"
+              IsVisible="{Binding IsLiveContent}">
+        <icons:MaterialIcon Kind="SkipPrevious"
+                            Width="24" Height="24"
+                            Foreground="{DynamicResource PlayerOverlayTextBrush}" />
+      </Button>
+
+      <Button Grid.Column="1"
+              Classes="playerTransport"
+              Command="{Binding PlayPauseCommand}">
+        <Panel Width="28" Height="28">
+          <icons:MaterialIcon Kind="Play"
+                              Width="28" Height="28"
+                              Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                              IsVisible="{Binding IsPlaying, Converter={StaticResource InverseBoolConverter}}" />
+          <icons:MaterialIcon Kind="Pause"
+                              Width="28" Height="28"
+                              Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                              IsVisible="{Binding IsPlaying}" />
+        </Panel>
+      </Button>
+
+      <Button Grid.Column="2"
+              Classes="playerTransport"
+              Command="{Binding SkipForwardCommand}"
+              CommandParameter="10"
+              IsVisible="{Binding !IsLiveContent}">
+        <icons:MaterialIcon Kind="FastForward10"
+                            Width="24" Height="24"
+                            Foreground="{DynamicResource PlayerOverlayTextBrush}" />
+      </Button>
+      <Button Grid.Column="2"
+              Classes="playerTransport"
+              Command="{Binding PlayNextLiveChannelCommand}"
+              IsVisible="{Binding IsLiveContent}">
+        <icons:MaterialIcon Kind="SkipNext"
+                            Width="24" Height="24"
+                            Foreground="{DynamicResource PlayerOverlayTextBrush}" />
+      </Button>
+
+      <Button Grid.Column="3"
+              Classes="playerTransport"
+              Command="{Binding ToggleMuteCommand}">
+        <Panel Width="24" Height="24">
+          <icons:MaterialIcon Kind="VolumeOff"
+                              Width="24" Height="24"
+                              Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                              IsVisible="{Binding IsMuted}" />
+          <icons:MaterialIcon Kind="VolumeHigh"
+                              Width="24" Height="24"
+                              Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                              IsVisible="{Binding IsMuted, Converter={StaticResource InverseBoolConverter}}" />
+        </Panel>
+      </Button>
+
+      <StackPanel Grid.Column="4"
+                  Orientation="Horizontal"
+                  Spacing="6"
+                  VerticalAlignment="Center"
+                  Margin="8,0,0,0">
+        <TextBlock Text="{Binding PositionText}"
+                   FontSize="14"
+                   FontWeight="SemiBold"
+                   Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                   VerticalAlignment="Center" />
+        <TextBlock Text="·"
+                   FontSize="14"
+                   FontWeight="Normal"
+                   Foreground="{DynamicResource PlayerOverlaySecondaryTextBrush}"
+                   Opacity="0.50"
+                   VerticalAlignment="Center" />
+        <TextBlock Text="{Binding DurationText}"
+                   FontSize="14"
+                   FontWeight="Normal"
+                   Foreground="{DynamicResource PlayerOverlaySecondaryTextBrush}"
+                   Opacity="0.70"
+                   VerticalAlignment="Center" />
+        <Button Background="{DynamicResource ErrorBrush}"
+                CornerRadius="3"
+                Padding="6,1,6,2"
+                VerticalAlignment="Center"
+                BorderThickness="0"
+                IsVisible="{Binding CanShowGoToLiveButton}"
+                Command="{Binding GoToLiveCommand}"
+                ToolTip.Tip="{loc:Translate Player.Mobile.GoToLive}">
+          <TextBlock Text="{loc:Translate Player.Mobile.GoToLive}"
+                     Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                     FontSize="11"
+                     FontWeight="Bold" />
+        </Button>
+      </StackPanel>
+
+      <Button Grid.Column="6"
+              Classes="playerAction"
+              IsVisible="{Binding IsLiveContent}"
+              Command="{Binding ToggleLiveFavoriteCommand}">
+        <Panel Width="24" Height="24">
+          <icons:MaterialIcon Kind="Heart"
+                              Width="24" Height="24"
+                              Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                              IsVisible="{Binding IsCurrentChannelFavorite}" />
+          <icons:MaterialIcon Kind="HeartOutline"
+                              Width="24" Height="24"
+                              Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                              IsVisible="{Binding IsCurrentChannelFavorite, Converter={StaticResource InverseBoolConverter}}" />
+        </Panel>
+      </Button>
+
+      <Button Grid.Column="7"
+              Classes="playerAction"
+              IsVisible="{Binding IsLiveContent}"
+              Command="{Binding ToggleEpgPanelCommand}"
+              ToolTip.Tip="{loc:Translate Player.Epg.GuideTooltip}">
+        <icons:MaterialIcon Kind="CalendarClock"
+                            Width="24" Height="24"
+                            Foreground="{DynamicResource PlayerOverlayTextBrush}" />
+      </Button>
+
+      <Button Grid.Column="8"
+              Classes="playerAction"
+              Command="{Binding OpenActionsPanelCommand}"
+              ToolTip.Tip="{loc:Translate Player.Mobile.More}">
+        <icons:MaterialIcon Kind="DotsHorizontal"
+                            Width="24" Height="24"
+                            Foreground="{DynamicResource PlayerOverlayTextBrush}" />
+      </Button>
+    </Grid>
+  </Grid>
+</UserControl>

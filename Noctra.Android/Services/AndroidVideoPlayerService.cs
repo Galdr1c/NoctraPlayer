@@ -472,6 +472,64 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
         });
     }
 
+    public async Task EndSessionAsync(CancellationToken cancellationToken = default)
+    {
+        ThrowIfDisposed();
+
+        _reinitializeCts?.Cancel();
+
+        var completion = new TaskCompletionSource(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+
+        RunOnMainThread(() =>
+        {
+            try
+            {
+                StopPositionUpdates();
+
+                if (_exoPlayer is not null)
+                {
+                    _exoPlayer.PlayWhenReady = false;
+                    _exoPlayer.Stop();
+                    _exoPlayer.ClearVideoSurface();
+                    _exoPlayer.ClearMediaItems();
+                }
+
+                _currentUrl = null;
+                _hasLoadedMedia = false;
+                _isPlaying = false;
+                _currentTimeMs = 0;
+                _duration = 0;
+                _state = PlaybackState.Stopped;
+                StreamQuality = null;
+
+                _selectedAudioTrack = -1;
+                _selectedSubtitleTrack = -1;
+
+                ClearTrackCache();
+                RaiseSubtitleTextChanged(null);
+                PlayingChanged?.Invoke(this, false);
+
+                completion.TrySetResult();
+            }
+            catch (Exception ex)
+            {
+                completion.TrySetException(ex);
+            }
+        });
+
+        await completion.Task
+            .WaitAsync(TimeSpan.FromSeconds(3), cancellationToken)
+            .ConfigureAwait(false);
+
+        await NoctraPlaybackService
+            .StopPlaybackServiceAsync(_applicationContext, cancellationToken)
+            .ConfigureAwait(false);
+
+        _videoSurfaceService.ResetInteractionTransform();
+        _videoSurfaceService.Hide();
+    }
+
     public void SeekToTime(long milliseconds)
     {
         RunOnMainThread(() =>

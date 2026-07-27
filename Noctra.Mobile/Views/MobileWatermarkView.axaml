@@ -10,7 +10,7 @@
 
   <Grid IsVisible="{Binding IsVisible}">
     <Border Background="Transparent"
-            CornerRadius="12"
+            CornerRadius="8"
             Padding="6,6"
             HorizontalAlignment="Right"
             VerticalAlignment="Bottom"
@@ -18,7 +18,7 @@
       <!-- Desktop watermark preserved, with a slightly smaller mobile font so it does not dominate narrow screens. -->
       <TextBlock Text="Noctra - Free"
                  FontWeight="Bold"
-                 FontSize="{DynamicResource FHeadline}"
+                 FontSize="{DynamicResource FDisplay}"
                  Foreground="{DynamicResource PlayerOverlayTextBrush}"
                  Opacity="0.27" />
     </Border>

@@ -20,7 +20,7 @@ namespace Noctra.ViewModels;
 /// </summary>
 public partial class PlayerViewModel : ObservableObject, IDisposable
 {
-    private const double OverlayAutoHideDelayMs = 5000;
+    private const double OverlayAutoHideDelayMs = 4000;
     
     public sealed record TrackOption(int Id, string Name, string? LanguageCode = null);
     public sealed class SkipOverlayEventArgs : EventArgs
@@ -45,7 +45,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
     public enum SleepTimerOption { Off, Minutes15, Minutes30, Minutes60, EndOfEpisode }
     public enum FillMode { Fit, Fill, Stretch, Original }
-    public enum MobilePanelState { None, Audio, Quality, Info, Episodes, Sleep, Epg, Resume, NextEpisode }
+    public enum MobilePanelState { None, Actions, Audio, Quality, Info, Episodes, Sleep, Epg, Resume, NextEpisode }
 
     // ── Controllers / Subclasses (Decomposition Pattern) ────────────────────
     public PlayerPlaybackController PlaybackController { get; }
@@ -152,7 +152,15 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     private bool _isDownloadedPlayback;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsControlsVisible))]
+    [NotifyPropertyChangedFor(nameof(AreMobileControlsVisible))]
+    [NotifyPropertyChangedFor(nameof(IsTopOverlayVisible))]
+    [NotifyPropertyChangedFor(nameof(IsBottomControlsVisible))]
+    [NotifyPropertyChangedFor(nameof(IsMobileCompactControlsVisible))]
     private bool _isLocked;
+
+    [ObservableProperty]
+    private bool _isLockIndicatorVisible;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsPiPControlsVisible))]
@@ -162,6 +170,10 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     [NotifyPropertyChangedFor(nameof(IsBottomControlsVisible))]
     [NotifyPropertyChangedFor(nameof(IsMobileCompactControlsVisible))]
     private bool _isPiPMode;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(ClosePlayerCommand))]
+    private bool _isClosingPlayer;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsPiPControlsVisible))]
@@ -175,7 +187,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     /// Tek dokunuşla aç/kapat (ToggleControls) ve otomatik gizleme bu değeri sürer.
     /// </summary>
     public bool IsPlayerVisible => IsVisible;
-    public bool IsControlsVisible => IsVisible && !IsPiPMode;
+    public bool IsControlsVisible => IsVisible && !IsPiPMode && !IsLocked;
     public bool AreMobileControlsVisible => IsControlsVisible && !IsEpgPanelOpen;
     public bool IsTopOverlayVisible => AreMobileControlsVisible;
 
@@ -184,6 +196,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         get
         {
             if (IsEpgPanelOpen) return MobilePanelState.Epg;
+            if (IsActionsPanelOpen) return MobilePanelState.Actions;
             if (IsAudioSettingsOpen) return MobilePanelState.Audio;
             if (IsQualitySettingsOpen) return MobilePanelState.Quality;
             if (IsInfoPanelOpen) return MobilePanelState.Info;
@@ -199,6 +212,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     public bool IsPanelOpen => ActiveMobilePanelState != MobilePanelState.None;
 
     public bool IsMobileDetailPanelOpen =>
+        IsActionsPanelOpen ||
         IsAudioSettingsOpen ||
         IsQualitySettingsOpen ||
         IsInfoPanelOpen ||
@@ -219,6 +233,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
             return;
         }
 
+        IsActionsPanelOpen = state == MobilePanelState.Actions;
         IsAudioSettingsOpen = state == MobilePanelState.Audio;
         IsQualitySettingsOpen = state == MobilePanelState.Quality;
         IsInfoPanelOpen = state == MobilePanelState.Info;
@@ -226,14 +241,14 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         IsSleepTimerPanelOpen = state == MobilePanelState.Sleep;
         IsEpgPanelOpen = state == MobilePanelState.Epg;
 
-        var isPanelOpen = state != MobilePanelState.None;
-        IsLocked = isPanelOpen;
-
-        if (isPanelOpen)
+        if (state != MobilePanelState.None)
         {
             _autoHideTimer.Change(Timeout.Infinite, Timeout.Infinite);
             IsVisible = true;
         }
+
+        OnPropertyChanged(nameof(ActiveMobilePanelState));
+        OnPropertyChanged(nameof(IsMobileDetailPanelOpen));
     }
 
     internal void ToggleMobilePanelState(MobilePanelState state)
@@ -244,6 +259,34 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         }
 
         SetMobilePanelState(ActiveMobilePanelState == state ? MobilePanelState.None : state);
+    }
+
+    private MobilePanelState _panelParentState = MobilePanelState.None;
+
+    [RelayCommand]
+    private void OpenActionsPanel()
+    {
+        _panelParentState = MobilePanelState.None;
+        SetMobilePanelState(MobilePanelState.Actions);
+    }
+
+    internal void OpenChildPanel(MobilePanelState panel)
+    {
+        _panelParentState = MobilePanelState.Actions;
+        SetMobilePanelState(panel);
+    }
+
+    [RelayCommand]
+    private void BackFromPlayerPanel()
+    {
+        if (_panelParentState == MobilePanelState.Actions)
+        {
+            _panelParentState = MobilePanelState.None;
+            SetMobilePanelState(MobilePanelState.Actions);
+            return;
+        }
+
+        SetMobilePanelState(MobilePanelState.None);
     }
 
     // ── EPG Timeline Panel ──────────────────────────────────────────────────
@@ -336,6 +379,14 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
     [ObservableProperty]
     private bool _isResizing;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ActiveMobilePanelState))]
+    [NotifyPropertyChangedFor(nameof(IsPanelOpen))]
+    [NotifyPropertyChangedFor(nameof(IsMobileDetailPanelOpen))]
+    [NotifyPropertyChangedFor(nameof(IsBottomControlsVisible))]
+    [NotifyPropertyChangedFor(nameof(IsMobileCompactControlsVisible))]
+    private bool _isActionsPanelOpen;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ActiveMobilePanelState))]
@@ -595,6 +646,43 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
     public string SelectedSubtitleTrackName => SubtitleTracks.FirstOrDefault(t => t.Id == SelectedSubtitleTrack)?.Name ?? string.Empty;
 
+    public bool HasNetworkError =>
+        !string.IsNullOrWhiteSpace(ConnectionStatus) &&
+        (ConnectionStatus.Contains("offline", StringComparison.OrdinalIgnoreCase) ||
+         ConnectionStatus.Contains("error", StringComparison.OrdinalIgnoreCase) ||
+         ConnectionStatus.Contains("disconnect", StringComparison.OrdinalIgnoreCase));
+
+    public string QualitySummary
+    {
+        get
+        {
+            if (StreamQuality is null && string.IsNullOrWhiteSpace(QualityResolutionText))
+                return string.Empty;
+
+            var resolution = StreamQuality is { Width: > 0, Height: > 0 }
+                ? $"{StreamQuality.Height}p"
+                : QualityResolutionText;
+
+            return resolution;
+        }
+    }
+
+    public string AudioSubtitleSummary
+    {
+        get
+        {
+            var parts = new List<string>();
+            if (!string.IsNullOrWhiteSpace(SelectedAudioTrackName))
+                parts.Add(SelectedAudioTrackName);
+
+            if (!string.IsNullOrWhiteSpace(SelectedSubtitleTrackName) &&
+                !string.Equals(SelectedSubtitleTrackName, "Off", StringComparison.OrdinalIgnoreCase))
+                parts.Add(SelectedSubtitleTrackName);
+
+            return parts.Count > 0 ? string.Join(" • ", parts) : string.Empty;
+        }
+    }
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ActiveMobilePanelState))]
     [NotifyPropertyChangedFor(nameof(IsPanelOpen))]
@@ -752,6 +840,8 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     internal System.Threading.Timer? _unreachableWarningTimer;
     private readonly System.Timers.Timer _clockTimer;
     internal readonly System.Timers.Timer _watchHistoryTimer;
+
+    private readonly SemaphoreSlim _exitGate = new(1, 1);
 
     internal void LogDebug(string msg) {
         System.Diagnostics.Debug.WriteLine($"[PVM] {msg}");
@@ -1173,8 +1263,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     {
         if (IsLocked)
         {
-            // Kilitliyken yalnızca kilit göstergesini kısa süre göster, kontrolleri açma.
-            OverlayManager.RestartAutoHideTimer();
+            ShowLockIndicatorBriefly();
             return;
         }
 
@@ -1194,6 +1283,25 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void ToggleLock() => OverlayManager.ToggleLock();
 
+    internal void ShowLockIndicatorBriefly()
+    {
+        IsLockIndicatorVisible = true;
+        _ = HideLockIndicatorAfterDelayAsync();
+    }
+
+    private async Task HideLockIndicatorAfterDelayAsync()
+    {
+        await Task.Delay(2500);
+        IsLockIndicatorVisible = false;
+    }
+
+    public void Unlock()
+    {
+        IsLocked = false;
+        IsLockIndicatorVisible = false;
+        OverlayManager.RestartAutoHideTimer();
+    }
+
     [RelayCommand]
     private void OpenAudioSettings() => OverlayManager.OpenAudioSettings();
 
@@ -1205,6 +1313,8 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
     [RelayCommand]
     private void ClosePanels() => OverlayManager.ClosePanels();
+
+    public void CloseAllPanels() => OverlayManager.ClosePanels();
 
     [RelayCommand]
     private void ShowSleepTimerMenu() => OverlayManager.ShowSleepTimerMenu();
@@ -1608,11 +1718,83 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         RestartAutoHideTimer();
     }
 
-    [RelayCommand]
+    private bool CanClosePlayer() => !IsClosingPlayer;
+
+    [RelayCommand(CanExecute = nameof(CanClosePlayer))]
     private async Task ClosePlayer()
     {
-        await Stop();
-        CloseRequested?.Invoke(this, EventArgs.Empty);
+        await _exitGate.WaitAsync();
+
+        try
+        {
+            if (IsClosingPlayer)
+                return;
+
+            IsClosingPlayer = true;
+
+            Interlocked.Increment(ref _playRequestVersion);
+
+            CancelResumeDialog();
+
+            _autoHideTimer.Change(Timeout.Infinite, Timeout.Infinite);
+            _watchHistoryTimer.Stop();
+
+            SetMobilePanelState(MobilePanelState.None);
+            IsVisible = false;
+
+            var historySnapshot = EpisodeNavigator.CreatePlaybackExitSnapshot();
+
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+
+            await _videoPlayerService.EndSessionAsync(timeout.Token);
+
+            try
+            {
+                await EpisodeNavigator
+                    .FlushPlaybackExitSnapshotAsync(historySnapshot)
+                    .WaitAsync(TimeSpan.FromSeconds(1));
+            }
+            catch (Exception ex)
+            {
+                LogDebug($"Exit history flush failed: {ex.Message}");
+            }
+
+            ResetPlayerAfterExit();
+
+            _dispatcherService.Invoke(() =>
+                CloseRequested?.Invoke(this, EventArgs.Empty));
+
+            _ = _contentDownloadService.CleanupPlaybackCacheAsync();
+        }
+        finally
+        {
+            IsClosingPlayer = false;
+            _exitGate.Release();
+        }
+    }
+
+    private void ResetPlayerAfterExit()
+    {
+        CurrentChannel = null;
+        CurrentProgram = null;
+
+        IsPlaying = false;
+        IsBuffering = false;
+        BufferingProgress = 0;
+
+        Position = 0;
+        Duration = 0;
+        PositionText = "00:00:00";
+        DurationText = "00:00:00";
+        RemainingTime = string.Empty;
+
+        IsPiPMode = false;
+        IsFullScreen = false;
+        IsLocked = false;
+
+        _livePauseRequiresHardRestart = false;
+        _lastLiveProgressAtUtc = DateTime.MinValue;
+        _lastLivePositionEventAtUtc = DateTime.MinValue;
     }
 
     [RelayCommand]
@@ -2132,7 +2314,6 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         if (value)
         {
             _autoHideTimer.Change(Timeout.Infinite, Timeout.Infinite);
-            IsVisible = true;
             return;
         }
         RestartAutoHideTimer();

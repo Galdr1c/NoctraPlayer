@@ -147,19 +147,44 @@ public sealed class VideoOverlayInputSurfaceTests
     }
 
     [Fact]
-    public void MobilePlayerTopOverlay_ShowsResolutionAndCodecWithoutPersistentConnectionStatus()
+    public void MobilePlayerTopOverlay_HasPiPAndLockButtons()
     {
         var topOverlay = LoadProjectFile(
             "Noctra.Mobile",
             "Views",
             "MobilePlayerTopOverlay.axaml");
 
-        Assert.DoesNotContain("Text=\"{Binding ConnectionStatus}\"",
+        Assert.Contains("EnterPiPCommand",
             topOverlay, StringComparison.Ordinal);
-        Assert.Contains("Text=\"{Binding QualityResolutionText}\"",
+        Assert.Contains("ToggleLockCommand",
             topOverlay, StringComparison.Ordinal);
-        Assert.Contains("Text=\"{Binding QualityVideoCodecText}\"",
+        Assert.DoesNotContain("QualityResolutionText",
             topOverlay, StringComparison.Ordinal);
+        Assert.DoesNotContain("QualityVideoCodecText",
+            topOverlay, StringComparison.Ordinal);
+        Assert.DoesNotContain("CurrentChannel.Name",
+            topOverlay, StringComparison.Ordinal);
+        Assert.DoesNotContain("CurrentProgram.Title",
+            topOverlay, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void MobilePlayerTransportBar_HasLiveBadgeNextToTime()
+    {
+        var transportBar = LoadProjectFile(
+            "Noctra.Mobile",
+            "Views",
+            "Player",
+            "MobilePlayerTransportBar.axaml");
+
+        Assert.Contains("IsLiveContent",
+            transportBar, StringComparison.Ordinal);
+        Assert.Contains("PositionText",
+            transportBar, StringComparison.Ordinal);
+        Assert.Contains("DurationText",
+            transportBar, StringComparison.Ordinal);
+        Assert.DoesNotContain("CurrentChannel.Name",
+            transportBar, StringComparison.Ordinal);
     }
 
     [Fact]

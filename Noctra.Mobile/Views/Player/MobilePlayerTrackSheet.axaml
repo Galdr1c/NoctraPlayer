@@ -1,0 +1,74 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:Noctra.ViewModels;assembly=Noctra.Core"
+             xmlns:loc="using:Noctra.Mobile.Localization"
+             xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             x:Class="Noctra.Mobile.Views.Player.MobilePlayerTrackSheet"
+             x:DataType="vm:PlayerViewModel"
+             x:CompileBindings="False">
+  <StackPanel Spacing="12">
+    <Grid ColumnDefinitions="*,Auto">
+      <TextBlock Text="{loc:Translate Player.Mobile.AudioSubtitles}"
+                 FontSize="16" FontWeight="SemiBold"
+                 Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                 VerticalAlignment="Center" />
+      <Button Grid.Column="1"
+              Command="{Binding BackFromPlayerPanelCommand}"
+              Width="40" Height="40" Padding="0"
+              Background="Transparent" BorderThickness="0">
+        <icons:MaterialIcon Kind="Close" Width="22" Height="22"
+                            Foreground="{DynamicResource TextMutedBrush}" />
+      </Button>
+    </Grid>
+
+    <StackPanel Spacing="8">
+      <TextBlock Text="{loc:Translate Player.Settings.Audio}"
+                 FontSize="11" FontWeight="Bold"
+                 Foreground="{DynamicResource PlayerOverlaySecondaryTextBrush}"
+                 LetterSpacing="1" />
+      <ItemsControl ItemsSource="{Binding AudioTracks}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate>
+            <Button Command="{Binding #PlayerRoot.DataContext.SetAudioTrackCommand}"
+                    CommandParameter="{Binding Id}"
+                    MinHeight="46" Margin="0,0,0,6"
+                    Padding="12,8" BorderThickness="1"
+                    HorizontalContentAlignment="Stretch">
+              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                <TextBlock Text="{Binding Name}"
+                           Foreground="{DynamicResource TextPrimaryBrush}"
+                           FontSize="13" FontWeight="SemiBold"
+                           TextTrimming="CharacterEllipsis" />
+              </Grid>
+            </Button>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </StackPanel>
+
+    <StackPanel Spacing="8">
+      <TextBlock Text="{loc:Translate Player.Settings.Subtitle}"
+                 FontSize="11" FontWeight="Bold"
+                 Foreground="{DynamicResource PlayerOverlaySecondaryTextBrush}"
+                 LetterSpacing="1" />
+      <ItemsControl ItemsSource="{Binding SubtitleTracks}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate>
+            <Button Command="{Binding #PlayerRoot.DataContext.SetSubtitleTrackCommand}"
+                    CommandParameter="{Binding Id}"
+                    MinHeight="46" Margin="0,0,0,6"
+                    Padding="12,8" BorderThickness="1"
+                    HorizontalContentAlignment="Stretch">
+              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                <TextBlock Text="{Binding Name}"
+                           Foreground="{DynamicResource TextPrimaryBrush}"
+                           FontSize="13" FontWeight="SemiBold"
+                           TextTrimming="CharacterEllipsis" />
+              </Grid>
+            </Button>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </StackPanel>
+  </StackPanel>
+</UserControl>

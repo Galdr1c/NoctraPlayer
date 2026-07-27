@@ -1,0 +1,71 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:Noctra.ViewModels;assembly=Noctra.Core"
+             xmlns:loc="using:Noctra.Mobile.Localization"
+             xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             x:Class="Noctra.Mobile.Views.Player.MobilePlayerQualitySheet"
+             x:DataType="vm:PlayerViewModel"
+             x:CompileBindings="False">
+  <StackPanel Spacing="12">
+    <Grid ColumnDefinitions="*,Auto">
+      <TextBlock Text="{loc:Translate Player.Mobile.Quality}"
+                 FontSize="16" FontWeight="SemiBold"
+                 Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                 VerticalAlignment="Center" />
+      <Button Grid.Column="1"
+              Command="{Binding BackFromPlayerPanelCommand}"
+              Width="40" Height="40" Padding="0"
+              Background="Transparent" BorderThickness="0">
+        <icons:MaterialIcon Kind="Close" Width="22" Height="22"
+                            Foreground="{DynamicResource TextMutedBrush}" />
+      </Button>
+    </Grid>
+
+    <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="10" RowSpacing="8">
+      <StackPanel Spacing="2">
+        <TextBlock Text="{loc:Translate Player.Quality.Resolution}"
+                   FontSize="11" FontWeight="Bold"
+                   Foreground="{DynamicResource PlayerOverlaySecondaryTextBrush}" />
+        <TextBlock Text="{Binding QualityResolutionText}"
+                   FontSize="13" FontWeight="SemiBold"
+                   Foreground="{DynamicResource PlayerOverlayTextBrush}" />
+      </StackPanel>
+      <StackPanel Grid.Column="1" Spacing="2">
+        <TextBlock Text="{loc:Translate Player.Quality.Fps}"
+                   FontSize="11" FontWeight="Bold"
+                   Foreground="{DynamicResource PlayerOverlaySecondaryTextBrush}" />
+        <TextBlock Text="{Binding QualityFpsText}"
+                   FontSize="13" FontWeight="SemiBold"
+                   Foreground="{DynamicResource PlayerOverlayTextBrush}" />
+      </StackPanel>
+      <StackPanel Grid.Row="1" Spacing="2">
+        <TextBlock Text="{loc:Translate Player.Quality.Codec}"
+                   FontSize="11" FontWeight="Bold"
+                   Foreground="{DynamicResource PlayerOverlaySecondaryTextBrush}" />
+        <TextBlock Text="{Binding QualityVideoCodecText}"
+                   FontSize="13" FontWeight="SemiBold"
+                   Foreground="{DynamicResource PlayerOverlayTextBrush}" />
+      </StackPanel>
+      <StackPanel Grid.Row="1" Grid.Column="1" Spacing="2">
+        <TextBlock Text="{loc:Translate Player.Quality.Bitrate}"
+                   FontSize="11" FontWeight="Bold"
+                   Foreground="{DynamicResource PlayerOverlaySecondaryTextBrush}" />
+        <TextBlock Text="{Binding QualityVideoBitrateText}"
+                   FontSize="13" FontWeight="SemiBold"
+                   Foreground="{DynamicResource PlayerOverlayTextBrush}" />
+      </StackPanel>
+    </Grid>
+
+    <TextBlock Text="{loc:Translate Player.Mobile.Speed}"
+               FontSize="11" FontWeight="Bold"
+               Foreground="{DynamicResource PlayerOverlaySecondaryTextBrush}" />
+    <Grid ColumnDefinitions="*,*,*" RowDefinitions="Auto,Auto" ColumnSpacing="8" RowSpacing="8">
+      <Button Content="0.5x" Command="{Binding SetPlaybackSpeedCommand}" CommandParameter="0.5" MinHeight="38" />
+      <Button Grid.Column="1" Content="0.75x" Command="{Binding SetPlaybackSpeedCommand}" CommandParameter="0.75" MinHeight="38" />
+      <Button Grid.Column="2" Content="1.0x" Command="{Binding SetPlaybackSpeedCommand}" CommandParameter="1.0" MinHeight="38" />
+      <Button Grid.Row="1" Content="1.25x" Command="{Binding SetPlaybackSpeedCommand}" CommandParameter="1.25" MinHeight="38" />
+      <Button Grid.Row="1" Grid.Column="1" Content="1.5x" Command="{Binding SetPlaybackSpeedCommand}" CommandParameter="1.5" MinHeight="38" />
+      <Button Grid.Row="1" Grid.Column="2" Content="2.0x" Command="{Binding SetPlaybackSpeedCommand}" CommandParameter="2.0" MinHeight="38" />
+    </Grid>
+  </StackPanel>
+</UserControl>

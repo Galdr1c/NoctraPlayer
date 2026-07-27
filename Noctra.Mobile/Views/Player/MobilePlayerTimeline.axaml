@@ -1,0 +1,19 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:Noctra.ViewModels;assembly=Noctra.Core"
+             x:Class="Noctra.Mobile.Views.Player.MobilePlayerTimeline"
+             x:DataType="vm:PlayerViewModel"
+             x:CompileBindings="False">
+  <Grid RowDefinitions="Auto" Margin="0,4,0,4">
+    <Border Height="3"
+            CornerRadius="2"
+            Background="{DynamicResource PlayerOverlaySecondaryTextBrush}"
+            Opacity="0.35">
+      <Border Width="{Binding Position, Converter={StaticResource PercentToWidthConverter}, ConverterParameter=1}"
+              Height="3"
+              CornerRadius="2"
+              HorizontalAlignment="Left"
+              Background="{DynamicResource AccentBrush}" />
+    </Border>
+  </Grid>
+</UserControl>

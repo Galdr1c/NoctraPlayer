@@ -1,0 +1,172 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:Noctra.ViewModels;assembly=Noctra.Core"
+             xmlns:loc="using:Noctra.Mobile.Localization"
+             xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             x:Class="Noctra.Mobile.Views.Player.MobilePlayerMoreSheet"
+             x:DataType="vm:PlayerViewModel"
+             x:CompileBindings="False">
+  <UserControl.Styles>
+    <Style Selector="Button.moreSheetRow">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Padding" Value="14,12" />
+      <Setter Property="MinHeight" Value="54" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    </Style>
+    <Style Selector="Button.moreSheetRow:pressed">
+      <Setter Property="Opacity" Value="0.6" />
+    </Style>
+  </UserControl.Styles>
+
+  <StackPanel Spacing="4">
+    <TextBlock Text="{loc:Translate Player.Overlay.Settings.Tooltip}"
+               FontSize="16"
+               FontWeight="SemiBold"
+               Foreground="{DynamicResource PlayerOverlayTextBrush}"
+               Margin="14,8,14,12" />
+
+    <TextBlock Text="{loc:Translate Player.Mobile.Playback}"
+               FontSize="11"
+               FontWeight="Bold"
+               Foreground="{DynamicResource PlayerOverlaySecondaryTextBrush}"
+               LetterSpacing="1"
+               Margin="14,0,14,6" />
+
+    <Button Classes="moreSheetRow"
+            Command="{Binding OpenAudioSettingsCommand}">
+      <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="14">
+        <icons:MaterialIcon Kind="Subtitles" Width="22" Height="22"
+                            Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                            VerticalAlignment="Center" />
+        <TextBlock Grid.Column="1"
+                   Text="{loc:Translate Player.Mobile.AudioSubtitles}"
+                   Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                   FontSize="15"
+                   FontWeight="SemiBold"
+                   VerticalAlignment="Center" />
+        <TextBlock Grid.Column="2"
+                   Text="{Binding AudioSubtitleSummary}"
+                   Foreground="{DynamicResource PlayerOverlaySecondaryTextBrush}"
+                   FontSize="13"
+                   VerticalAlignment="Center" />
+      </Grid>
+    </Button>
+
+    <Button Classes="moreSheetRow"
+            Command="{Binding OpenQualitySettingsCommand}">
+      <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="14">
+        <icons:MaterialIcon Kind="Cog" Width="22" Height="22"
+                            Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                            VerticalAlignment="Center" />
+        <TextBlock Grid.Column="1"
+                   Text="{loc:Translate Player.Mobile.Quality}"
+                   Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                   FontSize="15"
+                   FontWeight="SemiBold"
+                   VerticalAlignment="Center" />
+        <TextBlock Grid.Column="2"
+                   Text="{Binding QualitySummary}"
+                   Foreground="{DynamicResource PlayerOverlaySecondaryTextBrush}"
+                   FontSize="13"
+                   VerticalAlignment="Center" />
+      </Grid>
+    </Button>
+
+    <Button Classes="moreSheetRow"
+            Command="{Binding CycleVideoFillModeCommand}">
+      <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="14">
+        <icons:MaterialIcon Kind="AspectRatio" Width="22" Height="22"
+                            Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                            VerticalAlignment="Center" />
+        <TextBlock Grid.Column="1"
+                   Text="{loc:Translate Player.Overlay.FillMode.Tooltip}"
+                   Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                   FontSize="15"
+                   FontWeight="SemiBold"
+                   VerticalAlignment="Center" />
+        <TextBlock Grid.Column="2"
+                   Text="{Binding VideoFillMode}"
+                   Foreground="{DynamicResource PlayerOverlaySecondaryTextBrush}"
+                   FontSize="13"
+                   VerticalAlignment="Center" />
+      </Grid>
+    </Button>
+
+    <TextBlock Text="{loc:Translate Player.Mobile.Content}"
+               FontSize="11"
+               FontWeight="Bold"
+               Foreground="{DynamicResource PlayerOverlaySecondaryTextBrush}"
+               LetterSpacing="1"
+               Margin="14,12,14,6" />
+
+    <Button Classes="moreSheetRow"
+            Command="{Binding OpenInfoPanelCommand}">
+      <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="14">
+        <icons:MaterialIcon Kind="InformationOutline" Width="22" Height="22"
+                            Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                            VerticalAlignment="Center" />
+        <TextBlock Grid.Column="1"
+                   Text="{loc:Translate Player.Info.Title}"
+                   Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                   FontSize="15"
+                   FontWeight="SemiBold"
+                   VerticalAlignment="Center" />
+      </Grid>
+    </Button>
+
+    <Button Classes="moreSheetRow"
+            IsVisible="{Binding IsSeriesContent}"
+            Command="{Binding OpenEpisodesCommand}">
+      <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="14">
+        <icons:MaterialIcon Kind="Animation" Width="22" Height="22"
+                            Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                            VerticalAlignment="Center" />
+        <TextBlock Grid.Column="1"
+                   Text="{loc:Translate Player.Overlay.Episodes.Tooltip}"
+                   Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                   FontSize="15"
+                   FontWeight="SemiBold"
+                   VerticalAlignment="Center" />
+      </Grid>
+    </Button>
+
+    <Button Classes="moreSheetRow"
+            IsVisible="{Binding CanShowDownloadButton}"
+            Command="{Binding DownloadCurrentContentCommand}">
+      <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="14">
+        <icons:MaterialIcon Kind="Download" Width="22" Height="22"
+                            Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                            VerticalAlignment="Center" />
+        <TextBlock Grid.Column="1"
+                   Text="{loc:Translate Player.Overlay.Download.Tooltip}"
+                   Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                   FontSize="15"
+                   FontWeight="SemiBold"
+                   VerticalAlignment="Center" />
+      </Grid>
+    </Button>
+
+    <Button Classes="moreSheetRow"
+            Command="{Binding ShowSleepTimerMenuCommand}">
+      <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="14">
+        <icons:MaterialIcon Kind="WeatherNight" Width="22" Height="22"
+                            Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                            VerticalAlignment="Center" />
+        <TextBlock Grid.Column="1"
+                   Text="{loc:Translate Player.Overlay.SleepTimer.Tooltip}"
+                   Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                   FontSize="15"
+                   FontWeight="SemiBold"
+                   VerticalAlignment="Center" />
+        <TextBlock Grid.Column="2"
+                   Text="{Binding SleepTimerCountdown}"
+                   Foreground="{DynamicResource PlayerOverlaySecondaryTextBrush}"
+                   FontSize="13"
+                   VerticalAlignment="Center"
+                   IsVisible="{Binding IsSleepTimerActive}" />
+      </Grid>
+    </Button>
+
+  </StackPanel>
+</UserControl>

@@ -8,28 +8,21 @@
              xmlns:controls="using:Noctra.Mobile.Controls"
              xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              xmlns:views="using:Noctra.Mobile.Views"
+             xmlns:player="using:Noctra.Mobile.Views.Player"
              x:Class="Noctra.Mobile.Views.MobilePlayerView"
              x:Name="PlayerRoot"
              x:DataType="vm:PlayerViewModel"
              x:CompileBindings="False"
              mc:Ignorable="d">
-  <UserControl.Styles>
-    <Style Selector="Button.compactPlayerAction">
-      <Setter Property="MinHeight" Value="44" />
-      <Setter Property="MinWidth" Value="96" />
-      <Setter Property="Padding" Value="10,0" />
-    </Style>
-  </UserControl.Styles>
-
   <Grid Background="Transparent"
         ClipToBounds="True"
         Tapped="OnPlayerBackgroundTapped">
-    <!-- Double tap and gesture zones split the visible player area into left/right halves. -->
     <Grid.ColumnDefinitions>
       <ColumnDefinition Width="*" />
       <ColumnDefinition Width="*" />
     </Grid.ColumnDefinitions>
 
+    <!-- Layer 0: Native video surface -->
     <Grid x:Name="VideoSurfaceLayer"
           Grid.ColumnSpan="2"
           ClipToBounds="True"
@@ -38,46 +31,110 @@
               Background="Transparent"
               ClipToBounds="True"
               IsHitTestVisible="False" />
-
-      <!-- Watermark is bound to the same visual layer as the native video slot. -->
       <views:MobileWatermarkView x:Name="MobileWatermark"
-                                  ZIndex="10"
-                                  HorizontalAlignment="Right"
-                                  VerticalAlignment="Bottom"
-                                  Margin="0,0,24,120"
-                                  IsHitTestVisible="False" />
+                                 ZIndex="10"
+                                 HorizontalAlignment="Right"
+                                 VerticalAlignment="Bottom"
+                                 Margin="0,0,24,120"
+                                 IsHitTestVisible="False" />
     </Grid>
 
+    <!-- Layer 1: Gesture zones (sol/sağ yarı) -->
+    <Border x:Name="LeftZone" Grid.Column="0" Background="Transparent"
+            DoubleTapped="OnLeftDoubleTapped"
+            PointerPressed="OnZonePointerPressed"
+            PointerMoved="OnZonePointerMoved"
+            PointerReleased="OnZonePointerReleased" />
+    <Border x:Name="RightZone" Grid.Column="1" Background="Transparent"
+            DoubleTapped="OnRightDoubleTapped"
+            PointerPressed="OnZonePointerPressed"
+            PointerMoved="OnZonePointerMoved"
+            PointerReleased="OnZonePointerReleased" />
+
+    <!-- Layer 2: Üst gradient + içerik bilgisi -->
     <Border Grid.ColumnSpan="2"
-            ZIndex="4"
+            ZIndex="20"
             Height="130"
             VerticalAlignment="Top"
             IsHitTestVisible="False"
-            Background="{DynamicResource PlayerTopGradientBrush}"
-            IsVisible="{Binding IsTopOverlayVisible}" />
-
-    <Border Grid.ColumnSpan="2"
-            ZIndex="4"
-            Height="260"
-            VerticalAlignment="Bottom"
-            IsHitTestVisible="False"
-            Background="{DynamicResource PlayerBottomGradientBrush}"
-            IsVisible="{Binding IsTopOverlayVisible}" />
+            IsVisible="{Binding IsTopOverlayVisible}">
+      <Border.Styles>
+        <Style Selector="Border">
+          <Setter Property="Transitions">
+            <Transitions>
+              <DoubleTransition Property="Opacity" Duration="0:0:0.16" Easing="CubicEaseOut" />
+              <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.16" Easing="CubicEaseOut" />
+            </Transitions>
+          </Setter>
+        </Style>
+      </Border.Styles>
+      <Border.Background>
+        <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+          <GradientStop Offset="0" Color="#D9000000" />
+          <GradientStop Offset="1" Color="#00000000" />
+        </LinearGradientBrush>
+      </Border.Background>
+    </Border>
 
     <views:MobilePlayerTopOverlay Grid.ColumnSpan="2"
-                                  ZIndex="35"
+                                  ZIndex="21"
                                   VerticalAlignment="Top"
-                                  IsVisible="{Binding IsTopOverlayVisible}" />
+                                  IsVisible="{Binding IsTopOverlayVisible}">
+      <views:MobilePlayerTopOverlay.Styles>
+        <Style Selector="views|MobilePlayerTopOverlay">
+          <Setter Property="Transitions">
+            <Transitions>
+              <DoubleTransition Property="Opacity" Duration="0:0:0.16" Easing="CubicEaseOut" />
+              <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.16" Easing="CubicEaseOut" />
+            </Transitions>
+          </Setter>
+        </Style>
+      </views:MobilePlayerTopOverlay.Styles>
+    </views:MobilePlayerTopOverlay>
 
-    <views:MobilePlayerCenterControls Grid.ColumnSpan="2"
-                                      ZIndex="34"
-                                      HorizontalAlignment="Center"
-                                      VerticalAlignment="Center"
-                                      IsVisible="{Binding IsBottomControlsVisible}" />
-
-    <!-- Mobile subtitle overlay. Text/style bindings update instantly without restarting the native player. -->
+    <!-- Layer 3: Alt gradient -->
     <Border Grid.ColumnSpan="2"
-            ZIndex="9"
+            ZIndex="20"
+            Height="240"
+            VerticalAlignment="Bottom"
+            IsHitTestVisible="False"
+            IsVisible="{Binding IsTopOverlayVisible}">
+      <Border.Styles>
+        <Style Selector="Border">
+          <Setter Property="Transitions">
+            <Transitions>
+              <DoubleTransition Property="Opacity" Duration="0:0:0.14" Easing="CubicEaseOut" />
+            </Transitions>
+          </Setter>
+        </Style>
+      </Border.Styles>
+      <Border.Background>
+        <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+          <GradientStop Offset="0" Color="#00000000" />
+          <GradientStop Offset="1" Color="#E6000000" />
+        </LinearGradientBrush>
+      </Border.Background>
+    </Border>
+
+    <!-- Layer 4: Transport bar -->
+    <views:MobilePlayerCompactControls Grid.ColumnSpan="2"
+                                       ZIndex="21"
+                                       VerticalAlignment="Bottom"
+                                       IsVisible="{Binding IsBottomControlsVisible}">
+      <views:MobilePlayerCompactControls.Styles>
+        <Style Selector="views|MobilePlayerCompactControls">
+          <Setter Property="Transitions">
+            <Transitions>
+              <DoubleTransition Property="Opacity" Duration="0:0:0.14" Easing="CubicEaseOut" />
+            </Transitions>
+          </Setter>
+        </Style>
+      </views:MobilePlayerCompactControls.Styles>
+    </views:MobilePlayerCompactControls>
+
+    <!-- Subtitles (alt konum) -->
+    <Border Grid.ColumnSpan="2"
+            ZIndex="15"
             HorizontalAlignment="Stretch"
             VerticalAlignment="Bottom"
             Margin="18,0,18,96"
@@ -95,8 +152,9 @@
                  MaxLines="3" />
     </Border>
 
+    <!-- Subtitles (üst konum) -->
     <Border Grid.ColumnSpan="2"
-            ZIndex="9"
+            ZIndex="15"
             HorizontalAlignment="Stretch"
             VerticalAlignment="Top"
             Margin="18,72,18,0"
@@ -113,22 +171,10 @@
                  TextWrapping="Wrap"
                  MaxLines="3" />
     </Border>
-    <!-- Left zone: double tap seeks back, vertical drag adjusts brightness, horizontal drag seeks. -->
-    <Border x:Name="LeftZone" Grid.Column="0" Background="Transparent"
-            DoubleTapped="OnLeftDoubleTapped"
-            PointerPressed="OnZonePointerPressed"
-            PointerMoved="OnZonePointerMoved"
-            PointerReleased="OnZonePointerReleased" />
-    <!-- Right zone: double tap seeks forward, vertical drag adjusts volume, horizontal drag seeks. -->
-    <Border x:Name="RightZone" Grid.Column="1" Background="Transparent"
-            DoubleTapped="OnRightDoubleTapped"
-            PointerPressed="OnZonePointerPressed"
-            PointerMoved="OnZonePointerMoved"
-            PointerReleased="OnZonePointerReleased" />
 
-    <!-- Buffering / loading shield: desktop overlay parity for mobile. -->
+    <!-- Buffering shield -->
     <Border Grid.ColumnSpan="2"
-            ZIndex="20"
+            ZIndex="25"
             Background="{DynamicResource PlayerOverlayShieldBrush}"
             IsHitTestVisible="False"
             IsVisible="{Binding IsBufferShieldVisible}">
@@ -174,15 +220,15 @@
       </StackPanel>
     </Border>
 
-    <!-- Generic overlay message from PlayerOverlayManager. -->
+    <!-- Overlay mesajı -->
     <Border Grid.ColumnSpan="2"
-            ZIndex="42"
+            ZIndex="30"
             HorizontalAlignment="Center"
             VerticalAlignment="Center"
             MaxWidth="320"
             Padding="18,12"
-            CornerRadius="16"
-            Background="{DynamicResource PlayerOverlayStrongBrush}"
+            CornerRadius="8"
+            Background="{DynamicResource PlayerOverlayShieldBrush}"
             IsHitTestVisible="False"
             IsVisible="{Binding IsOverlayMessageVisible}">
       <StackPanel Orientation="Horizontal" Spacing="10">
@@ -199,15 +245,15 @@
       </StackPanel>
     </Border>
 
-    <!-- Volume feedback toast. -->
+    <!-- Volume toast -->
     <Border Grid.ColumnSpan="2"
-            ZIndex="60"
+            ZIndex="40"
             HorizontalAlignment="Center"
             VerticalAlignment="Top"
             Margin="0,54,0,0"
             Padding="20,12"
-            CornerRadius="20"
-            Background="{DynamicResource PlayerOverlayStrongBrush}"
+            CornerRadius="8"
+            Background="{DynamicResource PlayerOverlayShieldBrush}"
             IsHitTestVisible="False"
             IsVisible="{Binding #PlayerRoot.IsVolumeToastVisible}">
       <StackPanel Orientation="Horizontal" Spacing="10">
@@ -234,14 +280,14 @@
       </StackPanel>
     </Border>
 
-    <!-- Seek / double-tap feedback toast. -->
+    <!-- Seek / double-tap feedback -->
     <Border Grid.ColumnSpan="2"
-            ZIndex="61"
+            ZIndex="41"
             HorizontalAlignment="Center"
             VerticalAlignment="Center"
             Padding="22,14"
-            CornerRadius="20"
-            Background="{DynamicResource PlayerOverlayStrongBrush}"
+            CornerRadius="8"
+            Background="{DynamicResource PlayerOverlayShieldBrush}"
             IsHitTestVisible="False"
             IsVisible="{Binding #PlayerRoot.IsSeekToastVisible}">
       <StackPanel Orientation="Horizontal" Spacing="10">
@@ -257,15 +303,15 @@
       </StackPanel>
     </Border>
 
-    <!-- Download feedback toast. -->
+    <!-- Download toast -->
     <Border Grid.ColumnSpan="2"
-            ZIndex="62"
+            ZIndex="42"
             HorizontalAlignment="Center"
             VerticalAlignment="Bottom"
             Margin="18,0,18,148"
             Padding="18,12"
-            CornerRadius="18"
-            Background="{DynamicResource PlayerOverlayStrongBrush}"
+            CornerRadius="8"
+            Background="{DynamicResource PlayerOverlayShieldBrush}"
             IsHitTestVisible="False"
             IsVisible="{Binding #PlayerRoot.IsDownloadToastVisible}">
       <StackPanel Orientation="Horizontal" Spacing="10">
@@ -283,15 +329,15 @@
       </StackPanel>
     </Border>
 
-    <!-- Gesture feedback for brightness and non-seekable live streams. -->
+    <!-- Gesture feedback -->
     <Border Grid.ColumnSpan="2"
-            ZIndex="63"
+            ZIndex="43"
             HorizontalAlignment="Center"
             VerticalAlignment="Center"
             Margin="18"
             Padding="18,12"
-            CornerRadius="18"
-            Background="{DynamicResource PlayerOverlayStrongBrush}"
+            CornerRadius="8"
+            Background="{DynamicResource PlayerOverlayShieldBrush}"
             IsHitTestVisible="False"
             IsVisible="{Binding #PlayerRoot.IsGestureToastVisible}">
       <TextBlock Text="{Binding #PlayerRoot.GestureToastText}"
@@ -303,37 +349,61 @@
                  MaxWidth="300" />
     </Border>
 
-    <!-- Persistent lock badge remains available while controls are hidden. -->
-    <Button Grid.ColumnSpan="2"
-            ZIndex="70"
+    <!-- Lock badge: kilitliyken her an dinler, tek dokunmayla görünür, 800ms basılı tutunca kilit açılır -->
+    <Button x:Name="LockIndicator"
+            Grid.ColumnSpan="2"
+            ZIndex="50"
             HorizontalAlignment="Center"
             VerticalAlignment="Top"
             Margin="0,48,0,0"
             Padding="14,8"
-            CornerRadius="20"
-            Background="{DynamicResource PlayerOverlayStrongBrush}"
+            CornerRadius="8"
+            Background="{DynamicResource PlayerOverlayShieldBrush}"
             BorderThickness="0"
             IsVisible="{Binding IsLocked}"
-            Command="{Binding ToggleLockCommand}">
+            IsHitTestVisible="{Binding IsLockIndicatorVisible}"
+            Opacity="0"
+            PointerPressed="OnLockIndicatorPressed"
+            PointerReleased="OnLockIndicatorReleased">
+      <Button.Styles>
+        <Style Selector="Button">
+          <Setter Property="Transitions">
+            <Transitions>
+              <DoubleTransition Property="Opacity" Duration="0:0:0.20" />
+            </Transitions>
+          </Setter>
+        </Style>
+      </Button.Styles>
       <StackPanel Orientation="Horizontal" Spacing="8">
-        <icons:MaterialIcon Kind="Lock" Width="18" Height="18" Foreground="{DynamicResource PlayerOverlayTextBrush}" />
+        <icons:MaterialIcon Kind="Lock" Width="24" Height="24"
+                            Foreground="{DynamicResource PlayerOverlayTextBrush}" />
         <TextBlock Text="{loc:Translate Player.Mobile.Locked}"
-                   Foreground="{DynamicResource PlayerOverlayTextBrush}" FontSize="{DynamicResource FCaption}" FontWeight="SemiBold" />
+                   Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                   FontSize="20" FontWeight="SemiBold" />
       </StackPanel>
     </Button>
 
-    <views:MobilePlayerCompactControls Grid.ColumnSpan="2"
-                                       ZIndex="30"
-                                       VerticalAlignment="Bottom"
-                                       IsVisible="{Binding IsBottomControlsVisible}" />
+    <!-- Layer 5: Sheet katmanı (en üst) -->
     <views:MobilePlayerSheets Grid.ColumnSpan="2"
-                              ZIndex="50"
+                              ZIndex="100"
                               VerticalAlignment="Bottom"
-                              IsVisible="{Binding IsMobileDetailPanelOpen}" />
+                              IsVisible="{Binding IsMobileDetailPanelOpen}">
+      <views:MobilePlayerSheets.Styles>
+        <Style Selector="views|MobilePlayerSheets">
+          <Setter Property="Transitions">
+            <Transitions>
+              <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.22" Easing="CubicEaseOut" />
+              <DoubleTransition Property="Opacity" Duration="0:0:0.22" Easing="CubicEaseOut" />
+            </Transitions>
+          </Setter>
+        </Style>
+      </views:MobilePlayerSheets.Styles>
+    </views:MobilePlayerSheets>
+
+    <!-- Layer 6: EPG panel -->
     <views:MobilePlayerEpgPanel x:Name="EpgPanel"
                                 Grid.ColumnSpan="2"
-                                ZIndex="40"
+                                ZIndex="90"
                                 IsVisible="{Binding IsEpgPanelOpen}" />
   </Grid>
-
 </UserControl>

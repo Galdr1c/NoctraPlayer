@@ -11,6 +11,17 @@ using Noctra.Services.Interfaces;
 
 namespace Noctra.ViewModels;
 
+public sealed class PlaybackExitSnapshot
+{
+    public int? ProfileId { get; init; }
+    public Channel? Channel { get; init; }
+    public Episode? Episode { get; init; }
+    public double PositionSeconds { get; init; }
+    public double DurationSeconds { get; init; }
+    public bool IsCompleted { get; init; }
+    public DateTime Timestamp { get; init; } = DateTime.UtcNow;
+}
+
 public class PlayerEpisodeNavigator
 {
     private readonly PlayerViewModel _vm;
@@ -585,6 +596,54 @@ public class PlayerEpisodeNavigator
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"Watch history tracking error: {ex.Message}");
+        }
+    }
+
+    public PlaybackExitSnapshot CreatePlaybackExitSnapshot()
+    {
+        var channel = _vm.CurrentChannel;
+        var episode = _vm.CurrentEpisode;
+        var position = _vm.Position > 0 ? _vm.Position : Math.Max(0, _vm.VideoPlayerService.Position);
+        var duration = _vm.Duration > 0 ? _vm.Duration : 0;
+
+        return new PlaybackExitSnapshot
+        {
+            ProfileId = _vm.CurrentProfileId,
+            Channel = channel,
+            Episode = episode,
+            PositionSeconds = position,
+            DurationSeconds = duration,
+            IsCompleted = IsEpisodeCompleted(duration, position),
+            Timestamp = DateTime.UtcNow
+        };
+    }
+
+    public async Task FlushPlaybackExitSnapshotAsync(PlaybackExitSnapshot snapshot)
+    {
+        if (_vm.WatchHistoryService == null || snapshot.ProfileId == null || snapshot.Channel == null)
+            return;
+
+        try
+        {
+            var channelId = snapshot.Channel.Id > 0 ? snapshot.Channel.Id : (int?)null;
+            var currentPosition = TimeSpan.FromSeconds(Math.Max(0, snapshot.PositionSeconds));
+            var currentDuration = snapshot.DurationSeconds > 0
+                ? TimeSpan.FromSeconds(snapshot.DurationSeconds)
+                : (TimeSpan?)null;
+
+            await _vm.WatchHistoryService.TrackWatchAsync(
+                snapshot.ProfileId.Value,
+                snapshot.Channel.Type == ChannelType.Series && snapshot.Episode?.Id > 0 ? null : channelId,
+                snapshot.Episode?.Id,
+                currentPosition,
+                snapshot.IsCompleted,
+                currentDuration,
+                incrementDelta: null,
+                allowReset: false);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"PlaybackExitSnapshot flush error: {ex.Message}");
         }
     }
 }

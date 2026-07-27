@@ -39,7 +39,7 @@ public class PlayerOverlayManager
         _vm.IsVisible = true;
         if (CanAutoHideOverlay())
         {
-            _vm._autoHideTimer.Change(5000, Timeout.Infinite); // OverlayAutoHideDelayMs = 5000
+            _vm._autoHideTimer.Change(4000, Timeout.Infinite);
         }
     }
 
@@ -47,13 +47,17 @@ public class PlayerOverlayManager
     {
         return _vm.IsPlaying
             && !_vm.IsLocked
+            && !_vm.IsClosingPlayer
             && !_vm.IsDragging
             && !_vm.IsResizing
             && !_vm.IsBuffering
+            && !_vm.IsOverlayMessageVisible
+            && !_vm.IsActionsPanelOpen
             && !_vm.IsAudioSettingsOpen
             && !_vm.IsQualitySettingsOpen
             && !_vm.IsEpisodesPanelOpen
             && !_vm.IsInfoPanelOpen
+            && !_vm.IsSleepTimerPanelOpen
             && !_vm.IsEpgPanelOpen
             && !_vm.IsNextEpisodePromptVisible;
     }

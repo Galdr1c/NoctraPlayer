@@ -1,0 +1,134 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:Noctra.ViewModels;assembly=Noctra.Core"
+             xmlns:loc="using:Noctra.Mobile.Localization"
+             xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             x:Class="Noctra.Mobile.Views.Player.MobilePlayerInfoSheet"
+             x:DataType="vm:PlayerViewModel"
+             x:CompileBindings="False">
+  <StackPanel Spacing="12">
+    <Grid ColumnDefinitions="*,Auto">
+      <StackPanel Spacing="2" VerticalAlignment="Center">
+        <TextBlock Text="{loc:Translate Player.Info.Title}"
+                   FontSize="11" FontWeight="Bold"
+                   Foreground="{DynamicResource PlayerOverlaySecondaryTextBrush}"
+                   LetterSpacing="1" />
+        <TextBlock Text="{Binding CurrentChannel.Name}"
+                   FontSize="16" FontWeight="SemiBold"
+                   Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                   TextWrapping="Wrap" />
+      </StackPanel>
+      <Button Grid.Column="1"
+              Command="{Binding BackFromPlayerPanelCommand}"
+              Width="40" Height="40" Padding="0"
+              Background="Transparent" BorderThickness="0">
+        <icons:MaterialIcon Kind="Close" Width="22" Height="22"
+                            Foreground="{DynamicResource TextMutedBrush}" />
+      </Button>
+    </Grid>
+
+    <ScrollViewer MaxHeight="300"
+                  HorizontalScrollBarVisibility="Disabled"
+                  VerticalScrollBarVisibility="Auto">
+      <StackPanel Spacing="10">
+        <Border Background="{DynamicResource Surface1Brush}"
+                CornerRadius="8" Padding="12"
+                IsVisible="{Binding IsLiveInfoVisible}">
+          <StackPanel Spacing="5">
+            <TextBlock Text="{loc:Translate Player.Info.NowPlaying}"
+                       Foreground="{DynamicResource AccentBrush}"
+                       FontSize="11" FontWeight="Bold" />
+            <TextBlock Text="{Binding CurrentProgram.Title}"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
+                       FontSize="14" FontWeight="SemiBold"
+                       TextWrapping="Wrap" />
+            <TextBlock Text="{Binding CurrentProgram.TimeRange}"
+                       Foreground="{DynamicResource TextMutedBrush}"
+                       FontSize="12"
+                       IsVisible="{Binding HasCurrentProgramInfo}" />
+            <TextBlock Text="{Binding CurrentProgram.Description}"
+                       Foreground="{DynamicResource OverlayTextBrush}"
+                       FontSize="12" LineHeight="18"
+                       TextWrapping="Wrap"
+                       IsVisible="{Binding CurrentProgram.Description, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
+          </StackPanel>
+        </Border>
+
+        <Border Background="{DynamicResource Surface1Brush}"
+                CornerRadius="8" Padding="12"
+                IsVisible="{Binding IsInfoSeriesHeaderVisible}">
+          <StackPanel Spacing="5">
+            <TextBlock Text="{Binding SeriesInfoTitle}"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
+                       FontSize="14" FontWeight="SemiBold"
+                       TextWrapping="Wrap" />
+            <TextBlock Text="{Binding SeriesInfoPlot}"
+                       Foreground="{DynamicResource OverlayTextBrush}"
+                       FontSize="12" LineHeight="18"
+                       TextWrapping="Wrap" MaxHeight="96"
+                       IsVisible="{Binding SeriesInfoPlot, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
+          </StackPanel>
+        </Border>
+
+        <Border Background="{DynamicResource Surface1Brush}"
+                CornerRadius="8" Padding="12"
+                IsVisible="{Binding IsInfoEpisodeVisible}">
+          <StackPanel Spacing="5">
+            <TextBlock Text="{Binding CurrentEpisodeDisplayTitle}"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
+                       FontSize="14" FontWeight="SemiBold"
+                       TextWrapping="Wrap" />
+            <TextBlock Text="{Binding CurrentEpisodeMetaText}"
+                       Foreground="{DynamicResource TextMutedBrush}"
+                       FontSize="12" />
+            <TextBlock Text="{Binding CurrentEpisode.Plot}"
+                       Foreground="{DynamicResource OverlayTextBrush}"
+                       FontSize="12" LineHeight="18"
+                       TextWrapping="Wrap" MaxHeight="110" />
+          </StackPanel>
+        </Border>
+
+        <Border Background="{DynamicResource Surface1Brush}"
+                CornerRadius="8" Padding="12"
+                IsVisible="{Binding IsVodPlotVisible}">
+          <StackPanel Spacing="5">
+            <TextBlock Text="{Binding InfoVodMetaText}"
+                       Foreground="{DynamicResource TextMutedBrush}"
+                       FontSize="12" />
+            <TextBlock Text="{Binding CurrentChannel.Plot}"
+                       Foreground="{DynamicResource OverlayTextBrush}"
+                       FontSize="12" LineHeight="18"
+                       TextWrapping="Wrap" MaxHeight="130" />
+          </StackPanel>
+        </Border>
+
+        <Border Background="{DynamicResource Surface1Brush}"
+                CornerRadius="8" Padding="12"
+                IsVisible="{Binding IsInfoDirectorVisible}">
+          <StackPanel Spacing="5">
+            <TextBlock Text="{loc:Translate Player.Info.Director}"
+                       FontSize="11" FontWeight="Bold"
+                       Foreground="{DynamicResource TextMutedBrush}" />
+            <TextBlock Text="{Binding InfoDirectorText}"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
+                       FontSize="12" TextWrapping="Wrap" />
+          </StackPanel>
+        </Border>
+
+        <Border Background="{DynamicResource Surface1Brush}"
+                CornerRadius="8" Padding="12"
+                IsVisible="{Binding IsInfoCastVisible}">
+          <StackPanel Spacing="5">
+            <TextBlock Text="{loc:Translate Player.Info.Cast}"
+                       FontSize="11" FontWeight="Bold"
+                       Foreground="{DynamicResource TextMutedBrush}" />
+            <TextBlock Text="{Binding InfoCastText}"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
+                       FontSize="12" LineHeight="18"
+                       TextWrapping="Wrap" />
+          </StackPanel>
+        </Border>
+      </StackPanel>
+    </ScrollViewer>
+  </StackPanel>
+</UserControl>

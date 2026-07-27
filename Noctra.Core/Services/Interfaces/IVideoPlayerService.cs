@@ -1,3 +1,6 @@
+using System.Threading;
+using System.Threading.Tasks;
+
 namespace Noctra.Services.Interfaces;
 
 public interface IVideoPlayerService : IDisposable
@@ -10,6 +13,8 @@ public interface IVideoPlayerService : IDisposable
     void Pause();
     void Resume();
     void Stop();
+
+    Task EndSessionAsync(CancellationToken cancellationToken = default);
 
     event EventHandler<int>? VolumeChanged;
     int Volume { get; set; }

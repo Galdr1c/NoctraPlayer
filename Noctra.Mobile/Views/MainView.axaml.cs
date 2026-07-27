@@ -513,12 +513,10 @@ public partial class MainView : UserControl
             return true;
         }
 
-        // 2) Oynatıcıda bir alt panel açıksa -> önce paneli kapat.
-        // Mobil UX'te Android geri hareketi doğrudan player'ı kapatmamalı;
-        // ses/altyazı, kalite, bilgi, bölüm, zamanlayıcı veya EPG paneli önce kapanır.
-        if (PlayerHost.IsVisible && IsAnyPlayerPanelOpen())
+        if (PlayerHost.IsVisible &&
+            _playerViewModel?.ActiveMobilePanelState != PlayerViewModel.MobilePanelState.None)
         {
-            _playerViewModel?.ClosePanelsCommand.Execute(null);
+            _playerViewModel.BackFromPlayerPanelCommand.Execute(null);
             return true;
         }
 
@@ -583,18 +581,6 @@ public partial class MainView : UserControl
         BackExitToast.IsVisible = true;
         _backExitToastTimer.Stop();
         _backExitToastTimer.Start();
-    }
-
-    private bool IsAnyPlayerPanelOpen()
-    {
-        var vm = _playerViewModel;
-        return vm is not null &&
-            (vm.IsEpgPanelOpen ||
-             vm.IsAudioSettingsOpen ||
-             vm.IsQualitySettingsOpen ||
-             vm.IsInfoPanelOpen ||
-             vm.IsEpisodesPanelOpen ||
-             vm.IsSleepTimerPanelOpen);
     }
 
     private IPlayerWindowService? GetPlayerWindowService()
@@ -1179,6 +1165,14 @@ public partial class MainView : UserControl
 
     private void PlayerViewModel_CloseRequested(object? sender, EventArgs e)
     {
+        var platform = GetPlatformServiceResolver();
+        var window = GetPlayerWindowService();
+
+        platform?.GetVideoSurfaceService()?.ResetInteractionTransform();
+        platform?.GetVideoSurfaceService()?.Hide();
+
+        PlayerHost.IsVisible = false;
+
         if (_playerViewModel is not null)
         {
             _playerViewModel.IsFullScreen = false;
@@ -1186,16 +1180,11 @@ public partial class MainView : UserControl
             _playerViewModel.IsPiPMode = false;
         }
 
-        PlayerHost.IsVisible = false;
-        UpdatePlayerChromeState();
-        GetPlatformServiceResolver()?.GetVideoSurfaceService()?.Hide();
+        window?.SetKeepScreenOn(false);
+        window?.SetFullScreenMode(false);
+        window?.SetBrightness(-1);
 
-        // Oynatıcı kapanınca: ekranı uyanık tutmayı bırak, tam ekran/immersive modundan çık
-        // ve parlaklığı sistem varsayılanına sıfırla (-1).
-        var windowService = GetPlayerWindowService();
-        windowService?.SetKeepScreenOn(false);
-        windowService?.SetFullScreenMode(false);
-        windowService?.SetBrightness(-1);
+        UpdatePlayerChromeState();
         UpdatePictureInPictureState();
     }
 
@@ -1262,13 +1251,8 @@ public partial class MainView : UserControl
             UpdatePlayerWatermarkInsets();
         }
         else if (e.PropertyName == nameof(PlayerViewModel.IsVisible) ||
-                 e.PropertyName == nameof(PlayerViewModel.IsAudioSettingsOpen) ||
-                 e.PropertyName == nameof(PlayerViewModel.IsQualitySettingsOpen) ||
-                 e.PropertyName == nameof(PlayerViewModel.IsInfoPanelOpen) ||
-                 e.PropertyName == nameof(PlayerViewModel.IsEpisodesPanelOpen) ||
-                 e.PropertyName == nameof(PlayerViewModel.IsSleepTimerPanelOpen) ||
-                 e.PropertyName == nameof(PlayerViewModel.IsResumeDialogVisible) ||
-                 e.PropertyName == nameof(PlayerViewModel.IsNextEpisodePromptVisible))
+                 e.PropertyName == nameof(PlayerViewModel.IsMobileDetailPanelOpen) ||
+                 e.PropertyName == nameof(PlayerViewModel.IsActionsPanelOpen))
         {
             UpdatePlayerWatermarkInsets();
         }

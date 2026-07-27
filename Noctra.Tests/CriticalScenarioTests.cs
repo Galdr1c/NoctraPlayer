@@ -69,6 +69,7 @@ namespace Noctra.Tests
         public void Pause() { IsPlaying = false; PlayingChanged?.Invoke(this, false); }
         public void Resume() { IsPlaying = true; PlayingChanged?.Invoke(this, true); }
         public void Stop() { IsPlaying = false; CurrentUrl = null; StopCallCount++; }
+        public Task EndSessionAsync(CancellationToken cancellationToken = default) { Stop(); return Task.CompletedTask; }
         public void SetAudioTrack(int trackId) { }
         public void SetSubtitleTrack(int trackId) { }
         public void SeekToTime(long milliseconds) => Position = milliseconds / 1000.0;
