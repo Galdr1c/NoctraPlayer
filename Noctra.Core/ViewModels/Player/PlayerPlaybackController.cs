@@ -79,6 +79,8 @@ public class PlayerPlaybackController
                 
                 // Canlı akışlarda ara sıra Position gelmesi yayının canlı olduğunu doğrular.
                 _vm._lastLivePositionEventAtUtc = DateTime.UtcNow;
+
+                _vm.RaisePropertyChanged(nameof(_vm.LiveProgramProgress));
                 return;
             }
 

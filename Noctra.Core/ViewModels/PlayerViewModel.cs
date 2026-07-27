@@ -420,6 +420,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsLiveInfoVisible))]
+    [NotifyPropertyChangedFor(nameof(LiveProgramProgress))]
     private EpgProgram? _currentProgram;
 
     public bool HasCurrentProgramInfo =>
@@ -441,6 +442,22 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     public bool IsLiveInfoVisible => IsLiveContent && CurrentProgram != null && !string.IsNullOrWhiteSpace(CurrentProgram.Title);
     public bool IsSeriesPlotVisible => IsSeriesContent && !IsLiveContent && CurrentEpisode != null && !string.IsNullOrWhiteSpace(CurrentEpisode.Plot);
     public bool IsVodPlotVisible => !IsLiveContent && !IsSeriesContent && CurrentChannel != null && !string.IsNullOrWhiteSpace(CurrentChannel.Plot);
+
+    public double LiveProgramProgress
+    {
+        get
+        {
+            if (CurrentProgram is null)
+                return 0;
+
+            var duration = (CurrentProgram.EndTime - CurrentProgram.StartTime).TotalSeconds;
+            if (duration <= 0)
+                return 0;
+
+            var elapsed = (DateTime.UtcNow - CurrentProgram.StartTime).TotalSeconds;
+            return Math.Clamp(elapsed / duration * 100d, 0d, 100d);
+        }
+    }
 
     // Mobile info panel uses these richer desktop-parity metadata fields.
     public string? CurrentEpisodeDisplayTitle => FirstNonEmpty(CurrentEpisode?.TmdbEpisodeName, CurrentEpisode?.Name);
@@ -1739,32 +1756,41 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
             _autoHideTimer.Change(Timeout.Infinite, Timeout.Infinite);
             _watchHistoryTimer.Stop();
 
-            SetMobilePanelState(MobilePanelState.None);
-            IsVisible = false;
+        SetMobilePanelState(MobilePanelState.None);
+        IsVisible = false;
 
-            var historySnapshot = EpisodeNavigator.CreatePlaybackExitSnapshot();
+        var historySnapshot = EpisodeNavigator.CreatePlaybackExitSnapshot();
 
+        try
+        {
             using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-
             await _videoPlayerService.EndSessionAsync(timeout.Token);
+        }
+        catch (Exception ex)
+        {
+            LogDebug($"Player shutdown failed: {ex.Message}");
 
-            try
-            {
-                await EpisodeNavigator
-                    .FlushPlaybackExitSnapshotAsync(historySnapshot)
-                    .WaitAsync(TimeSpan.FromSeconds(1));
-            }
-            catch (Exception ex)
-            {
-                LogDebug($"Exit history flush failed: {ex.Message}");
-            }
+            try { _videoPlayerService.Stop(); }
+            catch { /* Best effort fallback */ }
+        }
 
-            ResetPlayerAfterExit();
+        try
+        {
+            await EpisodeNavigator
+                .FlushPlaybackExitSnapshotAsync(historySnapshot)
+                .WaitAsync(TimeSpan.FromSeconds(1));
+        }
+        catch (Exception ex)
+        {
+            LogDebug($"Exit history flush failed: {ex.Message}");
+        }
 
-            _dispatcherService.Invoke(() =>
-                CloseRequested?.Invoke(this, EventArgs.Empty));
+        ResetPlayerAfterExit();
 
-            _ = _contentDownloadService.CleanupPlaybackCacheAsync();
+        _dispatcherService.Invoke(() =>
+            CloseRequested?.Invoke(this, EventArgs.Empty));
+
+        _ = _contentDownloadService.CleanupPlaybackCacheAsync();
         }
         finally
         {
@@ -1826,7 +1852,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         if (!IsSeriesContent) return;
         if (EpisodeSeasons.Count == 0) return;
 
-        ToggleMobilePanelState(MobilePanelState.Episodes);
+        OpenChildPanel(MobilePanelState.Episodes);
         RestartAutoHideTimer();
     }
 

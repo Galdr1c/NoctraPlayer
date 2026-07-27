@@ -5,15 +5,21 @@
              x:DataType="vm:PlayerViewModel"
              x:CompileBindings="False">
   <Grid RowDefinitions="Auto" Margin="0,4,0,4">
-    <Border Height="3"
-            CornerRadius="2"
-            Background="{DynamicResource PlayerOverlaySecondaryTextBrush}"
-            Opacity="0.35">
-      <Border Width="{Binding Position, Converter={StaticResource PercentToWidthConverter}, ConverterParameter=1}"
-              Height="3"
-              CornerRadius="2"
-              HorizontalAlignment="Left"
-              Background="{DynamicResource AccentBrush}" />
-    </Border>
+    <ProgressBar Minimum="0"
+                 Maximum="{Binding Duration}"
+                 Value="{Binding Position}"
+                 Height="3"
+                 CornerRadius="2"
+                 IsVisible="{Binding !IsLiveContent}"
+                 Background="{DynamicResource PlayerOverlaySecondaryTextBrush}"
+                 Foreground="{DynamicResource AccentBrush}" />
+    <ProgressBar Minimum="0"
+                 Maximum="100"
+                 Value="{Binding LiveProgramProgress}"
+                 Height="3"
+                 CornerRadius="2"
+                 IsVisible="{Binding IsLiveContent}"
+                 Background="{DynamicResource PlayerOverlaySecondaryTextBrush}"
+                 Foreground="{DynamicResource AccentBrush}" />
   </Grid>
 </UserControl>

@@ -518,6 +518,8 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
             }
         });
 
+    try
+    {
         await completion.Task
             .WaitAsync(TimeSpan.FromSeconds(3), cancellationToken)
             .ConfigureAwait(false);
@@ -525,10 +527,13 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
         await NoctraPlaybackService
             .StopPlaybackServiceAsync(_applicationContext, cancellationToken)
             .ConfigureAwait(false);
-
+    }
+    finally
+    {
         _videoSurfaceService.ResetInteractionTransform();
         _videoSurfaceService.Hide();
     }
+}
 
     public void SeekToTime(long milliseconds)
     {

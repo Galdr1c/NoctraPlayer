@@ -73,7 +73,7 @@ public class PlayerOverlayManager
     public void OpenAudioSettings()
     {
         _vm.LogDebug("UI Action: OpenAudioSettings clicked");
-        _vm.ToggleMobilePanelState(MobilePanelState.Audio);
+        _vm.OpenChildPanel(MobilePanelState.Audio);
         if (_vm.IsAudioSettingsOpen)
         {
             _vm.UpdateMediaInfo();
@@ -84,7 +84,7 @@ public class PlayerOverlayManager
     public void OpenQualitySettings()
     {
         _vm.LogDebug("UI Action: OpenQualitySettings clicked");
-        _vm.ToggleMobilePanelState(MobilePanelState.Quality);
+        _vm.OpenChildPanel(MobilePanelState.Quality);
     }
 
     public void OpenInfoPanel()
@@ -95,7 +95,7 @@ public class PlayerOverlayManager
             return;
         }
 
-        _vm.ToggleMobilePanelState(MobilePanelState.Info);
+        _vm.OpenChildPanel(MobilePanelState.Info);
     }
 
     public void ClosePanels()
@@ -108,7 +108,7 @@ public class PlayerOverlayManager
     public void ShowSleepTimerMenu()
     {
         _vm.LogDebug("UI Action: ShowSleepTimerMenu clicked");
-        _vm.ToggleMobilePanelState(MobilePanelState.Sleep);
+        _vm.OpenChildPanel(MobilePanelState.Sleep);
     }
 
     public void SetSleepTimer(PlayerViewModel.SleepTimerOption mode)
