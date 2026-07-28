@@ -852,9 +852,21 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
         }
     }
 
+    private void UpdatePositionPollingForLoadedMedia()
+    {
+        if (_hasLoadedMedia && _exoPlayer is not null)
+        {
+            StartPositionUpdates();
+        }
+        else
+        {
+            StopPositionUpdates();
+        }
+    }
+
     private void QueuePositionUpdate()
     {
-        if (_isDisposed || !_isPlaying ||
+        if (_isDisposed || !_hasLoadedMedia || _exoPlayer is null ||
             Interlocked.Exchange(ref _positionUpdateQueued, 1) != 0)
         {
             return;
@@ -875,7 +887,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
 
     private void PublishPlaybackPosition()
     {
-        if (_isDisposed || !_isPlaying || _exoPlayer is null)
+        if (_isDisposed || !_hasLoadedMedia || _exoPlayer is null)
         {
             return;
         }
@@ -905,13 +917,14 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
     {
         var (minBufferMs, maxBufferMs, playbackMs, rebufferMs) = bufferSize switch
         {
-            BufferSize.Small => (2_000, 8_000, 750, 1_500),
-            BufferSize.Large => (10_000, 60_000, 1_500, 5_000),
-            _ => (5_000, 30_000, 1_000, 2_500)
+            BufferSize.Small => (6_000, 24_000, 750, 1_500),
+            BufferSize.Large => (30_000, 180_000, 1_500, 5_000),
+            _ => (15_000, 90_000, 1_000, 2_500)
         };
 
         return new DefaultLoadControl.Builder()
             .SetBufferDurationsMs(minBufferMs, maxBufferMs, playbackMs, rebufferMs)
+            .SetPrioritizeTimeOverSizeThresholds(true)
             .Build();
     }
 
@@ -1434,8 +1447,8 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
                     _service.PlayingChanged?.Invoke(_service, false);
                     break;
                 case BasePlayer.InterfaceConsts.StateBuffering:
-                    _service.StopPositionUpdates();
                     _service._state = PlaybackState.Buffering;
+                    _service.UpdatePositionPollingForLoadedMedia();
                     _service.BufferingChanged?.Invoke(_service, 0);
                     break;
                 case BasePlayer.InterfaceConsts.StateReady:
@@ -1469,10 +1482,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
                     _service.BufferingChanged?.Invoke(_service, 100f);
                     _service.PlayerReady?.Invoke(_service, EventArgs.Empty);
                     _service.PlayingChanged?.Invoke(_service, _service._isPlaying);
-                    if (_service._isPlaying)
-                    {
-                        _service.StartPositionUpdates();
-                    }
+                    _service.UpdatePositionPollingForLoadedMedia();
                     _service.UpdateStreamQuality();
                     break;
                 case BasePlayer.InterfaceConsts.StateEnded:
@@ -1492,14 +1502,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
             {
                 _service._state = isPlaying ? PlaybackState.Playing : PlaybackState.Paused;
             }
-            if (isPlaying)
-            {
-                _service.StartPositionUpdates();
-            }
-            else
-            {
-                _service.StopPositionUpdates();
-            }
+            _service.UpdatePositionPollingForLoadedMedia();
             _service.PlayingChanged?.Invoke(_service, isPlaying);
         }
 

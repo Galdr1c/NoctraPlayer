@@ -238,6 +238,34 @@ public sealed class VideoOverlayInputSurfaceTests
     }
 
     [Fact]
+    public void MobilePlayerLockIndicator_UsesSingleTapCommandAndIconOnly()
+    {
+        var playerView = LoadProjectFile(
+            "Noctra.Mobile",
+            "Views",
+            "MobilePlayerView.axaml");
+        var playerViewCode = LoadProjectFile(
+            "Noctra.Mobile",
+            "Views",
+            "MobilePlayerView.axaml.cs");
+
+        var lockIndicator = ExtractStartTag(
+            playerView,
+            "x:Name=\"LockIndicator\"");
+
+        Assert.Contains(
+            "Command=\"{Binding ToggleLockCommand}\"",
+            lockIndicator,
+            StringComparison.Ordinal);
+        Assert.Contains("MinWidth=\"180\"", lockIndicator, StringComparison.Ordinal);
+        Assert.Contains("MinHeight=\"56\"", lockIndicator, StringComparison.Ordinal);
+        Assert.DoesNotContain("Player.Mobile.Locked", playerView, StringComparison.Ordinal);
+        Assert.DoesNotContain("OnLockIndicatorPressed", playerViewCode, StringComparison.Ordinal);
+        Assert.DoesNotContain("OnLockIndicatorReleased", playerViewCode, StringComparison.Ordinal);
+        Assert.DoesNotContain("_lockPressTimer", playerViewCode, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void AndroidPictureInPicture_AutoEnterKeepsManualFallbackOnModernAndroid()
     {
         var pictureInPictureService = LoadProjectFile(
@@ -283,6 +311,34 @@ public sealed class VideoOverlayInputSurfaceTests
     }
 
     [Fact]
+    public void AndroidPlayer_ContinuesBufferedPositionTelemetryWhileLoadedMediaIsPaused()
+    {
+        var playerService = LoadProjectFile(
+            "Noctra.Android",
+            "Services",
+            "AndroidVideoPlayerService.cs");
+
+        var queueUpdate = ExtractMethodBody(
+            playerService,
+            "private void QueuePositionUpdate()");
+        var publishUpdate = ExtractMethodBody(
+            playerService,
+            "private void PublishPlaybackPosition()");
+        var playingChanged = ExtractMethodBody(
+            playerService,
+            "public void OnIsPlayingChanged(bool isPlaying)");
+
+        Assert.Contains("!_hasLoadedMedia", queueUpdate, StringComparison.Ordinal);
+        Assert.DoesNotContain("!_isPlaying", queueUpdate, StringComparison.Ordinal);
+        Assert.Contains("!_hasLoadedMedia", publishUpdate, StringComparison.Ordinal);
+        Assert.DoesNotContain("!_isPlaying", publishUpdate, StringComparison.Ordinal);
+        Assert.Contains(
+            "_service.UpdatePositionPollingForLoadedMedia();",
+            playingChanged,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void MobilePlayerTimeline_UsesProtectedTouchTargetAndBufferedLayer()
     {
         var timeline = LoadProjectFile(
@@ -297,14 +353,19 @@ public sealed class VideoOverlayInputSurfaceTests
             "MobilePlayerTimeline.axaml.cs");
 
         var rootGrid = ExtractStartTag(timeline, "x:Name=\"RootGrid\"");
+        var thumb = ExtractStartTag(timeline, "x:Name=\"Thumb\"");
 
         Assert.Contains("Height=\"40\"", rootGrid, StringComparison.Ordinal);
         Assert.Contains("Background=\"Transparent\"", rootGrid, StringComparison.Ordinal);
         Assert.Contains("x:Name=\"TrackGrid\"", timeline, StringComparison.Ordinal);
         Assert.Contains("x:Name=\"BufferBar\"", timeline, StringComparison.Ordinal);
-        Assert.Contains("Opacity=\"0.30\"", timeline, StringComparison.Ordinal);
+        Assert.Contains("Opacity=\"0.45\"", timeline, StringComparison.Ordinal);
+        Assert.DoesNotContain("x:Name=\"BufferEndMarker\"", timeline, StringComparison.Ordinal);
+        Assert.Contains("Width=\"8\"", thumb, StringComparison.Ordinal);
+        Assert.Contains("Height=\"8\"", thumb, StringComparison.Ordinal);
         Assert.Contains("nameof(PlayerViewModel.BufferedPosition)",
             timelineCode, StringComparison.Ordinal);
+        Assert.DoesNotContain("BufferEndMarker", timelineCode, StringComparison.Ordinal);
     }
 
     [Fact]

@@ -162,6 +162,8 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     private bool _isLockIndicatorVisible;
 
+    private CancellationTokenSource? _lockIndicatorVisibilityCts;
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsPiPControlsVisible))]
     [NotifyPropertyChangedFor(nameof(IsControlsVisible))]
@@ -1306,18 +1308,33 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
     internal void ShowLockIndicatorBriefly()
     {
+        _lockIndicatorVisibilityCts?.Cancel();
+        _lockIndicatorVisibilityCts?.Dispose();
+        _lockIndicatorVisibilityCts = new CancellationTokenSource();
+
         IsLockIndicatorVisible = true;
-        _ = HideLockIndicatorAfterDelayAsync();
+        _ = HideLockIndicatorAfterDelayAsync(_lockIndicatorVisibilityCts.Token);
     }
 
-    private async Task HideLockIndicatorAfterDelayAsync()
+    private async Task HideLockIndicatorAfterDelayAsync(CancellationToken cancellationToken)
     {
-        await Task.Delay(2500);
-        IsLockIndicatorVisible = false;
+        try
+        {
+            await Task.Delay(2500, cancellationToken);
+            if (!cancellationToken.IsCancellationRequested)
+                IsLockIndicatorVisible = false;
+        }
+        catch (OperationCanceledException)
+        {
+            // A newer tap restarted the complete visibility window.
+        }
     }
 
     public void Unlock()
     {
+        _lockIndicatorVisibilityCts?.Cancel();
+        _lockIndicatorVisibilityCts?.Dispose();
+        _lockIndicatorVisibilityCts = null;
         IsLocked = false;
         IsLockIndicatorVisible = false;
         OverlayManager.RestartAutoHideTimer();
@@ -2601,6 +2618,10 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         _sleepCountdownCts?.Cancel();
         _sleepCountdownCts?.Dispose();
         _sleepCountdownCts = null;
+
+        _lockIndicatorVisibilityCts?.Cancel();
+        _lockIndicatorVisibilityCts?.Dispose();
+        _lockIndicatorVisibilityCts = null;
 
         if (_settingsService != null)
         {

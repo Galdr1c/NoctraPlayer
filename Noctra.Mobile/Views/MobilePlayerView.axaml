@@ -350,22 +350,23 @@
                  MaxWidth="300" />
     </Border>
 
-    <!-- Lock badge: kilitliyken her an dinler, tek dokunmayla görünür, 800ms basılı tutunca kilit açılır -->
+    <!-- Kilitliyken kısa süre görünür; tek dokunuşta kilidi açar. -->
     <Button x:Name="LockIndicator"
             Grid.ColumnSpan="2"
             ZIndex="50"
             HorizontalAlignment="Center"
             VerticalAlignment="Top"
             Margin="0,48,0,0"
+            MinWidth="180"
+            MinHeight="56"
             Padding="14,8"
             CornerRadius="8"
             Background="{DynamicResource PlayerOverlayShieldBrush}"
             BorderThickness="0"
             IsVisible="{Binding IsLocked}"
             IsHitTestVisible="{Binding IsLockIndicatorVisible}"
-            Opacity="0"
-            PointerPressed="OnLockIndicatorPressed"
-            PointerReleased="OnLockIndicatorReleased">
+            Command="{Binding ToggleLockCommand}"
+            Opacity="0">
       <Button.Styles>
         <Style Selector="Button">
           <Setter Property="Transitions">
@@ -375,13 +376,10 @@
           </Setter>
         </Style>
       </Button.Styles>
-      <StackPanel Orientation="Horizontal" Spacing="8">
-        <icons:MaterialIcon Kind="Lock" Width="24" Height="24"
-                            Foreground="{DynamicResource PlayerOverlayTextBrush}" />
-        <TextBlock Text="{loc:Translate Player.Mobile.Locked}"
-                   Foreground="{DynamicResource PlayerOverlayTextBrush}"
-                   FontSize="20" FontWeight="SemiBold" />
-      </StackPanel>
+      <icons:MaterialIcon Kind="Lock"
+                          Width="28"
+                          Height="28"
+                          Foreground="{DynamicResource PlayerOverlayTextBrush}" />
     </Button>
 
     <!-- Layer 5: Sheet katmanı (en üst) -->

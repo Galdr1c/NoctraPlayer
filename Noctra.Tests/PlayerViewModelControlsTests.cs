@@ -276,6 +276,30 @@ namespace Noctra.Tests
         }
 
         [Fact]
+        public void ToggleLock_ShowsUnlockAffordanceImmediately()
+        {
+            var ctx = new PlayerTestContext();
+
+            ctx.VM.ToggleLockCommand.Execute(null);
+
+            Assert.True(ctx.VM.IsLocked);
+            Assert.True(ctx.VM.IsLockIndicatorVisible);
+        }
+
+        [Fact]
+        public async Task ShowLockIndicatorBriefly_RestartsVisibilityWindow()
+        {
+            var ctx = new PlayerTestContext();
+
+            ctx.VM.ShowLockIndicatorBriefly();
+            await Task.Delay(2000);
+            ctx.VM.ShowLockIndicatorBriefly();
+            await Task.Delay(700);
+
+            Assert.True(ctx.VM.IsLockIndicatorVisible);
+        }
+
+        [Fact]
         public async Task PlayChannelAsync_PublishesMediaMetadataBeforePlayback()
         {
             var ctx = new PlayerTestContext();

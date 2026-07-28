@@ -13,7 +13,6 @@ using Noctra.Mobile.Services;
 using Noctra.Models;
 using Noctra.Services;
 using Noctra.Services.Interfaces;
-using System.Threading;
 using System.Threading.Tasks;
 using Material.Icons;
 using Noctra.ViewModels;
@@ -91,9 +90,6 @@ public partial class MobilePlayerView : UserControl
     /// </summary>
     public event Action<Channel>? ChannelSelected;
 
-    // ── Kilit göstergesi uzun basma ────────────────────────────────────────
-    private const int LockLongPressMs = 500;
-    private CancellationTokenSource? _lockPressCts;
 
     // ── Swipe (kaydırma) jest durumu ───────────────────────────────────────
     // Sağ yarı dikey = ses, sol yarı dikey = parlaklık.
@@ -827,29 +823,5 @@ public partial class MobilePlayerView : UserControl
         return _settingsService;
     }
 
-    // ── Kilit göstergesi uzun basma (500 ms) ─────────────────────────────────
 
-    private void OnLockIndicatorPressed(object? sender, PointerPressedEventArgs e)
-    {
-        _lockPressCts?.Cancel();
-        _lockPressCts = new CancellationTokenSource();
-        var cts = _lockPressCts;
-
-        var timer = new DispatcherTimer
-        {
-            Interval = TimeSpan.FromMilliseconds(LockLongPressMs)
-        };
-        timer.Tick += (s, args) =>
-        {
-            timer.Stop();
-            if (!cts.IsCancellationRequested && DataContext is PlayerViewModel vm)
-                vm.Unlock();
-        };
-        timer.Start();
-    }
-
-    private void OnLockIndicatorReleased(object? sender, PointerReleasedEventArgs e)
-    {
-        _lockPressCts?.Cancel();
-    }
 }

@@ -66,7 +66,14 @@ public class PlayerOverlayManager
 
     public void ToggleLock()
     {
-        _vm.IsLocked = !_vm.IsLocked;
+        if (_vm.IsLocked)
+        {
+            _vm.Unlock();
+            return;
+        }
+
+        _vm.IsLocked = true;
+        _vm.ShowLockIndicatorBriefly();
         RestartAutoHideTimer();
     }
 

@@ -479,7 +479,7 @@ public class MobileReleaseGuardTests
     }
 
     [Fact]
-    public void AndroidPlayer_LargeBufferMinimumMatchesTenSecondSettingsLabel()
+    public void AndroidPlayer_UsesTripledTimePrioritizedBufferTargets()
     {
         var player = ReadProjectFile(
             "Noctra.Android",
@@ -487,10 +487,16 @@ public class MobileReleaseGuardTests
             "AndroidVideoPlayerService.cs");
 
         Assert.Contains(
-            "BufferSize.Large => (10_000, 60_000, 1_500, 5_000)",
+            "BufferSize.Small => (6_000, 24_000, 750, 1_500)",
             player);
-        Assert.DoesNotContain(
-            "BufferSize.Large => (15_000, 60_000, 1_500, 5_000)",
+        Assert.Contains(
+            "BufferSize.Large => (30_000, 180_000, 1_500, 5_000)",
+            player);
+        Assert.Contains(
+            "_ => (15_000, 90_000, 1_000, 2_500)",
+            player);
+        Assert.Contains(
+            ".SetPrioritizeTimeOverSizeThresholds(true)",
             player);
     }
 

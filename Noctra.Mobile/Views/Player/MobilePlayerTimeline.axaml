@@ -20,7 +20,7 @@
               HorizontalAlignment="Left"
               CornerRadius="2"
               Background="{DynamicResource AccentBrush}"
-              Opacity="0.30"
+              Opacity="0.45"
               IsVisible="False" />
       <Border x:Name="FillBar"
               HorizontalAlignment="Left"
@@ -28,8 +28,8 @@
               Background="{DynamicResource AccentBrush}" />
     </Grid>
     <Ellipse x:Name="Thumb"
-             Width="14"
-             Height="14"
+             Width="8"
+             Height="8"
              Fill="{DynamicResource AccentBrush}"
              VerticalAlignment="Center"
              HorizontalAlignment="Left"
