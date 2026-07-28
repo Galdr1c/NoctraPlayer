@@ -90,4 +90,44 @@ public class LocalizationServiceTests
             Assert.NotEqual(key, service.GetString(key));
         }
     }
+
+    [Theory]
+    [InlineData("tr")]
+    [InlineData("en")]
+    [InlineData("de")]
+    [InlineData("fr")]
+    [InlineData("es")]
+    public void PlayerAccessibilityKeys_ExistInEverySupportedLanguage(string language)
+    {
+        var service = new LocalizationService();
+        service.SetLanguage(language);
+
+        var keys = new[]
+        {
+            "Player.Accessibility.Play",
+            "Player.Accessibility.Pause",
+            "Player.Accessibility.Mute",
+            "Player.Accessibility.Unmute",
+            "Player.Accessibility.AddFavorite",
+            "Player.Accessibility.RemoveFavorite",
+            "Player.Accessibility.Lock",
+            "Player.Accessibility.Unlock",
+            "Player.Accessibility.GoToLive",
+            "Player.Accessibility.Timeline.Progress",
+            "Player.Accessibility.Timeline.UnknownDuration",
+            "Player.Accessibility.Timeline.LiveProgress",
+            "Player.Accessibility.Timeline.LiveProgressWithTitle",
+            "Player.Accessibility.Time.Hour.One",
+            "Player.Accessibility.Time.Hour.Many",
+            "Player.Accessibility.Time.Minute.One",
+            "Player.Accessibility.Time.Minute.Many",
+            "Player.Accessibility.Time.Second.One",
+            "Player.Accessibility.Time.Second.Many"
+        };
+
+        foreach (var key in keys)
+        {
+            Assert.NotEqual(key, service.GetString(key));
+        }
+    }
 }

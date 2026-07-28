@@ -357,7 +357,7 @@
             HorizontalAlignment="Center"
             VerticalAlignment="Top"
             Margin="0,48,0,0"
-            MinWidth="180"
+            MinWidth="100"
             MinHeight="56"
             Padding="14,8"
             CornerRadius="8"
@@ -366,6 +366,7 @@
             IsVisible="{Binding IsLocked}"
             IsHitTestVisible="{Binding IsLockIndicatorVisible}"
             Command="{Binding ToggleLockCommand}"
+            AutomationProperties.Name="{Binding LockAccessibilityName}"
             Opacity="0">
       <Button.Styles>
         <Style Selector="Button">

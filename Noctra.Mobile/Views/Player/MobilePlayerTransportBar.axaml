@@ -63,14 +63,16 @@
       <Button Classes="playerTransport"
               Command="{Binding SkipBackwardCommand}"
               CommandParameter="10"
-              IsVisible="{Binding !IsLiveContent}">
+              IsVisible="{Binding !IsLiveContent}"
+              AutomationProperties.Name="{loc:Translate Player.Overlay.Backward}">
         <icons:MaterialIcon Kind="Rewind10"
                             Width="24" Height="24"
                             Foreground="{DynamicResource PlayerOverlayTextBrush}" />
       </Button>
       <Button Classes="playerTransport"
               Command="{Binding PlayPreviousLiveChannelCommand}"
-              IsVisible="{Binding IsLiveContent}">
+              IsVisible="{Binding IsLiveContent}"
+              AutomationProperties.Name="{loc:Translate Player.Overlay.PreviousChannel}">
         <icons:MaterialIcon Kind="SkipPrevious"
                             Width="24" Height="24"
                             Foreground="{DynamicResource PlayerOverlayTextBrush}" />
@@ -78,7 +80,8 @@
 
       <Button Grid.Column="1"
               Classes="playerTransport"
-              Command="{Binding PlayPauseCommand}">
+              Command="{Binding PlayPauseCommand}"
+              AutomationProperties.Name="{Binding PlayPauseAccessibilityName}">
         <Panel Width="28" Height="28">
           <icons:MaterialIcon Kind="Play"
                               Width="28" Height="28"
@@ -95,7 +98,8 @@
               Classes="playerTransport"
               Command="{Binding SkipForwardCommand}"
               CommandParameter="10"
-              IsVisible="{Binding !IsLiveContent}">
+              IsVisible="{Binding !IsLiveContent}"
+              AutomationProperties.Name="{loc:Translate Player.Overlay.Forward}">
         <icons:MaterialIcon Kind="FastForward10"
                             Width="24" Height="24"
                             Foreground="{DynamicResource PlayerOverlayTextBrush}" />
@@ -103,7 +107,8 @@
       <Button Grid.Column="2"
               Classes="playerTransport"
               Command="{Binding PlayNextLiveChannelCommand}"
-              IsVisible="{Binding IsLiveContent}">
+              IsVisible="{Binding IsLiveContent}"
+              AutomationProperties.Name="{loc:Translate Player.Overlay.NextChannel}">
         <icons:MaterialIcon Kind="SkipNext"
                             Width="24" Height="24"
                             Foreground="{DynamicResource PlayerOverlayTextBrush}" />
@@ -111,7 +116,8 @@
 
       <Button Grid.Column="3"
               Classes="playerTransport"
-              Command="{Binding ToggleMuteCommand}">
+              Command="{Binding ToggleMuteCommand}"
+              AutomationProperties.Name="{Binding MuteAccessibilityName}">
         <Panel Width="24" Height="24">
           <icons:MaterialIcon Kind="VolumeOff"
                               Width="24" Height="24"
@@ -153,7 +159,8 @@
                 BorderThickness="0"
                 IsVisible="{Binding CanShowGoToLiveButton}"
                 Command="{Binding GoToLiveCommand}"
-                ToolTip.Tip="{loc:Translate Player.Mobile.GoToLive}">
+                ToolTip.Tip="{loc:Translate Player.Mobile.GoToLive}"
+                AutomationProperties.Name="{loc:Translate Player.Accessibility.GoToLive}">
           <TextBlock Text="{loc:Translate Player.Mobile.GoToLive}"
                      Foreground="{DynamicResource PlayerOverlayTextBrush}"
                      FontSize="11"
@@ -164,7 +171,8 @@
       <Button Grid.Column="6"
               Classes="playerAction"
               IsVisible="{Binding IsLiveContent}"
-              Command="{Binding ToggleLiveFavoriteCommand}">
+              Command="{Binding ToggleLiveFavoriteCommand}"
+              AutomationProperties.Name="{Binding LiveFavoriteAccessibilityName}">
         <Panel Width="24" Height="24">
           <icons:MaterialIcon Kind="Heart"
                               Width="24" Height="24"
@@ -181,7 +189,8 @@
               Classes="playerAction"
               IsVisible="{Binding IsLiveContent}"
               Command="{Binding ToggleEpgPanelCommand}"
-              ToolTip.Tip="{loc:Translate Player.Epg.GuideTooltip}">
+              ToolTip.Tip="{loc:Translate Player.Epg.GuideTooltip}"
+              AutomationProperties.Name="{loc:Translate Player.Epg.GuideTooltip}">
         <icons:MaterialIcon Kind="CalendarClock"
                             Width="24" Height="24"
                             Foreground="{DynamicResource PlayerOverlayTextBrush}" />
@@ -190,7 +199,8 @@
       <Button Grid.Column="8"
               Classes="playerAction"
               Command="{Binding OpenActionsPanelCommand}"
-              ToolTip.Tip="{loc:Translate Player.Mobile.More}">
+              ToolTip.Tip="{loc:Translate Mobile.Nav.More}"
+              AutomationProperties.Name="{loc:Translate Mobile.Nav.More}">
         <icons:MaterialIcon Kind="DotsHorizontal"
                             Width="24" Height="24"
                             Foreground="{DynamicResource PlayerOverlayTextBrush}" />

@@ -97,6 +97,7 @@ public class PlayerPlaybackController
                 _vm._lastLivePositionEventAtUtc = DateTime.UtcNow;
 
                 _vm.RaisePropertyChanged(nameof(_vm.LiveProgramProgress));
+                _vm.RaisePropertyChanged(nameof(_vm.TimelineAccessibilityName));
                 return;
             }
 

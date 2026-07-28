@@ -219,6 +219,7 @@ namespace Noctra.Tests
         public FakeLicenseService License { get; } = new();
         public FakeSettingsService Settings { get; } = new();
         public FakeWatchHistoryService WatchHistory { get; } = new();
+        public LocalizationService Localization { get; } = new();
         public PlayerViewModel VM { get; }
 
         public PlayerTestContext(bool isPremium = false)
@@ -235,7 +236,7 @@ namespace Noctra.Tests
                 new SyncDispatcher(),
                 Settings,
                 License,
-                new LocalizationService(),
+                Localization,
                 null!,  // MainViewModel — not needed for these tests
                 WatchHistory,
                 new FakeStalkerPortalService());
@@ -297,6 +298,88 @@ namespace Noctra.Tests
             await Task.Delay(700);
 
             Assert.True(ctx.VM.IsLockIndicatorVisible);
+        }
+
+        [Fact]
+        public void AccessibilityActionNames_TrackCurrentPlayerState()
+        {
+            var ctx = new PlayerTestContext();
+            var viewModelType = typeof(PlayerViewModel);
+            var playPauseName = viewModelType.GetProperty("PlayPauseAccessibilityName");
+            var muteName = viewModelType.GetProperty("MuteAccessibilityName");
+            var favoriteName = viewModelType.GetProperty("LiveFavoriteAccessibilityName");
+            var lockName = viewModelType.GetProperty("LockAccessibilityName");
+
+            Assert.NotNull(playPauseName);
+            Assert.NotNull(muteName);
+            Assert.NotNull(favoriteName);
+            Assert.NotNull(lockName);
+
+            Assert.Equal("Play video", playPauseName!.GetValue(ctx.VM));
+            Assert.Equal("Mute", muteName!.GetValue(ctx.VM));
+            Assert.Equal("Add to favorites", favoriteName!.GetValue(ctx.VM));
+            Assert.Equal("Lock player", lockName!.GetValue(ctx.VM));
+
+            ctx.VM.IsPlaying = true;
+            ctx.VM.IsMuted = true;
+            ctx.VM.IsCurrentChannelFavorite = true;
+            ctx.VM.IsLocked = true;
+
+            Assert.Equal("Pause video", playPauseName.GetValue(ctx.VM));
+            Assert.Equal("Unmute", muteName.GetValue(ctx.VM));
+            Assert.Equal("Remove from favorites", favoriteName.GetValue(ctx.VM));
+            Assert.Equal("Unlock player", lockName.GetValue(ctx.VM));
+        }
+
+        [Fact]
+        public void TimelineAccessibilityName_UsesNaturalFiniteAndLiveProgress()
+        {
+            var ctx = new PlayerTestContext();
+            var property = typeof(PlayerViewModel).GetProperty("TimelineAccessibilityName");
+
+            Assert.NotNull(property);
+
+            ctx.VM.IsLiveContent = false;
+            ctx.VM.Position = (18 * 60) + 32;
+            ctx.VM.Duration = 42 * 60;
+
+            Assert.Equal(
+                "Progress, 18 minutes 32 seconds / 42 minutes",
+                property!.GetValue(ctx.VM));
+
+            var now = DateTime.UtcNow;
+            ctx.VM.IsLiveContent = true;
+            ctx.VM.CurrentProgram = new EpgProgram
+            {
+                Title = "Evening News",
+                StartTime = now.AddMinutes(-63),
+                EndTime = now.AddMinutes(37)
+            };
+
+            var liveName = Assert.IsType<string>(property.GetValue(ctx.VM));
+            Assert.StartsWith(
+                "Live program progress, Evening News, 63 percent",
+                liveName,
+                StringComparison.Ordinal);
+        }
+
+        [Fact]
+        public void AccessibilityNames_RefreshWhenLanguageChanges()
+        {
+            var ctx = new PlayerTestContext();
+            var property = typeof(PlayerViewModel).GetProperty("PlayPauseAccessibilityName");
+            var raised = new List<string?>();
+            ctx.VM.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+            ctx.VM.IsPlaying = true;
+
+            Assert.NotNull(property);
+            Assert.Equal("Pause video", property!.GetValue(ctx.VM));
+
+            ctx.Localization.SetLanguage("tr");
+
+            Assert.Equal("Videoyu duraklat", property.GetValue(ctx.VM));
+            Assert.Contains("PlayPauseAccessibilityName", raised);
+            Assert.Contains("TimelineAccessibilityName", raised);
         }
 
         [Fact]

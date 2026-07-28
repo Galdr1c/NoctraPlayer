@@ -133,6 +133,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     [NotifyPropertyChangedFor(nameof(IsLiveInfoVisible))]
     [NotifyPropertyChangedFor(nameof(IsSeriesPlotVisible))]
     [NotifyPropertyChangedFor(nameof(IsVodPlotVisible))]
+    [NotifyPropertyChangedFor(nameof(TimelineAccessibilityName))]
     private bool _isLiveContent;
 
     [ObservableProperty]
@@ -157,6 +158,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     [NotifyPropertyChangedFor(nameof(IsTopOverlayVisible))]
     [NotifyPropertyChangedFor(nameof(IsBottomControlsVisible))]
     [NotifyPropertyChangedFor(nameof(IsMobileCompactControlsVisible))]
+    [NotifyPropertyChangedFor(nameof(LockAccessibilityName))]
     private bool _isLocked;
 
     [ObservableProperty]
@@ -418,11 +420,13 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     private Channel? _currentChannel;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(LiveFavoriteAccessibilityName))]
     private bool _isCurrentChannelFavorite;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsLiveInfoVisible))]
     [NotifyPropertyChangedFor(nameof(LiveProgramProgress))]
+    [NotifyPropertyChangedFor(nameof(TimelineAccessibilityName))]
     private EpgProgram? _currentProgram;
 
     public bool HasCurrentProgramInfo =>
@@ -459,6 +463,117 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
             var elapsed = (DateTime.UtcNow - CurrentProgram.StartTime).TotalSeconds;
             return Math.Clamp(elapsed / duration * 100d, 0d, 100d);
         }
+    }
+
+    public string PlayPauseAccessibilityName =>
+        _localizationService.GetString(
+            IsPlaying
+                ? "Player.Accessibility.Pause"
+                : "Player.Accessibility.Play");
+
+    public string MuteAccessibilityName =>
+        _localizationService.GetString(
+            IsMuted
+                ? "Player.Accessibility.Unmute"
+                : "Player.Accessibility.Mute");
+
+    public string LiveFavoriteAccessibilityName =>
+        _localizationService.GetString(
+            IsCurrentChannelFavorite
+                ? "Player.Accessibility.RemoveFavorite"
+                : "Player.Accessibility.AddFavorite");
+
+    public string LockAccessibilityName =>
+        _localizationService.GetString(
+            IsLocked
+                ? "Player.Accessibility.Unlock"
+                : "Player.Accessibility.Lock");
+
+    public string TimelineAccessibilityName
+    {
+        get
+        {
+            if (IsLiveContent)
+            {
+                var progress = (int)Math.Round(
+                    LiveProgramProgress,
+                    MidpointRounding.AwayFromZero);
+
+                if (HasCurrentProgramInfo)
+                {
+                    return string.Format(
+                        _localizationService.GetString(
+                            "Player.Accessibility.Timeline.LiveProgressWithTitle"),
+                        CurrentProgram!.Title.Trim(),
+                        progress);
+                }
+
+                return string.Format(
+                    _localizationService.GetString(
+                        "Player.Accessibility.Timeline.LiveProgress"),
+                    progress);
+            }
+
+            var position = FormatAccessibilityTime(Position);
+            if (Duration <= 0)
+            {
+                return string.Format(
+                    _localizationService.GetString(
+                        "Player.Accessibility.Timeline.UnknownDuration"),
+                    position);
+            }
+
+            return string.Format(
+                _localizationService.GetString(
+                    "Player.Accessibility.Timeline.Progress"),
+                position,
+                FormatAccessibilityTime(Duration));
+        }
+    }
+
+    private string FormatAccessibilityTime(double seconds)
+    {
+        var totalSeconds = (long)Math.Floor(Math.Max(0, seconds));
+        var hours = (int)(totalSeconds / 3600);
+        var minutes = (int)((totalSeconds % 3600) / 60);
+        var remainingSeconds = (int)(totalSeconds % 60);
+        var parts = new List<string>(3);
+
+        if (hours > 0)
+        {
+            parts.Add(FormatAccessibilityTimeUnit(
+                hours,
+                "Player.Accessibility.Time.Hour.One",
+                "Player.Accessibility.Time.Hour.Many"));
+        }
+
+        if (minutes > 0)
+        {
+            parts.Add(FormatAccessibilityTimeUnit(
+                minutes,
+                "Player.Accessibility.Time.Minute.One",
+                "Player.Accessibility.Time.Minute.Many"));
+        }
+
+        if (remainingSeconds > 0 || parts.Count == 0)
+        {
+            parts.Add(FormatAccessibilityTimeUnit(
+                remainingSeconds,
+                "Player.Accessibility.Time.Second.One",
+                "Player.Accessibility.Time.Second.Many"));
+        }
+
+        return string.Join(" ", parts);
+    }
+
+    private string FormatAccessibilityTimeUnit(
+        int value,
+        string singularKey,
+        string pluralKey)
+    {
+        var format = _localizationService.GetString(
+            value == 1 ? singularKey : pluralKey);
+        return string.Format(format, value);
     }
 
     // Mobile info panel uses these richer desktop-parity metadata fields.
@@ -524,6 +639,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     }
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(PlayPauseAccessibilityName))]
     private bool _isPlaying;
 
     partial void OnIsPlayingChanged(bool value)
@@ -627,15 +743,18 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     }
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(MuteAccessibilityName))]
     private bool _isMuted;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(TimelineAccessibilityName))]
     private double _position;
 
     [ObservableProperty]
     private double _bufferedPosition;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(TimelineAccessibilityName))]
     private double _duration;
 
     [ObservableProperty]

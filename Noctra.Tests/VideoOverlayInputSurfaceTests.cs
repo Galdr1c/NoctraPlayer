@@ -169,6 +169,51 @@ public sealed class VideoOverlayInputSurfaceTests
     }
 
     [Fact]
+    public void MobilePlayerTopOverlay_ExposesAccessibleNamesForEveryButton()
+    {
+        var topOverlay = LoadProjectFile(
+            "Noctra.Mobile",
+            "Views",
+            "MobilePlayerTopOverlay.axaml");
+        var playerView = LoadProjectFile(
+            "Noctra.Mobile",
+            "Views",
+            "MobilePlayerView.axaml");
+
+        foreach (var command in new[]
+                 {
+                     "ClosePlayerCommand",
+                     "EnterPiPCommand",
+                     "ToggleLockCommand"
+                 })
+        {
+            var button = ExtractStartTag(
+                topOverlay,
+                $"Command=\"{{Binding {command}}}\"");
+            Assert.Contains(
+                "AutomationProperties.Name=",
+                button,
+                StringComparison.Ordinal);
+        }
+
+        var lockButton = ExtractStartTag(
+            topOverlay,
+            "Command=\"{Binding ToggleLockCommand}\"");
+        Assert.Contains(
+            "ToolTip.Tip=\"{Binding LockAccessibilityName}\"",
+            lockButton,
+            StringComparison.Ordinal);
+
+        var lockIndicator = ExtractStartTag(
+            playerView,
+            "x:Name=\"LockIndicator\"");
+        Assert.Contains(
+            "AutomationProperties.Name=\"{Binding LockAccessibilityName}\"",
+            lockIndicator,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void MobilePlayerTransportBar_HasContentInfoAndLiveBadgeNextToTime()
     {
         var transportBar = LoadProjectFile(
@@ -187,6 +232,51 @@ public sealed class VideoOverlayInputSurfaceTests
             transportBar, StringComparison.Ordinal);
         Assert.Contains("OverlaySecondaryText",
             transportBar, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void MobilePlayerTransportBar_ExposesAccessibleNamesForEveryAction()
+    {
+        var transportBar = LoadProjectFile(
+            "Noctra.Mobile",
+            "Views",
+            "Player",
+            "MobilePlayerTransportBar.axaml");
+
+        foreach (var command in new[]
+                 {
+                     "SkipBackwardCommand",
+                     "PlayPreviousLiveChannelCommand",
+                     "PlayPauseCommand",
+                     "SkipForwardCommand",
+                     "PlayNextLiveChannelCommand",
+                     "ToggleMuteCommand",
+                     "GoToLiveCommand",
+                     "ToggleLiveFavoriteCommand",
+                     "ToggleEpgPanelCommand",
+                     "OpenActionsPanelCommand"
+                 })
+        {
+            var button = ExtractStartTag(
+                transportBar,
+                $"Command=\"{{Binding {command}}}\"");
+            Assert.Contains(
+                "AutomationProperties.Name=",
+                button,
+                StringComparison.Ordinal);
+        }
+
+        var moreButton = ExtractStartTag(
+            transportBar,
+            "Command=\"{Binding OpenActionsPanelCommand}\"");
+        Assert.Contains(
+            "ToolTip.Tip=\"{loc:Translate Mobile.Nav.More}\"",
+            moreButton,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "AutomationProperties.Name=\"{loc:Translate Mobile.Nav.More}\"",
+            moreButton,
+            StringComparison.Ordinal);
     }
 
     [Fact]
@@ -257,7 +347,7 @@ public sealed class VideoOverlayInputSurfaceTests
             "Command=\"{Binding ToggleLockCommand}\"",
             lockIndicator,
             StringComparison.Ordinal);
-        Assert.Contains("MinWidth=\"180\"", lockIndicator, StringComparison.Ordinal);
+        Assert.Contains("MinWidth=\"100\"", lockIndicator, StringComparison.Ordinal);
         Assert.Contains("MinHeight=\"56\"", lockIndicator, StringComparison.Ordinal);
         Assert.DoesNotContain("Player.Mobile.Locked", playerView, StringComparison.Ordinal);
         Assert.DoesNotContain("OnLockIndicatorPressed", playerViewCode, StringComparison.Ordinal);
@@ -360,6 +450,11 @@ public sealed class VideoOverlayInputSurfaceTests
         Assert.Contains("x:Name=\"TrackGrid\"", timeline, StringComparison.Ordinal);
         Assert.Contains("x:Name=\"BufferBar\"", timeline, StringComparison.Ordinal);
         Assert.Contains("Opacity=\"0.45\"", timeline, StringComparison.Ordinal);
+        Assert.Contains(
+            "AutomationProperties.Name=\"{Binding TimelineAccessibilityName}\"",
+            timeline,
+            StringComparison.Ordinal);
+        Assert.Contains("Focusable=\"True\"", timeline, StringComparison.Ordinal);
         Assert.DoesNotContain("x:Name=\"BufferEndMarker\"", timeline, StringComparison.Ordinal);
         Assert.Contains("Width=\"8\"", thumb, StringComparison.Ordinal);
         Assert.Contains("Height=\"8\"", thumb, StringComparison.Ordinal);

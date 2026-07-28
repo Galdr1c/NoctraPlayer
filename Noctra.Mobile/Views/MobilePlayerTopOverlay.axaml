@@ -25,7 +25,8 @@
     <Button Grid.Column="0"
             Classes="topFlatIcon"
             Command="{Binding ClosePlayerCommand}"
-            ToolTip.Tip="{loc:Translate Player.Overlay.Back}">
+            ToolTip.Tip="{loc:Translate Player.Overlay.Back}"
+            AutomationProperties.Name="{loc:Translate Player.Overlay.Back}">
       <Grid Width="26" Height="26">
         <icons:MaterialIcon Kind="ArrowLeft"
                             Width="26" Height="26"
@@ -52,14 +53,16 @@
       </Border>
       <Button Classes="topFlatIcon"
               Command="{Binding EnterPiPCommand}"
-              ToolTip.Tip="{loc:Translate Player.Overlay.PiP.Tooltip}">
+              ToolTip.Tip="{loc:Translate Player.Overlay.PiP.Tooltip}"
+              AutomationProperties.Name="{loc:Translate Player.Overlay.PiP.Tooltip}">
         <icons:MaterialIcon Kind="PictureInPictureBottomRight"
                             Width="24" Height="24"
                             Foreground="{DynamicResource PlayerOverlayTextBrush}" />
       </Button>
       <Button Classes="topFlatIcon"
               Command="{Binding ToggleLockCommand}"
-              ToolTip.Tip="{loc:Translate Player.Overlay.Lock.Tooltip}">
+              ToolTip.Tip="{Binding LockAccessibilityName}"
+              AutomationProperties.Name="{Binding LockAccessibilityName}">
         <Grid Width="24" Height="24">
           <icons:MaterialIcon Kind="Lock"
                               Width="24" Height="24"
