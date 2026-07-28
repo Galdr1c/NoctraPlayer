@@ -207,7 +207,10 @@
               Content="{loc:Translate Player.Mobile.Sleep.Cancel}"
               Command="{Binding CancelSleepTimerCommand}"
               IsVisible="{Binding IsSleepTimerActive}"
-              MinHeight="44" />
+              Classes="SelectionSheetOption"
+              Background="{DynamicResource IconGradientBrush}"
+              HorizontalContentAlignment="Center"
+              VerticalContentAlignment="Center"/>
     </Grid>
   </StackPanel>
 </UserControl>

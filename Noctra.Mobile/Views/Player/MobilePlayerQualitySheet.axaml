@@ -41,35 +41,35 @@
     <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="10" RowSpacing="8">
       <StackPanel Spacing="2">
         <TextBlock Text="{loc:Translate Player.Quality.Resolution}"
-                   FontSize="11" FontWeight="Bold"
+                   FontSize="{Binding FCaption}" FontWeight="Bold"
                    Foreground="{DynamicResource PlayerOverlaySecondaryTextBrush}" />
         <TextBlock Text="{Binding QualityResolutionText}"
-                   FontSize="13" FontWeight="SemiBold"
-                   Foreground="{DynamicResource PlayerOverlayTextBrush}" />
+                   FontSize="{Binding FTitleM}" LetterSpacing="2.5"
+                   Foreground="{DynamicResource Accent500Color}" />
       </StackPanel>
       <StackPanel Grid.Column="1" Spacing="2">
         <TextBlock Text="{loc:Translate Player.Quality.Fps}"
-                   FontSize="11" FontWeight="Bold"
+                   FontSize="{Binding FCaption}" FontWeight="Bold"
                    Foreground="{DynamicResource PlayerOverlaySecondaryTextBrush}" />
         <TextBlock Text="{Binding QualityFpsText}"
-                   FontSize="13" FontWeight="SemiBold"
-                   Foreground="{DynamicResource PlayerOverlayTextBrush}" />
+                   FontSize="{Binding FTitleM}" LetterSpacing="2.5"
+                   Foreground="{DynamicResource Accent500Color}" />
       </StackPanel>
       <StackPanel Grid.Row="1" Spacing="2">
         <TextBlock Text="{loc:Translate Player.Quality.Codec}"
-                   FontSize="11" FontWeight="Bold"
+                   FontSize="{Binding FCaption}" FontWeight="Bold"
                    Foreground="{DynamicResource PlayerOverlaySecondaryTextBrush}" />
         <TextBlock Text="{Binding QualityVideoCodecText}"
-                   FontSize="13" FontWeight="SemiBold"
-                   Foreground="{DynamicResource PlayerOverlayTextBrush}" />
+                   FontSize="{Binding FTitleM}" LetterSpacing="2.5"
+                   Foreground="{DynamicResource Accent500Color}" />
       </StackPanel>
       <StackPanel Grid.Row="1" Grid.Column="1" Spacing="2">
         <TextBlock Text="{loc:Translate Player.Quality.Bitrate}"
-                   FontSize="11" FontWeight="Bold"
+                   FontSize="{Binding FCaption}" FontWeight="Bold"
                    Foreground="{DynamicResource PlayerOverlaySecondaryTextBrush}" />
         <TextBlock Text="{Binding QualityVideoBitrateText}"
-                   FontSize="13" FontWeight="SemiBold"
-                   Foreground="{DynamicResource PlayerOverlayTextBrush}" />
+                   FontSize="{Binding FTitleM}" LetterSpacing="2.5"
+                   Foreground="{DynamicResource Accent500Color}" />
       </StackPanel>
     </Grid>
 

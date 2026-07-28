@@ -13,6 +13,7 @@ using Noctra.Mobile.Services;
 using Noctra.Models;
 using Noctra.Services;
 using Noctra.Services.Interfaces;
+using System.Threading;
 using System.Threading.Tasks;
 using Material.Icons;
 using Noctra.ViewModels;
@@ -223,7 +224,8 @@ public partial class MobilePlayerView : UserControl
 
         if (e.PropertyName == nameof(PlayerViewModel.IsLockIndicatorVisible))
         {
-            LockIndicator.Opacity = _boundVm?.IsLockIndicatorVisible == true ? 1 : 0;
+            if (_boundVm?.IsLockIndicatorVisible == true)
+                _ = PlayLockShakeAnimation();
         }
 
         if (e.PropertyName == nameof(PlayerViewModel.IsEpgPanelOpen))
@@ -823,5 +825,172 @@ public partial class MobilePlayerView : UserControl
         return _settingsService;
     }
 
+    private CancellationTokenSource? _lockAnimationCts;
 
+    private ScaleTransform? _lockScaleTransform;
+    private RotateTransform? _lockRotateTransform;
+    private TranslateTransform? _lockTranslateTransform;
+
+    private ScaleTransform LockScaleTransform
+        => _lockScaleTransform ??= ((TransformGroup)LockIndicator.RenderTransform!).Children[0] as ScaleTransform
+            ?? throw new InvalidOperationException("LockIndicator ScaleTransform not found");
+    private RotateTransform LockRotateTransform
+        => _lockRotateTransform ??= ((TransformGroup)LockIndicator.RenderTransform!).Children[1] as RotateTransform
+            ?? throw new InvalidOperationException("LockIndicator RotateTransform not found");
+    private TranslateTransform LockTranslateTransform
+        => _lockTranslateTransform ??= ((TransformGroup)LockIndicator.RenderTransform!).Children[2] as TranslateTransform
+            ?? throw new InvalidOperationException("LockIndicator TranslateTransform not found");
+
+    private async Task PlayLockShakeAnimation()
+    {
+        _lockAnimationCts?.Cancel();
+
+        var cts = new CancellationTokenSource();
+        _lockAnimationCts = cts;
+
+        try
+        {
+            var ct = cts.Token;
+
+            ResetLockIndicator();
+
+            LockIndicator.IsVisible = true;
+            LockIndicator.Opacity = 0;
+
+            await AnimateAsync(
+                durationMs: 110,
+                update: progress =>
+                {
+                    var eased = EaseOutBack(progress);
+                    var scale = Lerp(0.78, 1.08, eased);
+                    LockScaleTransform.ScaleX = scale;
+                    LockScaleTransform.ScaleY = scale;
+                    LockIndicator.Opacity = Lerp(0, 1, EaseOutCubic(progress));
+                },
+                ct);
+
+            await AnimateAsync(
+                durationMs: 560,
+                update: progress =>
+                {
+                    const double amplitude = 16;
+                    const double oscillations = 4.25;
+                    const double damping = 4.5;
+
+                    var envelope = Math.Exp(-damping * progress);
+                    var phase = progress * Math.PI * 2 * oscillations;
+                    var shakeX = Math.Sin(phase) * amplitude * envelope;
+                    var shakeY = Math.Sin((phase * 1.7) + 0.8) * 1.4 * envelope;
+                    var rotation = -shakeX * 0.28;
+                    var scalePulse = 1 + (0.055 * envelope * Math.Cos(phase));
+
+                    LockTranslateTransform.X = shakeX;
+                    LockTranslateTransform.Y = shakeY;
+                    LockRotateTransform.Angle = rotation;
+                    LockScaleTransform.ScaleX = scalePulse;
+                    LockScaleTransform.ScaleY = scalePulse;
+                    LockIndicator.Opacity = 1;
+                },
+                ct);
+
+            var startX = LockTranslateTransform.X;
+            var startY = LockTranslateTransform.Y;
+            var startRotation = LockRotateTransform.Angle;
+            var startScaleX = LockScaleTransform.ScaleX;
+            var startScaleY = LockScaleTransform.ScaleY;
+
+            await AnimateAsync(
+                durationMs: 120,
+                update: progress =>
+                {
+                    var eased = EaseOutCubic(progress);
+                    LockTranslateTransform.X = Lerp(startX, 0, eased);
+                    LockTranslateTransform.Y = Lerp(startY, 0, eased);
+                    LockRotateTransform.Angle = Lerp(startRotation, 0, eased);
+                    LockScaleTransform.ScaleX = Lerp(startScaleX, 1, eased);
+                    LockScaleTransform.ScaleY = Lerp(startScaleY, 1, eased);
+                },
+                ct);
+
+            await Task.Delay(220, ct);
+
+            await AnimateAsync(
+                durationMs: 160,
+                update: progress =>
+                {
+                    var eased = SmoothStep(progress);
+                    LockIndicator.Opacity = Lerp(1, 0, eased);
+                    LockScaleTransform.ScaleX = Lerp(1, 0.92, eased);
+                    LockScaleTransform.ScaleY = Lerp(1, 0.92, eased);
+                },
+                ct);
+
+            if (ReferenceEquals(_lockAnimationCts, cts))
+                LockIndicator.IsVisible = false;
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        finally
+        {
+            if (ReferenceEquals(_lockAnimationCts, cts))
+            {
+                ResetLockIndicator();
+                LockIndicator.IsVisible = false;
+                _lockAnimationCts = null;
+            }
+
+            cts.Dispose();
+        }
+    }
+
+    private static async Task AnimateAsync(
+        int durationMs,
+        Action<double> update,
+        CancellationToken cancellationToken)
+    {
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+
+        while (true)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var progress = Math.Clamp(
+                sw.Elapsed.TotalMilliseconds / durationMs,
+                0, 1);
+
+            update(progress);
+
+            if (progress >= 1)
+                break;
+
+            await Task.Delay(16, cancellationToken);
+        }
+    }
+
+    private void ResetLockIndicator()
+    {
+        LockTranslateTransform.X = 0;
+        LockTranslateTransform.Y = 0;
+        LockRotateTransform.Angle = 0;
+        LockScaleTransform.ScaleX = 1;
+        LockScaleTransform.ScaleY = 1;
+        LockIndicator.Opacity = 0;
+    }
+
+    private static double Lerp(double start, double end, double progress)
+        => start + ((end - start) * progress);
+
+    private static double EaseOutCubic(double progress)
+        => 1 - Math.Pow(1 - progress, 3);
+
+    private static double EaseOutBack(double progress)
+    {
+        const double overshoot = 1.70158;
+        const double multiplier = overshoot + 1;
+        return 1 + (multiplier * Math.Pow(progress - 1, 3)) + (overshoot * Math.Pow(progress - 1, 2));
+    }
+
+    private static double SmoothStep(double progress)
+        => progress * progress * (3 - (2 * progress));
 }

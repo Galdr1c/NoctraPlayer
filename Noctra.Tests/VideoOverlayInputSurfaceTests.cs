@@ -347,7 +347,7 @@ public sealed class VideoOverlayInputSurfaceTests
             "Command=\"{Binding ToggleLockCommand}\"",
             lockIndicator,
             StringComparison.Ordinal);
-        Assert.Contains("MinWidth=\"100\"", lockIndicator, StringComparison.Ordinal);
+        Assert.Contains("MinWidth=\"60\"", lockIndicator, StringComparison.Ordinal);
         Assert.Contains("MinHeight=\"56\"", lockIndicator, StringComparison.Ordinal);
         Assert.DoesNotContain("Player.Mobile.Locked", playerView, StringComparison.Ordinal);
         Assert.DoesNotContain("OnLockIndicatorPressed", playerViewCode, StringComparison.Ordinal);

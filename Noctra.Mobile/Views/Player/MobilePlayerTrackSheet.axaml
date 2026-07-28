@@ -13,7 +13,7 @@
       <Setter Property="BorderThickness" Value="0,0,0,1.5" />
       <Setter Property="Padding" Value="16,4,48,4" />
       <Setter Property="Margin" Value="0,0,0,8" />
-      <Setter Property="MinHeight" Value="46" />
+      <Setter Property="MinHeight" Value="48" />
       <Setter Property="CornerRadius" Value="6" />
       <Setter Property="HorizontalContentAlignment" Value="Stretch" />
       <Setter Property="HorizontalAlignment" Value="Stretch" />
@@ -49,8 +49,7 @@
           <DataTemplate>
             <Button Classes="SelectionSheetOption"
                     Command="{Binding #PlayerRoot.DataContext.SetAudioTrackCommand}"
-                    CommandParameter="{Binding Id}"
-                    HorizontalContentAlignment="Stretch">
+                    CommandParameter="{Binding Id}">
               <Grid IsHitTestVisible="False">
                 <Border Background="{DynamicResource AccentSubtleBrush}"
                         CornerRadius="8">
@@ -102,8 +101,7 @@
           <DataTemplate>
             <Button Classes="SelectionSheetOption"
                     Command="{Binding #PlayerRoot.DataContext.SetSubtitleTrackCommand}"
-                    CommandParameter="{Binding Id}"
-                    HorizontalContentAlignment="Stretch">
+                    CommandParameter="{Binding Id}">
               <Grid IsHitTestVisible="False">
                 <Border Background="{DynamicResource AccentSubtleBrush}"
                         CornerRadius="8">

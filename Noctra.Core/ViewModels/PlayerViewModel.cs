@@ -1468,6 +1468,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         _lockIndicatorVisibilityCts?.Dispose();
         _lockIndicatorVisibilityCts = new CancellationTokenSource();
 
+        IsLockIndicatorVisible = false;
         IsLockIndicatorVisible = true;
         _ = HideLockIndicatorAfterDelayAsync(_lockIndicatorVisibilityCts.Token);
     }

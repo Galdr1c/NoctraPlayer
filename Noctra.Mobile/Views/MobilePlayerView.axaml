@@ -205,11 +205,6 @@
               </Style>
             </Arc.Styles>
           </Arc>
-          <icons:MaterialIcon Kind="ShieldCheckOutline"
-                              Width="28" Height="28"
-                              Foreground="{DynamicResource PlayerOverlayTextBrush}"
-                              HorizontalAlignment="Center"
-                              VerticalAlignment="Center" />
         </Grid>
         <TextBlock Text="{Binding PlayerLoadingWarningMessage}"
                    Foreground="{DynamicResource WarningBrush}"
@@ -357,26 +352,27 @@
             HorizontalAlignment="Center"
             VerticalAlignment="Top"
             Margin="0,48,0,0"
-            MinWidth="100"
+            MinWidth="60"
             MinHeight="56"
             Padding="14,8"
             CornerRadius="8"
             Background="{DynamicResource PlayerOverlayShieldBrush}"
             BorderThickness="0"
-            IsVisible="{Binding IsLocked}"
+            IsVisible="False"
             IsHitTestVisible="{Binding IsLockIndicatorVisible}"
             Command="{Binding ToggleLockCommand}"
             AutomationProperties.Name="{Binding LockAccessibilityName}"
-            Opacity="0">
-      <Button.Styles>
-        <Style Selector="Button">
-          <Setter Property="Transitions">
-            <Transitions>
-              <DoubleTransition Property="Opacity" Duration="0:0:0.20" />
-            </Transitions>
-          </Setter>
-        </Style>
-      </Button.Styles>
+            Opacity="0"
+            RenderTransformOrigin="50%,50%">
+      <Button.RenderTransform>
+        <TransformGroup>
+          <ScaleTransform ScaleX="1"
+                          ScaleY="1" />
+          <RotateTransform Angle="0" />
+          <TranslateTransform X="0"
+                              Y="0" />
+        </TransformGroup>
+      </Button.RenderTransform>
       <icons:MaterialIcon Kind="Lock"
                           Width="28"
                           Height="28"
