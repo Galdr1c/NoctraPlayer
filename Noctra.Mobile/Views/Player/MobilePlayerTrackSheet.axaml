@@ -6,6 +6,24 @@
              x:Class="Noctra.Mobile.Views.Player.MobilePlayerTrackSheet"
              x:DataType="vm:PlayerViewModel"
              x:CompileBindings="False">
+  <UserControl.Styles>
+    <Style Selector="Button.SelectionSheetOption">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+      <Setter Property="BorderThickness" Value="0,0,0,1.5" />
+      <Setter Property="Padding" Value="16,4,48,4" />
+      <Setter Property="Margin" Value="0,0,0,8" />
+      <Setter Property="MinHeight" Value="46" />
+      <Setter Property="CornerRadius" Value="6" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+    </Style>
+    <Style Selector="Button.SelectionSheetOption:pressed /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource InteractivePressedBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+    </Style>
+  </UserControl.Styles>
+
   <StackPanel Spacing="12">
     <Grid ColumnDefinitions="*,Auto">
       <TextBlock Text="{loc:Translate Player.Mobile.AudioSubtitles}"
@@ -29,16 +47,44 @@
       <ItemsControl ItemsSource="{Binding AudioTracks}">
         <ItemsControl.ItemTemplate>
           <DataTemplate>
-            <Button Command="{Binding #PlayerRoot.DataContext.SetAudioTrackCommand}"
+            <Button Classes="SelectionSheetOption"
+                    Command="{Binding #PlayerRoot.DataContext.SetAudioTrackCommand}"
                     CommandParameter="{Binding Id}"
-                    MinHeight="46" Margin="0,0,0,6"
-                    Padding="12,8" BorderThickness="1"
                     HorizontalContentAlignment="Stretch">
-              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
-                <TextBlock Text="{Binding Name}"
-                           Foreground="{DynamicResource TextPrimaryBrush}"
-                           FontSize="13" FontWeight="SemiBold"
-                           TextTrimming="CharacterEllipsis" />
+              <Grid IsHitTestVisible="False">
+                <Border Background="{DynamicResource AccentSubtleBrush}"
+                        CornerRadius="8">
+                  <Border.IsVisible>
+                    <MultiBinding Converter="{StaticResource EqualityToBoolMultiConverter}">
+                      <Binding Path="Id" />
+                      <Binding Path="#PlayerRoot.DataContext.SelectedAudioTrack" />
+                    </MultiBinding>
+                  </Border.IsVisible>
+                </Border>
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                  <TextBlock Text="{Binding Name}"
+                             Foreground="{DynamicResource TextPrimaryBrush}"
+                             FontSize="{DynamicResource FBodyL}"
+                             FontWeight="Normal"
+                             TextWrapping="Wrap"
+                             VerticalAlignment="Center" />
+                  <Grid Grid.Column="1"
+                        Width="48"
+                        Height="48"
+                        VerticalAlignment="Center">
+                    <icons:MaterialIcon Kind="RadioboxMarked"
+                                        Width="22"
+                                        Height="22"
+                                        Foreground="{DynamicResource AccentBrush}">
+                      <icons:MaterialIcon.IsVisible>
+                        <MultiBinding Converter="{StaticResource EqualityToBoolMultiConverter}">
+                          <Binding Path="Id" />
+                          <Binding Path="#PlayerRoot.DataContext.SelectedAudioTrack" />
+                        </MultiBinding>
+                      </icons:MaterialIcon.IsVisible>
+                    </icons:MaterialIcon>
+                  </Grid>
+                </Grid>
               </Grid>
             </Button>
           </DataTemplate>
@@ -54,16 +100,44 @@
       <ItemsControl ItemsSource="{Binding SubtitleTracks}">
         <ItemsControl.ItemTemplate>
           <DataTemplate>
-            <Button Command="{Binding #PlayerRoot.DataContext.SetSubtitleTrackCommand}"
+            <Button Classes="SelectionSheetOption"
+                    Command="{Binding #PlayerRoot.DataContext.SetSubtitleTrackCommand}"
                     CommandParameter="{Binding Id}"
-                    MinHeight="46" Margin="0,0,0,6"
-                    Padding="12,8" BorderThickness="1"
                     HorizontalContentAlignment="Stretch">
-              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
-                <TextBlock Text="{Binding Name}"
-                           Foreground="{DynamicResource TextPrimaryBrush}"
-                           FontSize="13" FontWeight="SemiBold"
-                           TextTrimming="CharacterEllipsis" />
+              <Grid IsHitTestVisible="False">
+                <Border Background="{DynamicResource AccentSubtleBrush}"
+                        CornerRadius="8">
+                  <Border.IsVisible>
+                    <MultiBinding Converter="{StaticResource EqualityToBoolMultiConverter}">
+                      <Binding Path="Id" />
+                      <Binding Path="#PlayerRoot.DataContext.SelectedSubtitleTrack" />
+                    </MultiBinding>
+                  </Border.IsVisible>
+                </Border>
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                  <TextBlock Text="{Binding Name}"
+                             Foreground="{DynamicResource TextPrimaryBrush}"
+                             FontSize="{DynamicResource FBodyL}"
+                             FontWeight="Normal"
+                             TextWrapping="Wrap"
+                             VerticalAlignment="Center" />
+                  <Grid Grid.Column="1"
+                        Width="48"
+                        Height="48"
+                        VerticalAlignment="Center">
+                    <icons:MaterialIcon Kind="RadioboxMarked"
+                                        Width="22"
+                                        Height="22"
+                                        Foreground="{DynamicResource AccentBrush}">
+                      <icons:MaterialIcon.IsVisible>
+                        <MultiBinding Converter="{StaticResource EqualityToBoolMultiConverter}">
+                          <Binding Path="Id" />
+                          <Binding Path="#PlayerRoot.DataContext.SelectedSubtitleTrack" />
+                        </MultiBinding>
+                      </icons:MaterialIcon.IsVisible>
+                    </icons:MaterialIcon>
+                  </Grid>
+                </Grid>
               </Grid>
             </Button>
           </DataTemplate>

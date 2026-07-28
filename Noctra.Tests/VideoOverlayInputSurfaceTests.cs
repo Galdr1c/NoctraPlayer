@@ -482,6 +482,136 @@ public sealed class VideoOverlayInputSurfaceTests
     }
 
     [Fact]
+    public void MobilePlayerTrackSheet_UsesSelectionSheetSelectedVisuals()
+    {
+        var selectionSheet = LoadProjectFile(
+            "Noctra.Mobile",
+            "Views",
+            "MobileSelectionSheet.axaml");
+        var trackSheet = LoadProjectFile(
+            "Noctra.Mobile",
+            "Views",
+            "Player",
+            "MobilePlayerTrackSheet.axaml");
+
+        foreach (var sharedVisual in new[]
+                 {
+                     "AccentSubtleBrush",
+                     "RadioboxMarked",
+                     "AccentBrush"
+                 })
+        {
+            Assert.Contains(sharedVisual, selectionSheet, StringComparison.Ordinal);
+            Assert.Contains(sharedVisual, trackSheet, StringComparison.Ordinal);
+        }
+
+        Assert.Contains("EqualityToBoolMultiConverter",
+            trackSheet, StringComparison.Ordinal);
+        Assert.Contains("SelectedAudioTrack",
+            trackSheet, StringComparison.Ordinal);
+        Assert.Contains("SelectedSubtitleTrack",
+            trackSheet, StringComparison.Ordinal);
+        Assert.Equal(2,
+            trackSheet.Split("IsHitTestVisible=\"False\"", StringSplitOptions.None).Length - 1);
+    }
+
+    [Fact]
+    public void MobilePlayerQualitySheet_UsesSelectionSheetVisualsForCurrentPlaybackRate()
+    {
+        var qualitySheet = LoadProjectFile(
+            "Noctra.Mobile",
+            "Views",
+            "Player",
+            "MobilePlayerQualitySheet.axaml");
+
+        Assert.Contains("CurrentPlaybackRateKey",
+            qualitySheet, StringComparison.Ordinal);
+        Assert.Contains("EqualityToBoolMultiConverter",
+            qualitySheet, StringComparison.Ordinal);
+        Assert.Equal(6,
+            qualitySheet.Split("AccentSubtleBrush", StringSplitOptions.None).Length - 1);
+        Assert.Equal(6,
+            qualitySheet.Split("RadioboxMarked", StringSplitOptions.None).Length - 1);
+        Assert.Equal(6,
+            qualitySheet.Split("IsHitTestVisible=\"False\"", StringSplitOptions.None).Length - 1);
+        Assert.DoesNotContain(
+            "CommandParameter=\"0.",
+            qualitySheet,
+            StringComparison.Ordinal);
+        Assert.Equal(6,
+            qualitySheet.Split("CommandParameter=\"{x:Static vm:PlayerViewModel.PlaybackRate", StringSplitOptions.None).Length - 1);
+    }
+
+    [Fact]
+    public void MobilePlayerSleepSheet_UsesSelectionSheetVisualsForCurrentTimerMode()
+    {
+        var sleepSheet = LoadProjectFile(
+            "Noctra.Mobile",
+            "Views",
+            "Player",
+            "MobilePlayerSleepSheet.axaml");
+
+        Assert.Contains("SleepTimerMode",
+            sleepSheet, StringComparison.Ordinal);
+        Assert.Contains("EqualityToBoolMultiConverter",
+            sleepSheet, StringComparison.Ordinal);
+        Assert.Equal(5,
+            sleepSheet.Split("AccentSubtleBrush", StringSplitOptions.None).Length - 1);
+        Assert.Equal(5,
+            sleepSheet.Split("RadioboxMarked", StringSplitOptions.None).Length - 1);
+        Assert.Equal(5,
+            sleepSheet.Split("IsHitTestVisible=\"False\"", StringSplitOptions.None).Length - 1);
+    }
+
+    [Fact]
+    public void MobilePlayerTimeline_UpdatesBottomVodTimeDuringDragWithoutFloatingBubble()
+    {
+        var timeline = LoadProjectFile(
+            "Noctra.Mobile",
+            "Views",
+            "Player",
+            "MobilePlayerTimeline.axaml");
+        var timelineCode = LoadProjectFile(
+            "Noctra.Mobile",
+            "Views",
+            "Player",
+            "MobilePlayerTimeline.axaml.cs");
+
+        Assert.DoesNotContain("x:Name=\"PreviewBubble\"",
+            timeline, StringComparison.Ordinal);
+        Assert.DoesNotContain("x:Name=\"PreviewText\"",
+            timeline, StringComparison.Ordinal);
+        Assert.DoesNotContain("UpdatePreviewBubble(",
+            timelineCode, StringComparison.Ordinal);
+        Assert.DoesNotContain("FormatPreviewTime(",
+            timelineCode, StringComparison.Ordinal);
+        Assert.Contains(
+            "DisplayedPositionText",
+            LoadProjectFile(
+                "Noctra.Mobile",
+                "Views",
+                "Player",
+                "MobilePlayerTransportBar.axaml"),
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "UpdateSeekPreview(",
+            timelineCode,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "ClearSeekPreview();",
+            timelineCode,
+            StringComparison.Ordinal);
+
+        var pointerPressed = ExtractMethodBody(
+            timelineCode,
+            "private void OnPointerPressed");
+        Assert.Contains("_vm.IsLiveContent",
+            pointerPressed, StringComparison.Ordinal);
+        Assert.Contains("Math.Clamp(",
+            timelineCode, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void MobilePlayerGestures_RequireVerticalIntentAndExcludeActualTransportBounds()
     {
         var playerView = LoadProjectFile(

@@ -6,6 +6,23 @@
              x:Class="Noctra.Mobile.Views.Player.MobilePlayerSleepSheet"
              x:DataType="vm:PlayerViewModel"
              x:CompileBindings="False">
+  <UserControl.Styles>
+    <Style Selector="Button.SelectionSheetOption">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+      <Setter Property="BorderThickness" Value="0,0,0,1.5" />
+      <Setter Property="Padding" Value="8,4" />
+      <Setter Property="MinHeight" Value="48" />
+      <Setter Property="CornerRadius" Value="6" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+    </Style>
+    <Style Selector="Button.SelectionSheetOption:pressed /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource InteractivePressedBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+    </Style>
+  </UserControl.Styles>
+
   <StackPanel Spacing="12">
     <Grid ColumnDefinitions="*,Auto">
       <TextBlock Text="{Binding SleepTimerLabel}"
@@ -22,30 +39,170 @@
     </Grid>
 
     <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="8" RowSpacing="8">
-      <Button Content="{loc:Translate Player.Mobile.Sleep.Off}"
+      <Button Classes="SelectionSheetOption"
               Command="{Binding SetSleepTimerCommand}"
-              CommandParameter="{x:Static vm:PlayerViewModel+SleepTimerOption.Off}"
-              MinHeight="44" />
+              CommandParameter="{x:Static vm:PlayerViewModel+SleepTimerOption.Off}">
+        <Grid IsHitTestVisible="False">
+          <Border Background="{DynamicResource AccentSubtleBrush}" CornerRadius="8">
+            <Border.IsVisible>
+              <MultiBinding Converter="{StaticResource EqualityToBoolMultiConverter}">
+                <Binding Path="SleepTimerMode" />
+                <Binding Source="{x:Static vm:PlayerViewModel+SleepTimerOption.Off}" />
+              </MultiBinding>
+            </Border.IsVisible>
+          </Border>
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Text="{loc:Translate Player.Mobile.Sleep.Off}"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
+                       VerticalAlignment="Center" />
+            <icons:MaterialIcon Grid.Column="1"
+                                Kind="RadioboxMarked"
+                                Width="20"
+                                Height="20"
+                                Margin="4,0"
+                                Foreground="{DynamicResource AccentBrush}">
+              <icons:MaterialIcon.IsVisible>
+                <MultiBinding Converter="{StaticResource EqualityToBoolMultiConverter}">
+                  <Binding Path="SleepTimerMode" />
+                  <Binding Source="{x:Static vm:PlayerViewModel+SleepTimerOption.Off}" />
+                </MultiBinding>
+              </icons:MaterialIcon.IsVisible>
+            </icons:MaterialIcon>
+          </Grid>
+        </Grid>
+      </Button>
       <Button Grid.Column="1"
-              Content="{loc:Translate Player.Mobile.Sleep.15min}"
+              Classes="SelectionSheetOption"
               Command="{Binding SetSleepTimerCommand}"
-              CommandParameter="{x:Static vm:PlayerViewModel+SleepTimerOption.Minutes15}"
-              MinHeight="44" />
+              CommandParameter="{x:Static vm:PlayerViewModel+SleepTimerOption.Minutes15}">
+        <Grid IsHitTestVisible="False">
+          <Border Background="{DynamicResource AccentSubtleBrush}" CornerRadius="8">
+            <Border.IsVisible>
+              <MultiBinding Converter="{StaticResource EqualityToBoolMultiConverter}">
+                <Binding Path="SleepTimerMode" />
+                <Binding Source="{x:Static vm:PlayerViewModel+SleepTimerOption.Minutes15}" />
+              </MultiBinding>
+            </Border.IsVisible>
+          </Border>
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Text="{loc:Translate Player.Mobile.Sleep.15min}"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
+                       VerticalAlignment="Center" />
+            <icons:MaterialIcon Grid.Column="1"
+                                Kind="RadioboxMarked"
+                                Width="20"
+                                Height="20"
+                                Margin="4,0"
+                                Foreground="{DynamicResource AccentBrush}">
+              <icons:MaterialIcon.IsVisible>
+                <MultiBinding Converter="{StaticResource EqualityToBoolMultiConverter}">
+                  <Binding Path="SleepTimerMode" />
+                  <Binding Source="{x:Static vm:PlayerViewModel+SleepTimerOption.Minutes15}" />
+                </MultiBinding>
+              </icons:MaterialIcon.IsVisible>
+            </icons:MaterialIcon>
+          </Grid>
+        </Grid>
+      </Button>
       <Button Grid.Row="1"
-              Content="{loc:Translate Player.Mobile.Sleep.30min}"
+              Classes="SelectionSheetOption"
               Command="{Binding SetSleepTimerCommand}"
-              CommandParameter="{x:Static vm:PlayerViewModel+SleepTimerOption.Minutes30}"
-              MinHeight="44" />
+              CommandParameter="{x:Static vm:PlayerViewModel+SleepTimerOption.Minutes30}">
+        <Grid IsHitTestVisible="False">
+          <Border Background="{DynamicResource AccentSubtleBrush}" CornerRadius="8">
+            <Border.IsVisible>
+              <MultiBinding Converter="{StaticResource EqualityToBoolMultiConverter}">
+                <Binding Path="SleepTimerMode" />
+                <Binding Source="{x:Static vm:PlayerViewModel+SleepTimerOption.Minutes30}" />
+              </MultiBinding>
+            </Border.IsVisible>
+          </Border>
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Text="{loc:Translate Player.Mobile.Sleep.30min}"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
+                       VerticalAlignment="Center" />
+            <icons:MaterialIcon Grid.Column="1"
+                                Kind="RadioboxMarked"
+                                Width="20"
+                                Height="20"
+                                Margin="4,0"
+                                Foreground="{DynamicResource AccentBrush}">
+              <icons:MaterialIcon.IsVisible>
+                <MultiBinding Converter="{StaticResource EqualityToBoolMultiConverter}">
+                  <Binding Path="SleepTimerMode" />
+                  <Binding Source="{x:Static vm:PlayerViewModel+SleepTimerOption.Minutes30}" />
+                </MultiBinding>
+              </icons:MaterialIcon.IsVisible>
+            </icons:MaterialIcon>
+          </Grid>
+        </Grid>
+      </Button>
       <Button Grid.Row="1" Grid.Column="1"
-              Content="{loc:Translate Player.Mobile.Sleep.60min}"
+              Classes="SelectionSheetOption"
               Command="{Binding SetSleepTimerCommand}"
-              CommandParameter="{x:Static vm:PlayerViewModel+SleepTimerOption.Minutes60}"
-              MinHeight="44" />
+              CommandParameter="{x:Static vm:PlayerViewModel+SleepTimerOption.Minutes60}">
+        <Grid IsHitTestVisible="False">
+          <Border Background="{DynamicResource AccentSubtleBrush}" CornerRadius="8">
+            <Border.IsVisible>
+              <MultiBinding Converter="{StaticResource EqualityToBoolMultiConverter}">
+                <Binding Path="SleepTimerMode" />
+                <Binding Source="{x:Static vm:PlayerViewModel+SleepTimerOption.Minutes60}" />
+              </MultiBinding>
+            </Border.IsVisible>
+          </Border>
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Text="{loc:Translate Player.Mobile.Sleep.60min}"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
+                       VerticalAlignment="Center" />
+            <icons:MaterialIcon Grid.Column="1"
+                                Kind="RadioboxMarked"
+                                Width="20"
+                                Height="20"
+                                Margin="4,0"
+                                Foreground="{DynamicResource AccentBrush}">
+              <icons:MaterialIcon.IsVisible>
+                <MultiBinding Converter="{StaticResource EqualityToBoolMultiConverter}">
+                  <Binding Path="SleepTimerMode" />
+                  <Binding Source="{x:Static vm:PlayerViewModel+SleepTimerOption.Minutes60}" />
+                </MultiBinding>
+              </icons:MaterialIcon.IsVisible>
+            </icons:MaterialIcon>
+          </Grid>
+        </Grid>
+      </Button>
       <Button Grid.Row="2"
-              Content="{loc:Translate Player.Mobile.Sleep.End}"
+              Classes="SelectionSheetOption"
               Command="{Binding SetSleepTimerCommand}"
-              CommandParameter="{x:Static vm:PlayerViewModel+SleepTimerOption.EndOfEpisode}"
-              MinHeight="44" />
+              CommandParameter="{x:Static vm:PlayerViewModel+SleepTimerOption.EndOfEpisode}">
+        <Grid IsHitTestVisible="False">
+          <Border Background="{DynamicResource AccentSubtleBrush}" CornerRadius="8">
+            <Border.IsVisible>
+              <MultiBinding Converter="{StaticResource EqualityToBoolMultiConverter}">
+                <Binding Path="SleepTimerMode" />
+                <Binding Source="{x:Static vm:PlayerViewModel+SleepTimerOption.EndOfEpisode}" />
+              </MultiBinding>
+            </Border.IsVisible>
+          </Border>
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Text="{loc:Translate Player.Mobile.Sleep.End}"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
+                       VerticalAlignment="Center" />
+            <icons:MaterialIcon Grid.Column="1"
+                                Kind="RadioboxMarked"
+                                Width="20"
+                                Height="20"
+                                Margin="4,0"
+                                Foreground="{DynamicResource AccentBrush}">
+              <icons:MaterialIcon.IsVisible>
+                <MultiBinding Converter="{StaticResource EqualityToBoolMultiConverter}">
+                  <Binding Path="SleepTimerMode" />
+                  <Binding Source="{x:Static vm:PlayerViewModel+SleepTimerOption.EndOfEpisode}" />
+                </MultiBinding>
+              </icons:MaterialIcon.IsVisible>
+            </icons:MaterialIcon>
+          </Grid>
+        </Grid>
+      </Button>
       <Button Grid.Row="2" Grid.Column="1"
               Content="{loc:Translate Player.Mobile.Sleep.Cancel}"
               Command="{Binding CancelSleepTimerCommand}"

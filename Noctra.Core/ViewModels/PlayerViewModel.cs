@@ -7,6 +7,7 @@ using Noctra.Services.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -21,6 +22,22 @@ namespace Noctra.ViewModels;
 public partial class PlayerViewModel : ObservableObject, IDisposable
 {
     private const double OverlayAutoHideDelayMs = 4000;
+    public const float PlaybackRateHalf = 0.5f;
+    public const float PlaybackRateThreeQuarters = 0.75f;
+    public const float PlaybackRateNormal = 1.0f;
+    public const float PlaybackRateOneAndQuarter = 1.25f;
+    public const float PlaybackRateOneAndHalf = 1.5f;
+    public const float PlaybackRateDouble = 2.0f;
+
+    private static readonly float[] SupportedPlaybackRates =
+    [
+        PlaybackRateHalf,
+        PlaybackRateThreeQuarters,
+        PlaybackRateNormal,
+        PlaybackRateOneAndQuarter,
+        PlaybackRateOneAndHalf,
+        PlaybackRateDouble
+    ];
     
     public sealed record TrackOption(int Id, string Name, string? LanguageCode = null);
     public sealed class SkipOverlayEventArgs : EventArgs
@@ -758,10 +775,22 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     private double _duration;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(DisplayedPositionText))]
     private string _positionText = "00:00:00";
 
     [ObservableProperty]
     private string _durationText = "00:00:00";
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(DisplayedPositionText))]
+    private bool _isSeekPreviewActive;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(DisplayedPositionText))]
+    private string _seekPreviewPositionText = string.Empty;
+
+    public string DisplayedPositionText =>
+        IsSeekPreviewActive ? SeekPreviewPositionText : PositionText;
 
     [ObservableProperty]
     private bool _isFullScreen;
@@ -783,9 +812,16 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     [NotifyPropertyChangedFor(nameof(SelectedSubtitleTrackName))]
     private int _selectedSubtitleTrack = -1;
 
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CurrentPlaybackRateKey))]
+    private float _currentPlaybackRate = 1.0f;
+
     public string SelectedAudioTrackName => AudioTracks.FirstOrDefault(t => t.Id == SelectedAudioTrack)?.Name ?? string.Empty;
 
     public string SelectedSubtitleTrackName => SubtitleTracks.FirstOrDefault(t => t.Id == SelectedSubtitleTrack)?.Name ?? string.Empty;
+
+    public string CurrentPlaybackRateKey =>
+        CurrentPlaybackRate.ToString("0.0#", CultureInfo.InvariantCulture);
 
     public bool HasNetworkError =>
         !string.IsNullOrWhiteSpace(ConnectionStatus) &&
@@ -1291,6 +1327,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         PositionText = "00:00:00";
         Duration = 0;
         DurationText = "00:00:00";
+        ResetPlaybackRate();
         RemainingTime = IsLiveContent ? "00:00:00" : "-00:00:00";
         IsBuffering = true;
         BufferingProgress = 0;
@@ -1871,8 +1908,52 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void SetPlaybackSpeed(float speed)
     {
-        _videoPlayerService.PlaybackRate = speed;
+        var normalizedRate = NormalizePlaybackRate(speed);
+        _videoPlayerService.PlaybackRate = normalizedRate;
+        CurrentPlaybackRate = normalizedRate;
         RestartAutoHideTimer();
+    }
+
+    public void UpdateSeekPreview(double positionSeconds)
+    {
+        if (IsLiveContent ||
+            !double.IsFinite(positionSeconds) ||
+            !double.IsFinite(Duration) ||
+            Duration <= 0)
+        {
+            ClearSeekPreview();
+            return;
+        }
+
+        var clampedPosition = Math.Clamp(positionSeconds, 0, Duration);
+        SeekPreviewPositionText =
+            TimeSpan.FromSeconds(clampedPosition).ToString(@"hh\:mm\:ss");
+        IsSeekPreviewActive = true;
+    }
+
+    public void ClearSeekPreview()
+    {
+        IsSeekPreviewActive = false;
+        SeekPreviewPositionText = string.Empty;
+    }
+
+    private void ResetPlaybackRate()
+    {
+        _videoPlayerService.PlaybackRate = 1.0f;
+        CurrentPlaybackRate = 1.0f;
+    }
+
+    private static float NormalizePlaybackRate(float requestedRate)
+    {
+        foreach (var supportedRate in SupportedPlaybackRates)
+        {
+            if (Math.Abs(requestedRate - supportedRate) < 0.001f)
+            {
+                return supportedRate;
+            }
+        }
+
+        return 1.0f;
     }
 
     private bool CanClosePlayer() => !IsClosingPlayer;
@@ -1953,6 +2034,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         Duration = 0;
         PositionText = "00:00:00";
         DurationText = "00:00:00";
+        ResetPlaybackRate();
         RemainingTime = string.Empty;
 
         IsPiPMode = false;

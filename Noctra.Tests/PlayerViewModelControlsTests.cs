@@ -1398,6 +1398,19 @@ namespace Noctra.Tests
         }
 
         [Fact]
+        public void StartSeeking_PreventsOverlayAutoHideWhileSeekIsActive()
+        {
+            var ctx = new PlayerTestContext();
+            ctx.VideoService.SimulatePlayingChanged(true);
+
+            Assert.True(ctx.VM.OverlayManager.CanAutoHideOverlay());
+
+            ctx.VM.StartSeekingCommand.Execute(null);
+
+            Assert.False(ctx.VM.OverlayManager.CanAutoHideOverlay());
+        }
+
+        [Fact]
         public void PlayingChanged_FalseEvent_SetsIsPlayingFalse()
         {
             var ctx = new PlayerTestContext();

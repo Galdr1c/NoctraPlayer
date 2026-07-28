@@ -6,6 +6,23 @@
              x:Class="Noctra.Mobile.Views.Player.MobilePlayerQualitySheet"
              x:DataType="vm:PlayerViewModel"
              x:CompileBindings="False">
+  <UserControl.Styles>
+    <Style Selector="Button.SelectionSheetOption">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+      <Setter Property="BorderThickness" Value="0,0,0,1.5" />
+      <Setter Property="Padding" Value="8,4" />
+      <Setter Property="MinHeight" Value="48" />
+      <Setter Property="CornerRadius" Value="6" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+    </Style>
+    <Style Selector="Button.SelectionSheetOption:pressed /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource InteractivePressedBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+    </Style>
+  </UserControl.Styles>
+
   <StackPanel Spacing="12">
     <Grid ColumnDefinitions="*,Auto">
       <TextBlock Text="{loc:Translate Player.Mobile.Quality}"
@@ -60,12 +77,211 @@
                FontSize="11" FontWeight="Bold"
                Foreground="{DynamicResource PlayerOverlaySecondaryTextBrush}" />
     <Grid ColumnDefinitions="*,*,*" RowDefinitions="Auto,Auto" ColumnSpacing="8" RowSpacing="8">
-      <Button Content="0.5x" Command="{Binding SetPlaybackSpeedCommand}" CommandParameter="0.5" MinHeight="38" />
-      <Button Grid.Column="1" Content="0.75x" Command="{Binding SetPlaybackSpeedCommand}" CommandParameter="0.75" MinHeight="38" />
-      <Button Grid.Column="2" Content="1.0x" Command="{Binding SetPlaybackSpeedCommand}" CommandParameter="1.0" MinHeight="38" />
-      <Button Grid.Row="1" Content="1.25x" Command="{Binding SetPlaybackSpeedCommand}" CommandParameter="1.25" MinHeight="38" />
-      <Button Grid.Row="1" Grid.Column="1" Content="1.5x" Command="{Binding SetPlaybackSpeedCommand}" CommandParameter="1.5" MinHeight="38" />
-      <Button Grid.Row="1" Grid.Column="2" Content="2.0x" Command="{Binding SetPlaybackSpeedCommand}" CommandParameter="2.0" MinHeight="38" />
+      <Button Classes="SelectionSheetOption"
+              Command="{Binding SetPlaybackSpeedCommand}"
+              CommandParameter="{x:Static vm:PlayerViewModel.PlaybackRateHalf}">
+        <Grid IsHitTestVisible="False">
+          <Border Background="{DynamicResource AccentSubtleBrush}" CornerRadius="8">
+            <Border.IsVisible>
+              <MultiBinding Converter="{StaticResource EqualityToBoolMultiConverter}">
+                <Binding Source="0.5" />
+                <Binding Path="CurrentPlaybackRateKey" />
+              </MultiBinding>
+            </Border.IsVisible>
+          </Border>
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Text="0.5x"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
+                       FontWeight="Normal"
+                       VerticalAlignment="Center" />
+            <icons:MaterialIcon Grid.Column="1"
+                                Kind="RadioboxMarked"
+                                Width="20"
+                                Height="20"
+                                Margin="4,0"
+                                Foreground="{DynamicResource AccentBrush}">
+              <icons:MaterialIcon.IsVisible>
+                <MultiBinding Converter="{StaticResource EqualityToBoolMultiConverter}">
+                  <Binding Source="0.5" />
+                  <Binding Path="CurrentPlaybackRateKey" />
+                </MultiBinding>
+              </icons:MaterialIcon.IsVisible>
+            </icons:MaterialIcon>
+          </Grid>
+        </Grid>
+      </Button>
+      <Button Grid.Column="1"
+              Classes="SelectionSheetOption"
+              Command="{Binding SetPlaybackSpeedCommand}"
+              CommandParameter="{x:Static vm:PlayerViewModel.PlaybackRateThreeQuarters}">
+        <Grid IsHitTestVisible="False">
+          <Border Background="{DynamicResource AccentSubtleBrush}" CornerRadius="8">
+            <Border.IsVisible>
+              <MultiBinding Converter="{StaticResource EqualityToBoolMultiConverter}">
+                <Binding Source="0.75" />
+                <Binding Path="CurrentPlaybackRateKey" />
+              </MultiBinding>
+            </Border.IsVisible>
+          </Border>
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Text="0.75x"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
+                       FontWeight="Normal"
+                       VerticalAlignment="Center" />
+            <icons:MaterialIcon Grid.Column="1"
+                                Kind="RadioboxMarked"
+                                Width="20"
+                                Height="20"
+                                Margin="4,0"
+                                Foreground="{DynamicResource AccentBrush}">
+              <icons:MaterialIcon.IsVisible>
+                <MultiBinding Converter="{StaticResource EqualityToBoolMultiConverter}">
+                  <Binding Source="0.75" />
+                  <Binding Path="CurrentPlaybackRateKey" />
+                </MultiBinding>
+              </icons:MaterialIcon.IsVisible>
+            </icons:MaterialIcon>
+          </Grid>
+        </Grid>
+      </Button>
+      <Button Grid.Column="2"
+              Classes="SelectionSheetOption"
+              Command="{Binding SetPlaybackSpeedCommand}"
+              CommandParameter="{x:Static vm:PlayerViewModel.PlaybackRateNormal}">
+        <Grid IsHitTestVisible="False">
+          <Border Background="{DynamicResource AccentSubtleBrush}" CornerRadius="8">
+            <Border.IsVisible>
+              <MultiBinding Converter="{StaticResource EqualityToBoolMultiConverter}">
+                <Binding Source="1.0" />
+                <Binding Path="CurrentPlaybackRateKey" />
+              </MultiBinding>
+            </Border.IsVisible>
+          </Border>
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Text="1.0x"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
+                       FontWeight="Normal"
+                       VerticalAlignment="Center" />
+            <icons:MaterialIcon Grid.Column="1"
+                                Kind="RadioboxMarked"
+                                Width="20"
+                                Height="20"
+                                Margin="4,0"
+                                Foreground="{DynamicResource AccentBrush}">
+              <icons:MaterialIcon.IsVisible>
+                <MultiBinding Converter="{StaticResource EqualityToBoolMultiConverter}">
+                  <Binding Source="1.0" />
+                  <Binding Path="CurrentPlaybackRateKey" />
+                </MultiBinding>
+              </icons:MaterialIcon.IsVisible>
+            </icons:MaterialIcon>
+          </Grid>
+        </Grid>
+      </Button>
+      <Button Grid.Row="1"
+              Classes="SelectionSheetOption"
+              Command="{Binding SetPlaybackSpeedCommand}"
+              CommandParameter="{x:Static vm:PlayerViewModel.PlaybackRateOneAndQuarter}">
+        <Grid IsHitTestVisible="False">
+          <Border Background="{DynamicResource AccentSubtleBrush}" CornerRadius="8">
+            <Border.IsVisible>
+              <MultiBinding Converter="{StaticResource EqualityToBoolMultiConverter}">
+                <Binding Source="1.25" />
+                <Binding Path="CurrentPlaybackRateKey" />
+              </MultiBinding>
+            </Border.IsVisible>
+          </Border>
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Text="1.25x"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
+                       FontWeight="Normal"
+                       VerticalAlignment="Center" />
+            <icons:MaterialIcon Grid.Column="1"
+                                Kind="RadioboxMarked"
+                                Width="20"
+                                Height="20"
+                                Margin="4,0"
+                                Foreground="{DynamicResource AccentBrush}">
+              <icons:MaterialIcon.IsVisible>
+                <MultiBinding Converter="{StaticResource EqualityToBoolMultiConverter}">
+                  <Binding Source="1.25" />
+                  <Binding Path="CurrentPlaybackRateKey" />
+                </MultiBinding>
+              </icons:MaterialIcon.IsVisible>
+            </icons:MaterialIcon>
+          </Grid>
+        </Grid>
+      </Button>
+      <Button Grid.Row="1"
+              Grid.Column="1"
+              Classes="SelectionSheetOption"
+              Command="{Binding SetPlaybackSpeedCommand}"
+              CommandParameter="{x:Static vm:PlayerViewModel.PlaybackRateOneAndHalf}">
+        <Grid IsHitTestVisible="False">
+          <Border Background="{DynamicResource AccentSubtleBrush}" CornerRadius="8">
+            <Border.IsVisible>
+              <MultiBinding Converter="{StaticResource EqualityToBoolMultiConverter}">
+                <Binding Source="1.5" />
+                <Binding Path="CurrentPlaybackRateKey" />
+              </MultiBinding>
+            </Border.IsVisible>
+          </Border>
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Text="1.5x"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
+                       FontWeight="Normal"
+                       VerticalAlignment="Center" />
+            <icons:MaterialIcon Grid.Column="1"
+                                Kind="RadioboxMarked"
+                                Width="20"
+                                Height="20"
+                                Margin="4,0"
+                                Foreground="{DynamicResource AccentBrush}">
+              <icons:MaterialIcon.IsVisible>
+                <MultiBinding Converter="{StaticResource EqualityToBoolMultiConverter}">
+                  <Binding Source="1.5" />
+                  <Binding Path="CurrentPlaybackRateKey" />
+                </MultiBinding>
+              </icons:MaterialIcon.IsVisible>
+            </icons:MaterialIcon>
+          </Grid>
+        </Grid>
+      </Button>
+      <Button Grid.Row="1"
+              Grid.Column="2"
+              Classes="SelectionSheetOption"
+              Command="{Binding SetPlaybackSpeedCommand}"
+              CommandParameter="{x:Static vm:PlayerViewModel.PlaybackRateDouble}">
+        <Grid IsHitTestVisible="False">
+          <Border Background="{DynamicResource AccentSubtleBrush}" CornerRadius="8">
+            <Border.IsVisible>
+              <MultiBinding Converter="{StaticResource EqualityToBoolMultiConverter}">
+                <Binding Source="2.0" />
+                <Binding Path="CurrentPlaybackRateKey" />
+              </MultiBinding>
+            </Border.IsVisible>
+          </Border>
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Text="2.0x"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
+                       FontWeight="Normal"
+                       VerticalAlignment="Center" />
+            <icons:MaterialIcon Grid.Column="1"
+                                Kind="RadioboxMarked"
+                                Width="20"
+                                Height="20"
+                                Margin="4,0"
+                                Foreground="{DynamicResource AccentBrush}">
+              <icons:MaterialIcon.IsVisible>
+                <MultiBinding Converter="{StaticResource EqualityToBoolMultiConverter}">
+                  <Binding Source="2.0" />
+                  <Binding Path="CurrentPlaybackRateKey" />
+                </MultiBinding>
+              </icons:MaterialIcon.IsVisible>
+            </icons:MaterialIcon>
+          </Grid>
+        </Grid>
+      </Button>
     </Grid>
   </StackPanel>
 </UserControl>

@@ -1084,5 +1084,77 @@ namespace Noctra.Tests
 
             Assert.Equal(0.5f, ctx.VideoService.PlaybackRate, precision: 2);
         }
+
+        [Fact]
+        public void SetPlaybackSpeed_UpdatesBindableCurrentRate()
+        {
+            var ctx = new ScenarioContext();
+            ctx.SetupVodChannel();
+            var currentRate = typeof(PlayerViewModel).GetProperty("CurrentPlaybackRate");
+
+            Assert.NotNull(currentRate);
+            Assert.Equal(1.0f, Assert.IsType<float>(currentRate.GetValue(ctx.VM)));
+
+            ctx.VM.SetPlaybackSpeedCommand.Execute(1.25f);
+
+            Assert.Equal(1.25f, Assert.IsType<float>(currentRate.GetValue(ctx.VM)));
+            Assert.Equal(1.25f, ctx.VideoService.PlaybackRate, precision: 2);
+        }
+
+        [Fact]
+        public void SetPlaybackSpeed_UnsupportedRateFallsBackToNormal()
+        {
+            var ctx = new ScenarioContext();
+            ctx.SetupVodChannel();
+            var currentRate = typeof(PlayerViewModel).GetProperty("CurrentPlaybackRate");
+
+            Assert.NotNull(currentRate);
+            ctx.VM.SetPlaybackSpeedCommand.Execute(1.1f);
+
+            Assert.Equal(1.0f, Assert.IsType<float>(currentRate.GetValue(ctx.VM)));
+            Assert.Equal(1.0f, ctx.VideoService.PlaybackRate, precision: 2);
+        }
+
+        [Fact]
+        public void PrepareForContentLoading_ResetsPlaybackRate()
+        {
+            var ctx = new ScenarioContext();
+            ctx.SetupVodChannel();
+            var currentRate = typeof(PlayerViewModel).GetProperty("CurrentPlaybackRate");
+
+            Assert.NotNull(currentRate);
+            ctx.VM.SetPlaybackSpeedCommand.Execute(2.0f);
+
+            ctx.InvokePrivate("PrepareForContentLoading");
+
+            Assert.Equal(1.0f, Assert.IsType<float>(currentRate.GetValue(ctx.VM)));
+            Assert.Equal(1.0f, ctx.VideoService.PlaybackRate, precision: 2);
+        }
+
+        [Fact]
+        public void SeekPreview_ChangesDisplayedTimeWithoutChangingPlaybackPosition()
+        {
+            var ctx = new ScenarioContext();
+            ctx.SetupVodChannel();
+            ctx.VM.Position = 120;
+            ctx.VM.PositionText = "00:02:00";
+
+            var updatePreview = typeof(PlayerViewModel).GetMethod("UpdateSeekPreview");
+            var clearPreview = typeof(PlayerViewModel).GetMethod("ClearSeekPreview");
+            var displayedPosition = typeof(PlayerViewModel).GetProperty("DisplayedPositionText");
+
+            Assert.NotNull(updatePreview);
+            Assert.NotNull(clearPreview);
+            Assert.NotNull(displayedPosition);
+
+            updatePreview.Invoke(ctx.VM, [1458d]);
+
+            Assert.Equal("00:24:18", displayedPosition.GetValue(ctx.VM));
+            Assert.Equal(120, ctx.VM.Position);
+
+            clearPreview.Invoke(ctx.VM, null);
+
+            Assert.Equal("00:02:00", displayedPosition.GetValue(ctx.VM));
+        }
     }
 }

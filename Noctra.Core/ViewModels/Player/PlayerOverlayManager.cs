@@ -48,6 +48,7 @@ public class PlayerOverlayManager
         return _vm.IsPlaying
             && !_vm.IsLocked
             && !_vm.IsClosingPlayer
+            && !_vm._isUserSeeking
             && !_vm.IsDragging
             && !_vm.IsResizing
             && !_vm.IsBuffering

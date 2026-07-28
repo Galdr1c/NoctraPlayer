@@ -44,11 +44,12 @@ public partial class MobilePlayerTimeline : UserControl
 
     private void Detach()
     {
-        if (!_isAttached) return;
-        _isAttached = false;
-        if (_vm is not null)
+        if (_isAttached && _vm is not null)
             _vm.PropertyChanged -= OnVmPropertyChanged;
+
+        _isAttached = false;
         _isDragging = false;
+        _vm?.ClearSeekPreview();
         _vm = null;
     }
 
@@ -102,6 +103,7 @@ public partial class MobilePlayerTimeline : UserControl
         _isDragging = false;
         e.Pointer.Capture(null);
         CommitSeek();
+        _vm.ClearSeekPreview();
     }
 
     private void OnPointerCaptureLost(object? sender, PointerCaptureLostEventArgs e)
@@ -111,6 +113,7 @@ public partial class MobilePlayerTimeline : UserControl
 
         _isDragging = false;
         CommitSeek();
+        _vm?.ClearSeekPreview();
     }
 
     private void UpdatePreview(double pointX)
@@ -124,6 +127,7 @@ public partial class MobilePlayerTimeline : UserControl
 
         var localX = Math.Clamp(pointX, 0, width);
         _previewPosition = (localX / width) * _vm.Duration;
+        _vm.UpdateSeekPreview(_previewPosition);
         UpdateProgress();
     }
 
