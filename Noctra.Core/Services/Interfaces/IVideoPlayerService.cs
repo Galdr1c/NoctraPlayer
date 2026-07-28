@@ -24,6 +24,13 @@ public interface IVideoPlayerService : IDisposable
     bool HasLoadedMedia { get; }
     long CurrentTimeMilliseconds { get; }
     double Position { get; set; }
+
+    /// <summary>
+    /// Furthest buffered playback position in seconds. Implementations without
+    /// native buffered-range support fall back to the played position.
+    /// </summary>
+    double BufferedPosition => Position;
+
     float PlaybackRate { get; set; }
     double Duration { get; }
 

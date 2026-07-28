@@ -117,7 +117,8 @@
     </Border>
 
     <!-- Layer 4: Transport bar -->
-    <views:MobilePlayerCompactControls Grid.ColumnSpan="2"
+    <views:MobilePlayerCompactControls x:Name="PlayerControls"
+                                       Grid.ColumnSpan="2"
                                        ZIndex="21"
                                        VerticalAlignment="Bottom"
                                        IsVisible="{Binding IsBottomControlsVisible}">

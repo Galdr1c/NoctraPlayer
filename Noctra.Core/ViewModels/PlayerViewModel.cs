@@ -631,6 +631,9 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     private double _position;
 
     [ObservableProperty]
+    private double _bufferedPosition;
+
+    [ObservableProperty]
     private double _duration;
 
     [ObservableProperty]
@@ -1163,6 +1166,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         PlaybackController.ResetSeekInteractionState();
         IsPlaying = false;
         Position = 0;
+        BufferedPosition = 0;
         PositionText = "00:00:00";
         Duration = 0;
         DurationText = "00:00:00";
@@ -1809,6 +1813,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         BufferingProgress = 0;
 
         Position = 0;
+        BufferedPosition = 0;
         Duration = 0;
         PositionText = "00:00:00";
         DurationText = "00:00:00";
@@ -2233,6 +2238,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
             _isPlaybackEnded = false;
             PlaybackController.ResetSeekInteractionState();
             Position = 0;
+            BufferedPosition = 0;
             PositionText = "00:00:00";
             Duration = 0;
             DurationText = "00:00:00";

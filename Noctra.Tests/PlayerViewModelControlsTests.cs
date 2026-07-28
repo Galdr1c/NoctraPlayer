@@ -31,6 +31,7 @@ namespace Noctra.Tests
         public bool HasLoadedMedia => CurrentUrl != null;
         public long CurrentTimeMilliseconds => (long)(Position * 1000);
         public double Position { get; set; }
+        public double BufferedPosition { get; set; }
         public double Duration { get; set; } = 3600;
         public float PlaybackRate { get; set; } = 1f;
         public int Volume { get; set; } = 100;
@@ -1192,6 +1193,57 @@ namespace Noctra.Tests
             ctx.VideoService.SimulatePositionChanged(3661);
 
             Assert.Equal("01:01:01", ctx.VM.PositionText);
+        }
+
+        [Fact]
+        public void PositionChanged_Event_PublishesBufferedPositionClampedToDuration()
+        {
+            var ctx = new PlayerTestContext();
+            var bufferedPosition = typeof(PlayerViewModel).GetProperty("BufferedPosition");
+            Assert.NotNull(bufferedPosition);
+
+            ctx.VM.IsLiveContent = false;
+            ctx.VM.Duration = 3600;
+            ctx.VideoService.BufferedPosition = 4200;
+
+            ctx.VideoService.SimulatePositionChanged(600);
+
+            Assert.Equal(3600d, (double)bufferedPosition!.GetValue(ctx.VM)!);
+        }
+
+        [Fact]
+        public void PositionChanged_Event_ClearsBufferedPositionForLivePlayback()
+        {
+            var ctx = new PlayerTestContext();
+            var bufferedPosition = typeof(PlayerViewModel).GetProperty("BufferedPosition");
+            Assert.NotNull(bufferedPosition);
+
+            bufferedPosition!.SetValue(ctx.VM, 500d);
+            ctx.VM.IsLiveContent = true;
+            ctx.VideoService.BufferedPosition = 900;
+
+            ctx.VideoService.SimulatePositionChanged(600);
+
+            Assert.Equal(0d, (double)bufferedPosition.GetValue(ctx.VM)!);
+        }
+
+        [Fact]
+        public void CurrentChannelChanged_ResetsBufferedPosition()
+        {
+            var ctx = new PlayerTestContext();
+            var bufferedPosition = typeof(PlayerViewModel).GetProperty("BufferedPosition");
+            Assert.NotNull(bufferedPosition);
+
+            bufferedPosition!.SetValue(ctx.VM, 500d);
+            ctx.VM.CurrentChannel = new Channel
+            {
+                Id = 2,
+                Name = "Next",
+                StreamUrl = "https://example.test/next.mp4",
+                Type = ChannelType.VOD
+            };
+
+            Assert.Equal(0d, (double)bufferedPosition.GetValue(ctx.VM)!);
         }
 
         [Fact]

@@ -1,4 +1,5 @@
 using System;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Noctra.ViewModels;
@@ -10,6 +11,7 @@ public partial class MobilePlayerTimeline : UserControl
     private PlayerViewModel? _vm;
     private bool _isAttached;
     private bool _isDragging;
+    private double _previewPosition;
 
     public MobilePlayerTimeline()
     {
@@ -18,6 +20,7 @@ public partial class MobilePlayerTimeline : UserControl
         PointerMoved += OnPointerMoved;
         PointerReleased += OnPointerReleased;
         PointerCaptureLost += OnPointerCaptureLost;
+        SizeChanged += (_, _) => UpdateProgress();
         Tapped += (_, e) => e.Handled = true;
     }
 
@@ -45,6 +48,7 @@ public partial class MobilePlayerTimeline : UserControl
         _isAttached = false;
         if (_vm is not null)
             _vm.PropertyChanged -= OnVmPropertyChanged;
+        _isDragging = false;
         _vm = null;
     }
 
@@ -52,6 +56,7 @@ public partial class MobilePlayerTimeline : UserControl
     {
         if (e.PropertyName is nameof(PlayerViewModel.Position)
             or nameof(PlayerViewModel.Duration)
+            or nameof(PlayerViewModel.BufferedPosition)
             or nameof(PlayerViewModel.LiveProgramProgress)
             or nameof(PlayerViewModel.IsLiveContent))
         {
@@ -61,69 +66,139 @@ public partial class MobilePlayerTimeline : UserControl
 
     private void OnPointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (_vm is null || _vm.IsLiveContent || _vm.Duration <= 0) return;
+        // The whole timeline area must shield the underlying volume/brightness zones.
+        e.Handled = true;
+
+        if (_vm is null || _vm.IsLiveContent || _vm.Duration <= 0)
+            return;
 
         _isDragging = true;
+        _previewPosition = _vm.Position;
+
+        if (_vm.StartSeekingCommand.CanExecute(null))
+            _vm.StartSeekingCommand.Execute(null);
+
         e.Pointer.Capture(this);
-        SeekToPoint(e.GetCurrentPoint(RootGrid).Position.X);
-        e.Handled = true;
+        UpdatePreview(e.GetCurrentPoint(TrackGrid).Position.X);
     }
 
     private void OnPointerMoved(object? sender, PointerEventArgs e)
     {
-        if (!_isDragging || _vm is null) return;
-        SeekToPoint(e.GetCurrentPoint(RootGrid).Position.X);
+        if (!_isDragging || _vm is null)
+            return;
+
         e.Handled = true;
+        UpdatePreview(e.GetCurrentPoint(TrackGrid).Position.X);
     }
 
     private void OnPointerReleased(object? sender, PointerReleasedEventArgs e)
     {
-        if (!_isDragging) return;
+        e.Handled = true;
+
+        if (!_isDragging || _vm is null)
+            return;
+
+        UpdatePreview(e.GetCurrentPoint(TrackGrid).Position.X);
         _isDragging = false;
         e.Pointer.Capture(null);
-        e.Handled = true;
+        CommitSeek();
     }
 
     private void OnPointerCaptureLost(object? sender, PointerCaptureLostEventArgs e)
     {
+        if (!_isDragging)
+            return;
+
         _isDragging = false;
+        CommitSeek();
     }
 
-    private void SeekToPoint(double pointX)
+    private void UpdatePreview(double pointX)
     {
-        var width = RootGrid.Bounds.Width;
-        if (width <= 0) return;
+        if (_vm is null)
+            return;
 
-        var progress = Math.Clamp(pointX / width, 0, 1);
-        var targetPosition = progress * _vm!.Duration;
+        var width = TrackGrid.Bounds.Width;
+        if (width <= 0)
+            return;
 
-        if (_vm.SeekCommand.CanExecute(targetPosition))
-            _vm.SeekCommand.Execute(targetPosition);
+        var localX = Math.Clamp(pointX, 0, width);
+        _previewPosition = (localX / width) * _vm.Duration;
+        UpdateProgress();
+    }
+
+    private void CommitSeek()
+    {
+        if (_vm is null)
+            return;
+
+        var target = Math.Clamp(_previewPosition, 0, _vm.Duration);
+        if (_vm.SeekCommand.CanExecute(target))
+            _vm.SeekCommand.Execute(target);
     }
 
     private void UpdateProgress()
     {
-        if (_vm is null) return;
+        if (_vm is null)
+            return;
 
-        var width = RootGrid.Bounds.Width - Thumb.Width;
-        if (width <= 0) return;
+        var trackWidth = TrackGrid.Bounds.Width;
+        if (trackWidth <= 0)
+            return;
 
-        double progress;
+        var displayedPosition = _isDragging
+            ? _previewPosition
+            : _vm.Position;
+
+        double playedProgress;
         if (_vm.IsLiveContent)
         {
-            progress = _vm.LiveProgramProgress / 100d;
+            playedProgress = _vm.LiveProgramProgress / 100d;
         }
         else if (_vm.Duration > 0)
         {
-            progress = Math.Clamp(_vm.Position / _vm.Duration, 0, 1);
+            playedProgress = displayedPosition / _vm.Duration;
         }
         else
         {
-            progress = 0;
+            playedProgress = 0;
         }
 
-        var fillWidth = width * progress;
-        FillBar.Width = fillWidth;
-        Thumb.Margin = new Avalonia.Thickness(fillWidth, 0, 0, 0);
+        playedProgress = Math.Clamp(playedProgress, 0, 1);
+
+        var bufferedProgress = !_vm.IsLiveContent && _vm.Duration > 0
+            ? _vm.BufferedPosition / _vm.Duration
+            : 0;
+
+        bufferedProgress = Math.Clamp(
+            Math.Max(bufferedProgress, playedProgress),
+            0,
+            1);
+
+        var playedWidth = trackWidth * playedProgress;
+        var bufferedWidth = trackWidth * bufferedProgress;
+
+        FillBar.Width = playedWidth;
+        BufferBar.Width = bufferedWidth;
+        BufferBar.IsVisible =
+            !_vm.IsLiveContent &&
+            bufferedWidth > playedWidth + 1;
+
+        if (_vm.IsLiveContent)
+        {
+            Thumb.IsVisible = false;
+            return;
+        }
+
+        Thumb.IsVisible = true;
+
+        var thumbWidth = Thumb.Width;
+        var thumbX = TrackGrid.Bounds.X + playedWidth - (thumbWidth / 2d);
+        thumbX = Math.Clamp(
+            thumbX,
+            0,
+            Math.Max(0, RootGrid.Bounds.Width - thumbWidth));
+
+        Thumb.Margin = new Thickness(thumbX, 0, 0, 0);
     }
 }

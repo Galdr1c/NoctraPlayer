@@ -1288,7 +1288,13 @@ public partial class MainView : UserControl
 
         pictureInPictureService.UpdatePictureInPictureState(new PictureInPicturePlaybackState
         {
-            CanEnterPictureInPicture = PlayerHost.IsVisible && vm.CurrentChannel is not null && vm.IsPlaying,
+            // Manual PiP must also work for paused, already-loaded media so the
+            // PiP play action can resume it. Auto-enter remains playing-only in
+            // AndroidPictureInPictureService.
+            CanEnterPictureInPicture =
+                PlayerHost.IsVisible &&
+                vm.CurrentChannel is not null &&
+                (vm.IsPlaying || vm.VideoPlayerService.HasLoadedMedia),
             IsPlaying = vm.IsPlaying,
             IsLiveContent = vm.IsLiveContent,
             IsSeriesContent = vm.IsSeriesContent,

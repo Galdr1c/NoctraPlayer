@@ -46,6 +46,13 @@ public sealed class AndroidPictureInPictureService : IPictureInPictureService
             return false;
         }
 
+        // Android 12+ may complete auto-enter before the explicit OEM fallback
+        // resumes. Treat that race as success instead of entering a second time.
+        if (IsInPictureInPictureMode)
+        {
+            return true;
+        }
+
         var parameters = BuildParams(autoEnterEnabled: false);
         if (parameters is null)
         {
@@ -77,16 +84,17 @@ public sealed class AndroidPictureInPictureService : IPictureInPictureService
 
     public Task<bool> TryEnterAutoPictureInPictureAsync()
     {
-        // Android 12+ uses SetAutoEnterEnabled for the smooth home-gesture transition.
-        // OnUserLeaveHint remains the fallback for Android 8–11 devices.
-        if (Build.VERSION.SdkInt >= BuildVersionCodes.S)
+        if (!_state.CanEnterPictureInPicture || !_state.IsPlaying)
         {
             return Task.FromResult(false);
         }
 
-        if (!_state.CanEnterPictureInPicture || !_state.IsPlaying || IsInPictureInPictureMode)
+        // SetAutoEnterEnabled provides the smooth Android 12+ transition, but
+        // some OEM/navigation combinations still reach OnUserLeaveHint without
+        // entering PiP. Keep this idempotent explicit fallback on every version.
+        if (IsInPictureInPictureMode)
         {
-            return Task.FromResult(false);
+            return Task.FromResult(true);
         }
 
         return EnterPictureInPictureAsync();

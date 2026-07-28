@@ -96,12 +96,20 @@ public partial class MobilePlayerView : UserControl
     private CancellationTokenSource? _lockPressCts;
 
     // ── Swipe (kaydırma) jest durumu ───────────────────────────────────────
-    // Sağ yarı dikey = ses, sol yarı dikey = parlaklık, yatay = ileri/geri sarma.
+    // Sağ yarı dikey = ses, sol yarı dikey = parlaklık.
+    private const double SwipeActivationThreshold = 18d;
+    private const double VerticalIntentRatio = 1.35d;
+    private const double SwipeSensitivityDivisor = 1.75d;
+    private static readonly TimeSpan PostGestureTapSuppression = TimeSpan.FromMilliseconds(350);
+
     private bool _isSwiping;
+    private bool _swipeCandidate;
+    private bool _swipeRejected;
     private bool _swipeIsLeftZone;
-    private double _swipeStartY;
+    private Point _swipeStartPoint;
     private int _swipeStartVolume;
     private double _swipeStartBrightness;
+    private DateTime _suppressTapUntilUtc = DateTime.MinValue;
 
     private readonly Dictionary<long, Point> _activePointers = new();
     private bool _isPinchZooming;
@@ -281,12 +289,18 @@ public partial class MobilePlayerView : UserControl
 
     private void UpdateNormalVideoLayout()
     {
-        if (VideoSurfaceSlot is null)
+        // The normal player always fills Android's content root. Keeping the
+        // native TextureView on MatchParent lets Android resize it atomically
+        // during orientation changes, instead of copying a transient/stale
+        // Avalonia pixel rectangle into its LayoutParams.
+        var fullScreenRect = new Rect(0, 0, -1, -1);
+        if (_lastSurfaceRect == fullScreenRect)
         {
             return;
         }
 
-        SyncNativeSurfaceTo(VideoSurfaceSlot);
+        _lastSurfaceRect = fullScreenRect;
+        GetVideoSurfaceService()?.SetBounds(0, 0, -1, -1);
     }
 
     /// <summary>
@@ -335,40 +349,6 @@ public partial class MobilePlayerView : UserControl
         var py = (int)Math.Round(topLeft.Value.Y * scaling);
         var pw = (int)Math.Round(videoSlot.Bounds.Width * scaling);
         var ph = (int)Math.Round(videoSlot.Bounds.Height * scaling);
-        if (pw <= 0 || ph <= 0)
-        {
-            return;
-        }
-
-        var rect = new Rect(px, py, pw, ph);
-        if (rect == _lastSurfaceRect)
-        {
-            return;
-        }
-
-        _lastSurfaceRect = rect;
-        GetVideoSurfaceService()?.SetBounds(px, py, pw, ph);
-    }
-
-    private void SyncNativeSurfaceTo(Control slot)
-    {
-        var topLevel = TopLevel.GetTopLevel(this);
-        if (topLevel is null)
-        {
-            return;
-        }
-
-        var topLeft = slot.TranslatePoint(new Point(0, 0), topLevel);
-        if (topLeft is null)
-        {
-            return;
-        }
-
-        var scaling = topLevel.RenderScaling;
-        var px = (int)Math.Round(topLeft.Value.X * scaling);
-        var py = (int)Math.Round(topLeft.Value.Y * scaling);
-        var pw = (int)Math.Round(slot.Bounds.Width * scaling);
-        var ph = (int)Math.Round(slot.Bounds.Height * scaling);
         if (pw <= 0 || ph <= 0)
         {
             return;
@@ -577,9 +557,10 @@ public partial class MobilePlayerView : UserControl
     /// </summary>
     private void OnPlayerBackgroundTapped(object? sender, TappedEventArgs e)
     {
-        // Sürükleme (swipe) sırasında tetiklenen sahte tap'leri yoksay.
-        if (_isSwiping)
+        // PointerReleased sonrasında üretilebilen sahte tap'i de kısa süre engelle.
+        if (_isSwiping || DateTime.UtcNow < _suppressTapUntilUtc)
         {
+            e.Handled = true;
             return;
         }
 
@@ -614,8 +595,19 @@ public partial class MobilePlayerView : UserControl
             return;
         }
 
-        _isSwiping = true;
-        _swipeStartY = point.Position.Y;
+        // Timeline veya başka bir alt kontrol birkaç piksel kaçırılsa bile bu alan
+        // parlaklık/ses hareketine dönüşmemeli.
+        if (IsInsidePlayerControls(point.Position, vm))
+        {
+            ResetSwipeState();
+            e.Handled = true;
+            return;
+        }
+
+        _swipeCandidate = true;
+        _swipeRejected = false;
+        _isSwiping = false;
+        _swipeStartPoint = point.Position;
         _swipeIsLeftZone = ReferenceEquals(sender, LeftZone);
         _swipeStartVolume = vm.Volume;
         _swipeStartBrightness = GetPlayerWindowService()?.GetBrightness() ?? 0.5;
@@ -636,13 +628,38 @@ public partial class MobilePlayerView : UserControl
             return;
         }
 
-        if (!_isSwiping || DataContext is not PlayerViewModel vm)
+        if (!_swipeCandidate ||
+            _swipeRejected ||
+            DataContext is not PlayerViewModel vm)
             return;
 
-        var dy = point.Position.Y - _swipeStartY;
+        var dx = point.Position.X - _swipeStartPoint.X;
+        var dy = point.Position.Y - _swipeStartPoint.Y;
 
-        var height = Bounds.Height > 1 ? Bounds.Height : 1;
-        var fraction = -dy / height;
+        if (!_isSwiping)
+        {
+            var intent = PlayerGesturePolicy.Classify(
+                dx,
+                dy,
+                SwipeActivationThreshold,
+                VerticalIntentRatio);
+
+            if (intent == PlayerGestureIntent.Pending)
+                return;
+
+            if (intent == PlayerGestureIntent.Rejected)
+            {
+                _swipeRejected = true;
+                _suppressTapUntilUtc = DateTime.UtcNow + PostGestureTapSuppression;
+                e.Handled = true;
+                return;
+            }
+
+            _isSwiping = true;
+        }
+
+        var height = Math.Max(1, Bounds.Height);
+        var fraction = -dy / (height * SwipeSensitivityDivisor);
 
         if (_swipeIsLeftZone)
         {
@@ -669,25 +686,57 @@ public partial class MobilePlayerView : UserControl
             if (_activePointers.Count < 2)
             {
                 _isPinchZooming = false;
-                _isSwiping = false;
+                _suppressTapUntilUtc = DateTime.UtcNow + PostGestureTapSuppression;
+                ResetSwipeState();
             }
 
             e.Handled = true;
             return;
         }
 
-        _isSwiping = false;
+        if (_isSwiping || _swipeRejected)
+        {
+            _suppressTapUntilUtc = DateTime.UtcNow + PostGestureTapSuppression;
+            e.Handled = true;
+        }
+
+        ResetSwipeState();
     }
 
     private void BeginPinchZoom()
     {
         var (first, second) = GetFirstTwoPointers();
         _isPinchZooming = true;
-        _isSwiping = false;
+        ResetSwipeState();
 
         _pinchStartDistance = Distance(first, second);
         _pinchStartCenter = Midpoint(first, second);
         _pinchStartZoom = _currentZoom;
+    }
+
+    private bool IsInsidePlayerControls(Point position, PlayerViewModel vm)
+    {
+        if (!vm.IsBottomControlsVisible || !PlayerControls.IsVisible)
+            return false;
+
+        var origin = PlayerControls.TranslatePoint(new Point(0, 0), this);
+        if (origin is null)
+            return false;
+
+        var bounds = new Rect(
+            origin.Value.X,
+            origin.Value.Y,
+            PlayerControls.Bounds.Width,
+            PlayerControls.Bounds.Height);
+
+        return bounds.Contains(position);
+    }
+
+    private void ResetSwipeState()
+    {
+        _isSwiping = false;
+        _swipeCandidate = false;
+        _swipeRejected = false;
     }
 
     private void HandlePinchZoom()

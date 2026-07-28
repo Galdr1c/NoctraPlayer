@@ -67,6 +67,22 @@ public class PlayerPlaybackController
     {
         _vm.DispatcherService.BeginInvoke(() =>
         {
+            if (_vm.IsLiveContent)
+            {
+                _vm.BufferedPosition = 0;
+            }
+            else
+            {
+                var bufferedPosition = Math.Max(pos, _vm.VideoPlayerService.BufferedPosition);
+                var knownDuration = _vm.Duration > 0
+                    ? _vm.Duration
+                    : _vm.VideoPlayerService.Duration;
+
+                _vm.BufferedPosition = knownDuration > 0
+                    ? Math.Clamp(bufferedPosition, 0, knownDuration)
+                    : Math.Max(0, bufferedPosition);
+            }
+
             // Bu event çok sık tetiklendiği için lock/resizing anında arayüzü kasmamak adına skip ediyoruz.
             if (_vm.IsDragging || _vm.IsResizing || _vm._isContentTransitioning || _vm._isUserSeeking) return;
 

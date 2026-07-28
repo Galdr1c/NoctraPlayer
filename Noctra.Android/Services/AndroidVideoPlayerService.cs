@@ -61,6 +61,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
     private bool _isPlaying;
     private long _currentTimeMs;
     private double _duration;
+    private double _bufferedPosition;
 
     public string? CurrentUrl => _currentUrl;
     public bool IsPlaying => _isPlaying;
@@ -88,6 +89,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
     }
 
     public double Duration => _duration;
+    public double BufferedPosition => _bufferedPosition;
 
     public IReadOnlyList<(int Id, string? Name)> AudioTracks
     {
@@ -225,18 +227,14 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
 
     public double Position
     {
-        get
-        {
-            var duration = Duration;
-            if (duration <= 0) return 0;
-            return Math.Clamp((CurrentTimeMilliseconds / 1000d) / duration, 0, 1);
-        }
+        get => CurrentTimeMilliseconds / 1000d;
         set
         {
-            var duration = Duration;
-            if (duration <= 0) return;
-            var targetMs = (long)(Math.Clamp(value, 0, 1) * duration * 1000);
-            SeekToTime(targetMs);
+            var seconds = Duration > 0
+                ? Math.Clamp(value, 0, Duration)
+                : Math.Max(0, value);
+
+            SeekToTime((long)(seconds * 1000d));
         }
     }
 
@@ -263,6 +261,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
         RebuildPlayerIfNeeded();
 
         _currentUrl = url;
+        _bufferedPosition = 0;
         _selectedAudioTrack = -1;
         _selectedSubtitleTrack = -1;
         ClearTrackCache();
@@ -443,6 +442,10 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
             {
                 _state = PlaybackState.Stopped;
                 _hasLoadedMedia = false;
+                _isPlaying = false;
+                _currentTimeMs = 0;
+                _duration = 0;
+                _bufferedPosition = 0;
                 ClearTrackCache();
                 RaiseSubtitleTextChanged(null);
                 return;
@@ -467,6 +470,9 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
                 RaiseSubtitleTextChanged(null);
                 _state = PlaybackState.Stopped;
                 _isPlaying = false;
+                _currentTimeMs = 0;
+                _duration = 0;
+                _bufferedPosition = 0;
                 PlayingChanged?.Invoke(this, false);
             }
         });
@@ -500,6 +506,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
                 _isPlaying = false;
                 _currentTimeMs = 0;
                 _duration = 0;
+                _bufferedPosition = 0;
                 _state = PlaybackState.Stopped;
                 StreamQuality = null;
 
@@ -876,7 +883,16 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
         try
         {
             _currentTimeMs = Math.Max(0, _exoPlayer.CurrentPosition);
-            _duration = NormalizeDurationSeconds(_exoPlayer.Duration);
+            var durationMs = _exoPlayer.Duration;
+            _duration = NormalizeDurationSeconds(durationMs);
+
+            var bufferedMs = Math.Max(_currentTimeMs, _exoPlayer.BufferedPosition);
+            if (durationMs != C.TimeUnset && durationMs > 0)
+            {
+                bufferedMs = Math.Min(bufferedMs, durationMs);
+            }
+
+            _bufferedPosition = Math.Max(0, bufferedMs) / 1000d;
             PositionChanged?.Invoke(this, _currentTimeMs / 1000d);
         }
         catch (Exception ex)
@@ -1430,8 +1446,20 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
                     {
                         if (_service._exoPlayer is not null)
                         {
-                            _service._duration = NormalizeDurationSeconds(_service._exoPlayer.Duration);
-                            _service._currentTimeMs = _service._exoPlayer.CurrentPosition;
+                            var durationMs = _service._exoPlayer.Duration;
+                            _service._duration = NormalizeDurationSeconds(durationMs);
+                            _service._currentTimeMs = Math.Max(0, _service._exoPlayer.CurrentPosition);
+
+                            var bufferedMs = Math.Max(
+                                _service._currentTimeMs,
+                                _service._exoPlayer.BufferedPosition);
+
+                            if (durationMs != C.TimeUnset && durationMs > 0)
+                            {
+                                bufferedMs = Math.Min(bufferedMs, durationMs);
+                            }
+
+                            _service._bufferedPosition = Math.Max(0, bufferedMs) / 1000d;
                         }
                     }
                     catch (Exception ex)

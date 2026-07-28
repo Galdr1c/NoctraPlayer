@@ -169,7 +169,7 @@ public sealed class VideoOverlayInputSurfaceTests
     }
 
     [Fact]
-    public void MobilePlayerTransportBar_HasLiveBadgeNextToTime()
+    public void MobilePlayerTransportBar_HasContentInfoAndLiveBadgeNextToTime()
     {
         var transportBar = LoadProjectFile(
             "Noctra.Mobile",
@@ -183,7 +183,9 @@ public sealed class VideoOverlayInputSurfaceTests
             transportBar, StringComparison.Ordinal);
         Assert.Contains("DurationText",
             transportBar, StringComparison.Ordinal);
-        Assert.DoesNotContain("CurrentChannel.Name",
+        Assert.Contains("CurrentChannel.Name",
+            transportBar, StringComparison.Ordinal);
+        Assert.Contains("OverlaySecondaryText",
             transportBar, StringComparison.Ordinal);
     }
 
@@ -218,6 +220,49 @@ public sealed class VideoOverlayInputSurfaceTests
     }
 
     [Fact]
+    public void MobilePlayer_PictureInPictureAllowsPausedLoadedMedia()
+    {
+        var mainView = LoadProjectFile(
+            "Noctra.Mobile",
+            "Views",
+            "MainView.axaml.cs");
+
+        Assert.Contains(
+            "(vm.IsPlaying || vm.VideoPlayerService.HasLoadedMedia)",
+            mainView,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            "vm.CurrentChannel is not null && vm.IsPlaying",
+            mainView,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void AndroidPictureInPicture_AutoEnterKeepsManualFallbackOnModernAndroid()
+    {
+        var pictureInPictureService = LoadProjectFile(
+            "Noctra.Android",
+            "Services",
+            "AndroidPictureInPictureService.cs");
+        var autoEnterMethod = ExtractMethodBody(
+            pictureInPictureService,
+            "public Task<bool> TryEnterAutoPictureInPictureAsync()");
+
+        Assert.DoesNotContain(
+            "Build.VERSION.SdkInt >= BuildVersionCodes.S",
+            autoEnterMethod,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "if (IsInPictureInPictureMode)",
+            autoEnterMethod,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "return EnterPictureInPictureAsync();",
+            autoEnterMethod,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void AndroidPlayer_PublishesPlaybackPositionWhileMediaIsPlaying()
     {
         var playerService = LoadProjectFile(
@@ -237,6 +282,124 @@ public sealed class VideoOverlayInputSurfaceTests
             playerService, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void MobilePlayerTimeline_UsesProtectedTouchTargetAndBufferedLayer()
+    {
+        var timeline = LoadProjectFile(
+            "Noctra.Mobile",
+            "Views",
+            "Player",
+            "MobilePlayerTimeline.axaml");
+        var timelineCode = LoadProjectFile(
+            "Noctra.Mobile",
+            "Views",
+            "Player",
+            "MobilePlayerTimeline.axaml.cs");
+
+        var rootGrid = ExtractStartTag(timeline, "x:Name=\"RootGrid\"");
+
+        Assert.Contains("Height=\"40\"", rootGrid, StringComparison.Ordinal);
+        Assert.Contains("Background=\"Transparent\"", rootGrid, StringComparison.Ordinal);
+        Assert.Contains("x:Name=\"TrackGrid\"", timeline, StringComparison.Ordinal);
+        Assert.Contains("x:Name=\"BufferBar\"", timeline, StringComparison.Ordinal);
+        Assert.Contains("Opacity=\"0.30\"", timeline, StringComparison.Ordinal);
+        Assert.Contains("nameof(PlayerViewModel.BufferedPosition)",
+            timelineCode, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void MobilePlayerTimeline_PreviewsDuringDragAndCommitsSeekOnlyAfterDrag()
+    {
+        var timelineCode = LoadProjectFile(
+            "Noctra.Mobile",
+            "Views",
+            "Player",
+            "MobilePlayerTimeline.axaml.cs");
+
+        var pointerMoved = ExtractMethodBody(timelineCode, "private void OnPointerMoved");
+        var pointerReleased = ExtractMethodBody(timelineCode, "private void OnPointerReleased");
+
+        Assert.Contains("UpdatePreview(", pointerMoved, StringComparison.Ordinal);
+        Assert.DoesNotContain("SeekCommand", pointerMoved, StringComparison.Ordinal);
+        Assert.Contains("CommitSeek();", pointerReleased, StringComparison.Ordinal);
+        Assert.Contains("StartSeekingCommand", timelineCode, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void MobilePlayerGestures_RequireVerticalIntentAndExcludeActualTransportBounds()
+    {
+        var playerView = LoadProjectFile(
+            "Noctra.Mobile",
+            "Views",
+            "MobilePlayerView.axaml");
+        var playerViewCode = LoadProjectFile(
+            "Noctra.Mobile",
+            "Views",
+            "MobilePlayerView.axaml.cs");
+
+        Assert.Contains("x:Name=\"PlayerControls\"", playerView, StringComparison.Ordinal);
+        Assert.Contains("PlayerGesturePolicy.Classify", playerViewCode, StringComparison.Ordinal);
+        Assert.Contains("PlayerControls.TranslatePoint", playerViewCode, StringComparison.Ordinal);
+        Assert.Contains("SwipeSensitivityDivisor = 1.75d",
+            playerViewCode, StringComparison.Ordinal);
+        Assert.DoesNotContain("BottomControlsGestureExclusionHeight",
+            playerViewCode, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void MobilePlayer_NormalVideoSurfaceUsesMatchParentAcrossRotation()
+    {
+        var playerViewCode = LoadProjectFile(
+            "Noctra.Mobile",
+            "Views",
+            "MobilePlayerView.axaml.cs");
+
+        var normalLayout = ExtractMethodBody(
+            playerViewCode,
+            "private void UpdateNormalVideoLayout()");
+        var epgLayout = ExtractMethodBody(
+            playerViewCode,
+            "private void UpdateEpgVideoLayout()");
+
+        Assert.Contains(
+            "GetVideoSurfaceService()?.SetBounds(0, 0, -1, -1);",
+            normalLayout,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            "SyncNativeSurfaceTo",
+            normalLayout,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "GetVideoSurfaceService()?.SetBounds(px, py, pw, ph);",
+            epgLayout,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void AndroidPlayer_PositionAndBufferedPositionUseSeconds()
+    {
+        var playerInterface = LoadProjectFile(
+            "Noctra.Core",
+            "Services",
+            "Interfaces",
+            "IVideoPlayerService.cs");
+        var playerService = LoadProjectFile(
+            "Noctra.Android",
+            "Services",
+            "AndroidVideoPlayerService.cs");
+
+        Assert.Contains("double BufferedPosition", playerInterface, StringComparison.Ordinal);
+        Assert.Contains("public double BufferedPosition => _bufferedPosition;",
+            playerService, StringComparison.Ordinal);
+        Assert.Contains("get => CurrentTimeMilliseconds / 1000d;",
+            playerService, StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            "Math.Clamp((CurrentTimeMilliseconds / 1000d) / duration, 0, 1)",
+            playerService,
+            StringComparison.Ordinal);
+        Assert.Contains("_exoPlayer.BufferedPosition", playerService, StringComparison.Ordinal);
+    }
+
     private static string ExtractStartTag(string contents, string marker)
     {
         var markerIndex = contents.IndexOf(marker, StringComparison.Ordinal);
@@ -247,6 +410,30 @@ public sealed class VideoOverlayInputSurfaceTests
         Assert.True(tagStart >= 0 && tagEnd > tagStart, $"Tag for marker '{marker}' was not closed.");
 
         return contents[tagStart..(tagEnd + 1)];
+    }
+
+    private static string ExtractMethodBody(string contents, string signature)
+    {
+        var signatureIndex = contents.IndexOf(signature, StringComparison.Ordinal);
+        Assert.True(signatureIndex >= 0, $"Method '{signature}' was not found.");
+
+        var bodyStart = contents.IndexOf('{', signatureIndex);
+        Assert.True(bodyStart >= 0, $"Method '{signature}' has no body.");
+
+        var depth = 0;
+        for (var index = bodyStart; index < contents.Length; index++)
+        {
+            if (contents[index] == '{')
+            {
+                depth++;
+            }
+            else if (contents[index] == '}' && --depth == 0)
+            {
+                return contents[bodyStart..(index + 1)];
+            }
+        }
+
+        throw new InvalidOperationException($"Method '{signature}' body was not closed.");
     }
 
     private static string LoadProjectFile(params string[] pathParts)
