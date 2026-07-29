@@ -11,16 +11,26 @@
              MinWidth="260" MinHeight="85"
              HorizontalAlignment="Stretch" ClipToBounds="False">
   <UserControl.Styles>
-    <Style Selector="Border.CardContainer">
+    <Style Selector="controls|DesktopPressableCard.CardContainer">
       <Setter Property="Background" Value="Transparent"/>
       <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
       <Setter Property="BorderThickness" Value="0"/>
       <Setter Property="CornerRadius" Value="8"/>
       <Setter Property="Padding" Value="10,6"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="Transitions">
+        <Transitions>
+          <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.2" Easing="CubicEaseOut"/>
+          <DoubleTransition Property="Opacity" Duration="0:0:0.2"/>
+        </Transitions>
+      </Setter>
     </Style>
-    <Style Selector="Border.CardContainer:pointerover">
+    <Style Selector="controls|DesktopPressableCard.CardContainer:pointerover">
       <Setter Property="Background" Value="{DynamicResource Surface1Brush}"/>
       <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+    </Style>
+    <Style Selector="controls|DesktopPressableCard.CardContainer:pressed">
+      <Setter Property="RenderTransform" Value="scale(0.98)"/>
     </Style>
     <Style Selector="Button.CardContentBtn">
       <Setter Property="Background" Value="Transparent"/>
@@ -50,23 +60,12 @@
       <Setter Property="Opacity" Value="1"/>
     </Style>
   </UserControl.Styles>
-  <Border Classes="CardContainer" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-    <Border.ContextFlyout>
-      <MenuFlyout>
-        <MenuItem Header="{loc:Translate Context.Favorite.Toggle}"
-                  Click="Context_ToggleFavorite_Click"
-                  IsVisible="{Binding #LiveTvCardControl.ShowRemoveFavoriteMenu,
-                                      Converter={StaticResource InverseBoolConverter}}"/>
-        <MenuItem Header="{loc:Translate Context.Favorite.Toggle}"
-                  Click="Context_RemoveFromFavorites_Click"
-                  IsVisible="{Binding #LiveTvCardControl.ShowRemoveFavoriteMenu}"/>
-        <MenuItem Header="{loc:Translate MyList.Remove}"
-                  Click="Context_RemoveFromMyList_Click"
-                  IsVisible="{Binding #LiveTvCardControl.ShowRemoveMyListMenu}"/>
-        <MenuItem Header="{loc:Translate History.Remove}" Click="Context_RemoveFromHistory_Click"
-                  IsVisible="{Binding #LiveTvCardControl.ShowHistoryMenu}"/>
-      </MenuFlyout>
-    </Border.ContextFlyout>
+  <controls:DesktopPressableCard Classes="CardContainer"
+                                   CardRightTapped="OnCardRightTapped"
+                                   Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}"
+                                   CommandParameter="{Binding}"
+                                   HorizontalAlignment="Stretch"
+                                   VerticalAlignment="Stretch">
     <Grid RowDefinitions="*,Auto,Auto">
       <Button x:Name="PlaybackButton"
               Grid.RowSpan="3"
@@ -134,5 +133,5 @@
         </Panel>
       </Button>
     </Grid>
-  </Border>
+  </controls:DesktopPressableCard>
 </UserControl>

@@ -26,7 +26,20 @@
         <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
         <Setter Property="RenderTransform" Value="rotate(120deg)"/>
       </Style>
-
+      <Style Selector="Button.UpgradeButton">
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="Padding" Value="14" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Background" Value="{DynamicResource PremiumBadgeBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource PremiumBadgeTextBrush}" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+      </Style>
+      <Style Selector="Button.UpgradeButton:pressed /template/ ContentPresenter">
+        <Setter Property="Opacity" Value="0.80" />
+        <Setter Property="Background" Value="{DynamicResource PremiumBadgeBrush}" />
+      </Style>
       <Style Selector="Button.iconBtn">
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Background" Value="Transparent"/>
@@ -1053,24 +1066,58 @@
 
                   <Grid x:Name="PlayerOverlayLayer" ZIndex="2600" x:DataType="vm:PlayerViewModel">
                     <views:VideoOverlayView x:Name="OverlayControl" ZIndex="2" IsVisible="{Binding IsResumeDialogVisible, Converter={StaticResource InverseBoolConverter}}"/>
-                    <!-- Next Episode Prompt (binds to PlayerViewModel via OverlayControl's DataContext) -->
-                    <Border x:Name="NextEpisodePrompt" Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Padding="16"
-                            HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,40,140" Width="260"
+                    <!-- Next Episode Prompt with countdown and cancel -->
+                    <Border x:Name="NextEpisodePrompt"
+                            Background="{DynamicResource NavActiveBackgroundBrush}"
+                            CornerRadius="8" Padding="14,8"
+                            HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                            Margin="0,0,40,140" MinWidth="280" MaxWidth="340"
                             DataContext="{Binding #OverlayControl.DataContext}" x:DataType="vm:PlayerViewModel"
-                            IsVisible="{Binding IsNextEpisodePromptVisible}" ZIndex="3000">
-                      <Grid RowDefinitions="Auto,Auto,Auto">
-                        <TextBlock Text="{loc:Translate Player.Overlay.NextEpisode}" FontSize="12" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,8"/>
-                        <StackPanel Grid.Row="1" Margin="0,0,0,12">
-                          <TextBlock Text="{Binding NextEpisode.Name}" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis"/>
-                        </StackPanel>
-                        <Button Grid.Row="2" Command="{Binding PlayNextEpisodeCommand}"
-                                Background="{DynamicResource AccentBrush}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="14" FontWeight="Bold" Padding="16,10" BorderThickness="0" HorizontalAlignment="Stretch" Cursor="Hand">
-                          <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
-                            <materialIcons:MaterialIcon Kind="Play" Width="14" Height="14" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                            <TextBlock Text="{loc:Translate Player.NextEpisode.WatchNow}" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                          </StackPanel>
-                        </Button>
-                      </Grid>
+                            IsVisible="{Binding IsNextEpisodePromptVisible}" ZIndex="3000"
+                            BoxShadow="0 4 20 0 #88000000">
+                      <StackPanel Spacing="10">
+                        <TextBlock Text="{loc:Translate Player.Overlay.NextEpisode}"
+                                   FontSize="11" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextMutedBrush}"/>
+                        <TextBlock Text="{Binding NextEpisodeCountdownText}"
+                                   IsVisible="{Binding IsNextEpisodeCountdownActive}"
+                                   FontSize="12"
+                                   Foreground="{DynamicResource TextMutedBrush}"
+                                   TextWrapping="Wrap"/>
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                          <Button Grid.Column="0"
+                                  Command="{Binding PlayNextEpisodeCommand}"
+                                  Classes="UpgradeButton"
+                                  Background="{DynamicResource NextEpisodeHighlightColor}"
+                                  Foreground="{DynamicResource TextPrimaryBrush}"
+                                  BorderBrush="{DynamicResource PremiumBadgeBrush}"
+                                  BorderThickness="1"
+                                  Cursor="Hand">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="6">
+                              <materialIcons:MaterialIcon Kind="Play" Width="14" Height="14" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                              <TextBlock Text="{loc:Translate Player.NextEpisode.WatchNow}" FontSize="13" FontWeight="Bold"/>
+                            </StackPanel>
+                          </Button>
+                          <Button Grid.Column="1"
+                                  Command="{Binding CancelNextEpisodeCommand}"
+                                  Background="{DynamicResource PlayerOverlayPanelBrush}"
+                                  Foreground="{DynamicResource NextEpisodeCancel}"
+                                  Theme="{StaticResource DangerButtonStyle}"
+                                  BorderThickness="1"
+                                  BorderBrush="#33FFFFFF"
+                                  MinHeight="15"
+                                  MaxHeight="30"
+                                  Padding="0"
+                                  CornerRadius="6"
+                                  Cursor="Hand"
+                                  HorizontalAlignment="Stretch">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="6">
+                              <materialIcons:MaterialIcon Kind="Close" Width="14" Height="14" Foreground="{DynamicResource NextEpisodeCancel}"/>
+                              <TextBlock Text="{loc:Translate Player.NextEpisode.Cancel}" FontSize="13" FontWeight="SemiBold"/>
+                            </StackPanel>
+                          </Button>
+                        </Grid>
+                      </StackPanel>
                     </Border>
                   </Grid>
 
@@ -1079,7 +1126,7 @@
                           IsVisible="{Binding IsResumeDialogVisible}"
                           DataContext="{Binding #OverlayControl.DataContext}"
                           x:DataType="vm:PlayerViewModel"
-                          Background="#B3000000"
+                          Background="Transparent"
                           ZIndex="6000"
                           CornerRadius="8"
                           HorizontalAlignment="Stretch"
@@ -1088,142 +1135,79 @@
                             BorderBrush="{DynamicResource BorderBrush}"
                             BorderThickness="1"
                             CornerRadius="8"
-                            Padding="40,32"
-                            Width="440"
-                            MaxWidth="520"
+                            Padding="24,16"
                             HorizontalAlignment="Center"
                             VerticalAlignment="Center">
                       <Border.BoxShadow>
-                        <BoxShadows>0 24 64 0 #88000000</BoxShadows>
+                        <BoxShadows>0 12 40 0 #88000000</BoxShadows>
                       </Border.BoxShadow>
 
-                      <StackPanel Spacing="8">
-                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="16">
-                          <Border Grid.Column="0"
-                                  Width="58" Height="58"
-                                  CornerRadius="20"
-                                  Background="{DynamicResource SurfaceBrush}"
-                                  VerticalAlignment="Center">
-                            <materialIcons:MaterialIcon Kind="PlayCircleOutline"
-                                                        Width="31" Height="31"
-                                                        Foreground="{DynamicResource AccentBrush}"
-                                                        HorizontalAlignment="Center"
-                                                        VerticalAlignment="Center"/>
-                          </Border>
+                      <StackPanel Spacing="16">
+                        <StackPanel Spacing="8" HorizontalAlignment="Center">
+                          <materialIcons:MaterialIcon Kind="MotionPlay"
+                                                      Width="40" Height="40"
+                                                      Foreground="{DynamicResource AccentBrush}"
+                                                      HorizontalAlignment="Center" />
+                          <TextBlock Text="{loc:Translate Player.Resume.Title}"
+                                     FontSize="18" FontWeight="Bold"
+                                     Foreground="{DynamicResource TextPrimaryBrush}"
+                                     HorizontalAlignment="Center" />
+                        </StackPanel>
 
-                          <StackPanel Grid.Column="1" Spacing="5" VerticalAlignment="Center">
-                            <TextBlock Text="{loc:Translate Player.Resume.Title}"
-                                       FontSize="22"
-                                       FontWeight="Bold"
-                                       Foreground="{DynamicResource TextPrimaryBrush}"
-                                       TextWrapping="Wrap"/>
+                        <Border Background="{DynamicResource Surface1Brush}" CornerRadius="6" Padding="12,8">
+                          <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
+                            <materialIcons:MaterialIcon Kind="ClockOutline" Width="16" Height="16"
+                                                        Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center" />
+                            <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                              <TextBlock Text="{loc:Translate Player.Resume.LastPosition}"
+                                         Foreground="{DynamicResource TextMutedBrush}" FontSize="12" />
+                              <TextBlock Text="{Binding ResumePositionText}"
+                                         Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12" FontWeight="Bold" />
+                            </StackPanel>
                           </StackPanel>
-                        </Grid>
-
-                        <Border Background="{DynamicResource Surface1Brush}"
-                                BorderBrush="{DynamicResource BorderBrush}"
-                                BorderThickness="1"
-                                CornerRadius="8"
-                                Padding="16,13">
-                          <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
-                            <materialIcons:MaterialIcon Grid.Column="0"
-                                                        Kind="ClockOutline"
-                                                        Width="20" Height="20"
-                                                        Foreground="{DynamicResource TextMutedBrush}"
-                                                        VerticalAlignment="Center"/>
-                            <TextBlock Grid.Column="1"
-                                       Text="{loc:Translate Player.Resume.LastPosition}"
-                                       Foreground="{DynamicResource TextMutedBrush}" 
-                                       FontSize="14"
-                                       VerticalAlignment="Center"/>
-                            <TextBlock Grid.Column="2"
-                                       Text="{Binding ResumePositionText}"
-                                       Foreground="{DynamicResource TextPrimaryBrush}"
-                                       FontSize="16"
-                                       FontWeight="SemiBold"
-                                       VerticalAlignment="Center"/>
-                          </Grid>
                         </Border>
 
-                        <StackPanel Spacing="12">
+                        <StackPanel Spacing="10">
                           <Button Command="{Binding ResumeFromPositionCommand}"
-                                  IsVisible="{Binding IsPremiumResume}"
+                                  Theme="{StaticResource UpgradeButton}"
+                                  BorderThickness="1"
+                                  Margin="0"
                                   HorizontalAlignment="Stretch"
-                                  Padding="0,15"
-                                  BorderThickness="0"
-                                  CornerRadius="8"
                                   Cursor="Hand">
-                            <Button.Background>
-                              <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,0%">
-                                <GradientStop Color="#8B5CF6" Offset="0"/>
-                                <GradientStop Color="#A855F7" Offset="1"/>
-                              </LinearGradientBrush>
-                            </Button.Background>
-                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="10">
-                              <materialIcons:MaterialIcon Kind="Play" Width="20" Height="20" Foreground="White"/>
-                              <TextBlock Text="{loc:Translate Player.Resume.Continue}"
-                                         Foreground="White"
-                                         FontSize="15"
-                                         FontWeight="SemiBold"
-                                         VerticalAlignment="Center"/>
-                            </StackPanel>
-                          </Button>
-
-                          <Button Command="{Binding OpenPremiumUpsellCommand}"
-                                  IsVisible="{Binding !IsPremiumResume}"
-                                  HorizontalAlignment="Stretch"
-                                  Padding="0,15"
-                                  BorderThickness="0"
-                                  CornerRadius="8"
-                                  Cursor="Hand">
-                            <Button.Background>
-                              <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,0%">
-                                <GradientStop Color="#8B5CF6" Offset="0"/>
-                                <GradientStop Color="#A855F7" Offset="1"/>
-                              </LinearGradientBrush>
-                            </Button.Background>
-                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="10">
-                              <materialIcons:MaterialIcon Kind="Crown" Width="19" Height="19" Foreground="White"/>
-                              <TextBlock Text="{loc:Translate Player.Resume.Continue}"
-                                         Foreground="White"
-                                         FontSize="15"
-                                         FontWeight="SemiBold"
-                                         VerticalAlignment="Center"/>
-                            </StackPanel>
+                            <Grid ColumnDefinitions="Auto,*,Auto"
+                                  ColumnSpacing="10">
+                              <materialIcons:MaterialIcon Kind="Play"
+                                                          Width="18" Height="18"
+                                                          VerticalAlignment="Center" />
+                              <TextBlock Grid.Column="1"
+                                         Text="{loc:Translate Player.Resume.Continue}"
+                                         FontWeight="Bold"
+                                         VerticalAlignment="Center" />
+                            </Grid>
                           </Button>
 
                           <Button Command="{Binding StartFromBeginningCommand}"
+                                  MinHeight="48"
                                   HorizontalAlignment="Stretch"
-                                  Padding="0,15"
-                                  Background="{DynamicResource Surface0Brush}"
-                                  Foreground="{DynamicResource TextPrimaryBrush}"
-                                  FontSize="15"
-                                  BorderThickness="1"
-                                  BorderBrush="{DynamicResource BorderBrush}"
-                                  CornerRadius="8"
+                                  HorizontalContentAlignment="Center"
+                                  VerticalContentAlignment="Center"
+                                  CornerRadius="6"
                                   Cursor="Hand">
-                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="10">
-                              <materialIcons:MaterialIcon Kind="Replay" Width="19" Height="19"/>
-                              <TextBlock Text="{loc:Translate Player.Resume.StartOver}" VerticalAlignment="Center"/>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
+                              <materialIcons:MaterialIcon Kind="Replay" Width="17" Height="17" />
+                              <TextBlock Text="{loc:Translate Player.Resume.StartOver}" />
                             </StackPanel>
                           </Button>
-                        </StackPanel>
 
-                        <!-- Ücretsiz kullanıcıya küçük bilgi notu (Etkileşimsiz) -->
-                        <Border IsVisible="{Binding !IsPremiumResume}"
-                                Background="Transparent" Padding="4"
-                                HorizontalAlignment="Center">
-                            <StackPanel Orientation="Horizontal" Spacing="6">
-                              <materialIcons:MaterialIcon Kind="Crown" Width="14" Height="14"
-                                                          Foreground="{DynamicResource AccentLightBrush}"/>
-                              <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <TextBlock Text="{loc:Translate Common.Premium}" 
-                                           FontSize="12" Foreground="{DynamicResource AccentLightBrush}"/>
-                                <TextBlock Text="{loc:Translate Player.Resume.UpgradeNote}"
-                                           FontSize="12" Foreground="{DynamicResource TextMutedBrush}"/>
-                              </StackPanel>
-                            </StackPanel>
-                        </Border>
+                          <Button Content="{loc:Translate Player.Resume.Back}"
+                                  Command="{Binding ReturnFromResumeDialogCommand}"
+                                  HorizontalAlignment="Center"
+                                  HorizontalContentAlignment="Center"
+                                  VerticalContentAlignment="Center"
+                                  Background="Transparent"
+                                  BorderThickness="0"
+                                  Cursor="Hand" />
+                        </StackPanel>
                       </StackPanel>
                     </Border>
                   </Border>
@@ -1248,18 +1232,6 @@
         <Grid Margin="20,0" ColumnDefinitions="*,Auto">
           <!-- Left: Status & Stats -->
           <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="12">
-            <ProgressBar IsIndeterminate="True" Width="14" Height="14" 
-                         IsVisible="{Binding IsLoading}" 
-                         Theme="{StaticResource ProgressRingTheme}"/>
-            <TextBlock Text="{Binding StatusMessage}" FontSize="12"
-                       Foreground="{DynamicResource TextPrimaryBrush}"
-                       VerticalAlignment="Center">
-              <TextBlock.Transitions>
-                <Transitions>
-                  <DoubleTransition Property="Opacity" Duration="0:0:0.25"/>
-                </Transitions>
-              </TextBlock.Transitions>
-            </TextBlock>
                         <TextBlock Text="{Binding ChannelLoadingStats}" 
                        IsVisible="{Binding IsChannelLoading}" 
                        FontSize="11" Foreground="{DynamicResource TextMutedBrush}" 
@@ -1269,6 +1241,12 @@
         </Grid>
       </Grid>
     </Border>
+
+    <!-- Card Actions Sheet (replaces right-click ContextFlyout) -->
+    <views:DesktopCardActionsSheet x:Name="CardActionsSheet"
+                                   Grid.RowSpan="3"
+                                   ZIndex="15000"
+                                   IsVisible="False" />
 
     <!-- Global Loading Overlay (Visible during refresh etc.) -->
     <Grid Grid.RowSpan="3" Background="#AA000000" IsVisible="{Binding IsGlobalLoading}" ZIndex="10000">

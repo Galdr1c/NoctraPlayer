@@ -8,13 +8,16 @@ namespace Noctra.Avalonia.Controls;
 
 public enum DesktopCardGridKind
 {
+    Default,
     Live,
     Vod,
-    Series
+    Series,
+    ContinueWatching
 }
 
 public enum DesktopCardPresentationMode
 {
+    Default,
     Standard,
     MyList,
     Favorites,

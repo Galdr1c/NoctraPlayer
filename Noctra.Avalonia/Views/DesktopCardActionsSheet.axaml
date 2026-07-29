@@ -1,0 +1,116 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:loc="using:Noctra.Avalonia.Localization"
+             xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             x:Class="Noctra.Avalonia.Views.DesktopCardActionsSheet"
+             x:CompileBindings="False"
+             Focusable="True"
+             IsVisible="False"
+             KeyDown="Sheet_KeyDown">
+  <UserControl.Styles>
+    <Style Selector="Button.CardActionRow">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+      <Setter Property="BorderThickness" Value="0,0,0,1" />
+      <Setter Property="Padding" Value="14,8" />
+      <Setter Property="MinHeight" Value="48" />
+      <Setter Property="CornerRadius" Value="0" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    </Style>
+    <Style Selector="Button.CardActionRow:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource InteractiveHoverBrush}" />
+    </Style>
+    <Style Selector="Button.CardActionRow TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    </Style>
+    <Style Selector="Button.CardActionRow icons|MaterialIcon">
+      <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+    </Style>
+    <Style Selector="Button.CardActionRow.destructive TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource ErrorBrush}" />
+    </Style>
+    <Style Selector="Button.CardActionRow.destructive icons|MaterialIcon">
+      <Setter Property="Foreground" Value="{DynamicResource ErrorBrush}" />
+    </Style>
+  </UserControl.Styles>
+
+  <Grid>
+    <Border x:Name="ScrimLayer"
+            Background="{DynamicResource OverlayDimBrush}"
+            PointerPressed="Scrim_PointerPressed" />
+
+    <Border x:Name="SheetSurface"
+            Classes="DesktopSheetSurface"
+            MaxWidth="{DynamicResource DesktopSheetMaxWidth}"
+            MaxHeight="480"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Bottom">
+      <Border.RenderTransform>
+        <TranslateTransform />
+      </Border.RenderTransform>
+
+      <Grid RowDefinitions="Auto,*">
+        <Grid RowDefinitions="24,Auto" Margin="0,0,0,4">
+          <Border x:Name="DragHandle"
+                  Height="24"
+                  Background="Transparent"
+                  PointerPressed="DragHandle_PointerPressed"
+                  PointerMoved="DragHandle_PointerMoved"
+                  PointerReleased="DragHandle_PointerReleased"
+                  PointerCaptureLost="DragHandle_PointerCaptureLost">
+            <Border Width="44" Height="4"
+                    Background="{DynamicResource BorderBrush}"
+                    CornerRadius="2"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center" />
+          </Border>
+          <Grid Grid.Row="1" ColumnDefinitions="*,Auto">
+            <TextBlock x:Name="TitleTextBlock"
+                       Classes="DesktopSheetTitle"
+                       Margin="8,0,0,0"
+                       VerticalAlignment="Center" />
+            <Button Grid.Column="1"
+                    Classes="iconBtn"
+                    Width="44" Height="44"
+                    Click="Close_Click"
+                    AutomationProperties.Name="{loc:Translate Common.Close}">
+              <icons:MaterialIcon Kind="Close" Width="21" Height="21" />
+            </Button>
+          </Grid>
+        </Grid>
+
+        <ScrollViewer Grid.Row="1"
+                      MaxHeight="360"
+                      ScrollViewer.IsScrollChainingEnabled="False">
+          <ItemsControl x:Name="ActionsList"
+                        ItemsSource="{Binding Actions}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Button Classes="CardActionRow"
+                        Classes.destructive="{Binding IsDestructive}"
+                        Tag="{Binding}"
+                        Click="Action_Click"
+                        AutomationProperties.Name="{Binding Label}">
+                  <Grid ColumnDefinitions="Auto,*"
+                        ColumnSpacing="14">
+                    <icons:MaterialIcon Kind="{Binding Icon}"
+                                        Width="22"
+                                        Height="22"
+                                        VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="1"
+                               Text="{Binding Label}"
+                               FontSize="15"
+                               FontWeight="Medium"
+                               TextWrapping="Wrap"
+                               VerticalAlignment="Center" />
+                  </Grid>
+                </Button>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+      </Grid>
+    </Border>
+  </Grid>
+</UserControl>

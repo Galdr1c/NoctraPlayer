@@ -10,27 +10,45 @@
              Width="260" Height="146"
              ClipToBounds="False">
   <UserControl.Styles>
-    <Style Selector="Button.CardContainer:pointerover">
+    <Style Selector="controls|DesktopPressableCard.CardContainer">
+      <Setter Property="RenderTransformOrigin" Value="50%,50%"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="Padding" Value="0"/>
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="Transitions">
+        <Transitions>
+          <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.2" Easing="CubicEaseOut"/>
+          <DoubleTransition Property="Opacity" Duration="0:0:0.2"/>
+        </Transitions>
+      </Setter>
+    </Style>
+    <Style Selector="controls|DesktopPressableCard.CardContainer:pointerover">
       <Setter Property="ZIndex" Value="10"/>
       <Setter Property="RenderTransform" Value="scale(1.03)"/>
     </Style>
-    <Style Selector="Button.CardContainer:pointerover Border.HoverOverlay">
+    <Style Selector="controls|DesktopPressableCard.CardContainer:pointerover Border.HoverOverlay">
       <Setter Property="Opacity" Value="1"/>
+    </Style>
+    <Style Selector="controls|DesktopPressableCard.CardContainer:pressed">
+      <Setter Property="RenderTransform" Value="scale(0.98)"/>
     </Style>
     <Style Selector="Border.HoverOverlay">
       <Setter Property="Opacity" Value="0"/>
     </Style>
-    <Style Selector="Button.CardContainer:pointerover materialIcons|MaterialIcon.PlayIcon">
+    <Style Selector="controls|DesktopPressableCard.CardContainer:pointerover materialIcons|MaterialIcon.PlayIcon">
       <Setter Property="Opacity" Value="1"/>
       <Setter Property="RenderTransform" Value="scale(1)"/>
     </Style>
-    <Style Selector="Button.CardContainer:pointerover ProgressBar#WatchProgressBar">
+    <Style Selector="controls|DesktopPressableCard.CardContainer:pointerover ProgressBar#WatchProgressBar">
         <Setter Property="Height" Value="6"/>
     </Style>
   </UserControl.Styles>
 
-  <Button Classes="CardContainer" Padding="0" Background="Transparent" BorderThickness="0" Cursor="Hand"
-          Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}" CommandParameter="{Binding}">
+  <controls:DesktopPressableCard Classes="CardContainer"
+                                   CardRightTapped="OnCardRightTapped"
+                                   Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}"
+                                   CommandParameter="{Binding}">
     
     <Border CornerRadius="6" ClipToBounds="True" Background="{DynamicResource Surface0Brush}" BoxShadow="0 2 8 0 #40000000">
       <Grid>
@@ -86,5 +104,5 @@
 
       </Grid>
     </Border>
-  </Button>
+  </controls:DesktopPressableCard>
 </UserControl>

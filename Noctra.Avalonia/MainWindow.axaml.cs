@@ -14,6 +14,8 @@ using Noctra.Core.Services;
 using Noctra.ViewModels;
 using Noctra.Avalonia.Services;
 using Noctra.Avalonia.Localization;
+using Noctra.Avalonia.Controls;
+using Noctra.Avalonia.Views;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -101,6 +103,7 @@ public partial class MainWindow : Window
         // MiniVideoSurface.MediaPlayer = null;
 
         AddHandler(KeyDownEvent, MainWindow_KeyDown, RoutingStrategies.Tunnel, handledEventsToo: true);
+        AddHandler(DesktopCardActions.RequestedEvent, OnCardActionsRequested);
         Opened += MainWindow_Opened;
         PositionChanged += MainWindow_PositionChanged;
         Closed += OnClosed;
@@ -146,6 +149,85 @@ public partial class MainWindow : Window
         };
 
         UpdateDownloadBadgeVisibility();
+    }
+
+    private void OnCardActionsRequested(object? sender, DesktopCardActionsRequestedEventArgs e)
+    {
+        var request = e.Request;
+        var media = request.Media;
+        var title = media switch
+        {
+            Channel ch => ch.Name,
+            Series s => s.Name,
+            _ => string.Empty
+        };
+
+        if (string.IsNullOrEmpty(title))
+            return;
+
+        var actions = DesktopCardActions.BuildActions(request);
+        if (actions.Count == 0)
+            return;
+
+        var actionItems = actions.Select(action =>
+        {
+            var (label, icon, isDestructive) = action switch
+            {
+                DesktopCardActionKind.AddToMyList => ("My List'e Ekle", Material.Icons.MaterialIconKind.BookmarkOutline, false),
+                DesktopCardActionKind.ToggleFavorite => ("Favorilere Ekle", Material.Icons.MaterialIconKind.HeartOutline, false),
+                DesktopCardActionKind.RemoveFromMyList => ("My List'ten Çıkar", Material.Icons.MaterialIconKind.Bookmark, true),
+                DesktopCardActionKind.RemoveFromFavorites => ("Favorilerden Çıkar", Material.Icons.MaterialIconKind.Heart, true),
+                DesktopCardActionKind.RemoveFromHistory => ("Geçmişten Kaldır", Material.Icons.MaterialIconKind.DeleteOutline, true),
+                _ => (string.Empty, Material.Icons.MaterialIconKind.HelpCircleOutline, false)
+            };
+            return new DesktopCardActionSheetItem(action, label, icon, isDestructive);
+        }).ToList();
+
+        CardActionsSheet.Show(title, actionItems, item =>
+        {
+            RouteCardAction(media, item.Action);
+        });
+    }
+
+    private void RouteCardAction(object media, DesktopCardActionKind action)
+    {
+        var viewModel = _mainViewModel;
+        if (viewModel is null)
+            return;
+
+        switch (media, action)
+        {
+            case (Channel channel, DesktopCardActionKind.AddToMyList):
+                viewModel.AddToMyListCommand.Execute(channel);
+                break;
+            case (Channel channel, DesktopCardActionKind.ToggleFavorite):
+                viewModel.ToggleFavoriteCommand.Execute(channel);
+                break;
+            case (Channel channel, DesktopCardActionKind.RemoveFromHistory):
+                viewModel.RemoveFromHistoryCommand.Execute(channel);
+                break;
+            case (Channel channel, DesktopCardActionKind.RemoveFromFavorites):
+                viewModel.RemoveFromFavoritesCommand.Execute(channel);
+                break;
+            case (Channel channel, DesktopCardActionKind.RemoveFromMyList):
+                viewModel.RemoveFromMyListCommand.Execute(channel);
+                break;
+            case (Series series, DesktopCardActionKind.AddToMyList):
+                viewModel.AddToMyListCommand.Execute(series);
+                break;
+            case (Series series, DesktopCardActionKind.ToggleFavorite):
+                viewModel.ToggleFavoriteCommand.Execute(series);
+                break;
+            case (Series series, DesktopCardActionKind.RemoveFromHistory):
+                viewModel.RemoveFromHistoryCommand.Execute(series);
+                break;
+            case (Series series, DesktopCardActionKind.RemoveFromFavorites):
+                viewModel.RemoveFromFavoritesCommand.Execute(series);
+                break;
+            case (Series series, DesktopCardActionKind.RemoveFromMyList):
+                viewModel.RemoveFromMyListCommand.Execute(series);
+                break;
+        }
     }
 
     private void MainWindow_Opened(object? sender, EventArgs e)
@@ -326,7 +408,11 @@ public partial class MainWindow : Window
                 {
                     shouldResume = await _playerViewModel.ShowResumeDialogAsync(resumePosition, token);
                 }
-                catch (OperationCanceledException) { return; }
+                catch (OperationCanceledException)
+                {
+                    _playerViewModel.ClosePlayerCommand.Execute(null);
+                    return;
+                }
 
                 if (shouldResume)
                 {
@@ -570,7 +656,8 @@ public partial class MainWindow : Window
                 e.Handled = true;
                 break;
             case Key.Escape:
-                if (_playerViewModel.IsFullScreen)
+                if (CardActionsSheet.TryClose()) { }
+                else if (_playerViewModel.IsFullScreen)
                 {
                     _playerViewModel.ToggleFullScreenCommand.Execute(null);
                 }

@@ -1,5 +1,7 @@
+using System;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 using Noctra.Models;
 using Noctra.ViewModels;
@@ -24,28 +26,40 @@ public partial class SeriesCard : UserControl
     private MainViewModel? ViewModel
         => VisualRoot is Control root ? root.DataContext as MainViewModel : null;
 
-    private void Context_AddToMyList_Click(object? sender, RoutedEventArgs e)
+    internal void OnCardRightTapped(object? sender, RoutedEventArgs e)
     {
-        if (DataContext is Series series) ViewModel?.AddToMyListCommand.Execute(series);
+        if (DataContext is Series series)
+        {
+            DesktopCardActions.Raise(
+                this,
+                series,
+                DesktopCardGridKind.Default,
+                DesktopCardPresentationMode.Default);
+        }
     }
 
-    private void Context_ToggleFavorite_Click(object? sender, RoutedEventArgs e)
+    internal void HandleAction(DesktopCardActionKind action)
     {
-        if (DataContext is Series series) ViewModel?.ToggleFavoriteCommand.Execute(series);
-    }
+        if (DataContext is not Series series || ViewModel is null)
+            return;
 
-    private void Context_RemoveFromHistory_Click(object? sender, RoutedEventArgs e)
-    {
-        if (DataContext is Series series) ViewModel?.RemoveFromHistoryCommand.Execute(series);
-    }
-
-    private void Context_RemoveFromFavorites_Click(object? sender, RoutedEventArgs e)
-    {
-        if (DataContext is Series series) ViewModel?.RemoveFromFavoritesCommand.Execute(series);
-    }
-
-    private void Context_RemoveFromMyList_Click(object? sender, RoutedEventArgs e)
-    {
-        if (DataContext is Series series) ViewModel?.RemoveFromMyListCommand.Execute(series);
+        switch (action)
+        {
+            case DesktopCardActionKind.AddToMyList:
+                ViewModel.AddToMyListCommand.Execute(series);
+                break;
+            case DesktopCardActionKind.ToggleFavorite:
+                ViewModel.ToggleFavoriteCommand.Execute(series);
+                break;
+            case DesktopCardActionKind.RemoveFromHistory:
+                ViewModel.RemoveFromHistoryCommand.Execute(series);
+                break;
+            case DesktopCardActionKind.RemoveFromFavorites:
+                ViewModel.RemoveFromFavoritesCommand.Execute(series);
+                break;
+            case DesktopCardActionKind.RemoveFromMyList:
+                ViewModel.RemoveFromMyListCommand.Execute(series);
+                break;
+        }
     }
 }

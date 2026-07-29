@@ -128,6 +128,9 @@
   <SolidColorBrush x:Key="PlayerOverlayTextBrush" Color="#FFFFFFFF" />
   <SolidColorBrush x:Key="PlayerOverlaySecondaryTextBrush" Color="#CCFFFFFF" />
   <SolidColorBrush x:Key="PlayerOverlayBorderBrush" Color="#40FFFFFF" />
+  <SolidColorBrush x:Key="NextEpisodeHighlightColor" Color="#901E103F" />
+  <SolidColorBrush x:Key="NextEpisodeCancel" Color="#DDE50914" />
+
   <LinearGradientBrush x:Key="PlayerTopGradientBrush" StartPoint="0%,0%" EndPoint="0%,100%">
     <GradientStop Color="#CC000000" Offset="0" />
     <GradientStop Color="#00000000" Offset="1" />
