@@ -5929,6 +5929,14 @@ public partial class MainViewModel : ObservableObject
 
     public void ResetWatchHistoryUI()
     {
+        _isEpisodeContinueDirty = true;
+        _cachedEpisodeContinue = null;
+
+        foreach (var series in _allSeriesCache)
+        {
+            series.LastWatchedEpisodeAt = null;
+        }
+
         // 1. Reset Channels in memory
         if (Channels != null)
         {
@@ -5940,10 +5948,13 @@ public partial class MainViewModel : ObservableObject
             }
         }
 
-        // 2. Episodes are no longer cached in _allSeriesCache (lightweight cache).
-        // Progress is queried directly from DB when needed.
-        // Just update dependent UI collections
-        UpdateHistoryChannels();
+        SetItems(ContinueWatching, Enumerable.Empty<Channel>());
+        SetItems(HistoryChannels, Enumerable.Empty<Channel>());
+        SetItems(HistoryLiveChannels, Enumerable.Empty<Channel>());
+        SetItems(HistorySeriesItems, Enumerable.Empty<Series>());
+        SetItems(HistoryVodChannels, Enumerable.Empty<Channel>());
+        ShowHistoryEmptyState = true;
+
         _ = RefreshPersonalListsFromDatabaseAsync();
     }
 
@@ -8147,6 +8158,45 @@ public partial class MainViewModel : ObservableObject
 
         StatusMessage = _localizationService.GetString("Main.Status.RemovedFromList");
         await RefreshPersonalListsFromDatabaseAsync();
+    }
+
+    [RelayCommand]
+    private async Task ClearHistoryAsync()
+    {
+        var profileId = CurrentProfileId;
+        if (!profileId.HasValue)
+        {
+            return;
+        }
+
+        var confirmed = await _dialogService.ShowConfirmationAsync(
+            _localizationService.GetString("Settings.Privacy.Clear.Title"),
+            _localizationService.GetString("Settings.Privacy.Clear.Confirm"));
+
+        if (!confirmed || CurrentProfileId != profileId)
+        {
+            return;
+        }
+
+        try
+        {
+            await _watchHistoryService.DeleteProfileHistoryAsync(profileId.Value);
+
+            if (CurrentProfileId == profileId)
+            {
+                ResetWatchHistoryUI();
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "İzleme geçmişi temizlenirken hata oluştu");
+            await _dialogService.ShowErrorAsync(
+                _localizationService.GetString("Common.Error"),
+                string.Format(
+                    CultureInfo.CurrentCulture,
+                    _localizationService.GetString("Common.ErrorFormat"),
+                    ex.Message));
+        }
     }
 
     [RelayCommand]

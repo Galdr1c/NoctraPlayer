@@ -70,7 +70,8 @@
       <StaticResource ResourceKey="CardActionsFlyout" />
     </Border.ContextFlyout>
 
-    <Border Background="Transparent">
+    <Border Background="Transparent"
+            ClipToBounds="True">
       <Grid>
         <Border Background="{DynamicResource SurfaceLightBrush}">
           <Border.IsVisible>
@@ -102,14 +103,22 @@
           </Border>
 
           <ProgressBar Height="4"
+                       HorizontalAlignment="Stretch"
+                       ClipToBounds="True"
                        CornerRadius="0"
                        Minimum="0"
                        Maximum="100"
                        Value="{Binding WatchedPercentage}"
-                       IsVisible="{Binding ., Converter={StaticResource WatchedProgressVisibilityConverter}}"
                        Foreground="{DynamicResource AccentBrush}"
                        Background="{DynamicResource ThemePreviewDarkText}"
-                       BorderThickness="0" />
+                       BorderThickness="0">
+            <ProgressBar.IsVisible>
+              <MultiBinding Converter="{x:Static BoolConverters.And}">
+                <Binding Path="#VodCardControl.ShowHistoryMenu" />
+                <Binding Path="." Converter="{StaticResource WatchedProgressVisibilityConverter}" />
+              </MultiBinding>
+            </ProgressBar.IsVisible>
+          </ProgressBar>
         </StackPanel>
 
         

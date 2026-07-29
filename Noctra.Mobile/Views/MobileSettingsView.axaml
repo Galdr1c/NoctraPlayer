@@ -979,9 +979,6 @@
                                   Foreground="{DynamicResource TextMutedBrush}" />
             </Grid>
           </Button>
-          <Button Theme="{StaticResource DangerButtonStyle}"
-                  Content="{loc:Translate Settings.Privacy.ClearAllNow}"
-                  Command="{Binding ClearHistoryCommand}"/>
           <TextBlock Text="{Binding PrivacyStatusMessage}"
                      Foreground="{DynamicResource TextMutedBrush}"
                      FontSize="{DynamicResource FCaption}"

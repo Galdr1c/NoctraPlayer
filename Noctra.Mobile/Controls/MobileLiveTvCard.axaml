@@ -164,6 +164,7 @@
                    IsVisible="{Binding CurrentProgramTitle, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
 
         <ProgressBar Grid.Row="2"
+                     ClipToBounds="True"
                      Value="{Binding EpgProgress}"
                      Minimum="0"
                      Maximum="100"

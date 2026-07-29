@@ -349,6 +349,38 @@ public sealed class MobileRecentRegressionTests
     }
 
     [Fact]
+    public void MobileHistory_OwnsTheOnlyClearHistoryAction()
+    {
+        var history = File.ReadAllText(ProjectFile("Noctra.Mobile", "Views", "MobileHistoryView.axaml"));
+        var settings = File.ReadAllText(ProjectFile("Noctra.Mobile", "Views", "MobileSettingsView.axaml"));
+        var viewModel = File.ReadAllText(ProjectFile("Noctra.Core", "ViewModels", "MainViewModel.cs"));
+
+        Assert.Contains("Command=\"{Binding ClearHistoryCommand}\"", history, StringComparison.Ordinal);
+        Assert.DoesNotContain("Settings.Privacy.ClearAllNow", settings, StringComparison.Ordinal);
+        Assert.Contains("private async Task ClearHistoryAsync()", viewModel, StringComparison.Ordinal);
+        Assert.Contains(
+            "await _watchHistoryService.DeleteProfileHistoryAsync(profileId.Value)",
+            viewModel,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void MobileHistoryAndVodProgressBars_AreClippedToTheirCards()
+    {
+        var liveCard = File.ReadAllText(ProjectFile("Noctra.Mobile", "Controls", "MobileLiveTvCard.axaml"));
+        var vodCard = File.ReadAllText(ProjectFile("Noctra.Mobile", "Controls", "MobileVodCard.axaml"));
+
+        Assert.Contains("<ProgressBar Grid.Row=\"2\"\r\n                     ClipToBounds=\"True\"", liveCard, StringComparison.Ordinal);
+        Assert.Contains("<Border Background=\"Transparent\"\r\n            ClipToBounds=\"True\">", vodCard, StringComparison.Ordinal);
+        Assert.Contains("<ProgressBar Height=\"4\"\r\n                       HorizontalAlignment=\"Stretch\"\r\n                       ClipToBounds=\"True\"", vodCard, StringComparison.Ordinal);
+        Assert.Contains("<Binding Path=\"#VodCardControl.ShowHistoryMenu\" />", vodCard, StringComparison.Ordinal);
+        Assert.Contains(
+            "<Binding Path=\".\" Converter=\"{StaticResource WatchedProgressVisibilityConverter}\" />",
+            vodCard,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void MobileContinueWatching_RemainsExplicitlyBoundedInsteadOfJoiningTheLargeFeed()
     {
         var view = File.ReadAllText(ProjectFile("Noctra.Mobile", "Views", "MobileHomeView.axaml"));
