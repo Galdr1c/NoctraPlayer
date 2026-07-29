@@ -41,6 +41,8 @@ public partial class MainView : UserControl
     private ScopedServiceLease<SettingsViewModel>? _settingsViewModelLease;
     private MobilePlatformServiceResolver? _platformServiceResolver;
     private IPlayerWindowService? _playerWindowService;
+    private PlayerResumeResolver? _playerResumeResolver;
+    private CancellationTokenSource? _playbackSelectionCts;
     private MobileBackNavigationService? _backNavigationService;
     private ReviewPromptFallbackHandler? _fallbackHandler;
     private bool _isPlayerFullScreen;
@@ -379,6 +381,8 @@ public partial class MainView : UserControl
         _scrollEdgeFeedbackController.Hide();
         CategorySelectionOverlay.TryClose();
 
+        CancelAndDisposePlaybackSelection(
+            Interlocked.Exchange(ref _playbackSelectionCts, null));
         _fallbackHandler?.Unregister();
         ReleaseSettingsViewModel();
 
@@ -507,9 +511,8 @@ public partial class MainView : UserControl
             return true;
         }
 
-        if (PlayerHost.IsVisible && _playerViewModel is { IsFullScreen: true })
+        if (PlayerHost.IsVisible && MobilePlayerContent.TryHandleBack())
         {
-            _playerViewModel.IsFullScreen = false;
             return true;
         }
 
@@ -519,6 +522,12 @@ public partial class MainView : UserControl
             _playerViewModel.BackFromPlayerPanelCommand.Execute(null);
             return true;
         }
+        if (PlayerHost.IsVisible && _playerViewModel is { IsFullScreen: true })
+        {
+            _playerViewModel.IsFullScreen = false;
+            return true;
+        }
+
 
         // 3) Oynatıcı görünürse -> oynatıcıyı kapat
         if (PlayerHost.IsVisible)
@@ -805,6 +814,48 @@ public partial class MainView : UserControl
         return _platformServiceResolver;
     }
 
+    private PlayerResumeResolver? GetPlayerResumeResolver()
+    {
+        if (_playerResumeResolver is not null)
+        {
+            return _playerResumeResolver;
+        }
+
+        if (Application.Current is not App app)
+        {
+            return null;
+        }
+
+        var watchHistoryService = app.EnsureServices()?.GetService<IWatchHistoryService>();
+        if (watchHistoryService is null)
+        {
+            return null;
+        }
+
+        return _playerResumeResolver = new PlayerResumeResolver(watchHistoryService);
+    }
+
+    private static void CancelAndDisposePlaybackSelection(CancellationTokenSource? cancellation)
+    {
+        if (cancellation is null)
+        {
+            return;
+        }
+
+        try
+        {
+            cancellation.Cancel();
+        }
+        catch (ObjectDisposedException)
+        {
+            // A completed selection may have disposed itself concurrently.
+        }
+        finally
+        {
+            cancellation.Dispose();
+        }
+    }
+
     /// <summary>
     /// Navigates to the specified content destination.
     ///
@@ -1056,13 +1107,27 @@ public partial class MainView : UserControl
         }
 
         _playerViewModel ??= resolver.GetPlayerViewModel();
+        var selectionCts = new CancellationTokenSource();
+        var cancellationToken = selectionCts.Token;
+        var previousSelection = Interlocked.Exchange(ref _playbackSelectionCts, selectionCts);
+        CancelAndDisposePlaybackSelection(previousSelection);
+
+        var playbackIntent = _playerViewModel.BeginPlaybackIntent(stopCurrentPlayback: true);
 
         var platformResolver = GetPlatformServiceResolver();
         var videoSurfaceService = platformResolver?.GetVideoSurfaceService();
-        if (videoSurfaceService is not null)
+        try
         {
-            await videoSurfaceService.ShowAsync();
-        }
+            if (videoSurfaceService is not null)
+            {
+                await videoSurfaceService.ShowAsync();
+            }
+
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!_playerViewModel.IsPlaybackIntentCurrent(playbackIntent))
+            {
+                return;
+            }
 
         _playerViewModel.CloseRequested -= PlayerViewModel_CloseRequested;
         _playerViewModel.CloseRequested += PlayerViewModel_CloseRequested;
@@ -1086,7 +1151,7 @@ public partial class MainView : UserControl
             pictureInPictureService.PictureInPictureModeChanged += PictureInPictureService_ModeChanged;
         }
 
-        var coreViewModel = _coreMainViewModel;
+        var coreViewModel = _coreMainViewModel ??= resolver.GetCoreMainViewModel();
         _playerViewModel.CurrentProfileId = coreViewModel?.CurrentProfileId;
 
         if (channel.Type == ChannelType.Series && coreViewModel?.CurrentEpisodePlaybackContext is null)
@@ -1121,14 +1186,73 @@ public partial class MainView : UserControl
         }
         UpdatePlayerWatermarkInsets();
 
-        try
-        {
-            await _playerViewModel.PlayChannelAsync(channel);
+            double? startPosition = null;
+            var resumeResolver = GetPlayerResumeResolver();
+            if (resumeResolver is not null)
+            {
+                var resumePosition = await resumeResolver.ResolveAsync(
+                    coreViewModel?.CurrentProfileId,
+                    channel,
+                    coreViewModel?.CurrentEpisodePlaybackContext,
+                    cancellationToken);
+
+                cancellationToken.ThrowIfCancellationRequested();
+                if (!_playerViewModel.IsPlaybackIntentCurrent(playbackIntent))
+                {
+                    return;
+                }
+
+                if (resumePosition.HasValue)
+                {
+                    var shouldResume = await _playerViewModel.ShowResumeDialogAsync(
+                        resumePosition.Value,
+                        cancellationToken);
+
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (!_playerViewModel.IsPlaybackIntentCurrent(playbackIntent))
+                    {
+                        return;
+                    }
+
+                    startPosition = shouldResume
+                        ? resumePosition.Value
+                        : 0d;
+                }
+            }
+
+            await _playerViewModel.PlayChannelAsync(channel, startPosition, playbackIntent);
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!_playerViewModel.IsPlaybackIntentCurrent(playbackIntent))
+            {
+                return;
+            }
+
             UpdatePictureInPictureState();
+        }
+        catch (OperationCanceledException)
+        {
+            if (_playerViewModel.IsPlaybackIntentCurrent(playbackIntent))
+            {
+                videoSurfaceService?.Hide();
+                PlayerHost.IsVisible = false;
+                UpdatePlayerChromeState();
+            }
         }
         catch (Exception ex)
         {
-            ShowPlaybackStartupError(channel, ex);
+            if (_playerViewModel.IsPlaybackIntentCurrent(playbackIntent))
+            {
+                ShowPlaybackStartupError(channel, ex);
+            }
+        }
+        finally
+        {
+            if (ReferenceEquals(
+                    Interlocked.CompareExchange(ref _playbackSelectionCts, null, selectionCts),
+                    selectionCts))
+            {
+                selectionCts.Dispose();
+            }
         }
     }
 

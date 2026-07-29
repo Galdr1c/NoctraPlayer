@@ -22,7 +22,7 @@
               HorizontalAlignment="Left"
               CornerRadius="2"
               Background="{DynamicResource AccentBrush}"
-              Opacity="0.45"
+              Opacity="0.35"
               IsVisible="False" />
       <Border x:Name="FillBar"
               HorizontalAlignment="Left"

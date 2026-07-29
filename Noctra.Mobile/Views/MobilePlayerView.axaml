@@ -396,6 +396,11 @@
       </views:MobilePlayerSheets.Styles>
     </views:MobilePlayerSheets>
 
+    <views:MobileUpsellView x:Name="PlayerUpsellHost"
+                            Grid.ColumnSpan="2"
+                            ZIndex="200"
+                            IsVisible="False" />
+
     <!-- Layer 6: EPG panel -->
     <views:MobilePlayerEpgPanel x:Name="EpgPanel"
                                 Grid.ColumnSpan="2"

@@ -109,6 +109,20 @@ public class PlayerOverlayManager
     public void ClosePanels()
     {
         _vm.LogDebug("UI Action: ClosePanels clicked");
+
+        if (_vm.IsResumeDialogVisible)
+        {
+            _vm.CancelResumeDialog();
+            return;
+        }
+
+        if (_vm.IsNextEpisodePromptVisible)
+        {
+            _vm.IsNextEpisodePromptVisible = false;
+            RestartAutoHideTimer();
+            return;
+        }
+
         _vm.SetMobilePanelState(MobilePanelState.None);
         RestartAutoHideTimer();
     }

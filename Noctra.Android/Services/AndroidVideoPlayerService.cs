@@ -56,6 +56,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
     private bool _requiresPlayerRebuild;
     private readonly Timer _positionUpdateTimer;
     private int _positionUpdateQueued;
+    private int _playbackGeneration;
 
     // Cached values to avoid cross-thread calls when queried outside main thread
     private bool _isPlaying;
@@ -257,7 +258,14 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
     public async Task PlayAsync(string url, double startTimeSeconds = 0)
     {
         ThrowIfDisposed();
+        var playbackGeneration = Interlocked.Increment(ref _playbackGeneration);
+
         await NoctraPlaybackService.EnsureStartedAsync(_applicationContext).ConfigureAwait(false);
+        if (!IsPlaybackGenerationCurrent(playbackGeneration))
+        {
+            return;
+        }
+
         RebuildPlayerIfNeeded();
 
         _currentUrl = url;
@@ -279,6 +287,12 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
         {
             try
             {
+                if (!IsPlaybackGenerationCurrent(playbackGeneration))
+                {
+                    completion.TrySetCanceled();
+                    return;
+                }
+
                 if (_exoPlayer is null)
                 {
                     throw new InvalidOperationException("ExoPlayer is not initialized.");
@@ -350,7 +364,19 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
 
                 // Setup Video Surface
                 await _videoSurfaceService.ShowAsync().ConfigureAwait(true);
+                if (!IsPlaybackGenerationCurrent(playbackGeneration))
+                {
+                    completion.TrySetCanceled();
+                    return;
+                }
+
                 var surface = await _videoSurfaceService.WaitForSurfaceAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(true);
+                if (!IsPlaybackGenerationCurrent(playbackGeneration))
+                {
+                    completion.TrySetCanceled();
+                    return;
+                }
+
                 if (surface is null)
                 {
                     throw new InvalidOperationException(
@@ -434,6 +460,8 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
 
     public void Stop()
     {
+        Interlocked.Increment(ref _playbackGeneration);
+
         RunOnMainThread(() =>
         {
             StopPositionUpdates();
@@ -483,6 +511,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
         ThrowIfDisposed();
 
         _reinitializeCts?.Cancel();
+        Interlocked.Increment(ref _playbackGeneration);
 
         var completion = new TaskCompletionSource(
             TaskCreationOptions.RunContinuationsAsynchronously);
@@ -633,6 +662,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
         if (!_isDisposed)
         {
             _isDisposed = true;
+            Interlocked.Increment(ref _playbackGeneration);
             StopPositionUpdates();
             _positionUpdateTimer.Dispose();
             _settingsService.SettingsChanged -= OnSettingsChanged;
@@ -649,6 +679,10 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
 
         base.Dispose(disposing);
     }
+
+    private bool IsPlaybackGenerationCurrent(int playbackGeneration)
+        => !_isDisposed &&
+           playbackGeneration == Volatile.Read(ref _playbackGeneration);
 
     private void ApplySettingsSnapshot(AppSettings settings, bool updateAudioState)
     {

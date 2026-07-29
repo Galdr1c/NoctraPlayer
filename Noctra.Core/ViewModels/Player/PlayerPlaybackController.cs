@@ -185,11 +185,11 @@ public class PlayerPlaybackController
         // Flush previous content's watch position before switching.
         try
         {
-            await _vm.FlushWatchHistoryAsync(force: true);
+            await _vm.FlushPendingPlaybackExitSnapshotAsync();
         }
         catch (Exception ex)
         {
-            _vm.LogDebug($"PlayChannelAsync: Failed to flush watch history: {ex.Message}");
+            _vm.LogDebug($"PlayChannelAsync: Failed to flush playback exit snapshot: {ex.Message}");
         }
 
         if (!_vm.IsPlaybackIntentCurrent(requestVersion))

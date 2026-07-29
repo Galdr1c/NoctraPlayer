@@ -1052,6 +1052,38 @@ namespace Noctra.Tests
         }
 
         [Fact]
+        public async Task ResumeFromPosition_FreeUser_RaisesUpsellWithoutCompletingDialog()
+        {
+            var ctx = new PlayerTestContext(isPremium: false);
+            var upsellRequested = false;
+            ctx.VM.PremiumUpsellRequested += (_, _) => upsellRequested = true;
+            var task = ctx.VM.ShowResumeDialogAsync(600);
+
+            ctx.VM.ResumeFromPositionCommand.Execute(null);
+
+            Assert.True(upsellRequested);
+            Assert.True(ctx.VM.IsResumeDialogVisible);
+            Assert.False(task.IsCompleted);
+
+            ctx.VM.CancelResumeDialog();
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(async () => await task);
+        }
+
+        [Fact]
+        public async Task ResumeFromPosition_RechecksLicenseAfterPurchase()
+        {
+            var ctx = new PlayerTestContext(isPremium: false);
+            var task = ctx.VM.ShowResumeDialogAsync(600);
+            ctx.License.ActivatePremium();
+
+            ctx.VM.ResumeFromPositionCommand.Execute(null);
+
+            Assert.True(await task);
+            Assert.True(ctx.VM.IsPremiumResume);
+            Assert.False(ctx.VM.IsResumeDialogVisible);
+        }
+
+        [Fact]
         public async Task StartFromBeginning_ResolvesTaskFalse_HidesDialog()
         {
             var ctx = new PlayerTestContext(isPremium: true);
@@ -1061,6 +1093,34 @@ namespace Noctra.Tests
 
             var result = await task;
             Assert.False(result);
+            Assert.False(ctx.VM.IsResumeDialogVisible);
+        }
+
+        [Fact]
+        public async Task StartFromBeginning_PreparePreservesHistorySafetyNet()
+        {
+            var ctx = new PlayerTestContext(isPremium: true);
+            var task = ctx.VM.ShowResumeDialogAsync(600);
+
+            ctx.VM.StartFromBeginningCommand.Execute(null);
+
+            Assert.False(await task);
+            InvokePrepareForContentLoading(ctx.VM);
+
+            Assert.True(ctx.VM._isStartingOver);
+            Assert.Equal(600, ctx.VM._oldResumePosition);
+        }
+
+        [Fact]
+        public async Task BackFromPlayerPanel_CancelsVisibleResumeDialog()
+        {
+            var ctx = new PlayerTestContext(isPremium: true);
+            var task = ctx.VM.ShowResumeDialogAsync(600);
+
+            ctx.VM.BackFromPlayerPanelCommand.Execute(null);
+
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(
+                async () => await task.WaitAsync(TimeSpan.FromMilliseconds(100)));
             Assert.False(ctx.VM.IsResumeDialogVisible);
         }
 

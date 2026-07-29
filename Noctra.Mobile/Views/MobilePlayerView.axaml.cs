@@ -190,8 +190,10 @@ public partial class MobilePlayerView : UserControl
         {
             _boundVm.PropertyChanged -= OnPlayerPropertyChanged;
             _boundVm.SkipOverlayRequested -= OnSkipOverlayRequested;
+            _boundVm.PremiumUpsellRequested -= OnPremiumUpsellRequested;
         }
 
+        PlayerUpsellHost.TryClose();
         _boundVm = DataContext as PlayerViewModel;
         _lastObservedVolume = _boundVm?.Volume;
         _lastObservedIsMuted = _boundVm?.IsMuted;
@@ -200,9 +202,20 @@ public partial class MobilePlayerView : UserControl
         {
             _boundVm.PropertyChanged += OnPlayerPropertyChanged;
             _boundVm.SkipOverlayRequested += OnSkipOverlayRequested;
+            _boundVm.PremiumUpsellRequested += OnPremiumUpsellRequested;
             TryShowGestureHintsOnceAsync();
             QueueVideoSurfaceLayoutUpdate();
         }
+    }
+
+    private void OnPremiumUpsellRequested(object? sender, EventArgs e)
+    {
+        Dispatcher.UIThread.Post(() => PlayerUpsellHost.Show());
+    }
+
+    public bool TryHandleBack()
+    {
+        return PlayerUpsellHost.TryClose();
     }
 
     private void OnPlayerPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)

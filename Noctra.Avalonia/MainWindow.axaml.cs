@@ -268,7 +268,7 @@ public partial class MainWindow : Window
         // Bu satır, hâlâ devam eden PlayChannelAsync akışlarının URL çözümleme
         // sonrasındaki guard'da durmasını sağlar.
         // PreemptCurrentPlayback() CancelResumeDialog()'u da çağırır.
-        _playerViewModel.PreemptCurrentPlayback();
+        var playbackIntent = _playerViewModel.PreemptCurrentPlayback();
 
         // ── 2. Bu handler instance'ını iptal edilebilir yap ─────────────────
         // Yeni kanal seçildiğinde önceki handler VideoSurface veya
@@ -338,7 +338,7 @@ public partial class MainWindow : Window
             // Dialog kapandıktan sonra son token kontrolü.
             token.ThrowIfCancellationRequested();
 
-            await _playerViewModel.PlayChannelAsync(channel, finalStartPos);
+            await _playerViewModel.PlayChannelAsync(channel, finalStartPos, playbackIntent);
             Dispatcher.UIThread.Post(() => OverlayControl.Focus(), DispatcherPriority.Input);
         }
         catch (OperationCanceledException)

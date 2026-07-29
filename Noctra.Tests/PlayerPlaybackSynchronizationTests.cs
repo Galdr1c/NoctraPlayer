@@ -100,6 +100,32 @@ namespace Noctra.Tests
         }
 
         [Fact]
+        public void PlaybackIntent_BeginPlaybackIntent_PersistsOutgoingPositionBeforeStop()
+        {
+            var ctx = new PlayerTestContext();
+            ctx.VM.CurrentProfileId = 7;
+            ctx.VM.CurrentChannel = new Channel
+            {
+                Id = 42,
+                Name = "Outgoing movie",
+                StreamUrl = "https://example.test/outgoing.mp4",
+                Type = ChannelType.VOD
+            };
+            ctx.VM.Position = 321;
+            ctx.VM.Duration = 3600;
+            ctx.VideoService.Position = 321;
+
+            ctx.VM.BeginPlaybackIntent(stopCurrentPlayback: true);
+
+            var call = Assert.Single(ctx.WatchHistory.Calls);
+            Assert.Equal(7, call.ProfileId);
+            Assert.Equal(42, call.ChannelId);
+            Assert.Null(call.EpisodeId);
+            Assert.Equal(TimeSpan.FromSeconds(321), call.Position);
+            Assert.Equal(TimeSpan.FromSeconds(3600), call.Duration);
+        }
+
+        [Fact]
         public async Task PlayChannelAsync_RapidZapping_StaleRequestAbortsEarly()
         {
             // Arrange

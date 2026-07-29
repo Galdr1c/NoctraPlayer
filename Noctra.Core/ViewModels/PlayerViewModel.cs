@@ -300,6 +300,19 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void BackFromPlayerPanel()
     {
+        if (IsResumeDialogVisible)
+        {
+            CancelResumeDialog();
+            return;
+        }
+
+        if (IsNextEpisodePromptVisible)
+        {
+            IsNextEpisodePromptVisible = false;
+            RestartAutoHideTimer();
+            return;
+        }
+
         if (_panelParentState == MobilePanelState.Actions)
         {
             _panelParentState = MobilePanelState.None;
@@ -1019,6 +1032,8 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     internal readonly System.Timers.Timer _watchHistoryTimer;
 
     private readonly SemaphoreSlim _exitGate = new(1, 1);
+    private readonly object _playbackExitFlushSync = new();
+    private Task _pendingPlaybackExitFlush = Task.CompletedTask;
 
     internal void LogDebug(string msg) {
         System.Diagnostics.Debug.WriteLine($"[PVM] {msg}");
@@ -1247,7 +1262,10 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         var requestVersion = Interlocked.Increment(ref _playRequestVersion);
         LogDebug($"BeginPlaybackIntent: requestVersion={requestVersion}, stopCurrentPlayback={stopCurrentPlayback}");
 
+        QueueCurrentPlaybackExitSnapshot();
         CancelResumeDialog();
+        _isStartingOver = false;
+        _oldResumePosition = 0;
         _watchHistoryTimer.Stop();
         _pendingResumeSeekPosition = 0;
         _pendingResumeSeekAttempts = 0;
@@ -1280,6 +1298,44 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(IsBufferShieldVisible));
 
         return requestVersion;
+    }
+
+    private void QueueCurrentPlaybackExitSnapshot()
+    {
+        var snapshot = EpisodeNavigator.CreatePlaybackExitSnapshot();
+        if (snapshot.Channel is null ||
+            snapshot.Channel.Type == ChannelType.Live ||
+            snapshot.PositionSeconds <= 0)
+        {
+            return;
+        }
+
+        var flushTask = EpisodeNavigator.FlushPlaybackExitSnapshotAsync(snapshot);
+        lock (_playbackExitFlushSync)
+        {
+            _pendingPlaybackExitFlush = Task.WhenAll(
+                _pendingPlaybackExitFlush,
+                flushTask);
+        }
+    }
+
+    internal async Task FlushPendingPlaybackExitSnapshotAsync()
+    {
+        Task pendingFlush;
+        lock (_playbackExitFlushSync)
+        {
+            pendingFlush = _pendingPlaybackExitFlush;
+        }
+
+        await pendingFlush.ConfigureAwait(false);
+
+        lock (_playbackExitFlushSync)
+        {
+            if (ReferenceEquals(_pendingPlaybackExitFlush, pendingFlush))
+            {
+                _pendingPlaybackExitFlush = Task.CompletedTask;
+            }
+        }
     }
 
     public int PreemptCurrentPlayback() => BeginPlaybackIntent();
@@ -1335,8 +1391,6 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         PlayerLoadingWarningMessage = string.Empty;
 
         // Yeni içerik yüklenirken eski state sızıntısını önle
-        _isStartingOver = false;
-        _oldResumePosition = 0;
         ResumePositionText = string.Empty;
         _sessionPlaybackStartTimeUtc = DateTime.MinValue;
 
@@ -2379,7 +2433,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
         _oldResumePosition = positionSeconds;
         ResumePositionText = FormatResumePosition(positionSeconds);
-        IsPremiumResume = _licenseService.IsFeatureAvailable("resume_playback");
+        IsPremiumResume = _licenseService.IsFeatureAvailable(Noctra.Services.LicenseService.Features.ResumePlayback);
         IsResumeDialogVisible = true;
         _resumeDialogTcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         return _resumeDialogTcs.Task;
@@ -2401,6 +2455,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     public void CancelResumeDialog()
     {
         var pendingDialog = _resumeDialogTcs;
+        var hadActiveDialog = pendingDialog is not null || IsResumeDialogVisible;
         _resumeDialogTcs = null;
 
         if (IsResumeDialogVisible)
@@ -2410,30 +2465,51 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
         pendingDialog?.TrySetCanceled();
         ResumePositionText = string.Empty;
-        _oldResumePosition = 0;
+
+        if (hadActiveDialog)
+        {
+            _oldResumePosition = 0;
+        }
     }
 
     internal bool _isStartingOver;
     internal double _oldResumePosition;
 
+    private void CompleteResumeDialog(bool resumeFromSavedPosition)
+    {
+        _isStartingOver = !resumeFromSavedPosition;
+
+        var pendingDialog = _resumeDialogTcs;
+        _resumeDialogTcs = null;
+        IsResumeDialogVisible = false;
+        ResumePositionText = string.Empty;
+
+        pendingDialog?.TrySetResult(resumeFromSavedPosition);
+    }
+
     [RelayCommand]
     private void ResumeFromPosition()
     {
-        _isStartingOver = false;
-        IsResumeDialogVisible = false;
-        _resumeDialogTcs?.TrySetResult(true);
-        _resumeDialogTcs = null;
-        ResumePositionText = string.Empty;
+        IsPremiumResume = _licenseService.IsFeatureAvailable(Noctra.Services.LicenseService.Features.ResumePlayback);
+        if (!IsPremiumResume)
+        {
+            PremiumUpsellRequested?.Invoke(this, EventArgs.Empty);
+            return;
+        }
+
+        CompleteResumeDialog(resumeFromSavedPosition: true);
     }
 
     [RelayCommand]
     private void StartFromBeginning()
     {
-        _isStartingOver = true;
-        IsResumeDialogVisible = false;
-        _resumeDialogTcs?.TrySetResult(false);
-        _resumeDialogTcs = null;
-        ResumePositionText = string.Empty;
+        CompleteResumeDialog(resumeFromSavedPosition: false);
+    }
+
+    [RelayCommand]
+    private void ReturnFromResumeDialog()
+    {
+        CancelResumeDialog();
     }
 
     // ── Property / State Changed Interceptions ──────────────────────────────

@@ -381,6 +381,41 @@ public sealed class VideoOverlayInputSurfaceTests
     }
 
     [Fact]
+    public void AndroidPlayer_InvalidatesStaleAsyncPlayRequests()
+    {
+        var playerService = LoadProjectFile(
+            "Noctra.Android",
+            "Services",
+            "AndroidVideoPlayerService.cs");
+        var playMethod = ExtractMethodBody(
+            playerService,
+            "public async Task PlayAsync(string url, double startTimeSeconds = 0)");
+        var stopMethod = ExtractMethodBody(
+            playerService,
+            "public void Stop()");
+        var endSessionMethod = ExtractMethodBody(
+            playerService,
+            "public async Task EndSessionAsync(CancellationToken cancellationToken = default)");
+
+        Assert.Contains("private int _playbackGeneration;", playerService, StringComparison.Ordinal);
+        Assert.Contains(
+            "var playbackGeneration = Interlocked.Increment(ref _playbackGeneration);",
+            playMethod,
+            StringComparison.Ordinal);
+        Assert.True(
+            playMethod.Split("IsPlaybackGenerationCurrent(playbackGeneration)", StringSplitOptions.None).Length >= 4,
+            "PlayAsync must re-check its generation before and after awaited surface work.");
+        Assert.Contains(
+            "Interlocked.Increment(ref _playbackGeneration);",
+            stopMethod,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "Interlocked.Increment(ref _playbackGeneration);",
+            endSessionMethod,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void AndroidPlayer_PublishesPlaybackPositionWhileMediaIsPlaying()
     {
         var playerService = LoadProjectFile(
@@ -449,7 +484,7 @@ public sealed class VideoOverlayInputSurfaceTests
         Assert.Contains("Background=\"Transparent\"", rootGrid, StringComparison.Ordinal);
         Assert.Contains("x:Name=\"TrackGrid\"", timeline, StringComparison.Ordinal);
         Assert.Contains("x:Name=\"BufferBar\"", timeline, StringComparison.Ordinal);
-        Assert.Contains("Opacity=\"0.45\"", timeline, StringComparison.Ordinal);
+        Assert.Contains("Opacity=\"0.35\"", timeline, StringComparison.Ordinal);
         Assert.Contains(
             "AutomationProperties.Name=\"{Binding TimelineAccessibilityName}\"",
             timeline,
@@ -684,6 +719,203 @@ public sealed class VideoOverlayInputSurfaceTests
             playerService,
             StringComparison.Ordinal);
         Assert.Contains("_exoPlayer.BufferedPosition", playerService, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void MobileResumeSheet_OffersPremiumResumeStartOverAndBack()
+    {
+        var sheet = LoadProjectFile(
+            "Noctra.Mobile",
+            "Views",
+            "MobilePlayerSheets.axaml");
+
+        Assert.Contains("Player.Resume.Continue", sheet, StringComparison.Ordinal);
+        Assert.Contains("ResumeFromPositionCommand", sheet, StringComparison.Ordinal);
+        Assert.Contains("Player.Resume.StartOver", sheet, StringComparison.Ordinal);
+        Assert.Contains("StartFromBeginningCommand", sheet, StringComparison.Ordinal);
+        Assert.Contains("Player.Resume.Back", sheet, StringComparison.Ordinal);
+        Assert.Contains("ReturnFromResumeDialogCommand", sheet, StringComparison.Ordinal);
+        Assert.Contains("PremiumBadgeBrush", sheet, StringComparison.Ordinal);
+        Assert.Contains("IsVisible=\"{Binding !IsPremiumResume}\"", sheet, StringComparison.Ordinal);
+        Assert.DoesNotContain("Player.Resume.Resume", sheet, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void MobilePlayerUpsell_IsTopLayerAndBackDismissible()
+    {
+        var playerView = LoadProjectFile(
+            "Noctra.Mobile",
+            "Views",
+            "MobilePlayerView.axaml");
+        var playerViewCode = LoadProjectFile(
+            "Noctra.Mobile",
+            "Views",
+            "MobilePlayerView.axaml.cs");
+        var upsellCode = LoadProjectFile(
+            "Noctra.Mobile",
+            "Views",
+            "MobileUpsellView.axaml.cs");
+        var mainViewCode = LoadProjectFile(
+            "Noctra.Mobile",
+            "Views",
+            "MainView.axaml.cs");
+
+        var upsellHost = ExtractStartTag(playerView, "x:Name=\"PlayerUpsellHost\"");
+        Assert.Contains("ZIndex=\"200\"", upsellHost, StringComparison.Ordinal);
+        Assert.Contains("IsVisible=\"False\"", upsellHost, StringComparison.Ordinal);
+
+        Assert.Contains(
+            "_boundVm.PremiumUpsellRequested += OnPremiumUpsellRequested",
+            playerViewCode,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "_boundVm.PremiumUpsellRequested -= OnPremiumUpsellRequested",
+            playerViewCode,
+            StringComparison.Ordinal);
+        Assert.Contains("PlayerUpsellHost.Show()", playerViewCode, StringComparison.Ordinal);
+        Assert.Contains("public bool TryHandleBack()", playerViewCode, StringComparison.Ordinal);
+        Assert.Contains("PlayerUpsellHost.TryClose()", playerViewCode, StringComparison.Ordinal);
+        Assert.Contains("public bool TryClose()", upsellCode, StringComparison.Ordinal);
+        Assert.Contains("MobilePlayerContent.TryHandleBack()", mainViewCode, StringComparison.Ordinal);
+
+        var backMethod = ExtractMethodBody(mainViewCode, "internal bool TryHandleBack()");
+        var upsellIndex = backMethod.IndexOf(
+            "MobilePlayerContent.TryHandleBack()",
+            StringComparison.Ordinal);
+        var panelIndex = backMethod.IndexOf(
+            "ActiveMobilePanelState",
+            StringComparison.Ordinal);
+        var fullScreenIndex = backMethod.IndexOf(
+            "IsFullScreen: true",
+            StringComparison.Ordinal);
+
+        Assert.True(upsellIndex >= 0 && panelIndex > upsellIndex);
+        Assert.True(fullScreenIndex > panelIndex);
+    }
+
+    [Fact]
+    public void ResumeBackAction_IsLocalizedInEverySupportedLanguage()
+    {
+        foreach (var fileName in new[]
+                 {
+                     "tr-TR.json",
+                     "en-US.json",
+                     "de-DE.json",
+                     "fr-FR.json",
+                     "es-ES.json"
+                 })
+        {
+            var translation = LoadProjectFile(
+                "Noctra.Core",
+                "Localization",
+                "Translations",
+                fileName);
+
+            Assert.Contains("\"Player.Resume.Back\"", translation, StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
+    public void MobilePlaybackBridge_ResolvesResumeBeforeStartingCurrentIntent()
+    {
+        var mainViewCode = LoadProjectFile(
+            "Noctra.Mobile",
+            "Views",
+            "MainView.axaml.cs");
+        var playMethod = ExtractMethodBody(
+            mainViewCode,
+            "private async Task PlaySelectedChannelAsync(Channel channel)");
+
+        Assert.Contains("BeginPlaybackIntent(stopCurrentPlayback: true)", playMethod, StringComparison.Ordinal);
+        Assert.Contains("GetPlayerResumeResolver()", playMethod, StringComparison.Ordinal);
+        Assert.Contains("ResolveAsync(", playMethod, StringComparison.Ordinal);
+        Assert.Contains("ShowResumeDialogAsync(", playMethod, StringComparison.Ordinal);
+        Assert.Contains("IsPlaybackIntentCurrent(playbackIntent)", playMethod, StringComparison.Ordinal);
+        Assert.Contains(
+            "PlayChannelAsync(channel, startPosition, playbackIntent)",
+            playMethod,
+            StringComparison.Ordinal);
+        Assert.Contains("catch (OperationCanceledException)", playMethod, StringComparison.Ordinal);
+
+        var beginIndex = playMethod.IndexOf("BeginPlaybackIntent", StringComparison.Ordinal);
+        var dialogIndex = playMethod.IndexOf("ShowResumeDialogAsync", StringComparison.Ordinal);
+        var playIndex = playMethod.IndexOf("PlayChannelAsync(channel, startPosition, playbackIntent)", StringComparison.Ordinal);
+
+        Assert.True(beginIndex >= 0 && dialogIndex > beginIndex);
+        Assert.True(playIndex > dialogIndex);
+    }
+
+    [Fact]
+    public void MobilePlaybackBridge_OwnsCancellationSourceWithoutDisposeRace()
+    {
+        var mainViewCode = LoadProjectFile(
+            "Noctra.Mobile",
+            "Views",
+            "MainView.axaml.cs");
+        var playMethod = ExtractMethodBody(
+            mainViewCode,
+            "private async Task PlaySelectedChannelAsync(Channel channel)");
+        var cancelMethod = ExtractMethodBody(
+            mainViewCode,
+            "private static void CancelAndDisposePlaybackSelection(CancellationTokenSource? cancellation)");
+
+        var tokenIndex = playMethod.IndexOf("var cancellationToken = selectionCts.Token;", StringComparison.Ordinal);
+        var publishIndex = playMethod.IndexOf(
+            "Interlocked.Exchange(ref _playbackSelectionCts, selectionCts)",
+            StringComparison.Ordinal);
+        Assert.True(tokenIndex >= 0 && publishIndex > tokenIndex);
+
+        Assert.Contains(
+            "CancelAndDisposePlaybackSelection(previousSelection);",
+            playMethod,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "ReferenceEquals(",
+            playMethod,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "selectionCts.Dispose();",
+            playMethod,
+            StringComparison.Ordinal);
+        Assert.Contains("cancellation.Cancel();", cancelMethod, StringComparison.Ordinal);
+        Assert.Contains(
+            "catch (ObjectDisposedException)",
+            cancelMethod,
+            StringComparison.Ordinal);
+        Assert.Contains("cancellation.Dispose();", cancelMethod, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void DesktopPlaybackBridge_ReusesPreemptIntentAfterResumeDialog()
+    {
+        var mainWindowCode = LoadProjectFile(
+            "Noctra.Avalonia",
+            "MainWindow.axaml.cs");
+        var selectionMethod = ExtractMethodBody(
+            mainWindowCode,
+            "private async void MainViewModel_OnMediaSelected(object? media)");
+
+        Assert.Contains(
+            "var playbackIntent = _playerViewModel.PreemptCurrentPlayback();",
+            selectionMethod,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "PlayChannelAsync(channel, finalStartPos, playbackIntent)",
+            selectionMethod,
+            StringComparison.Ordinal);
+
+        var intentIndex = selectionMethod.IndexOf(
+            "PreemptCurrentPlayback()",
+            StringComparison.Ordinal);
+        var dialogIndex = selectionMethod.IndexOf(
+            "ShowResumeDialogAsync",
+            StringComparison.Ordinal);
+        var playIndex = selectionMethod.IndexOf(
+            "PlayChannelAsync(channel, finalStartPos, playbackIntent)",
+            StringComparison.Ordinal);
+
+        Assert.True(intentIndex >= 0 && dialogIndex > intentIndex);
+        Assert.True(playIndex > dialogIndex);
     }
 
     private static string ExtractStartTag(string contents, string marker)

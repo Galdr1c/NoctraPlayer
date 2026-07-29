@@ -100,18 +100,58 @@
                   </StackPanel>
                 </StackPanel>
               </Border>
-              <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
-                <Button Content="{loc:Translate Player.Resume.StartOver}"
-                        Command="{Binding StartFromBeginningCommand}"
-                        MinHeight="48" CornerRadius="12" />
-                <Button Grid.Column="1"
-                        Content="{loc:Translate Player.Resume.Resume}"
-                        Command="{Binding ResumeFromPositionCommand}"
-                        MinHeight="48" CornerRadius="12"
+              <StackPanel Spacing="10">
+                <Button Command="{Binding ResumeFromPositionCommand}"
+                        MinHeight="52"
+                        CornerRadius="12"
                         Background="{DynamicResource AccentBrush}"
                         Foreground="{DynamicResource TextPrimaryBrush}"
-                        FontWeight="Bold" BorderThickness="0" />
-              </Grid>
+                        BorderThickness="0">
+                  <Grid ColumnDefinitions="Auto,*,Auto"
+                        ColumnSpacing="10">
+                    <icons:MaterialIcon Kind="Play"
+                                        Width="18"
+                                        Height="18"
+                                        VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="1"
+                               Text="{loc:Translate Player.Resume.Continue}"
+                               FontWeight="Bold"
+                               VerticalAlignment="Center" />
+                    <Border Grid.Column="2"
+                            IsVisible="{Binding !IsPremiumResume}"
+                            Background="{DynamicResource PremiumBadgeBrush}"
+                            CornerRadius="6"
+                            Padding="7,3"
+                            VerticalAlignment="Center">
+                      <StackPanel Orientation="Horizontal" Spacing="4">
+                        <icons:MaterialIcon Kind="Star"
+                                            Width="12"
+                                            Height="12"
+                                            VerticalAlignment="Center" />
+                        <TextBlock Text="{loc:Translate Common.Premium}"
+                                   FontSize="10"
+                                   FontWeight="Bold"
+                                   VerticalAlignment="Center" />
+                      </StackPanel>
+                    </Border>
+                  </Grid>
+                </Button>
+
+                <Button Command="{Binding StartFromBeginningCommand}"
+                        MinHeight="48"
+                        CornerRadius="12">
+                  <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
+                    <icons:MaterialIcon Kind="Replay" Width="17" Height="17" />
+                    <TextBlock Text="{loc:Translate Player.Resume.StartOver}" />
+                  </StackPanel>
+                </Button>
+
+                <Button Content="{loc:Translate Player.Resume.Back}"
+                        Command="{Binding ReturnFromResumeDialogCommand}"
+                        MinHeight="44"
+                        Background="Transparent"
+                        BorderThickness="0" />
+              </StackPanel>
             </StackPanel>
           </Border>
 
