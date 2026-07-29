@@ -21,6 +21,22 @@
     <Style Selector="Button.CategorySelectionRow:pressed /template/ ContentPresenter">
       <Setter Property="Background" Value="Transparent" />
     </Style>
+    <Style Selector="Button.AllCategory">
+      <Setter Property="MinWidth" Value="104" />
+      <Setter Property="MinHeight" Value="50" />
+      <Setter Property="Background" Value="{DynamicResource Surface1Brush}" />
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="6" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    </Style>
+    <Style Selector="Button.AllCategory:pressed /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource InteractivePressedBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+    </Style>
     <Style Selector="Button.CategoryHideButton">
       <Setter Property="Width" Value="28" />
       <Setter Property="Height" Value="28" />
@@ -98,13 +114,8 @@
         <Grid ColumnDefinitions="Auto,*"
               ColumnSpacing="8"
               Margin="0,0,0,8">
-          <Border MinWidth="104"
-                  Background="{DynamicResource Surface1Brush}"
-                  BorderBrush="{DynamicResource BorderBrush}"
-                  BorderThickness="1"
-                  CornerRadius="6">
             <Button x:Name="AllCategoriesButton"
-                    Classes="CategorySelectionRow"
+                    Classes="AllCategory"
                     Click="SelectCategory_Click">
               <Grid ColumnDefinitions="*,Auto"
                     ColumnSpacing="12">
@@ -122,7 +133,6 @@
                                     VerticalAlignment="Center" />
               </Grid>
             </Button>
-          </Border>
 
           <Border Grid.Column="1"
                   Background="{DynamicResource Surface1Brush}"

@@ -380,6 +380,38 @@ public sealed class MobileRecentRegressionTests
             StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData("MobileVodCard.axaml")]
+    [InlineData("MobileSeriesCard.axaml")]
+    [InlineData("MobileLiveTvCard.axaml")]
+    [InlineData("MobileContinueWatchingCard.axaml")]
+    public void PrimaryMediaCards_UseARealPressedState(string cardFile)
+    {
+        var source = File.ReadAllText(ProjectFile("Noctra.Mobile", "Controls", cardFile));
+
+        Assert.Contains(
+            "<controls:MobilePressableCard Classes=\"CardContainer\"",
+            source,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "controls|MobilePressableCard.CardContainer:pressed",
+            source,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void MobilePressableCard_CancelsFeedbackWhenTheGestureBecomesScrolling()
+    {
+        var source = File.ReadAllText(
+            ProjectFile("Noctra.Mobile", "Controls", "MobilePressableCard.cs"));
+
+        Assert.Contains("ScrollCancellationDistance", source, StringComparison.Ordinal);
+        Assert.Contains("PseudoClasses.Set(\":pressed\", true)", source, StringComparison.Ordinal);
+        Assert.Contains("OriginatesFromNestedButton(e.Source)", source, StringComparison.Ordinal);
+        Assert.Contains("ResetPressedState();", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("e.Pointer.Capture(", source, StringComparison.Ordinal);
+    }
+
     [Fact]
     public void MobileContinueWatching_RemainsExplicitlyBoundedInsteadOfJoiningTheLargeFeed()
     {

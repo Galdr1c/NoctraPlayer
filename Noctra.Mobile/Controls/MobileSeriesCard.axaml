@@ -45,7 +45,8 @@
 
   <UserControl.Styles>
     <!-- Touch feedback: pressed state dims the card and scales it down slightly -->
-    <Style Selector="Border.CardContainer">
+    <Style Selector="controls|MobilePressableCard.CardContainer">
+      <Setter Property="RenderTransformOrigin" Value="50%,50%" />
       <Setter Property="RenderTransform" Value="scale(1)" />
       <Setter Property="Opacity" Value="1" />
       <Setter Property="Transitions">
@@ -55,19 +56,19 @@
         </Transitions>
       </Setter>
     </Style>
-    <Style Selector="Border.CardContainer:pressed">
-      <Setter Property="RenderTransform" Value="scale(0.96)" />
+    <Style Selector="controls|MobilePressableCard.CardContainer:pressed">
+      <Setter Property="RenderTransform" Value="scale(0.97)" />
       <Setter Property="Opacity" Value="0.75" />
     </Style>
   </UserControl.Styles>
 
   <!-- CardContainer_Tapped executes SelectMediaCommand from the parent MainViewModel. -->
-  <Border Classes="CardContainer"
-          Background="Transparent"
-          Tapped="CardContainer_Tapped">
-    <Border.ContextFlyout>
+  <controls:MobilePressableCard Classes="CardContainer"
+                                Background="Transparent"
+                                Tapped="CardContainer_Tapped">
+    <controls:MobilePressableCard.ContextFlyout>
       <StaticResource ResourceKey="CardActionsFlyout" />
-    </Border.ContextFlyout>
+    </controls:MobilePressableCard.ContextFlyout>
 
     <Border Background="Transparent">
       <Grid>
@@ -98,5 +99,5 @@
         </Border>
       </Grid>
     </Border>
-  </Border>
+  </controls:MobilePressableCard>
 </UserControl>

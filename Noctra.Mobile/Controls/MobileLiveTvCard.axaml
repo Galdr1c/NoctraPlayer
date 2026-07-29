@@ -44,18 +44,28 @@
   </UserControl.Resources>
 
   <UserControl.Styles>
-    <!-- Touch feedback: card surface dims on press -->
+    <!-- Touch feedback: the card responds while preserving vertical scrolling. -->
+    <Style Selector="controls|MobilePressableCard.CardContainer">
+      <Setter Property="RenderTransformOrigin" Value="50%,50%" />
+      <Setter Property="RenderTransform" Value="scale(1)" />
+      <Setter Property="Opacity" Value="1" />
+      <Setter Property="Transitions">
+        <Transitions>
+          <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.10" Easing="CubicEaseOut" />
+          <DoubleTransition Property="Opacity" Duration="0:0:0.10" Easing="CubicEaseOut" />
+        </Transitions>
+      </Setter>
+    </Style>
+    <Style Selector="controls|MobilePressableCard.CardContainer:pressed">
+      <Setter Property="RenderTransform" Value="scale(0.97)" />
+      <Setter Property="Opacity" Value="0.72" />
+    </Style>
     <Style Selector="Border.CardSurface">
       <Setter Property="Background" Value="Transparent"/>
       <Setter Property="BorderThickness" Value="0"/>
       <Setter Property="CornerRadius" Value="0"/>
       <Setter Property="Padding" Value="10,6"/>
       <Setter Property="Margin" Value="0,0,0,16"/>
-    </Style>
-    <Style Selector="Border.CardContainer:pressed Border.CardSurface">
-      <Setter Property="Background" Value="Transparent" />
-      <Setter Property="BorderThickness" Value="0"/>
-      <Setter Property="Padding" Value="10,6" />
     </Style>
     <Style Selector="Button.FavoriteBtn">
       <Setter Property="Opacity" Value="0.4" />
@@ -76,12 +86,12 @@
   </UserControl.Styles>
 
   <!-- CardContainer_Tapped executes SelectMediaCommand from the parent MainViewModel. -->
-  <Border Classes="CardContainer"
-          Background="Transparent"
-          Tapped="CardContainer_Tapped">
-    <Border.ContextFlyout>
+  <controls:MobilePressableCard Classes="CardContainer"
+                                Background="Transparent"
+                                Tapped="CardContainer_Tapped">
+    <controls:MobilePressableCard.ContextFlyout>
       <StaticResource ResourceKey="LiveCardActionsFlyout" />
-    </Border.ContextFlyout>
+    </controls:MobilePressableCard.ContextFlyout>
 
     <Border Classes="CardSurface" >
       <Grid RowDefinitions="Auto,Auto,Auto"
@@ -176,5 +186,5 @@
                      IsVisible="{Binding CurrentProgramTitle, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
       </Grid>
     </Border>
-  </Border>
+  </controls:MobilePressableCard>
 </UserControl>
