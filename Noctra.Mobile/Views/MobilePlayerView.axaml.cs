@@ -238,7 +238,15 @@ public partial class MobilePlayerView : UserControl
         if (e.PropertyName == nameof(PlayerViewModel.IsLockIndicatorVisible))
         {
             if (_boundVm?.IsLockIndicatorVisible == true)
+            {
                 _ = PlayLockShakeAnimation();
+            }
+            else
+            {
+                _lockAnimationCts?.Cancel();
+                ResetLockIndicator();
+                LockIndicator.IsVisible = false;
+            }
         }
 
         if (e.PropertyName == nameof(PlayerViewModel.IsEpgPanelOpen))

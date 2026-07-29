@@ -1012,6 +1012,30 @@ namespace Noctra.Tests
         }
 
         [Fact]
+        public async Task ResumeDialog_IsTheOnlyVisibleInteractivePlayerOverlay()
+        {
+            var ctx = new PlayerTestContext();
+            ctx.VM.IsVisible = true;
+            ctx.VM.IsLockIndicatorVisible = true;
+
+            Assert.True(ctx.VM.IsTopOverlayVisible);
+            Assert.True(ctx.VM.IsBottomControlsVisible);
+
+            var task = ctx.VM.ShowResumeDialogAsync(600);
+
+            Assert.True(ctx.VM.IsResumeDialogVisible);
+            Assert.False(ctx.VM.IsTopOverlayVisible);
+            Assert.False(ctx.VM.IsBottomControlsVisible);
+            Assert.False(ctx.VM.IsLockIndicatorVisible);
+
+            ctx.VM.CancelResumeDialog();
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(async () => await task);
+
+            Assert.True(ctx.VM.IsTopOverlayVisible);
+            Assert.True(ctx.VM.IsBottomControlsVisible);
+        }
+
+        [Fact]
         public async Task ShowResumeDialog_FormatsPositionText()
         {
             var ctx = new PlayerTestContext();

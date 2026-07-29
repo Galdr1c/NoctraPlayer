@@ -74,12 +74,12 @@
 
           <!-- Resume dialog -->
           <Border Background="{DynamicResource Surface0Brush}"
-                  CornerRadius="16" Padding="20"
+                  CornerRadius="8" Padding="20"
                   Margin="14,0,14,14"
                   IsVisible="{Binding IsResumeDialogVisible}">
             <StackPanel Spacing="16">
               <StackPanel Spacing="8" HorizontalAlignment="Center">
-                <icons:MaterialIcon Kind="PlayCircleOutline"
+                <icons:MaterialIcon Kind="MotionPlay"
                                     Width="40" Height="40"
                                     Foreground="{DynamicResource AccentBrush}"
                                     HorizontalAlignment="Center" />
@@ -88,7 +88,7 @@
                            Foreground="{DynamicResource TextPrimaryBrush}"
                            HorizontalAlignment="Center" />
               </StackPanel>
-              <Border Background="{DynamicResource Surface1Brush}" CornerRadius="10" Padding="14,10">
+              <Border Background="{DynamicResource Surface1Brush}" CornerRadius="6" Padding="14,10">
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
                   <icons:MaterialIcon Kind="ClockOutline" Width="16" Height="16"
                                       Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center" />
@@ -102,11 +102,7 @@
               </Border>
               <StackPanel Spacing="10">
                 <Button Command="{Binding ResumeFromPositionCommand}"
-                        MinHeight="52"
-                        CornerRadius="12"
-                        Background="{DynamicResource AccentBrush}"
-                        Foreground="{DynamicResource TextPrimaryBrush}"
-                        BorderThickness="0">
+                        Classes="UpgradeButton">
                   <Grid ColumnDefinitions="Auto,*,Auto"
                         ColumnSpacing="10">
                     <icons:MaterialIcon Kind="Play"
@@ -124,13 +120,15 @@
                             Padding="7,3"
                             VerticalAlignment="Center">
                       <StackPanel Orientation="Horizontal" Spacing="4">
-                        <icons:MaterialIcon Kind="Star"
+                        <icons:MaterialIcon Kind="Crown"
                                             Width="12"
                                             Height="12"
+                                            Foreground="{DynamicResource PremiumBadgeTextBrush}"
                                             VerticalAlignment="Center" />
                         <TextBlock Text="{loc:Translate Common.Premium}"
                                    FontSize="10"
                                    FontWeight="Bold"
+                                   Foreground="{DynamicResource PremiumBadgeTextBrush}"
                                    VerticalAlignment="Center" />
                       </StackPanel>
                     </Border>
@@ -139,7 +137,10 @@
 
                 <Button Command="{Binding StartFromBeginningCommand}"
                         MinHeight="48"
-                        CornerRadius="12">
+                        HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Center"
+                        VerticalContentAlignment="Center"
+                        CornerRadius="6">
                   <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
                     <icons:MaterialIcon Kind="Replay" Width="17" Height="17" />
                     <TextBlock Text="{loc:Translate Player.Resume.StartOver}" />
@@ -148,7 +149,9 @@
 
                 <Button Content="{loc:Translate Player.Resume.Back}"
                         Command="{Binding ReturnFromResumeDialogCommand}"
-                        MinHeight="44"
+                        HorizontalAlignment="Center"
+                        HorizontalContentAlignment="Center"
+                        VerticalContentAlignment="Center"
                         Background="Transparent"
                         BorderThickness="0" />
               </StackPanel>
@@ -157,7 +160,7 @@
 
           <!-- Next episode prompt -->
           <Border Background="{DynamicResource Surface0Brush}"
-                  CornerRadius="16" Padding="16"
+                  CornerRadius="8" Padding="16"
                   Margin="14,0,14,14"
                   IsVisible="{Binding IsNextEpisodePromptVisible}">
             <StackPanel Spacing="10">

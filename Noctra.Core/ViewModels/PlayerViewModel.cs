@@ -210,7 +210,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     public bool IsPlayerVisible => IsVisible;
     public bool IsControlsVisible => IsVisible && !IsPiPMode && !IsLocked;
     public bool AreMobileControlsVisible => IsControlsVisible && !IsEpgPanelOpen;
-    public bool IsTopOverlayVisible => AreMobileControlsVisible;
+    public bool IsTopOverlayVisible => AreMobileControlsVisible && !IsResumeDialogVisible;
 
     public MobilePanelState ActiveMobilePanelState
     {
@@ -2384,6 +2384,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     [NotifyPropertyChangedFor(nameof(IsMobileDetailPanelOpen))]
     [NotifyPropertyChangedFor(nameof(IsBottomControlsVisible))]
     [NotifyPropertyChangedFor(nameof(IsMobileCompactControlsVisible))]
+    [NotifyPropertyChangedFor(nameof(IsTopOverlayVisible))]
     private bool _isResumeDialogVisible;
     [ObservableProperty] private string _resumePositionText = string.Empty;
     [ObservableProperty] private bool _isPremiumResume;
@@ -2392,6 +2393,11 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     {
         if (value)
         {
+            _lockIndicatorVisibilityCts?.Cancel();
+            _lockIndicatorVisibilityCts?.Dispose();
+            _lockIndicatorVisibilityCts = null;
+            IsLockIndicatorVisible = false;
+
             EnsureResumePositionText();
         }
     }
