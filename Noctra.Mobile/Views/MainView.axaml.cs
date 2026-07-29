@@ -17,6 +17,7 @@ using HotAvalonia;
 #endif
 
 using Microsoft.Extensions.DependencyInjection;
+using Material.Icons;
 using Noctra.Mobile.Behaviors;
 using Noctra.Mobile.Controls;
 using Noctra.Models;
@@ -125,6 +126,14 @@ public partial class MainView : UserControl
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
+
+        RemoveHandler(
+            MobileCardActions.RequestedEvent,
+            OnCardActionsRequested);
+        AddHandler(
+            MobileCardActions.RequestedEvent,
+            OnCardActionsRequested,
+            RoutingStrategies.Bubble);
 
         // Android donanım/jest geri tuşunu bu view'e bağla.
         RegisterBackHandler();
@@ -379,7 +388,11 @@ public partial class MainView : UserControl
         OverlayProfileList.ProfileLoaded -= OverlayProfileList_ProfileLoaded;
         _backExitToastTimer.Stop();
         _scrollEdgeFeedbackController.Hide();
+        CardActionsSheet.TryClose();
         CategorySelectionOverlay.TryClose();
+        RemoveHandler(
+            MobileCardActions.RequestedEvent,
+            OnCardActionsRequested);
 
         CancelAndDisposePlaybackSelection(
             Interlocked.Exchange(ref _playbackSelectionCts, null));
@@ -423,6 +436,7 @@ public partial class MainView : UserControl
         ReviewPromptOverlay.Padding = new Thickness(safe.Left, 0, safe.Right, safe.Bottom);
         ProfilesOverlay.Padding = new Thickness(safe.Left, safe.Top, safe.Right, safe.Bottom);
         CategorySelectionOverlay.ApplySafeArea(safe);
+        CardActionsSheet.ApplySafeArea(safe);
         _lastSafeArea = safe;
         UpdatePlayerWatermarkInsets();
     }
@@ -476,6 +490,11 @@ public partial class MainView : UserControl
 
             _lastBackExitPromptUtc = nowUtc;
             ShowBackExitToast();
+            return true;
+        }
+
+        if (CardActionsSheet.TryClose())
+        {
             return true;
         }
 
@@ -636,6 +655,7 @@ public partial class MainView : UserControl
 
     private void UpdateContentVisibility(string destination)
     {
+        CardActionsSheet.TryClose();
         CloseCategorySelection();
 
         if (destination != "Live")
@@ -706,6 +726,7 @@ public partial class MainView : UserControl
 
     private void ShowProfileSelection()
     {
+        CardActionsSheet.TryClose();
         CloseCategorySelection();
 
         // Profil seçiminde oynatmayı durdur — profil değişimi playback context'ini sıfırlar.
@@ -1100,6 +1121,7 @@ public partial class MainView : UserControl
 
     private async Task PlaySelectedChannelAsync(Channel channel)
     {
+        CardActionsSheet.TryClose();
         var resolver = GetViewModelResolver();
         if (resolver is null)
         {
@@ -1468,6 +1490,117 @@ public partial class MainView : UserControl
             PlayerHost.IsVisible && _playerViewModel?.IsFullScreen == true,
             _playerViewModel?.IsPiPMode == true);
     }
+
+    private void OnCardActionsRequested(
+        object? sender,
+        MobileCardActionsRequestedEventArgs e)
+    {
+        e.Handled = true;
+
+        _coreMainViewModel ??= GetViewModelResolver()?.GetCoreMainViewModel();
+        if (_coreMainViewModel is not { } viewModel)
+        {
+            return;
+        }
+
+        var request = e.Request;
+        var actions = MobileCardActions.BuildActions(request)
+            .Where(action => CanExecuteCardAction(viewModel, request.Media, action))
+            .Select(action => new MobileCardActionSheetItem(
+                action,
+                GetCardActionLabel(action),
+                GetCardActionIcon(action),
+                MobileCardActions.IsDestructive(action)))
+            .ToArray();
+
+        if (actions.Length == 0)
+        {
+            return;
+        }
+
+        var title = request.Media switch
+        {
+            Channel channel => channel.Name,
+            Series series => series.Name,
+            _ => string.Empty
+        };
+
+        CardActionsSheet.Show(
+            title,
+            actions,
+            action => ExecuteCardAction(viewModel, request.Media, action.Action));
+    }
+
+    private static bool CanExecuteCardAction(
+        CoreMainViewModel viewModel,
+        object media,
+        MobileCardActionKind action)
+        => action switch
+        {
+            MobileCardActionKind.AddToMyList =>
+                viewModel.AddToMyListCommand.CanExecute(media),
+            MobileCardActionKind.ToggleFavorite =>
+                viewModel.ToggleFavoriteCommand.CanExecute(media),
+            MobileCardActionKind.RemoveFromMyList =>
+                viewModel.RemoveFromMyListCommand.CanExecute(media),
+            MobileCardActionKind.RemoveFromFavorites =>
+                viewModel.RemoveFromFavoritesCommand.CanExecute(media),
+            MobileCardActionKind.RemoveFromHistory =>
+                viewModel.RemoveFromHistoryCommand.CanExecute(media),
+            _ => false
+        };
+
+    private static void ExecuteCardAction(
+        CoreMainViewModel viewModel,
+        object media,
+        MobileCardActionKind action)
+    {
+        if (!CanExecuteCardAction(viewModel, media, action))
+        {
+            return;
+        }
+
+        switch (action)
+        {
+            case MobileCardActionKind.AddToMyList:
+                viewModel.AddToMyListCommand.Execute(media);
+                break;
+            case MobileCardActionKind.ToggleFavorite:
+                viewModel.ToggleFavoriteCommand.Execute(media);
+                break;
+            case MobileCardActionKind.RemoveFromMyList:
+                viewModel.RemoveFromMyListCommand.Execute(media);
+                break;
+            case MobileCardActionKind.RemoveFromFavorites:
+                viewModel.RemoveFromFavoritesCommand.Execute(media);
+                break;
+            case MobileCardActionKind.RemoveFromHistory:
+                viewModel.RemoveFromHistoryCommand.Execute(media);
+                break;
+        }
+    }
+
+    private static string GetCardActionLabel(MobileCardActionKind action)
+        => LocalizationSource.Instance[action switch
+        {
+            MobileCardActionKind.AddToMyList => "MyList.Add",
+            MobileCardActionKind.ToggleFavorite => "Context.Favorite.Toggle",
+            MobileCardActionKind.RemoveFromMyList => "MyList.Remove",
+            MobileCardActionKind.RemoveFromFavorites => "Favorites.Remove",
+            MobileCardActionKind.RemoveFromHistory => "History.Remove",
+            _ => string.Empty
+        }];
+
+    private static MaterialIconKind GetCardActionIcon(MobileCardActionKind action)
+        => action switch
+        {
+            MobileCardActionKind.AddToMyList => MaterialIconKind.BookmarkPlusOutline,
+            MobileCardActionKind.ToggleFavorite => MaterialIconKind.HeartOutline,
+            MobileCardActionKind.RemoveFromMyList => MaterialIconKind.BookmarkRemoveOutline,
+            MobileCardActionKind.RemoveFromFavorites => MaterialIconKind.HeartRemoveOutline,
+            MobileCardActionKind.RemoveFromHistory => MaterialIconKind.DeleteOutline,
+            _ => MaterialIconKind.DotsHorizontal
+        };
 
     private void WireCategorySelectionEvents()
     {

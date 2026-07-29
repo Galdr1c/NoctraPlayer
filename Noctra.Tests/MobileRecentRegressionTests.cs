@@ -115,40 +115,39 @@ public sealed class MobileRecentRegressionTests
     }
 
     [Fact]
-    public void MobileCardMenus_HaveRemoveFromMyListTranslations()
+    public void MobileCardActionSheet_HasUnambiguousLocalizedAddAndRemoveLabels()
     {
         foreach (var language in new[] { "de-DE", "en-US", "es-ES", "fr-FR", "tr-TR" })
         {
             var source = File.ReadAllText(
                 ProjectFile("Noctra.Core", "Localization", "Translations", $"{language}.json"));
 
+            Assert.Contains("\"MyList.Add\":", source, StringComparison.Ordinal);
             Assert.Contains("\"MyList.Remove\":", source, StringComparison.Ordinal);
+            Assert.Contains("\"Favorites.Remove\":", source, StringComparison.Ordinal);
         }
     }
 
-    [Theory]
-    [InlineData("MobileVodCard.axaml", "#VodCardControl.ShowRemoveMyListMenu")]
-    [InlineData("MobileSeriesCard.axaml", "#SeriesCardControl.ShowRemoveMyListMenu")]
-    public void MobileMyListCards_ShowExactlyOneMyListAction(
-        string cardFile,
-        string removeFlagBinding)
+    [Fact]
+    public void MobileMyListCards_GetExactlyOneRemoveActionFromTheSharedPolicy()
     {
-        var document = XDocument.Load(ProjectFile("Noctra.Mobile", "Controls", cardFile));
-        var menuItems = document
-            .Descendants()
-            .Where(element => element.Name.LocalName == "MenuItem")
-            .ToList();
-        var addItem = menuItems.Single(element =>
-            element.Attribute("Header")?.Value.Contains("Context.MyList.Toggle", StringComparison.Ordinal) == true);
-        var removeItem = menuItems.Single(element =>
-            element.Attribute("Header")?.Value.Contains("MyList.Remove", StringComparison.Ordinal) == true);
+        var policy = File.ReadAllText(
+            ProjectFile("Noctra.Mobile", "Controls", "MobileCardActions.cs"));
+        var presenter = File.ReadAllText(
+            ProjectFile("Noctra.Mobile", "Controls", "MobileCardRowPresenter.cs"));
 
-        var addVisibility = addItem.Attribute("IsVisible")?.Value ?? string.Empty;
-        var removeVisibility = removeItem.Attribute("IsVisible")?.Value ?? string.Empty;
-        Assert.Contains(removeFlagBinding, addVisibility, StringComparison.Ordinal);
-        Assert.Contains("InverseBoolConverter", addVisibility, StringComparison.Ordinal);
-        Assert.Contains(removeFlagBinding, removeVisibility, StringComparison.Ordinal);
-        Assert.DoesNotContain("InverseBoolConverter", removeVisibility, StringComparison.Ordinal);
+        foreach (var cardFile in new[] { "MobileVodCard.axaml", "MobileSeriesCard.axaml" })
+        {
+            var card = File.ReadAllText(ProjectFile("Noctra.Mobile", "Controls", cardFile));
+            Assert.DoesNotContain("<MenuItem", card, StringComparison.Ordinal);
+            Assert.DoesNotContain("ContextFlyout", card, StringComparison.Ordinal);
+        }
+
+        Assert.Equal(
+            2,
+            policy.Split("MobileCardPresentationMode.MyList", StringSplitOptions.None).Length - 1);
+        Assert.Contains("MobileCardActionKind.RemoveFromMyList", policy, StringComparison.Ordinal);
+        Assert.Contains("PresentationMode = mode", presenter, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -410,6 +409,101 @@ public sealed class MobileRecentRegressionTests
         Assert.Contains("OriginatesFromNestedButton(e.Source)", source, StringComparison.Ordinal);
         Assert.Contains("ResetPressedState();", source, StringComparison.Ordinal);
         Assert.DoesNotContain("e.Pointer.Capture(", source, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("MobileVodCard.axaml")]
+    [InlineData("MobileSeriesCard.axaml")]
+    [InlineData("MobileLiveTvCard.axaml")]
+    [InlineData("MobileContinueWatchingCard.axaml")]
+    public void PrimaryMediaCards_UseOnlyTheSharedLongPressActionSheet(string cardFile)
+    {
+        var source = File.ReadAllText(ProjectFile("Noctra.Mobile", "Controls", cardFile));
+
+        Assert.Contains("LongPressed=\"CardContainer_LongPressed\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("MenuFlyout", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("ContextFlyout", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void MobilePressableCard_LongPressIsCancellableAndSuppressesTheFollowingTap()
+    {
+        var source = File.ReadAllText(
+            ProjectFile("Noctra.Mobile", "Controls", "MobilePressableCard.cs"));
+
+        Assert.Contains("TimeSpan.FromMilliseconds(500)", source, StringComparison.Ordinal);
+        Assert.Contains("_longPressTimer.Stop()", source, StringComparison.Ordinal);
+        Assert.Contains("ScrollCancellationDistance", source, StringComparison.Ordinal);
+        Assert.Contains("_suppressNextTap = true", source, StringComparison.Ordinal);
+        Assert.Contains("ConsumeLongPressTapSuppression()", source, StringComparison.Ordinal);
+        Assert.Contains("longPressed?.Invoke(this, EventArgs.Empty)", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void MobileCardActionPolicy_UsesModeAndMediaSpecificNonDuplicatedActions()
+    {
+        var source = File.ReadAllText(
+            ProjectFile("Noctra.Mobile", "Controls", "MobileCardActions.cs"));
+
+        Assert.Contains("MobileCardGridKind.ContinueWatching", source, StringComparison.Ordinal);
+        Assert.Contains("MobileCardGridKind.Live", source, StringComparison.Ordinal);
+        Assert.Contains("MobileCardPresentationMode.MyList", source, StringComparison.Ordinal);
+        Assert.Contains("MobileCardPresentationMode.Favorites", source, StringComparison.Ordinal);
+        Assert.Contains("MobileCardPresentationMode.History", source, StringComparison.Ordinal);
+        Assert.Contains("BuildHistoryActions", source, StringComparison.Ordinal);
+        Assert.Contains("IsDestructive", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("MobileCardActionKind.ToggleFavorite,\r\n                    MobileCardActionKind.RemoveFromFavorites", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void MainView_HostsOneRootCardActionSheetWithFirstNavigationBackPriority()
+    {
+        var xaml = File.ReadAllText(ProjectFile("Noctra.Mobile", "Views", "MainView.axaml"));
+        var codeBehind = File.ReadAllText(ProjectFile("Noctra.Mobile", "Views", "MainView.axaml.cs"));
+        var sheet = File.ReadAllText(
+            ProjectFile("Noctra.Mobile", "Views", "MobileCardActionsSheet.axaml"));
+
+        Assert.Equal(
+            1,
+            xaml.Split("<views:MobileCardActionsSheet ", StringSplitOptions.None).Length - 1);
+        Assert.Contains("x:Name=\"CardActionsSheet\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("ZIndex=\"47500\"", xaml, StringComparison.Ordinal);
+        Assert.True(
+            codeBehind.IndexOf("if (CardActionsSheet.TryClose())", StringComparison.Ordinal) <
+            codeBehind.IndexOf("if (CategorySelectionOverlay.TryClose())", StringComparison.Ordinal));
+        Assert.Contains("MobileCardActions.RequestedEvent", codeBehind, StringComparison.Ordinal);
+        Assert.Contains("CanExecuteCardAction", codeBehind, StringComparison.Ordinal);
+        Assert.Contains("Background=\"{DynamicResource OverlayDimBrush}\"", sheet, StringComparison.Ordinal);
+        Assert.Contains("VerticalAlignment=\"Bottom\"", sheet, StringComparison.Ordinal);
+        Assert.Contains("Classes.destructive=\"{Binding IsDestructive}\"", sheet, StringComparison.Ordinal);
+        Assert.Contains("AutomationProperties.Name=\"{Binding Label}\"", sheet, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void MobilePlayerSheet_StretchesAcrossTheViewportWhileOnlyItsSurfaceAlignsToTheBottom()
+    {
+        var playerView = XDocument.Load(
+            ProjectFile("Noctra.Mobile", "Views", "MobilePlayerView.axaml"));
+        var sheetView = XDocument.Load(
+            ProjectFile("Noctra.Mobile", "Views", "MobilePlayerSheets.axaml"));
+
+        var sheetHost = playerView
+            .Descendants()
+            .Single(element => element.Name.LocalName == "MobilePlayerSheets");
+        var scrim = sheetView
+            .Descendants()
+            .Single(element => element.Attributes().Any(
+                attribute => attribute.Name.LocalName == "Name" &&
+                             attribute.Value == "ScrimLayer"));
+        var sheetSurface = sheetView
+            .Descendants()
+            .Single(element => element.Attributes().Any(
+                attribute => attribute.Name.LocalName == "Name" &&
+                             attribute.Value == "SheetSurface"));
+
+        Assert.Null(sheetHost.Attribute("VerticalAlignment"));
+        Assert.Null(scrim.Attribute("VerticalAlignment"));
+        Assert.Equal("Bottom", sheetSurface.Attribute("VerticalAlignment")?.Value);
     }
 
     [Fact]

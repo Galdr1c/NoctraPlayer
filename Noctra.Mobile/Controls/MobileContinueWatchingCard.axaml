@@ -10,17 +10,6 @@
              MinHeight="120"
              ClipToBounds="False"
              HorizontalAlignment="Stretch">
-  <UserControl.Resources>
-    <MenuFlyout x:Key="CardActionsFlyout">
-      <MenuItem Header="{loc:Translate Context.MyList.Toggle}"
-                Click="Context_AddToMyList_Click"
-                IsVisible="{Binding ., Converter={StaticResource MediaSupportsMyListConverter}}"/>
-      <MenuItem Header="{loc:Translate Context.Favorite.Toggle}"
-                Click="Context_ToggleFavorite_Click"
-                IsVisible="{Binding ., Converter={StaticResource MediaSupportsFavoriteConverter}}"/>
-    </MenuFlyout>
-  </UserControl.Resources>
-
   <UserControl.Styles>
     <!-- Touch feedback: pressed state dims the card and scales it down slightly -->
     <Style Selector="controls|MobilePressableCard.CardContainer">
@@ -43,11 +32,8 @@
   <!-- CardContainer_Tapped executes SelectMediaCommand from the parent MainViewModel. -->
   <controls:MobilePressableCard Classes="CardContainer"
                                 Background="Transparent"
+                                LongPressed="CardContainer_LongPressed"
                                 Tapped="CardContainer_Tapped">
-    <controls:MobilePressableCard.ContextFlyout>
-      <StaticResource ResourceKey="CardActionsFlyout" />
-    </controls:MobilePressableCard.ContextFlyout>
-
     <Border CornerRadius="0"
             ClipToBounds="True"
             Background="{DynamicResource Surface0Brush}"

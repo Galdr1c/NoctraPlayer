@@ -1,7 +1,7 @@
+using System;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
-using Avalonia.Interactivity;
 using Avalonia.VisualTree;
 using Noctra.Models;
 using Noctra.ViewModels;
@@ -17,6 +17,13 @@ public partial class MobileContinueWatchingCard : UserControl
 
     private void CardContainer_Tapped(object? sender, TappedEventArgs e)
     {
+        if (sender is MobilePressableCard pressable &&
+            pressable.ConsumeLongPressTapSuppression())
+        {
+            e.Handled = true;
+            return;
+        }
+
         if (e.Handled ||
             DataContext is not Channel channel ||
             this.FindAncestorOfType<ItemsControl>()?.DataContext is not MainViewModel viewModel)
@@ -31,26 +38,15 @@ public partial class MobileContinueWatchingCard : UserControl
         }
     }
 
-    private void Context_AddToMyList_Click(object? sender, RoutedEventArgs e)
+    private void CardContainer_LongPressed(object? sender, EventArgs e)
     {
-        if (DataContext is Channel media && this.FindAncestorOfType<ItemsControl>()?.DataContext is MainViewModel vm)
+        if (DataContext is Channel media)
         {
-            if (vm.AddToMyListCommand.CanExecute(media))
-            {
-                vm.AddToMyListCommand.Execute(media);
-            }
+            MobileCardActions.Raise(
+                this,
+                media,
+                MobileCardGridKind.ContinueWatching,
+                MobileCardPresentationMode.Standard);
         }
     }
-
-    private void Context_ToggleFavorite_Click(object? sender, RoutedEventArgs e)
-    {
-        if (DataContext is Channel media && this.FindAncestorOfType<ItemsControl>()?.DataContext is MainViewModel vm)
-        {
-            if (vm.ToggleFavoriteCommand.CanExecute(media))
-            {
-                vm.ToggleFavoriteCommand.Execute(media);
-            }
-        }
-    }
-
 }

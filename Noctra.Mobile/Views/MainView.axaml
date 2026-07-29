@@ -552,7 +552,7 @@
           <DockPanel HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
             <Border Classes="NavIndicator" DockPanel.Dock="Top" />
             <StackPanel Spacing="4" HorizontalAlignment="Center" VerticalAlignment="Center">
-              <icons:MaterialIcon Kind="HomeVariant" Width="22" Height="22" />
+              <icons:MaterialIcon Kind="HomeVariantOutline" Width="22" Height="22" />
               <TextBlock Text="{loc:Translate Shell.Nav.Home}" />
             </StackPanel>
           </DockPanel>
@@ -576,7 +576,7 @@
           <DockPanel HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
             <Border Classes="NavIndicator" DockPanel.Dock="Top" />
             <StackPanel Spacing="4" HorizontalAlignment="Center" VerticalAlignment="Center">
-              <icons:MaterialIcon Kind="Movie" Width="22" Height="22" />
+              <icons:MaterialIcon Kind="Filmstrip" Width="22" Height="22" />
               <TextBlock Text="{loc:Translate Shell.Nav.Movies}" />
             </StackPanel>
           </DockPanel>
@@ -588,7 +588,7 @@
           <DockPanel HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
             <Border Classes="NavIndicator" DockPanel.Dock="Top" />
             <StackPanel Spacing="4" HorizontalAlignment="Center" VerticalAlignment="Center">
-              <icons:MaterialIcon Kind="TelevisionPlay" Width="22" Height="22" />
+              <icons:MaterialIcon Kind="MovieOutline" Width="22" Height="22" />
               <TextBlock Text="{loc:Translate Shell.Nav.Series}" />
             </StackPanel>
           </DockPanel>
@@ -600,7 +600,7 @@
           <DockPanel HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
             <Border Classes="NavIndicator" DockPanel.Dock="Top" />
             <StackPanel Spacing="4" HorizontalAlignment="Center" VerticalAlignment="Center">
-              <icons:MaterialIcon Kind="Menu" Width="22" Height="22" />
+              <icons:MaterialIcon Kind="DotsHorizontal" Width="22" Height="22" />
               <TextBlock Text="{loc:Translate Mobile.Nav.More}" />
             </StackPanel>
           </DockPanel>
@@ -614,7 +614,14 @@
                                        Grid.ColumnSpan="2"
                                        ZIndex="47000"
                                        IsVisible="False" />
+
     </Grid>
+
+    <views:MobileCardActionsSheet x:Name="CardActionsSheet"
+                                  Grid.RowSpan="3"
+                                  Grid.ColumnSpan="2"
+                                  ZIndex="47500"
+                                  IsVisible="False" />
 
     <Border x:Name="PlayerHost"
             Grid.RowSpan="3"

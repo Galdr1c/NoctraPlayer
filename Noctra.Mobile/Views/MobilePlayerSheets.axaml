@@ -12,13 +12,15 @@
             Background="{DynamicResource OverlayDimBrush}"
             PointerPressed="Scrim_PointerPressed" />
     <Border x:Name="SheetSurface"
+            MaxWidth="520"
             Background="{DynamicResource PlayerOverlaySheetBrush}"
             BorderBrush="{DynamicResource BorderBrush}"
             BorderThickness="1,1,1,0"
-            Margin="100,0,100,0"
-            Padding="12,8"
             CornerRadius="8,8,0,0"
+            Margin="16,0"
+            Padding="12,8"
             VerticalAlignment="Bottom"
+            BoxShadow="{DynamicResource OverlaySheetShadow}"
             MaxHeight="{DynamicResource SheetMaxHeight}">
       <Border.RenderTransform>
         <TranslateTransform />
@@ -73,8 +75,8 @@
               Margin="14,0,14,14" />
 
           <!-- Resume dialog -->
-          <Border Background="{DynamicResource Surface0Brush}"
-                  CornerRadius="8" Padding="20"
+          <Border Background="Transparent"
+                  CornerRadius="8" Padding="12,8"
                   Margin="14,0,14,14"
                   IsVisible="{Binding IsResumeDialogVisible}">
             <StackPanel Spacing="16">
@@ -88,7 +90,7 @@
                            Foreground="{DynamicResource TextPrimaryBrush}"
                            HorizontalAlignment="Center" />
               </StackPanel>
-              <Border Background="{DynamicResource Surface1Brush}" CornerRadius="6" Padding="14,10">
+              <Border Background="{DynamicResource Surface1Brush}" CornerRadius="6" Padding="12,8">
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
                   <icons:MaterialIcon Kind="ClockOutline" Width="16" Height="16"
                                       Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center" />

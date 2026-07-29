@@ -123,6 +123,7 @@ internal sealed class MobileCardRowPresenter : WrapPanel
     {
         if (card is MobileLiveTvCard live)
         {
+            live.PresentationMode = mode;
             live.ShowHistoryMenu = mode == MobileCardPresentationMode.History;
             live.ShowMyListMenu = mode == MobileCardPresentationMode.MyList;
             live.ShowFavoriteMenu = mode is not MobileCardPresentationMode.History and
@@ -133,6 +134,7 @@ internal sealed class MobileCardRowPresenter : WrapPanel
 
         if (card is MobileVodCard vod)
         {
+            vod.PresentationMode = mode;
             vod.ShowHistoryMenu = mode == MobileCardPresentationMode.History;
             vod.ShowRemoveFavoriteMenu = mode == MobileCardPresentationMode.Favorites;
             vod.ShowRemoveMyListMenu = mode == MobileCardPresentationMode.MyList;
@@ -141,6 +143,7 @@ internal sealed class MobileCardRowPresenter : WrapPanel
 
         if (card is MobileSeriesCard series)
         {
+            series.PresentationMode = mode;
             series.ShowHistoryMenu = mode == MobileCardPresentationMode.History;
             series.ShowRemoveFavoriteMenu = mode == MobileCardPresentationMode.Favorites;
             series.ShowRemoveMyListMenu = mode == MobileCardPresentationMode.MyList;

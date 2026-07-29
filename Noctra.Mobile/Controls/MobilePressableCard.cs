@@ -3,6 +3,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Threading;
 using Avalonia.VisualTree;
 
 namespace Noctra.Mobile.Controls;
@@ -14,12 +15,19 @@ namespace Noctra.Mobile.Controls;
 public sealed class MobilePressableCard : Border
 {
     private const double ScrollCancellationDistance = 12d;
+    private static readonly TimeSpan LongPressDuration = TimeSpan.FromMilliseconds(500);
 
     private IPointer? _activePointer;
     private Point _pressOrigin;
+    private readonly DispatcherTimer _longPressTimer;
+    private bool _suppressNextTap;
+
+    public event EventHandler? LongPressed;
 
     public MobilePressableCard()
     {
+        _longPressTimer = new DispatcherTimer { Interval = LongPressDuration };
+        _longPressTimer.Tick += OnLongPressTimerTick;
         AddHandler(
             PointerPressedEvent,
             OnPointerPressed,
@@ -44,6 +52,17 @@ public sealed class MobilePressableCard : Border
         DetachedFromVisualTree += (_, _) => ResetPressedState();
     }
 
+    public bool ConsumeLongPressTapSuppression()
+    {
+        if (!_suppressNextTap)
+        {
+            return false;
+        }
+
+        _suppressNextTap = false;
+        return true;
+    }
+
     private void OnPointerPressed(object? sender, PointerPressedEventArgs e)
     {
         if (_activePointer is not null || OriginatesFromNestedButton(e.Source))
@@ -60,7 +79,10 @@ public sealed class MobilePressableCard : Border
 
         _activePointer = e.Pointer;
         _pressOrigin = point.Position;
+        _suppressNextTap = false;
         PseudoClasses.Set(":pressed", true);
+        _longPressTimer.Stop();
+        _longPressTimer.Start();
     }
 
     private void OnPointerMoved(object? sender, PointerEventArgs e)
@@ -114,8 +136,23 @@ public sealed class MobilePressableCard : Border
         return false;
     }
 
+    private void OnLongPressTimerTick(object? sender, EventArgs e)
+    {
+        _longPressTimer.Stop();
+        if (_activePointer is null)
+        {
+            return;
+        }
+
+        _suppressNextTap = true;
+        var longPressed = LongPressed;
+        ResetPressedState();
+        longPressed?.Invoke(this, EventArgs.Empty);
+    }
+
     private void ResetPressedState()
     {
+        _longPressTimer.Stop();
         _activePointer = null;
         PseudoClasses.Set(":pressed", false);
     }

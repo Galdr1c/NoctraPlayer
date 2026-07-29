@@ -382,7 +382,6 @@
     <!-- Layer 5: Sheet katmanı (en üst) -->
     <views:MobilePlayerSheets Grid.ColumnSpan="2"
                               ZIndex="100"
-                              VerticalAlignment="Bottom"
                               IsVisible="{Binding IsMobileDetailPanelOpen}">
       <views:MobilePlayerSheets.Styles>
         <Style Selector="views|MobilePlayerSheets">

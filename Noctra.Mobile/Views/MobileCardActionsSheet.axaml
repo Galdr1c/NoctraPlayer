@@ -2,22 +2,36 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:loc="using:Noctra.Mobile.Localization"
              xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
-             x:Class="Noctra.Mobile.Views.MobileSelectionSheet"
-             x:CompileBindings="False">
+             x:Class="Noctra.Mobile.Views.MobileCardActionsSheet"
+             x:CompileBindings="False"
+             Focusable="True"
+             KeyDown="Sheet_KeyDown">
   <UserControl.Styles>
-    <Style Selector="Button.SelectionSheetOption">
+    <Style Selector="Button.CardActionRow">
       <Setter Property="Background" Value="Transparent" />
       <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
-      <Setter Property="BorderThickness" Value="0,0,0,1.5" />
-      <Setter Property="Padding" Value="14,0" />
+      <Setter Property="BorderThickness" Value="0,0,0,1" />
+      <Setter Property="Padding" Value="14,8" />
       <Setter Property="MinHeight" Value="48" />
       <Setter Property="CornerRadius" Value="6" />
-      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
       <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
     </Style>
-    <Style Selector="Button.SelectionSheetOption:pressed /template/ ContentPresenter">
+    <Style Selector="Button.CardActionRow:pressed /template/ ContentPresenter">
       <Setter Property="Background" Value="{DynamicResource InteractivePressedBrush}" />
       <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+    </Style>
+    <Style Selector="Button.CardActionRow TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    </Style>
+    <Style Selector="Button.CardActionRow icons|MaterialIcon">
+      <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+    </Style>
+    <Style Selector="Button.CardActionRow.destructive TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource ErrorBrush}" />
+    </Style>
+    <Style Selector="Button.CardActionRow.destructive icons|MaterialIcon">
+      <Setter Property="Foreground" Value="{DynamicResource ErrorBrush}" />
     </Style>
   </UserControl.Styles>
 
@@ -25,23 +39,26 @@
     <Border x:Name="ScrimLayer"
             Background="{DynamicResource OverlayDimBrush}"
             PointerPressed="Scrim_PointerPressed" />
+
     <Border x:Name="SheetSurface"
             MaxWidth="520"
             Background="{DynamicResource Bg0Color}"
             BorderBrush="{DynamicResource BorderBrush}"
             BorderThickness="1,1,1,0"
             CornerRadius="8,8,0,0"
-            Margin="16,0"
-            Padding="12,8"
+            HorizontalAlignment="Stretch"
             VerticalAlignment="Bottom"
+            Margin="16,0"
+            Padding="12,8"          
             BoxShadow="{DynamicResource OverlaySheetShadow}"
             MaxHeight="{DynamicResource SheetMaxHeight}">
       <Border.RenderTransform>
         <TranslateTransform />
       </Border.RenderTransform>
+
       <Grid RowDefinitions="Auto,*">
         <Grid RowDefinitions="Auto,Auto"
-              Margin="0,0,0,8">
+              Margin="0,0,0,4">
           <Border x:Name="DragHandle"
                   Grid.Row="0"
                   Height="28"
@@ -57,19 +74,22 @@
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center" />
           </Border>
-          <Grid Grid.Row="1" ColumnDefinitions="*,Auto">
+
+          <Grid Grid.Row="1"
+                ColumnDefinitions="*,Auto">
             <TextBlock x:Name="TitleTextBlock"
+                       Margin="8,0,8,0"
                        Foreground="{DynamicResource TextPrimaryBrush}"
                        FontSize="{DynamicResource FTitleL}"
                        FontWeight="Bold"
-                       Margin="8,0,0,0"
                        TextTrimming="CharacterEllipsis"
+                       MaxLines="1"
                        VerticalAlignment="Center" />
             <Button Grid.Column="1"
-                    Background="Transparent"
-                    BorderThickness="0"
                     Width="48"
                     Height="48"
+                    Background="Transparent"
+                    BorderThickness="0"
                     Click="Close_Click"
                     AutomationProperties.Name="{loc:Translate Common.Close}"
                     AutomationProperties.HelpText="{loc:Translate Common.Close}">
@@ -84,40 +104,28 @@
         <ScrollViewer Grid.Row="1"
                       MaxHeight="{DynamicResource SheetMaxHeight}"
                       ScrollViewer.IsScrollChainingEnabled="False">
-          <ItemsControl ItemsSource="{Binding Options}">
+          <ItemsControl x:Name="ActionsList"
+                        ItemsSource="{Binding Actions}">
             <ItemsControl.ItemTemplate>
               <DataTemplate>
-                <Button Classes="SelectionSheetOption"
+                <Button Classes="CardActionRow"
+                        Classes.destructive="{Binding IsDestructive}"
                         Tag="{Binding}"
-                        Click="Option_Click">
-                  <Grid>
-                    <Border Background="{DynamicResource AccentSubtleBrush}"
-                            CornerRadius="8"
-                            IsVisible="{Binding IsSelected}" />
-                    <Grid ColumnDefinitions="*,Auto"
-                          ColumnSpacing="12">
-                      <TextBlock Text="{Binding Label}"
-                                 Foreground="{DynamicResource TextPrimaryBrush}"
-                                 FontSize="{DynamicResource FBodyL}"
-                                 FontWeight="Normal"
-                                 TextWrapping="Wrap"
-                                 VerticalAlignment="Center" />
-                      <Grid Grid.Column="1"
-                            Width="48"
-                            Height="48"
-                            VerticalAlignment="Center">
-                        <icons:MaterialIcon Kind="RadioboxMarked"
-                                            Width="22"
-                                            Height="22"
-                                            Foreground="{DynamicResource AccentBrush}"
-                                            IsVisible="{Binding ShowSelectionMark}" />
-                        <icons:MaterialIcon Kind="LockOutline"
-                                            Width="20"
-                                            Height="20"
-                                            Foreground="{DynamicResource TextMutedBrush}"
-                                            IsVisible="{Binding IsLocked}" />
-                      </Grid>
-                    </Grid>
+                        Click="Action_Click"
+                        AutomationProperties.Name="{Binding Label}"
+                        AutomationProperties.HelpText="{Binding Label}">
+                  <Grid ColumnDefinitions="Auto,*"
+                        ColumnSpacing="14">
+                    <icons:MaterialIcon Kind="{Binding Icon}"
+                                        Width="22"
+                                        Height="22"
+                                        VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="1"
+                               Text="{Binding Label}"
+                               FontSize="{DynamicResource FBodyL}"
+                               FontWeight="Medium"
+                               TextWrapping="Wrap"
+                               VerticalAlignment="Center" />
                   </Grid>
                 </Button>
               </DataTemplate>

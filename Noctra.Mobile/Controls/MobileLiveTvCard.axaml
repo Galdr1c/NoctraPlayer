@@ -10,39 +10,6 @@
              x:DataType="models:Channel"
              HorizontalAlignment="Stretch"
              ClipToBounds="False">
-  <UserControl.Resources>
-    <MenuFlyout x:Key="LiveCardActionsFlyout">
-      <MenuItem Header="{loc:Translate Context.Favorite.Toggle}"
-                Click="Context_ToggleFavorite_Click"
-                IsVisible="{Binding #LiveTvCardControl.ShowFavoriteMenu}">
-        <MenuItem.Icon>
-          <icons:MaterialIcon Kind="HeartOutline" />
-        </MenuItem.Icon>
-      </MenuItem>
-      <MenuItem Header="{loc:Translate Context.Favorite.Toggle}"
-                Click="Context_RemoveFromFavorites_Click"
-                IsVisible="{Binding #LiveTvCardControl.ShowRemoveFavoriteMenu}">
-        <MenuItem.Icon>
-          <icons:MaterialIcon Kind="HeartRemoveOutline" />
-        </MenuItem.Icon>
-      </MenuItem>
-      <MenuItem Header="{loc:Translate MyList.Remove}"
-                Click="Context_RemoveFromMyList_Click"
-                IsVisible="{Binding #LiveTvCardControl.ShowMyListMenu}">
-        <MenuItem.Icon>
-          <icons:MaterialIcon Kind="BookmarkRemoveOutline" />
-        </MenuItem.Icon>
-      </MenuItem>
-      <MenuItem Header="{loc:Translate History.Remove}"
-                Click="Context_RemoveFromHistory_Click"
-                IsVisible="{Binding #LiveTvCardControl.ShowHistoryMenu}">
-        <MenuItem.Icon>
-          <icons:MaterialIcon Kind="DeleteOutline" />
-        </MenuItem.Icon>
-      </MenuItem>
-    </MenuFlyout>
-  </UserControl.Resources>
-
   <UserControl.Styles>
     <!-- Touch feedback: the card responds while preserving vertical scrolling. -->
     <Style Selector="controls|MobilePressableCard.CardContainer">
@@ -88,11 +55,8 @@
   <!-- CardContainer_Tapped executes SelectMediaCommand from the parent MainViewModel. -->
   <controls:MobilePressableCard Classes="CardContainer"
                                 Background="Transparent"
+                                LongPressed="CardContainer_LongPressed"
                                 Tapped="CardContainer_Tapped">
-    <controls:MobilePressableCard.ContextFlyout>
-      <StaticResource ResourceKey="LiveCardActionsFlyout" />
-    </controls:MobilePressableCard.ContextFlyout>
-
     <Border Classes="CardSurface" >
       <Grid RowDefinitions="Auto,Auto,Auto"
             RowSpacing="4">
@@ -142,9 +106,6 @@
                   VerticalAlignment="Center"
                   Tapped="FavoriteBtn_Tapped"
                   IsVisible="{Binding #LiveTvCardControl.ShowFavoriteMenu}">
-            <Button.ContextFlyout>
-              <StaticResource ResourceKey="LiveCardActionsFlyout" />
-            </Button.ContextFlyout>
             <Grid>
               <icons:MaterialIcon Kind="Heart"
                                   Width="20"
