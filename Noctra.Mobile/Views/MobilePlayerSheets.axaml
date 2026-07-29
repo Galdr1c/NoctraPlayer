@@ -160,31 +160,6 @@
             </StackPanel>
           </Border>
 
-          <!-- Next episode prompt -->
-          <Border Background="{DynamicResource Surface0Brush}"
-                  CornerRadius="8" Padding="16"
-                  Margin="14,0,14,14"
-                  IsVisible="{Binding IsNextEpisodePromptVisible}">
-            <StackPanel Spacing="10">
-              <TextBlock Text="{loc:Translate Player.Overlay.NextEpisode}"
-                         FontSize="11" Foreground="{DynamicResource TextMutedBrush}" />
-              <TextBlock Text="{Binding NextEpisode.Name}"
-                         FontSize="15" FontWeight="SemiBold"
-                         Foreground="{DynamicResource TextPrimaryBrush}"
-                         TextTrimming="CharacterEllipsis" MaxLines="1" />
-              <Button Command="{Binding PlayNextEpisodeCommand}"
-                      MinHeight="44" CornerRadius="10"
-                      Background="{DynamicResource AccentBrush}"
-                      Foreground="{DynamicResource TextPrimaryBrush}"
-                      FontSize="14" FontWeight="Bold" BorderThickness="0"
-                      HorizontalAlignment="Stretch">
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
-                  <icons:MaterialIcon Kind="Play" Width="16" Height="16" Foreground="{DynamicResource TextPrimaryBrush}" />
-                  <TextBlock Text="{loc:Translate Player.NextEpisode.WatchNow}" FontSize="14" FontWeight="Bold" />
-                </StackPanel>
-              </Button>
-            </StackPanel>
-          </Border>
         </StackPanel>
       </ScrollViewer>
     </Border>

@@ -22,6 +22,26 @@ namespace Noctra.Tests
         public Task<T> InvokeAsync<T>(Func<Task<T>> func) => func();
     }
 
+    internal sealed class QueuedDispatcher : IDispatcherService
+    {
+        private readonly Queue<Action> _pending = new();
+
+        public int PendingCount => _pending.Count;
+        public void Invoke(Action action) => action();
+        public void BeginInvoke(Action action) => _pending.Enqueue(action);
+        public Task InvokeAsync(Func<Task> func) => func();
+        public Task<T> InvokeAsync<T>(Func<T> func) => Task.FromResult(func());
+        public Task<T> InvokeAsync<T>(Func<Task<T>> func) => func();
+
+        public void RunAll()
+        {
+            while (_pending.TryDequeue(out var action))
+            {
+                action();
+            }
+        }
+    }
+
     internal sealed class FakeVideoPlayerService : IVideoPlayerService
     {
         public string? CurrentUrl { get; private set; }
@@ -50,6 +70,7 @@ namespace Noctra.Tests
         public event EventHandler<int>? VolumeChanged;
         public event EventHandler<float>? BufferingChanged;
         public event EventHandler<string?>? SubtitleTextChanged;
+        public Func<CancellationToken, Task>? EndSessionHandler { get; set; }
 
         public Task PlayAsync(string url, double startTimeSeconds = 0)
         {
@@ -67,7 +88,16 @@ namespace Noctra.Tests
         public void Pause() { IsPlaying = false; PlayingChanged?.Invoke(this, false); }
         public void Resume() { IsPlaying = true; PlayingChanged?.Invoke(this, true); }
         public void Stop() { IsPlaying = false; CurrentUrl = null; }
-        public Task EndSessionAsync(CancellationToken cancellationToken = default) { Stop(); return Task.CompletedTask; }
+        public Task EndSessionAsync(CancellationToken cancellationToken = default)
+        {
+            if (EndSessionHandler != null)
+            {
+                return EndSessionHandler(cancellationToken);
+            }
+
+            Stop();
+            return Task.CompletedTask;
+        }
         public int LastAudioTrackId { get; private set; } = -2;
         public int LastSubtitleTrackId { get; private set; } = -2;
 
@@ -161,6 +191,7 @@ namespace Noctra.Tests
         public Task LoadProfileSettingsAsync(int profileId) => Task.CompletedTask;
         public Task<AppSettings?> PeekProfileSettingsAsync(int profileId) => Task.FromResult<AppSettings?>(Settings);
         public void ResetToDefaults() { }
+        public void RaiseSettingsChanged() => SettingsChanged?.Invoke();
     }
 
     internal sealed class FakeLicenseService : ILicenseService
@@ -222,7 +253,9 @@ namespace Noctra.Tests
         public LocalizationService Localization { get; } = new();
         public PlayerViewModel VM { get; }
 
-        public PlayerTestContext(bool isPremium = false)
+        public PlayerTestContext(
+            bool isPremium = false,
+            IDispatcherService? dispatcher = null)
         {
             License.IsPremium = isPremium;
 
@@ -233,7 +266,7 @@ namespace Noctra.Tests
                 new FakeMediaService(),
                 new FakeContentDownloadService(),
                 new FakeNetworkService(),
-                new SyncDispatcher(),
+                dispatcher ?? new SyncDispatcher(),
                 Settings,
                 License,
                 Localization,
@@ -522,7 +555,7 @@ namespace Noctra.Tests
         }
 
         [Fact]
-        public void MobileCompactControls_HideWhenAnyBottomSheetPanelIsOpen()
+        public void MobileCompactControls_HideForBottomSheetsButRemainBehindNextEpisodeOverlay()
         {
             var ctx = new PlayerTestContext(isPremium: true);
             ctx.VM.IsVisible = true;
@@ -542,8 +575,8 @@ namespace Noctra.Tests
 
             ctx.VM.IsResumeDialogVisible = false;
             ctx.VM.IsNextEpisodePromptVisible = true;
-            Assert.True(ctx.VM.IsMobileDetailPanelOpen);
-            Assert.False(ctx.VM.IsMobileCompactControlsVisible);
+            Assert.False(ctx.VM.IsMobileDetailPanelOpen);
+            Assert.True(ctx.VM.IsMobileCompactControlsVisible);
 
             ctx.VM.IsNextEpisodePromptVisible = false;
             Assert.False(ctx.VM.IsMobileDetailPanelOpen);
@@ -1579,6 +1612,310 @@ namespace Noctra.Tests
 
             // Should show again
             Assert.True(ctx.VM.IsNextEpisodePromptVisible);
+            ctx.VM.Dispose();
+        }
+
+        [Fact]
+        public void NextEpisodeCountdown_StartsAtEightAndTransitionsExactlyOnce()
+        {
+            var ctx = new PlayerTestContext();
+            var nextEpisode = ConfigureNextEpisodeScenario(ctx, autoPlayNext: true);
+            var transitionCount = 0;
+            Episode? transitionedEpisode = null;
+            ctx.VM.NextEpisodeRequested += (_, episode) =>
+            {
+                transitionCount++;
+                transitionedEpisode = episode;
+            };
+
+            ctx.VM.SeekCommand.Execute(3550.0);
+
+            Assert.True(ctx.VM.IsNextEpisodePromptVisible);
+            Assert.True(ctx.VM.IsNextEpisodeCountdownActive);
+            Assert.Equal(8, ctx.VM.NextEpisodeCountdownSeconds);
+            Assert.False(ctx.VM.IsMobileDetailPanelOpen);
+            Assert.True(ctx.VM.IsBottomControlsVisible);
+
+            var generation = ctx.VM.EpisodeNavigator.NextEpisodeCountdownGeneration;
+            for (var tick = 0; tick < 7; tick++)
+            {
+                ctx.VM.EpisodeNavigator.AdvanceNextEpisodeCountdown(generation);
+            }
+
+            Assert.Equal(1, ctx.VM.NextEpisodeCountdownSeconds);
+            Assert.Equal(0, transitionCount);
+
+            ctx.VM.EpisodeNavigator.AdvanceNextEpisodeCountdown(generation);
+            ctx.VM.EpisodeNavigator.AdvanceNextEpisodeCountdown(generation);
+
+            Assert.Equal(1, transitionCount);
+            Assert.Same(nextEpisode, transitionedEpisode);
+            Assert.False(ctx.VM.IsNextEpisodeCountdownActive);
+            Assert.False(ctx.VM.IsNextEpisodePromptVisible);
+            ctx.VM.Dispose();
+        }
+
+        [Fact]
+        public void NextEpisodeCountdown_PlaybackEndTransitionsImmediatelyAndOnlyOnce()
+        {
+            var ctx = new PlayerTestContext();
+            var nextEpisode = ConfigureNextEpisodeScenario(ctx, autoPlayNext: true);
+            var transitionCount = 0;
+            Episode? transitionedEpisode = null;
+            ctx.VM.NextEpisodeRequested += (_, episode) =>
+            {
+                transitionCount++;
+                transitionedEpisode = episode;
+            };
+
+            ctx.VM.SeekCommand.Execute(3550.0);
+            ctx.VM.Position = 3600;
+            ctx.VideoService.Position = 3600;
+            ctx.VideoService.Duration = 3600;
+
+            ctx.VideoService.SimulatePlaybackEnded();
+            ctx.VideoService.SimulatePlaybackEnded();
+
+            Assert.Equal(1, transitionCount);
+            Assert.Same(nextEpisode, transitionedEpisode);
+            Assert.False(ctx.VM.IsNextEpisodeCountdownActive);
+            ctx.VM.Dispose();
+        }
+
+        [Fact]
+        public void NextEpisodeCountdown_CancelBlocksCountdownEndPlaybackEndAndCreditsReentry()
+        {
+            var ctx = new PlayerTestContext();
+            ConfigureNextEpisodeScenario(ctx, autoPlayNext: true);
+            var transitionCount = 0;
+            ctx.VM.NextEpisodeRequested += (_, _) => transitionCount++;
+
+            ctx.VM.SeekCommand.Execute(3550.0);
+            var cancelledGeneration = ctx.VM.EpisodeNavigator.NextEpisodeCountdownGeneration;
+
+            ctx.VM.CancelNextEpisodeCommand.Execute(null);
+            ctx.VM.EpisodeNavigator.AdvanceNextEpisodeCountdown(cancelledGeneration);
+            ctx.VM.Position = 3600;
+            ctx.VideoService.Position = 3600;
+            ctx.VideoService.Duration = 3600;
+            ctx.VideoService.SimulatePlaybackEnded();
+            ctx.VM.SeekCommand.Execute(3400.0);
+            ctx.VM.SeekCommand.Execute(3580.0);
+
+            Assert.Equal(0, transitionCount);
+            Assert.False(ctx.VM.IsNextEpisodePromptVisible);
+            Assert.False(ctx.VM.IsNextEpisodeCountdownActive);
+            Assert.True(ctx.VM.EpisodeNavigator.IsAutoPlayCancelledForCurrentEpisode);
+            ctx.VM.Dispose();
+        }
+
+        [Fact]
+        public void NextEpisodeCountdown_RewindResetsAndCreditsReentryRestartsFromEight()
+        {
+            var ctx = new PlayerTestContext();
+            ConfigureNextEpisodeScenario(ctx, autoPlayNext: true);
+
+            ctx.VM.SeekCommand.Execute(3550.0);
+            var originalGeneration = ctx.VM.EpisodeNavigator.NextEpisodeCountdownGeneration;
+            ctx.VM.EpisodeNavigator.AdvanceNextEpisodeCountdown(originalGeneration);
+            Assert.Equal(7, ctx.VM.NextEpisodeCountdownSeconds);
+
+            ctx.VM.SeekCommand.Execute(3400.0);
+
+            Assert.False(ctx.VM.IsNextEpisodePromptVisible);
+            Assert.False(ctx.VM.IsNextEpisodeCountdownActive);
+            Assert.Equal(0, ctx.VM.NextEpisodeCountdownSeconds);
+            Assert.False(ctx.VM.EpisodeNavigator.IsAutoPlayCancelledForCurrentEpisode);
+
+            ctx.VM.SeekCommand.Execute(3580.0);
+
+            Assert.True(ctx.VM.IsNextEpisodePromptVisible);
+            Assert.True(ctx.VM.IsNextEpisodeCountdownActive);
+            Assert.Equal(8, ctx.VM.NextEpisodeCountdownSeconds);
+
+            ctx.VM.EpisodeNavigator.AdvanceNextEpisodeCountdown(originalGeneration);
+            Assert.Equal(8, ctx.VM.NextEpisodeCountdownSeconds);
+            ctx.VM.Dispose();
+        }
+
+        [Fact]
+        public void NextEpisodeCountdown_NewEpisodeResetsExplicitCancellation()
+        {
+            var ctx = new PlayerTestContext();
+            ConfigureNextEpisodeScenario(ctx, autoPlayNext: true);
+            ctx.VM.SeekCommand.Execute(3550.0);
+            ctx.VM.CancelNextEpisodeCommand.Execute(null);
+
+            ConfigureNextEpisodeScenario(
+                ctx,
+                autoPlayNext: true,
+                currentEpisodeId: 201,
+                nextEpisodeId: 202);
+            ctx.VM.SeekCommand.Execute(3550.0);
+
+            Assert.False(ctx.VM.EpisodeNavigator.IsAutoPlayCancelledForCurrentEpisode);
+            Assert.True(ctx.VM.IsNextEpisodePromptVisible);
+            Assert.True(ctx.VM.IsNextEpisodeCountdownActive);
+            Assert.Equal(8, ctx.VM.NextEpisodeCountdownSeconds);
+            ctx.VM.Dispose();
+        }
+
+        [Fact]
+        public void NextEpisodeCountdown_AutoPlayDisabledNeverStartsOrTransitionsAtPlaybackEnd()
+        {
+            var ctx = new PlayerTestContext();
+            ConfigureNextEpisodeScenario(ctx, autoPlayNext: false);
+            var transitionCount = 0;
+            ctx.VM.NextEpisodeRequested += (_, _) => transitionCount++;
+
+            ctx.VM.SeekCommand.Execute(3550.0);
+
+            Assert.True(ctx.VM.IsNextEpisodePromptVisible);
+            Assert.False(ctx.VM.IsNextEpisodeCountdownActive);
+            Assert.Equal(0, ctx.VM.NextEpisodeCountdownSeconds);
+
+            ctx.VM.Position = 3600;
+            ctx.VideoService.Position = 3600;
+            ctx.VideoService.Duration = 3600;
+            ctx.VideoService.SimulatePlaybackEnded();
+
+            Assert.Equal(0, transitionCount);
+            Assert.True(ctx.VM.IsNextEpisodePromptVisible);
+            ctx.VM.Dispose();
+        }
+
+        [Fact]
+        public void NextEpisodeCountdown_LiveAutoPlaySettingChangesStopAndRestartTheVisiblePrompt()
+        {
+            var ctx = new PlayerTestContext();
+            ConfigureNextEpisodeScenario(ctx, autoPlayNext: true);
+            ctx.VM.SeekCommand.Execute(3550.0);
+
+            Assert.True(ctx.VM.IsNextEpisodeCountdownActive);
+
+            ctx.Settings.Settings.AutoPlayNext = false;
+            ctx.Settings.RaiseSettingsChanged();
+
+            Assert.True(ctx.VM.IsNextEpisodePromptVisible);
+            Assert.False(ctx.VM.IsNextEpisodeCountdownActive);
+            Assert.Equal(0, ctx.VM.NextEpisodeCountdownSeconds);
+
+            ctx.Settings.Settings.AutoPlayNext = true;
+            ctx.Settings.RaiseSettingsChanged();
+
+            Assert.True(ctx.VM.IsNextEpisodePromptVisible);
+            Assert.True(ctx.VM.IsNextEpisodeCountdownActive);
+            Assert.Equal(8, ctx.VM.NextEpisodeCountdownSeconds);
+            ctx.VM.Dispose();
+        }
+
+        [Fact]
+        public async Task NextEpisodeCountdown_ClosePlayerStopsTransitionBeforeSessionShutdownCompletes()
+        {
+            var ctx = new PlayerTestContext();
+            ConfigureNextEpisodeScenario(ctx, autoPlayNext: true);
+            var shutdownGate = new TaskCompletionSource(
+                TaskCreationOptions.RunContinuationsAsynchronously);
+            ctx.VideoService.EndSessionHandler = _ => shutdownGate.Task;
+            var transitionCount = 0;
+            ctx.VM.NextEpisodeRequested += (_, _) => transitionCount++;
+
+            ctx.VM.SeekCommand.Execute(3550.0);
+            var activeGeneration = ctx.VM.EpisodeNavigator.NextEpisodeCountdownGeneration;
+
+            var closeTask = ctx.VM.ClosePlayerCommand.ExecuteAsync(null);
+
+            Assert.True(ctx.VM.IsClosingPlayer);
+            Assert.False(ctx.VM.IsNextEpisodePromptVisible);
+            Assert.False(ctx.VM.IsNextEpisodeCountdownActive);
+
+            ctx.VM.EpisodeNavigator.AdvanceNextEpisodeCountdown(activeGeneration);
+            ctx.VideoService.SimulatePlaybackEnded();
+
+            Assert.Equal(0, transitionCount);
+
+            shutdownGate.SetResult();
+            await closeTask;
+            ctx.VM.Dispose();
+        }
+
+        [Fact]
+        public void NextEpisodeCountdown_OverlayEpisodeSelectionStartsANewSession()
+        {
+            var ctx = new PlayerTestContext();
+            ConfigureNextEpisodeScenario(ctx, autoPlayNext: true);
+            var selectedEpisode = new Episode
+            {
+                Id = 201,
+                EpisodeNumber = 2,
+                Name = "Selected Episode",
+                StreamUrl = "http://test/selected.mp4",
+                CreditsStartSec = 3500
+            };
+            var selectedNextEpisode = new Episode
+            {
+                Id = 202,
+                EpisodeNumber = 3,
+                Name = "Selected Next Episode",
+                StreamUrl = "http://test/selected-next.mp4"
+            };
+            ctx.VM.EpisodeSeasons = new List<Season>
+            {
+                new()
+                {
+                    SeasonNumber = 1,
+                    Episodes = new List<Episode>
+                    {
+                        selectedEpisode,
+                        selectedNextEpisode
+                    }
+                }
+            };
+            var transitionCount = 0;
+            ctx.VM.NextEpisodeRequested += (_, _) => transitionCount++;
+
+            ctx.VM.SeekCommand.Execute(3550.0);
+            var staleGeneration = ctx.VM.EpisodeNavigator.NextEpisodeCountdownGeneration;
+
+            ctx.VM.PlayEpisodeFromOverlayCommand.Execute(selectedEpisode);
+
+            Assert.Same(selectedEpisode, ctx.VM.CurrentEpisode);
+            Assert.Same(selectedNextEpisode, ctx.VM.NextEpisode);
+            Assert.False(ctx.VM.IsNextEpisodePromptVisible);
+            Assert.False(ctx.VM.IsNextEpisodeCountdownActive);
+            Assert.False(ctx.VM.EpisodeNavigator.IsAutoPlayCancelledForCurrentEpisode);
+
+            ctx.VM.EpisodeNavigator.AdvanceNextEpisodeCountdown(staleGeneration);
+            Assert.Equal(0, transitionCount);
+
+            ctx.VM.Position = 0;
+            ctx.VM._lastKnownValidPosition = 0;
+            ctx.VM.SeekCommand.Execute(3550.0);
+
+            Assert.True(ctx.VM.IsNextEpisodePromptVisible);
+            Assert.True(ctx.VM.IsNextEpisodeCountdownActive);
+            Assert.Equal(8, ctx.VM.NextEpisodeCountdownSeconds);
+            ctx.VM.Dispose();
+        }
+
+        [Fact]
+        public void NextEpisodeCountdown_QueuedSettingsCallbackCannotRestartAfterDispose()
+        {
+            var dispatcher = new QueuedDispatcher();
+            var ctx = new PlayerTestContext(dispatcher: dispatcher);
+            dispatcher.RunAll();
+            ConfigureNextEpisodeScenario(ctx, autoPlayNext: true);
+            ctx.VM.SeekCommand.Execute(3550.0);
+
+            ctx.Settings.RaiseSettingsChanged();
+            Assert.True(dispatcher.PendingCount > 0);
+
+            ctx.VM.Dispose();
+            dispatcher.RunAll();
+
+            Assert.False(ctx.VM.IsNextEpisodePromptVisible);
+            Assert.False(ctx.VM.IsNextEpisodeCountdownActive);
+            Assert.Equal(0, ctx.VM.NextEpisodeCountdownSeconds);
         }
 
         [Fact]
@@ -1626,6 +1963,42 @@ namespace Noctra.Tests
             Assert.True(eventTriggered);
             Assert.Equal(nextEp, triggeredEpisode);
             Assert.False(ctx.VM.IsNextEpisodePromptVisible); // Should hide after click
+        }
+
+        private static Episode ConfigureNextEpisodeScenario(
+            PlayerTestContext ctx,
+            bool autoPlayNext,
+            int currentEpisodeId = 101,
+            int nextEpisodeId = 102)
+        {
+            ctx.Settings.Settings.AutoPlayNext = autoPlayNext;
+            ctx.VM.CurrentChannel = new Channel
+            {
+                Id = 11,
+                Name = "Test Series",
+                StreamUrl = "http://test/episode-1.mp4",
+                Type = ChannelType.Series
+            };
+            ctx.VM.Duration = 3600;
+            ctx.VM.Position = 0;
+            ctx.VM._lastKnownValidPosition = 0;
+            ctx.VideoService.Duration = 3600;
+
+            var currentEpisode = new Episode
+            {
+                Id = currentEpisodeId,
+                Name = "Episode 1",
+                StreamUrl = "http://test/episode-1.mp4",
+                CreditsStartSec = 3500
+            };
+            var nextEpisode = new Episode
+            {
+                Id = nextEpisodeId,
+                Name = "Episode 2",
+                StreamUrl = "http://test/episode-2.mp4"
+            };
+            ctx.VM.SetCurrentEpisode(currentEpisode, nextEpisode);
+            return nextEpisode;
         }
     }
 }

@@ -1,4 +1,5 @@
 using System.Xml.Linq;
+using System.Text.Json;
 
 namespace Noctra.Tests;
 
@@ -504,6 +505,38 @@ public sealed class MobileRecentRegressionTests
         Assert.Null(sheetHost.Attribute("VerticalAlignment"));
         Assert.Null(scrim.Attribute("VerticalAlignment"));
         Assert.Equal("Bottom", sheetSurface.Attribute("VerticalAlignment")?.Value);
+    }
+
+    [Fact]
+    public void MobileNextEpisodePrompt_BindsCountdownCancelAndExistingProfileSetting()
+    {
+        var playerView = File.ReadAllText(
+            ProjectFile("Noctra.Mobile", "Views", "MobilePlayerView.axaml"));
+        var playerSheet = File.ReadAllText(
+            ProjectFile("Noctra.Mobile", "Views", "MobilePlayerSheets.axaml"));
+        var settingsView = File.ReadAllText(
+            ProjectFile("Noctra.Mobile", "Views", "MobileSettingsView.axaml"));
+
+        Assert.Contains("Text=\"{Binding NextEpisodeCountdownText}\"", playerView, StringComparison.Ordinal);
+        Assert.Contains("IsVisible=\"{Binding IsNextEpisodeCountdownActive}\"", playerView, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding PlayNextEpisodeCommand}\"", playerView, StringComparison.Ordinal);
+        Assert.Contains("Command=\"{Binding CancelNextEpisodeCommand}\"", playerView, StringComparison.Ordinal);
+        Assert.Contains("HorizontalAlignment=\"Right\"", playerView, StringComparison.Ordinal);
+        Assert.DoesNotContain("IsNextEpisodePromptVisible", playerSheet, StringComparison.Ordinal);
+        Assert.Contains("Player.NextEpisode.Cancel", playerView, StringComparison.Ordinal);
+        Assert.Contains("IsChecked=\"{Binding AutoPlayNext}\"", settingsView, StringComparison.Ordinal);
+
+        foreach (var locale in new[] { "de-DE", "en-US", "es-ES", "fr-FR", "tr-TR" })
+        {
+            using var translations = JsonDocument.Parse(
+                File.ReadAllText(
+                    ProjectFile("Noctra.Core", "Localization", "Translations", $"{locale}.json")));
+            var root = translations.RootElement;
+
+            Assert.True(root.TryGetProperty("Player.NextEpisode.Cancel", out _), locale);
+            Assert.True(root.TryGetProperty("Player.NextEpisode.Countdown.One", out _), locale);
+            Assert.True(root.TryGetProperty("Player.NextEpisode.Countdown.Many", out _), locale);
+        }
     }
 
     [Fact]

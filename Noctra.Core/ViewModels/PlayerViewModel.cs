@@ -239,8 +239,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         IsInfoPanelOpen ||
         IsEpisodesPanelOpen ||
         IsSleepTimerPanelOpen ||
-        IsResumeDialogVisible ||
-        IsNextEpisodePromptVisible;
+        IsResumeDialogVisible;
 
     public bool IsMobileCompactControlsVisible =>
         AreMobileControlsVisible && !IsMobileDetailPanelOpen;
@@ -306,17 +305,22 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
             return;
         }
 
-        if (IsNextEpisodePromptVisible)
-        {
-            IsNextEpisodePromptVisible = false;
-            RestartAutoHideTimer();
-            return;
-        }
-
         if (_panelParentState == MobilePanelState.Actions)
         {
             _panelParentState = MobilePanelState.None;
             SetMobilePanelState(MobilePanelState.Actions);
+            return;
+        }
+
+        if (IsMobileDetailPanelOpen)
+        {
+            SetMobilePanelState(MobilePanelState.None);
+            return;
+        }
+
+        if (IsNextEpisodePromptVisible)
+        {
+            EpisodeNavigator.CancelNextEpisode();
             return;
         }
 
@@ -945,6 +949,27 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     private Episode? _nextEpisode;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(NextEpisodeCountdownText))]
+    private int _nextEpisodeCountdownSeconds;
+
+    [ObservableProperty]
+    private bool _isNextEpisodeCountdownActive;
+
+    public string NextEpisodeCountdownText
+    {
+        get
+        {
+            var key = NextEpisodeCountdownSeconds == 1
+                ? "Player.NextEpisode.Countdown.One"
+                : "Player.NextEpisode.Countdown.Many";
+            return string.Format(
+                CultureInfo.CurrentCulture,
+                _localizationService.GetString(key),
+                NextEpisodeCountdownSeconds);
+        }
+    }
+
+    [ObservableProperty]
     private string _currentEpisodeIdentity = string.Empty;
 
     [ObservableProperty]
@@ -1500,6 +1525,13 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
             return;
         }
 
+        if (IsNextEpisodePromptVisible)
+        {
+            _autoHideTimer.Change(Timeout.Infinite, Timeout.Infinite);
+            IsVisible = true;
+            return;
+        }
+
         if (IsVisible)
         {
             // Görünür -> anında gizle (immersion).
@@ -1576,6 +1608,9 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
     [RelayCommand]
     private async Task PlayNextEpisode() => await EpisodeNavigator.PlayNextEpisode();
+
+    [RelayCommand]
+    private void CancelNextEpisode() => EpisodeNavigator.CancelNextEpisode();
 
     [RelayCommand(CanExecute = nameof(CanDownloadCurrentContent))]
     private async Task DownloadCurrentContentAsync() => await EpisodeNavigator.DownloadCurrentContentAsync();
@@ -2026,6 +2061,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
             IsClosingPlayer = true;
 
             Interlocked.Increment(ref _playRequestVersion);
+            EpisodeNavigator.ResetForPlaybackExit();
 
             CancelResumeDialog();
 
@@ -2077,6 +2113,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
     private void ResetPlayerAfterExit()
     {
+        EpisodeNavigator.ResetForPlaybackExit();
         CurrentChannel = null;
         CurrentProgram = null;
 
@@ -2756,7 +2793,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     {
         _dispatcherService.Invoke(() =>
         {
-            if (_isContentTransitioning) return;
+            if (IsClosingPlayer || _isContentTransitioning) return;
 
             _isPlaybackEnded = true;
 
@@ -2906,6 +2943,8 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         _lockIndicatorVisibilityCts?.Cancel();
         _lockIndicatorVisibilityCts?.Dispose();
         _lockIndicatorVisibilityCts = null;
+
+        EpisodeNavigator.Dispose();
 
         if (_settingsService != null)
         {

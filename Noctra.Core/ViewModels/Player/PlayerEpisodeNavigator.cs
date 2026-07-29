@@ -24,21 +24,36 @@ public sealed class PlaybackExitSnapshot
 
 public class PlayerEpisodeNavigator
 {
+    private const int NextEpisodeCountdownStartSeconds = 8;
+
     private readonly PlayerViewModel _vm;
+    private CancellationTokenSource? _nextEpisodeCountdownCts;
+    private int _nextEpisodeCountdownGeneration;
+    private int _nextEpisodeTransitionClaimed;
+    private int _isDisposed;
+    private bool _isPlaybackSessionActive;
+    private bool _isAutoPlayCancelledForCurrentEpisode;
 
     public PlayerEpisodeNavigator(PlayerViewModel vm)
     {
         _vm = vm;
     }
 
+    internal int NextEpisodeCountdownGeneration =>
+        Volatile.Read(ref _nextEpisodeCountdownGeneration);
+
+    internal bool IsAutoPlayCancelledForCurrentEpisode =>
+        _isAutoPlayCancelledForCurrentEpisode;
+
     public void SetCurrentEpisode(Episode? episode, Episode? nextEpisode = null, Series? series = null)
     {
+        ResetNextEpisodeSession();
+        _isPlaybackSessionActive = episode != null;
         _vm.CurrentEpisode = episode;
         _vm.CurrentEpisodeIdentity = BuildEpisodeIdentity(episode);
         _vm.NextEpisode = nextEpisode;
         _vm._creditsTriggered = false;
         _vm.IsCreditsZone = false;
-        _vm.IsNextEpisodePromptVisible = false;
         _vm.IsEpisodesPanelOpen = false;
         _vm._isPreferenceApplied = false;
 
@@ -79,7 +94,9 @@ public class PlayerEpisodeNavigator
 
     public void TryShowNextEpisodePromptAtEnd()
     {
-        if (_vm._creditsTriggered ||
+        if (!_isPlaybackSessionActive ||
+            Volatile.Read(ref _isDisposed) != 0 ||
+            _vm.IsClosingPlayer ||
             _vm.IsLiveContent ||
             _vm.CurrentChannel?.Type != ChannelType.Series ||
             _vm.NextEpisode == null)
@@ -89,16 +106,33 @@ public class PlayerEpisodeNavigator
 
         _vm._creditsTriggered = true;
         _vm.IsCreditsZone = true;
-        _vm.IsNextEpisodePromptVisible = true;
 
-        if (_vm.SettingsService.Settings.AutoPlayNext)
+        if (_isAutoPlayCancelledForCurrentEpisode)
         {
-            _ = _vm.PlayNextEpisodeCommand.ExecuteAsync(null);
+            StopNextEpisodeCountdown();
+            _vm.IsNextEpisodePromptVisible = false;
+            return;
         }
+
+        if (!_vm.SettingsService.Settings.AutoPlayNext)
+        {
+            StopNextEpisodeCountdown();
+            _vm.IsNextEpisodePromptVisible = true;
+            return;
+        }
+
+        _ = TryPlayNextEpisodeAsync(userInitiated: false);
     }
 
     public void CheckIntroCreditsPosition(double pos)
     {
+        if (!_isPlaybackSessionActive ||
+            Volatile.Read(ref _isDisposed) != 0 ||
+            _vm.IsClosingPlayer)
+        {
+            return;
+        }
+
         if (_vm.CurrentEpisode == null || _vm.IsLiveContent || _vm.NextEpisode == null)
         {
             return;
@@ -113,10 +147,25 @@ public class PlayerEpisodeNavigator
         var exitThreshold = Math.Max(0, triggerAt - 3);
         var hasExitedCreditsZone = pos < exitThreshold;
 
+        if (_isAutoPlayCancelledForCurrentEpisode)
+        {
+            StopNextEpisodeCountdown();
+            _vm.IsNextEpisodePromptVisible = false;
+            _vm.IsCreditsZone = !hasExitedCreditsZone;
+
+            if (hasExitedCreditsZone)
+            {
+                _vm._creditsTriggered = false;
+            }
+
+            return;
+        }
+
         if (_vm._creditsTriggered)
         {
             if (hasExitedCreditsZone)
             {
+                StopNextEpisodeCountdown();
                 _vm._creditsTriggered = false;
                 _vm.IsCreditsZone = false;
                 _vm.IsNextEpisodePromptVisible = false;
@@ -125,6 +174,7 @@ public class PlayerEpisodeNavigator
             {
                 _vm.IsCreditsZone = true;
                 _vm.IsNextEpisodePromptVisible = true;
+                StartNextEpisodeCountdownIfEligible();
             }
 
             return;
@@ -138,6 +188,7 @@ public class PlayerEpisodeNavigator
         _vm._creditsTriggered = true;
         _vm.IsCreditsZone = true;
         _vm.IsNextEpisodePromptVisible = true;
+        StartNextEpisodeCountdownIfEligible();
     }
 
     public bool TryGetCreditsTriggerThreshold(out double triggerAt)
@@ -178,7 +229,160 @@ public class PlayerEpisodeNavigator
 
     public async Task PlayNextEpisode()
     {
-        if (_vm.NextEpisode == null)
+        await TryPlayNextEpisodeAsync(userInitiated: true);
+    }
+
+    public void CancelNextEpisode()
+    {
+        _isAutoPlayCancelledForCurrentEpisode = true;
+        StopNextEpisodeCountdown();
+        _vm.IsNextEpisodePromptVisible = false;
+        _vm.RestartAutoHideTimer();
+    }
+
+    public void OnAutoPlayPreferenceChanged()
+    {
+        if (!_isPlaybackSessionActive ||
+            Volatile.Read(ref _isDisposed) != 0 ||
+            _vm.IsClosingPlayer)
+        {
+            return;
+        }
+
+        if (!_vm.SettingsService.Settings.AutoPlayNext)
+        {
+            StopNextEpisodeCountdown();
+            return;
+        }
+
+        if (_vm.IsNextEpisodePromptVisible &&
+            !_isAutoPlayCancelledForCurrentEpisode)
+        {
+            StartNextEpisodeCountdownIfEligible();
+        }
+    }
+
+    public void ResetForPlaybackExit()
+    {
+        _isPlaybackSessionActive = false;
+        ResetNextEpisodeSession();
+        _vm._creditsTriggered = false;
+        _vm.IsCreditsZone = false;
+    }
+
+    public void Dispose()
+    {
+        if (Interlocked.Exchange(ref _isDisposed, 1) != 0)
+        {
+            return;
+        }
+
+        _isPlaybackSessionActive = false;
+        StopNextEpisodeCountdown();
+        _vm.IsNextEpisodePromptVisible = false;
+    }
+
+    internal void AdvanceNextEpisodeCountdown(int generation)
+    {
+        if (!_isPlaybackSessionActive ||
+            Volatile.Read(ref _isDisposed) != 0 ||
+            _vm.IsClosingPlayer ||
+            generation != NextEpisodeCountdownGeneration ||
+            !_vm.IsNextEpisodeCountdownActive ||
+            _isAutoPlayCancelledForCurrentEpisode ||
+            !_vm.SettingsService.Settings.AutoPlayNext)
+        {
+            return;
+        }
+
+        var nextValue = Math.Max(0, _vm.NextEpisodeCountdownSeconds - 1);
+        _vm.NextEpisodeCountdownSeconds = nextValue;
+
+        if (nextValue > 0)
+        {
+            return;
+        }
+
+        StopNextEpisodeCountdown();
+        _ = TryPlayNextEpisodeAsync(userInitiated: false);
+    }
+
+    private void StartNextEpisodeCountdownIfEligible()
+    {
+        if (!_isPlaybackSessionActive ||
+            Volatile.Read(ref _isDisposed) != 0 ||
+            _vm.IsClosingPlayer ||
+            !_vm.SettingsService.Settings.AutoPlayNext ||
+            _isAutoPlayCancelledForCurrentEpisode ||
+            _vm.NextEpisode == null ||
+            _vm.IsNextEpisodeCountdownActive)
+        {
+            return;
+        }
+
+        StopNextEpisodeCountdown();
+
+        var countdownCts = new CancellationTokenSource();
+        _nextEpisodeCountdownCts = countdownCts;
+        var generation = Interlocked.Increment(ref _nextEpisodeCountdownGeneration);
+
+        _vm.NextEpisodeCountdownSeconds = NextEpisodeCountdownStartSeconds;
+        _vm.IsNextEpisodeCountdownActive = true;
+        _ = RunNextEpisodeCountdownAsync(generation, countdownCts.Token);
+    }
+
+    private async Task RunNextEpisodeCountdownAsync(
+        int generation,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken)
+                    .ConfigureAwait(false);
+
+                _vm.DispatcherService.BeginInvoke(
+                    () => AdvanceNextEpisodeCountdown(generation));
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected when the user cancels, rewinds, or changes content.
+        }
+    }
+
+    private void StopNextEpisodeCountdown()
+    {
+        Interlocked.Increment(ref _nextEpisodeCountdownGeneration);
+
+        var countdownCts = Interlocked.Exchange(
+            ref _nextEpisodeCountdownCts,
+            null);
+        countdownCts?.Cancel();
+        countdownCts?.Dispose();
+
+        _vm.IsNextEpisodeCountdownActive = false;
+        _vm.NextEpisodeCountdownSeconds = 0;
+    }
+
+    private void ResetNextEpisodeSession()
+    {
+        StopNextEpisodeCountdown();
+        _isAutoPlayCancelledForCurrentEpisode = false;
+        Interlocked.Exchange(ref _nextEpisodeTransitionClaimed, 0);
+        _vm.IsNextEpisodePromptVisible = false;
+    }
+
+    private async Task TryPlayNextEpisodeAsync(bool userInitiated)
+    {
+        if (!_isPlaybackSessionActive ||
+            Volatile.Read(ref _isDisposed) != 0 ||
+            _vm.IsClosingPlayer ||
+            _vm.NextEpisode == null ||
+            (!userInitiated &&
+             (!_vm.SettingsService.Settings.AutoPlayNext ||
+              _isAutoPlayCancelledForCurrentEpisode)))
         {
             return;
         }
@@ -190,7 +394,16 @@ public class PlayerEpisodeNavigator
             return;
         }
 
+        if (Interlocked.CompareExchange(
+                ref _nextEpisodeTransitionClaimed,
+                1,
+                0) != 0)
+        {
+            return;
+        }
+
         var nextEpisode = _vm.NextEpisode;
+        StopNextEpisodeCountdown();
         _vm.PrepareForContentLoading();
         _vm.IsNextEpisodePromptVisible = false;
         _vm.IsCreditsZone = false;
@@ -281,13 +494,8 @@ public class PlayerEpisodeNavigator
             return;
         }
 
-        _vm.CurrentEpisode = episode;
-        _vm.CurrentEpisodeIdentity = BuildEpisodeIdentity(episode);
-        _vm.NextEpisode = FindNextEpisodeInBrowser(episode);
-        _vm._creditsTriggered = false;
-        _vm.IsCreditsZone = false;
-        _vm.IsNextEpisodePromptVisible = false;
-        _vm.IsEpisodesPanelOpen = false;
+        var nextEpisode = FindNextEpisodeInBrowser(episode);
+        SetCurrentEpisode(episode, nextEpisode, _vm._currentSeriesContext);
         _vm.IsLocked = false;
 
         _vm.PrepareForContentLoading();

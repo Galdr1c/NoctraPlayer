@@ -60,6 +60,8 @@
   <SolidColorBrush x:Key="ScrollBarThumbBrush" Color="#444444" Opacity="0.6" />
   <SolidColorBrush x:Key="ScrollBarHoverBrush" Color="{StaticResource Accent300Color}" />
   <SolidColorBrush x:Key="TextControlSelectionHighlightColor" Color="#8B5CF6" />
+  <SolidColorBrush x:Key="NextEpisodeHighlightColor" Color="#901E103F" />
+  <SolidColorBrush x:Key="NextEpisodeCancel" Color="#DDE50914" />
 
   <LinearGradientBrush x:Key="PrimaryGradientBrush" StartPoint="0,0" EndPoint="1,1">
     <GradientStop Color="#8B5CF6" Offset="0.0" />

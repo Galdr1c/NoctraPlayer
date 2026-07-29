@@ -379,6 +379,78 @@
                           Foreground="{DynamicResource PlayerOverlayTextBrush}" />
     </Button>
 
+    <!-- Timeline üstünde sağa yaslı kompakt sonraki bölüm kartı. -->
+    <Border Grid.ColumnSpan="2"
+            ZIndex="70"
+            HorizontalAlignment="Right"
+            VerticalAlignment="Bottom"
+            Margin="16,0,20,150"
+            MinWidth="300"
+            MaxWidth="350"
+            Padding="14,8"
+            CornerRadius="6"
+            Background="{DynamicResource NavActiveBackgroundBrush}"
+            IsVisible="{Binding IsNextEpisodePromptVisible}">
+      <StackPanel Spacing="8">
+        <TextBlock Text="{loc:Translate Player.Overlay.NextEpisode}"
+                   FontSize="{DynamicResource FCaption}"
+                   FontWeight="SemiBold"
+                   Foreground="{DynamicResource PlayerOverlaySecondaryTextBrush}" />
+        <TextBlock Text="{Binding NextEpisodeCountdownText}"
+                   IsVisible="{Binding IsNextEpisodeCountdownActive}"
+                   FontSize="12"
+                   Foreground="{DynamicResource PlayerOverlaySecondaryTextBrush}"
+                   TextWrapping="Wrap" />
+        <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+          <Button Grid.Column="0"
+                  Command="{Binding PlayNextEpisodeCommand}"
+                  Classes="UpgradeButton"
+                  Background="{DynamicResource NextEpisodeHighlightColor}"
+                  Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                  BorderBrush="{DynamicResource PremiumBadgeBrush}"
+                  BorderThickness="1"
+                  AutomationProperties.Name="{loc:Translate Player.NextEpisode.WatchNow}">
+            <StackPanel Orientation="Horizontal"
+                        HorizontalAlignment="Center"
+                        Spacing="6">
+              <icons:MaterialIcon Kind="Play"
+                                  Width="16"
+                                  Height="16"
+                                  Foreground="{DynamicResource PlayerOverlayTextBrush}" />
+              <TextBlock Text="{loc:Translate Player.NextEpisode.WatchNow}"
+                         FontSize="13"
+                         FontWeight="Bold" />
+            </StackPanel>
+          </Button>
+          <Button Grid.Column="1"
+                  Command="{Binding CancelNextEpisodeCommand}"
+                  MinHeight="15"
+                  MaxHeight="30"
+                  Padding="0"
+                  CornerRadius="6"
+                  Theme="{StaticResource DangerButtonStyle}"
+                  Background="{DynamicResource PlayerOverlayPanelBrush}"
+                  Foreground="{DynamicResource NextEpisodeCancel}"
+                  BorderThickness="0"
+                  HorizontalAlignment="Stretch"
+                  VerticalContentAlignment="Center"
+                  AutomationProperties.Name="{loc:Translate Player.NextEpisode.Cancel}">
+            <StackPanel Orientation="Horizontal"
+                        HorizontalAlignment="Center"
+                        Spacing="6">
+              <icons:MaterialIcon Kind="Close"
+                                  Width="16"
+                                  Height="16"
+                                  Foreground="{DynamicResource NextEpisodeCancel}" />
+              <TextBlock Text="{loc:Translate Player.NextEpisode.Cancel}"
+                         FontSize="13"
+                         FontWeight="SemiBold" />
+            </StackPanel>
+          </Button>
+        </Grid>
+      </StackPanel>
+    </Border>
+
     <!-- Layer 5: Sheet katmanı (en üst) -->
     <views:MobilePlayerSheets Grid.ColumnSpan="2"
                               ZIndex="100"

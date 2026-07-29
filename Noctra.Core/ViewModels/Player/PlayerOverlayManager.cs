@@ -116,10 +116,16 @@ public class PlayerOverlayManager
             return;
         }
 
+        if (_vm.IsMobileDetailPanelOpen)
+        {
+            _vm.SetMobilePanelState(MobilePanelState.None);
+            RestartAutoHideTimer();
+            return;
+        }
+
         if (_vm.IsNextEpisodePromptVisible)
         {
-            _vm.IsNextEpisodePromptVisible = false;
-            RestartAutoHideTimer();
+            _vm.EpisodeNavigator.CancelNextEpisode();
             return;
         }
 

@@ -71,6 +71,7 @@ public class PlayerSettingsAdapter
                 // Sync volume and mute states!
                 _vm.Volume = _vm.SettingsService.Settings.DefaultVolume;
                 _vm.IsMuted = _vm.SettingsService.Settings.IsMuted;
+                _vm.EpisodeNavigator.OnAutoPlayPreferenceChanged();
             }
         });
     }
@@ -97,6 +98,7 @@ public class PlayerSettingsAdapter
             _vm.RaisePropertyChanged(nameof(PlayerViewModel.LiveFavoriteAccessibilityName));
             _vm.RaisePropertyChanged(nameof(PlayerViewModel.LockAccessibilityName));
             _vm.RaisePropertyChanged(nameof(PlayerViewModel.TimelineAccessibilityName));
+            _vm.RaisePropertyChanged(nameof(PlayerViewModel.NextEpisodeCountdownText));
             _vm.QualityMonitor.UpdateStreamInfoFromQuality();
         });
     }
