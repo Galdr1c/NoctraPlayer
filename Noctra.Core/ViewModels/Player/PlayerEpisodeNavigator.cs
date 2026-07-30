@@ -200,14 +200,14 @@ public class PlayerEpisodeNavigator
         }
 
         var hasDuration = _vm.Duration > 0;
-        var fallbackFiveMinuteTrigger = hasDuration
+        var fallbackThreeMinuteTrigger = hasDuration
             ? Math.Max(0, _vm.Duration - TimeSpan.FromMinutes(3).TotalSeconds)
             : double.MaxValue;
 
         if (_vm.CurrentEpisode.CreditsStartSec is double creditsStartSec && creditsStartSec > 0)
         {
             triggerAt = hasDuration
-                ? Math.Min(creditsStartSec, fallbackFiveMinuteTrigger)
+                ? Math.Min(creditsStartSec, fallbackThreeMinuteTrigger)
                 : creditsStartSec;
             return true;
         }
@@ -223,7 +223,7 @@ public class PlayerEpisodeNavigator
             180); // NextEpisodePromptMaxTailSeconds = 180
         triggerAt = Math.Min(
             Math.Max(0, _vm.Duration - tailThreshold),
-            fallbackFiveMinuteTrigger);
+            fallbackThreeMinuteTrigger);
         return true;
     }
 
@@ -389,7 +389,8 @@ public class PlayerEpisodeNavigator
 
         if (_vm.IsDownloadedPlayback && !IsDownloadedStreamUrl(_vm.NextEpisode.StreamUrl))
         {
-            _vm.DownloadStatusMessage = "Siradaki bolum indirilmemis.";
+            _vm.DownloadStatusMessage =
+                _vm.LocalizationService.GetString("Player.NextEpisode.NotDownloaded");
             _vm.RestartAutoHideTimer();
             return;
         }

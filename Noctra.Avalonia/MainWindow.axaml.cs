@@ -19,6 +19,7 @@ using Noctra.Avalonia.Views;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Input;
 
 namespace Noctra.Avalonia;
 
@@ -28,6 +29,7 @@ public partial class MainWindow : Window
 
     private readonly IVideoPlayerService _videoPlayerService;
     private readonly IWatchHistoryService _watchHistoryService;
+    private readonly PlayerResumeResolver _playerResumeResolver;
     private readonly ISettingsService _settingsService;
     private readonly IReviewPromptService _reviewPromptService;
     private readonly MainViewModel _mainViewModel;
@@ -36,6 +38,7 @@ public partial class MainWindow : Window
     private CancellationTokenSource _mediaSelectionCts = new();
     private readonly CancellationTokenSource _reviewPromptCts = new();
     private DateTime _lastPointerInteractionUtc = DateTime.MinValue;
+    private int _premiumUpsellOpen;
 
     internal bool IsVideoPlaybackSurfaceVisible =>
         PlayerArea.IsVisible ||
@@ -85,6 +88,7 @@ public partial class MainWindow : Window
         _playerViewModel = playerViewModel;
         _videoPlayerService = videoPlayerService;
         _watchHistoryService = watchHistoryService;
+        _playerResumeResolver = new PlayerResumeResolver(watchHistoryService);
         _settingsService = settingsService;
         _reviewPromptService = reviewPromptService;
         _windowResizeService = new WindowResizeService(this);
@@ -119,11 +123,7 @@ public partial class MainWindow : Window
         _playerViewModel.PreviousLiveChannelRequested += PlayerViewModel_PreviousLiveChannelRequested;
         _playerViewModel.PiPRequested += PlayerViewModel_PiPRequested;
         
-        _playerViewModel.PremiumUpsellRequested += async (_, _) =>
-        {
-            var dialogService = ((App)Application.Current!).Services.GetRequiredService<IDialogService>();
-            await dialogService.ShowUpsellAsync();
-        };
+        _playerViewModel.PremiumUpsellRequested += PlayerViewModel_PremiumUpsellRequested;
 
         var playlistService = ((App)Application.Current!).Services.GetRequiredService<IPlaylistService>();
         _playerViewModel.LiveChannelsLoader = async () =>
@@ -157,76 +157,119 @@ public partial class MainWindow : Window
         var media = request.Media;
         var title = media switch
         {
-            Channel ch => ch.Name,
-            Series s => s.Name,
+            Channel channel => channel.Name,
+            Series series => series.Name,
             _ => string.Empty
         };
 
-        if (string.IsNullOrEmpty(title))
+        if (string.IsNullOrWhiteSpace(title))
             return;
 
-        var actions = DesktopCardActions.BuildActions(request);
-        if (actions.Count == 0)
+        var actionItems = DesktopCardActions.BuildActions(request)
+            .Where(action => CanExecuteCardAction(media, action))
+            .Select(action => CreateCardActionSheetItem(media, action))
+            .ToList();
+
+        if (actionItems.Count == 0)
             return;
 
-        var actionItems = actions.Select(action =>
-        {
-            var (label, icon, isDestructive) = action switch
-            {
-                DesktopCardActionKind.AddToMyList => ("My List'e Ekle", Material.Icons.MaterialIconKind.BookmarkOutline, false),
-                DesktopCardActionKind.ToggleFavorite => ("Favorilere Ekle", Material.Icons.MaterialIconKind.HeartOutline, false),
-                DesktopCardActionKind.RemoveFromMyList => ("My List'ten Çıkar", Material.Icons.MaterialIconKind.Bookmark, true),
-                DesktopCardActionKind.RemoveFromFavorites => ("Favorilerden Çıkar", Material.Icons.MaterialIconKind.Heart, true),
-                DesktopCardActionKind.RemoveFromHistory => ("Geçmişten Kaldır", Material.Icons.MaterialIconKind.DeleteOutline, true),
-                _ => (string.Empty, Material.Icons.MaterialIconKind.HelpCircleOutline, false)
-            };
-            return new DesktopCardActionSheetItem(action, label, icon, isDestructive);
-        }).ToList();
-
-        CardActionsSheet.Show(title, actionItems, item =>
-        {
-            RouteCardAction(media, item.Action);
-        });
+        CardActionsSheet.Show(
+            title,
+            actionItems,
+            item => RouteCardAction(media, item.Action));
+        e.Handled = true;
     }
+
+    private DesktopCardActionSheetItem CreateCardActionSheetItem(
+        object media,
+        DesktopCardActionKind action)
+    {
+        var isFavorite = DesktopCardActions.IsFavorite(media);
+        var (labelKey, icon) = action switch
+        {
+            DesktopCardActionKind.AddToMyList =>
+                ("MyList.Add", Material.Icons.MaterialIconKind.BookmarkOutline),
+            DesktopCardActionKind.RemoveFromMyList =>
+                ("MyList.Remove", Material.Icons.MaterialIconKind.Bookmark),
+            DesktopCardActionKind.ToggleFavorite when isFavorite =>
+                ("Favorites.Remove", Material.Icons.MaterialIconKind.Heart),
+            DesktopCardActionKind.ToggleFavorite =>
+                ("Favorites.Add", Material.Icons.MaterialIconKind.HeartOutline),
+            DesktopCardActionKind.RemoveFromFavorites =>
+                ("Favorites.Remove", Material.Icons.MaterialIconKind.Heart),
+            DesktopCardActionKind.RemoveFromHistory =>
+                ("History.Remove", Material.Icons.MaterialIconKind.DeleteOutline),
+            _ => throw new ArgumentOutOfRangeException(nameof(action), action, null)
+        };
+
+        return new DesktopCardActionSheetItem(
+            action,
+            LocalizationSource.Instance[labelKey],
+            icon,
+            DesktopCardActions.IsDestructive(action, media));
+    }
+
+    private bool CanExecuteCardAction(
+        object media,
+        DesktopCardActionKind action) =>
+        TryResolveCardActionCommand(action, out var command) &&
+        command.CanExecute(media);
 
     private void RouteCardAction(object media, DesktopCardActionKind action)
     {
-        var viewModel = _mainViewModel;
-        if (viewModel is null)
+        if (!TryResolveCardActionCommand(action, out var command) ||
+            !command.CanExecute(media))
+        {
+            return;
+        }
+
+        command.Execute(media);
+    }
+
+    private bool TryResolveCardActionCommand(
+        DesktopCardActionKind action,
+        out ICommand command)
+    {
+        ICommand? resolved = action switch
+        {
+            DesktopCardActionKind.AddToMyList => _mainViewModel.AddToMyListCommand,
+            DesktopCardActionKind.ToggleFavorite => _mainViewModel.ToggleFavoriteCommand,
+            DesktopCardActionKind.RemoveFromMyList => _mainViewModel.RemoveFromMyListCommand,
+            DesktopCardActionKind.RemoveFromFavorites => _mainViewModel.RemoveFromFavoritesCommand,
+            DesktopCardActionKind.RemoveFromHistory => _mainViewModel.RemoveFromHistoryCommand,
+            _ => null
+        };
+
+        command = resolved!;
+        return resolved is not null;
+    }
+
+    private async void PlayerViewModel_PremiumUpsellRequested(
+        object? sender,
+        EventArgs e)
+    {
+        if (Interlocked.CompareExchange(ref _premiumUpsellOpen, 1, 0) != 0)
             return;
 
-        switch (media, action)
+        try
         {
-            case (Channel channel, DesktopCardActionKind.AddToMyList):
-                viewModel.AddToMyListCommand.Execute(channel);
-                break;
-            case (Channel channel, DesktopCardActionKind.ToggleFavorite):
-                viewModel.ToggleFavoriteCommand.Execute(channel);
-                break;
-            case (Channel channel, DesktopCardActionKind.RemoveFromHistory):
-                viewModel.RemoveFromHistoryCommand.Execute(channel);
-                break;
-            case (Channel channel, DesktopCardActionKind.RemoveFromFavorites):
-                viewModel.RemoveFromFavoritesCommand.Execute(channel);
-                break;
-            case (Channel channel, DesktopCardActionKind.RemoveFromMyList):
-                viewModel.RemoveFromMyListCommand.Execute(channel);
-                break;
-            case (Series series, DesktopCardActionKind.AddToMyList):
-                viewModel.AddToMyListCommand.Execute(series);
-                break;
-            case (Series series, DesktopCardActionKind.ToggleFavorite):
-                viewModel.ToggleFavoriteCommand.Execute(series);
-                break;
-            case (Series series, DesktopCardActionKind.RemoveFromHistory):
-                viewModel.RemoveFromHistoryCommand.Execute(series);
-                break;
-            case (Series series, DesktopCardActionKind.RemoveFromFavorites):
-                viewModel.RemoveFromFavoritesCommand.Execute(series);
-                break;
-            case (Series series, DesktopCardActionKind.RemoveFromMyList):
-                viewModel.RemoveFromMyListCommand.Execute(series);
-                break;
+            var dialogService = ((App)Application.Current!).Services
+                .GetRequiredService<IDialogService>();
+            await dialogService.ShowUpsellAsync();
+
+            // The purchase may have completed while the resume dialog remained open.
+            // Refresh the badge immediately; the command also rechecks on click.
+            _playerViewModel.RefreshResumeEntitlement();
+        }
+        catch (Exception ex)
+        {
+            StartupDiagnostics.LogException("Failed to show Premium upsell.", ex);
+            _mainViewModel.StatusMessage = UserFriendlyErrorMessage.WithPrefix(
+                LocalizationSource.Instance["Dialog.Error"], ex);
+        }
+        finally
+        {
+            Volatile.Write(ref _premiumUpsellOpen, 0);
         }
     }
 
@@ -273,7 +316,11 @@ public partial class MainWindow : Window
         _playerViewModel.NextLiveChannelRequested -= PlayerViewModel_NextLiveChannelRequested;
         _playerViewModel.PreviousLiveChannelRequested -= PlayerViewModel_PreviousLiveChannelRequested;
         _playerViewModel.PiPRequested -= PlayerViewModel_PiPRequested;
+        _playerViewModel.PremiumUpsellRequested -= PlayerViewModel_PremiumUpsellRequested;
         _videoPlayerService.PlayerReady -= VideoPlayerService_PlayerReady;
+
+        _mediaSelectionCts.Cancel();
+        _mediaSelectionCts.Dispose();
 
         // VideoSurface.MediaPlayer = null; // Handled in ClosePiP or let it be cleared
         ClosePiP(false); 
@@ -399,14 +446,22 @@ public partial class MainWindow : Window
 
             double? finalStartPos = null;
 
-            // --- RESUME DIALOG ---
-            var resumePosition = await ResolveResumePositionAsync(channel, token);
-            if (resumePosition > 120)
+            // Mobile and desktop must use the same tested resume rules. History
+            // failures are non-fatal inside PlayerResumeResolver.
+            var resumePosition = await _playerResumeResolver.ResolveAsync(
+                _mainViewModel.CurrentProfileId,
+                channel,
+                _mainViewModel.CurrentEpisodePlaybackContext,
+                token);
+
+            if (resumePosition.HasValue)
             {
                 bool shouldResume;
                 try
                 {
-                    shouldResume = await _playerViewModel.ShowResumeDialogAsync(resumePosition, token);
+                    shouldResume = await _playerViewModel.ShowResumeDialogAsync(
+                        resumePosition.Value,
+                        token);
                 }
                 catch (OperationCanceledException)
                 {
@@ -414,11 +469,10 @@ public partial class MainWindow : Window
                     return;
                 }
 
+                // Start Over is an explicit seek to zero, not an implicit null/default.
+                finalStartPos = shouldResume ? resumePosition.Value : 0d;
                 if (shouldResume)
-                {
-                    finalStartPos = resumePosition;
-                    _playerViewModel.SetResumePosition(resumePosition);
-                }
+                    _playerViewModel.SetResumePosition(resumePosition.Value);
             }
 
             // Dialog kapandıktan sonra son token kontrolü.
@@ -440,108 +494,9 @@ public partial class MainWindow : Window
         }
     }
 
-    private async Task<double> ResolveResumePositionAsync(Channel channel, CancellationToken cancellationToken)
+    private void MainWindow_EpgChannelSelected(object? sender, Views.EpgChannelSelectedRoutedEventArgs e)
     {
-        if (channel.Type == ChannelType.Live || !_mainViewModel.CurrentProfileId.HasValue)
-        {
-            return 0;
-        }
-
-        var profileId = _mainViewModel.CurrentProfileId.Value;
-
-        // Only a real episode selection may use episode progress.
-        // A stale CurrentEpisodePlaybackContext from a previously opened series must never
-        // trigger a continue prompt for a different VOD/series item.
-        if (channel.Type == ChannelType.Series)
-        {
-            var episode = _mainViewModel.CurrentEpisodePlaybackContext;
-            if (episode != null &&
-                !string.IsNullOrWhiteSpace(episode.StreamUrl) &&
-                string.Equals(episode.StreamUrl, channel.StreamUrl, StringComparison.OrdinalIgnoreCase))
-            {
-                var episodeHistory = episode.Id > 0
-                    ? await _watchHistoryService.GetLatestForMediaAsync(profileId, null, episode.Id, cancellationToken)
-                    : null;
-
-                var position = episodeHistory?.StoppedAt ?? episode.WatchedPosition ?? TimeSpan.Zero;
-                var completed = episodeHistory?.Completed ?? episode.IsCompleted;
-                var hasRealWatchSignal = episodeHistory != null || episode.LastWatched.HasValue;
-
-                if (ShouldOfferResume(position, episode.Duration, completed, hasRealWatchSignal))
-                {
-                    return position.TotalSeconds;
-                }
-            }
-
-            // Virtual series episode cards built for Continue Watching may carry their own
-            // progress. Require a real watch signal so playlist refresh/user-data merges cannot
-            // show continue prompts on content the user never opened.
-            if (IsSameStream(channel.StreamUrl, _mainViewModel.CurrentEpisodePlaybackContext?.StreamUrl))
-            {
-                var channelHistory = channel.Id > 0
-                    ? await _watchHistoryService.GetLatestForMediaAsync(profileId, channel.Id, null, cancellationToken)
-                    : null;
-
-                var position = channelHistory?.StoppedAt ?? channel.WatchedPosition ?? TimeSpan.Zero;
-                var completed = channelHistory?.Completed ?? channel.IsCompleted;
-                var hasRealWatchSignal = channelHistory != null || channel.LastWatched.HasValue;
-
-                if (ShouldOfferResume(position, channel.Duration, completed, hasRealWatchSignal))
-                {
-                    return position.TotalSeconds;
-                }
-            }
-
-            return 0;
-        }
-
-        if (channel.Type == ChannelType.VOD)
-        {
-            var history = channel.Id > 0
-                ? await _watchHistoryService.GetLatestForMediaAsync(profileId, channel.Id, null, cancellationToken)
-                : null;
-
-            var position = history?.StoppedAt ?? channel.WatchedPosition ?? TimeSpan.Zero;
-            var completed = history?.Completed ?? channel.IsCompleted;
-            var hasRealWatchSignal = history != null || channel.LastWatched.HasValue;
-
-            if (ShouldOfferResume(position, channel.Duration, completed, hasRealWatchSignal))
-            {
-                return position.TotalSeconds;
-            }
-        }
-
-        return 0;
-    }
-
-    private static bool IsSameStream(string? left, string? right)
-        => !string.IsNullOrWhiteSpace(left) &&
-           !string.IsNullOrWhiteSpace(right) &&
-           string.Equals(left, right, StringComparison.OrdinalIgnoreCase);
-
-    private static bool ShouldOfferResume(TimeSpan position, TimeSpan? duration, bool completed, bool hasRealWatchSignal)
-    {
-        if (!hasRealWatchSignal || completed || position.TotalSeconds <= 120)
-        {
-            return false;
-        }
-
-        if (duration.HasValue && duration.Value.TotalSeconds > 0)
-        {
-            var durationSeconds = duration.Value.TotalSeconds;
-
-            if (position.TotalSeconds >= durationSeconds - 30)
-            {
-                return false;
-            }
-
-            if (position.TotalSeconds / durationSeconds >= 0.95)
-            {
-                return false;
-            }
-        }
-
-        return true;
+        _mainViewModel.SelectChannelFromEpgCommand.Execute(e.Channel);
     }
 
     private void PlayerViewModel_NextEpisodeRequested(object? sender, Episode episode)
@@ -567,11 +522,6 @@ public partial class MainWindow : Window
     private void PlayerViewModel_PreviousLiveChannelRequested(object? sender, EventArgs e)
     {
         _mainViewModel.PlayPreviousLiveChannelCommand.Execute(null);
-    }
-
-    private void MainWindow_EpgChannelSelected(object? sender, Views.EpgChannelSelectedRoutedEventArgs e)
-    {
-        _mainViewModel.SelectChannelFromEpgCommand.Execute(e.Channel);
     }
 
     private void MainViewModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)

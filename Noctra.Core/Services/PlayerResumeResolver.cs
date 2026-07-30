@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Noctra.Models;
 using Noctra.Services.Interfaces;
 
@@ -123,8 +124,12 @@ public sealed class PlayerResumeResolver
         {
             throw;
         }
-        catch
+        catch (Exception ex)
         {
+            Debug.WriteLine(
+                $"[PlayerResumeResolver] Resume history lookup failed " +
+                $"(profile={profileId}, channel={channelId?.ToString() ?? "null"}, " +
+                $"episode={episodeId?.ToString() ?? "null"}): {ex}");
             return null;
         }
     }

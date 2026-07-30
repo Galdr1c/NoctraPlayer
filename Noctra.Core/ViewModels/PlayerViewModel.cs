@@ -2530,10 +2530,16 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         pendingDialog?.TrySetResult(resumeFromSavedPosition);
     }
 
+    public void RefreshResumeEntitlement()
+    {
+        IsPremiumResume = _licenseService.IsFeatureAvailable(
+            Noctra.Services.LicenseService.Features.ResumePlayback);
+    }
+
     [RelayCommand]
     private void ResumeFromPosition()
     {
-        IsPremiumResume = _licenseService.IsFeatureAvailable(Noctra.Services.LicenseService.Features.ResumePlayback);
+        RefreshResumeEntitlement();
         if (!IsPremiumResume)
         {
             PremiumUpsellRequested?.Invoke(this, EventArgs.Empty);

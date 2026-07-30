@@ -54,88 +54,86 @@ public static class DesktopCardActions
         var supportsMyList = request.Media is Series ||
             request.Media is Channel { Type: not ChannelType.Live };
 
-        if (request.CardKind == DesktopCardGridKind.ContinueWatching)
-            return BuildStandardActions(supportsMyList, supportsFavorite);
+        var actions = new List<DesktopCardActionKind>(3);
 
-        if (request.CardKind == DesktopCardGridKind.Live)
+        switch (request.PresentationMode)
         {
-            return request.PresentationMode switch
-            {
-                DesktopCardPresentationMode.MyList =>
-                [
-                    DesktopCardActionKind.ToggleFavorite,
-                    DesktopCardActionKind.RemoveFromMyList
-                ],
-                DesktopCardPresentationMode.Favorites =>
-                [
-                    DesktopCardActionKind.RemoveFromFavorites
-                ],
-                DesktopCardPresentationMode.History =>
-                [
-                    DesktopCardActionKind.RemoveFromHistory
-                ],
-                _ => supportsFavorite
-                    ? [DesktopCardActionKind.ToggleFavorite]
-                    : []
-            };
+            case DesktopCardPresentationMode.MyList:
+                AddFavoriteAction(actions, request.Media, supportsFavorite);
+                if (supportsMyList)
+                    actions.Add(DesktopCardActionKind.RemoveFromMyList);
+                break;
+
+            case DesktopCardPresentationMode.Favorites:
+                AddMyListAction(actions, request.Media, supportsMyList);
+                if (supportsFavorite)
+                    actions.Add(DesktopCardActionKind.RemoveFromFavorites);
+                break;
+
+            case DesktopCardPresentationMode.History:
+                AddMyListAction(actions, request.Media, supportsMyList);
+                AddFavoriteAction(actions, request.Media, supportsFavorite);
+                actions.Add(DesktopCardActionKind.RemoveFromHistory);
+                break;
+
+            default:
+                AddMyListAction(actions, request.Media, supportsMyList);
+                AddFavoriteAction(actions, request.Media, supportsFavorite);
+                break;
         }
 
-        return request.PresentationMode switch
+        // Continue Watching is a history-backed rail. It should expose the same
+        // explicit removal action even though its normal card presentation mode is Default.
+        if (request.CardKind == DesktopCardGridKind.ContinueWatching &&
+            !actions.Contains(DesktopCardActionKind.RemoveFromHistory))
         {
-            DesktopCardPresentationMode.MyList => supportsFavorite
-                ?
-                [
-                    DesktopCardActionKind.ToggleFavorite,
-                    DesktopCardActionKind.RemoveFromMyList
-                ]
-                :
-                [
-                    DesktopCardActionKind.RemoveFromMyList
-                ],
-            DesktopCardPresentationMode.Favorites => supportsMyList
-                ?
-                [
-                    DesktopCardActionKind.AddToMyList,
-                    DesktopCardActionKind.RemoveFromFavorites
-                ]
-                :
-                [
-                    DesktopCardActionKind.RemoveFromFavorites
-                ],
-            DesktopCardPresentationMode.History =>
-                BuildHistoryActions(supportsMyList, supportsFavorite),
-            _ => BuildStandardActions(supportsMyList, supportsFavorite)
-        };
+            actions.Add(DesktopCardActionKind.RemoveFromHistory);
+        }
+
+        return actions;
     }
 
-    public static bool IsDestructive(DesktopCardActionKind action) =>
+    public static bool IsFavorite(object media) => media switch
+    {
+        Channel channel => channel.IsFavorite,
+        Series series => series.IsFavorite,
+        _ => false
+    };
+
+    public static bool IsInMyList(object media) => media switch
+    {
+        Channel channel => channel.IsInMyList,
+        Series series => series.IsInMyList,
+        _ => false
+    };
+
+    public static bool IsDestructive(
+        DesktopCardActionKind action,
+        object media) =>
         action is DesktopCardActionKind.RemoveFromMyList
             or DesktopCardActionKind.RemoveFromFavorites
-            or DesktopCardActionKind.RemoveFromHistory;
+            or DesktopCardActionKind.RemoveFromHistory ||
+        action == DesktopCardActionKind.ToggleFavorite && IsFavorite(media);
 
-    private static IReadOnlyList<DesktopCardActionKind> BuildStandardActions(
-        bool supportsMyList,
-        bool supportsFavorite)
+    private static void AddMyListAction(
+        ICollection<DesktopCardActionKind> actions,
+        object media,
+        bool supportsMyList)
     {
-        if (supportsMyList && supportsFavorite)
-            return [DesktopCardActionKind.AddToMyList, DesktopCardActionKind.ToggleFavorite];
-        if (supportsMyList)
-            return [DesktopCardActionKind.AddToMyList];
-        return supportsFavorite
-            ? [DesktopCardActionKind.ToggleFavorite]
-            : [];
+        if (!supportsMyList)
+            return;
+
+        actions.Add(IsInMyList(media)
+            ? DesktopCardActionKind.RemoveFromMyList
+            : DesktopCardActionKind.AddToMyList);
     }
 
-    private static IReadOnlyList<DesktopCardActionKind> BuildHistoryActions(
-        bool supportsMyList,
+    private static void AddFavoriteAction(
+        ICollection<DesktopCardActionKind> actions,
+        object media,
         bool supportsFavorite)
     {
-        var actions = new List<DesktopCardActionKind>(3);
-        if (supportsMyList)
-            actions.Add(DesktopCardActionKind.AddToMyList);
         if (supportsFavorite)
             actions.Add(DesktopCardActionKind.ToggleFavorite);
-        actions.Add(DesktopCardActionKind.RemoveFromHistory);
-        return actions;
     }
 }

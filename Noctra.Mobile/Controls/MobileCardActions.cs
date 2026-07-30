@@ -56,7 +56,10 @@ public static class MobileCardActions
 
         if (request.CardKind == MobileCardGridKind.ContinueWatching)
         {
-            return BuildStandardActions(supportsMyList, supportsFavorite);
+            var actions = new List<MobileCardActionKind>(
+                BuildStandardActions(supportsMyList, supportsFavorite));
+            actions.Add(MobileCardActionKind.RemoveFromHistory);
+            return actions;
         }
 
         if (request.CardKind == MobileCardGridKind.Live)

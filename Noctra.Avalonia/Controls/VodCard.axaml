@@ -25,11 +25,21 @@
       <Setter Property="ZIndex" Value="10"/>
       <Setter Property="RenderTransform" Value="scale(1.035)"/>
     </Style>
+    <Style Selector="controls|DesktopPressableCard.CardContainer:focus">
+      <Setter Property="ZIndex" Value="10"/>
+      <Setter Property="RenderTransform" Value="scale(1.035)"/>
+    </Style>
     <Style Selector="controls|DesktopPressableCard.CardContainer:pointerover Border.HoverOverlay">
+      <Setter Property="Opacity" Value="1"/>
+    </Style>
+    <Style Selector="controls|DesktopPressableCard.CardContainer:focus Border.HoverOverlay">
       <Setter Property="Opacity" Value="1"/>
     </Style>
     <Style Selector="controls|DesktopPressableCard.CardContainer:pressed">
       <Setter Property="RenderTransform" Value="scale(0.98)"/>
+    </Style>
+    <Style Selector="controls|DesktopPressableCard.CardContainer:command-disabled">
+      <Setter Property="Opacity" Value="0.55"/>
     </Style>
     <Style Selector="Border.HoverOverlay">
       <Setter Property="Opacity" Value="0"/>
@@ -39,6 +49,7 @@
                                    CardRightTapped="OnCardRightTapped"
                                    Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}"
                                    CommandParameter="{Binding}"
+                                   AutomationProperties.Name="{Binding Name}"
                                    Padding="0"
                                   Background="Transparent"
                                   BorderThickness="0"
@@ -64,8 +75,16 @@
             </StackPanel>
           </Border>
           <ProgressBar Height="5" CornerRadius="0" Minimum="0" Maximum="100" Value="{Binding WatchedPercentage}"
-                       Foreground="{DynamicResource AccentBrush}" Background="#4D000000" BorderThickness="0"
-                       IsVisible="{Binding ., Converter={StaticResource WatchedProgressVisibilityConverter}}"/>
+                       Foreground="{DynamicResource AccentBrush}" Background="{DynamicResource ThemePreviewDarkText}" BorderThickness="0"
+                       IsVisible="{Binding ., Converter={StaticResource WatchedProgressVisibilityConverter}}">
+
+            <ProgressBar.IsVisible>
+              <MultiBinding Converter="{x:Static BoolConverters.And}">
+                <Binding Path="#VodCardControl.ShowHistoryMenu" />
+                <Binding Path="." Converter="{StaticResource WatchedProgressVisibilityConverter}" />
+              </MultiBinding>
+            </ProgressBar.IsVisible>
+          </ProgressBar>               
         </StackPanel>
       </Grid>
     </Border>

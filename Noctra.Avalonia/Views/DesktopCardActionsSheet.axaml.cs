@@ -1,13 +1,17 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
+using Avalonia;
+using Avalonia.Animation;
+using Avalonia.Animation.Easings;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
+using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Material.Icons;
 using Noctra.Avalonia.Controls;
@@ -38,15 +42,17 @@ public partial class DesktopCardActionsSheet : UserControl
 {
     private const double DismissDragThresholdRatio = 0.22;
     private const double MinimumDismissDragDistance = 96;
-    private const int SnapAnimationDurationMs = 150;
-    private const int DismissAnimationDurationMs = 140;
+    private static readonly TimeSpan SnapAnimationDuration = TimeSpan.FromMilliseconds(150);
+    private static readonly TimeSpan DismissAnimationDuration = TimeSpan.FromMilliseconds(140);
 
     private Action<DesktopCardActionSheetItem>? _selectionAction;
     private bool _isDragging;
     private double _dragStartY;
     private double _dragOffsetY;
-    private int _animationVersion;
     private TranslateTransform? _sheetTranslation;
+    private Control? _previousFocus;
+    private CancellationTokenSource? _transitionCts;
+    private int _presentationVersion;
 
     public DesktopCardActionsSheet()
     {
@@ -62,14 +68,21 @@ public partial class DesktopCardActionsSheet : UserControl
         IEnumerable<DesktopCardActionSheetItem> actions,
         Action<DesktopCardActionSheetItem> selectionAction)
     {
-        StopAnimation();
-        ResetVisuals();
+        CancelPendingTransition();
+        var presentationVersion = Interlocked.Increment(ref _presentationVersion);
+
+        if (!IsVisible)
+        {
+            _previousFocus = TopLevel.GetTopLevel(this)?
+                .FocusManager?
+                .GetFocusedElement() as Control;
+        }
+
+        ResetVisuals(useTransitions: false);
         TitleTextBlock.Text = title;
         Actions.Clear();
         foreach (var action in actions)
-        {
             Actions.Add(action);
-        }
 
         if (Actions.Count == 0)
         {
@@ -81,17 +94,18 @@ public partial class DesktopCardActionsSheet : UserControl
         IsVisible = true;
         Focus();
 
-        Task.Run(async () =>
-        {
-            await Task.Delay(50);
-            await Dispatcher.InvokeAsync(FocusFirstAction);
-        });
+        // Loaded priority is deterministic and is cancelled naturally by the
+        // IsVisible check; no background Task/50 ms timing race is required.
+        Dispatcher.UIThread.Post(
+            () => FocusFirstAction(presentationVersion),
+            DispatcherPriority.Loaded);
     }
 
     public bool TryClose()
     {
         if (!IsVisible)
             return false;
+
         Close();
         return true;
     }
@@ -111,15 +125,14 @@ public partial class DesktopCardActionsSheet : UserControl
     private void Scrim_PointerPressed(object? sender, PointerPressedEventArgs e)
     {
         if (ReferenceEquals(e.Source, sender))
-        {
             Close();
-        }
     }
 
     private void Sheet_KeyDown(object? sender, KeyEventArgs e)
     {
         if (e.Key != Key.Escape)
             return;
+
         Close();
         e.Handled = true;
     }
@@ -128,7 +141,9 @@ public partial class DesktopCardActionsSheet : UserControl
     {
         if (!IsVisible)
             return;
-        StopAnimation();
+
+        CancelPendingTransition();
+        SetTransitions(null);
         _isDragging = true;
         _dragStartY = e.GetCurrentPoint(this).Position.Y;
         _dragOffsetY = Math.Max(0, SheetTranslation.Y);
@@ -140,6 +155,7 @@ public partial class DesktopCardActionsSheet : UserControl
     {
         if (!_isDragging)
             return;
+
         var delta = e.GetCurrentPoint(this).Position.Y - _dragStartY;
         SetDragProgress(_dragOffsetY + delta);
         e.Handled = true;
@@ -149,6 +165,7 @@ public partial class DesktopCardActionsSheet : UserControl
     {
         if (!_isDragging)
             return;
+
         _isDragging = false;
         e.Pointer.Capture(null);
         _ = CompleteDragAsync();
@@ -159,22 +176,39 @@ public partial class DesktopCardActionsSheet : UserControl
     {
         if (!_isDragging)
             return;
+
         _isDragging = false;
-        _ = AnimateToAsync(0, 1, SnapAnimationDurationMs);
+        SnapBack();
     }
 
     private async Task CompleteDragAsync()
     {
-        if (SheetTranslation.Y >= GetDismissDistance())
+        if (SheetTranslation.Y < GetDismissDistance())
         {
-            var target = Math.Max(SheetSurface.Bounds.Height + 24, SheetTranslation.Y);
-            if (await AnimateToAsync(target, 0, DismissAnimationDurationMs))
-            {
-                Close();
-            }
+            SnapBack();
             return;
         }
-        await AnimateToAsync(0, 1, SnapAnimationDurationMs);
+
+        var target = Math.Max(SheetSurface.Bounds.Height + 24, SheetTranslation.Y);
+        var cts = BeginTransition(DismissAnimationDuration);
+        SetVisuals(target, 0);
+
+        try
+        {
+            await Task.Delay(DismissAnimationDuration, cts.Token);
+            if (!cts.IsCancellationRequested)
+                Close();
+        }
+        catch (OperationCanceledException)
+        {
+            // A new Show/Close/drag superseded this transition.
+        }
+    }
+
+    private void SnapBack()
+    {
+        BeginTransition(SnapAnimationDuration);
+        SetVisuals(0, 1);
     }
 
     private void SetDragProgress(double offset)
@@ -185,29 +219,8 @@ public partial class DesktopCardActionsSheet : UserControl
         SetVisuals(clamped, 1 - (0.65 * progress));
     }
 
-    private async Task<bool> AnimateToAsync(double targetOffset, double targetOpacity, int durationMs)
-    {
-        var version = ++_animationVersion;
-        var initialOffset = SheetTranslation.Y;
-        var initialOpacity = ScrimLayer.Opacity;
-        var stopwatch = Stopwatch.StartNew();
-        while (stopwatch.ElapsedMilliseconds < durationMs)
-        {
-            if (version != _animationVersion || !IsVisible)
-                return false;
-            var progress = stopwatch.ElapsedMilliseconds / (double)durationMs;
-            var eased = 1 - Math.Pow(1 - progress, 3);
-            SetVisuals(Lerp(initialOffset, targetOffset, eased), Lerp(initialOpacity, targetOpacity, eased));
-            await Task.Delay(8);
-        }
-        if (version != _animationVersion || !IsVisible)
-            return false;
-        SetVisuals(targetOffset, targetOpacity);
-        return true;
-    }
-
-    private double GetDismissDistance()
-        => Math.Max(MinimumDismissDragDistance, Bounds.Height * DismissDragThresholdRatio);
+    private double GetDismissDistance() =>
+        Math.Max(MinimumDismissDragDistance, Bounds.Height * DismissDragThresholdRatio);
 
     private void SetVisuals(double offset, double opacity)
     {
@@ -215,40 +228,100 @@ public partial class DesktopCardActionsSheet : UserControl
         ScrimLayer.Opacity = opacity;
     }
 
-    private void StopAnimation() => _animationVersion++;
+    private CancellationTokenSource BeginTransition(TimeSpan duration)
+    {
+        CancelPendingTransition();
+        var cts = new CancellationTokenSource();
+        _transitionCts = cts;
+        SetTransitions(duration);
+        return cts;
+    }
 
-    private void ResetVisuals()
+    private void SetTransitions(TimeSpan? duration)
+    {
+        if (duration is null)
+        {
+            SheetTranslation.Transitions = null;
+            ScrimLayer.Transitions = null;
+            return;
+        }
+
+        SheetTranslation.Transitions = new Transitions
+        {
+            new DoubleTransition
+            {
+                Property = TranslateTransform.YProperty,
+                Duration = duration.Value,
+                Easing = new CubicEaseOut()
+            }
+        };
+
+        ScrimLayer.Transitions = new Transitions
+        {
+            new DoubleTransition
+            {
+                Property = Visual.OpacityProperty,
+                Duration = duration.Value,
+                Easing = new CubicEaseOut()
+            }
+        };
+    }
+
+    private void CancelPendingTransition()
+    {
+        var cts = Interlocked.Exchange(ref _transitionCts, null);
+        if (cts is null)
+            return;
+
+        cts.Cancel();
+        cts.Dispose();
+    }
+
+    private void ResetVisuals(bool useTransitions)
     {
         _isDragging = false;
         _dragOffsetY = 0;
+        SetTransitions(useTransitions ? SnapAnimationDuration : null);
         SetVisuals(0, 1);
     }
 
-    private static double Lerp(double start, double end, double progress)
-        => start + ((end - start) * progress);
+    private TranslateTransform SheetTranslation =>
+        _sheetTranslation ??= SheetSurface.RenderTransform as TranslateTransform
+            ?? throw new InvalidOperationException(
+                "DesktopCardActionsSheet requires a TranslateTransform.");
 
-    private TranslateTransform SheetTranslation
-        => _sheetTranslation ??= SheetSurface.RenderTransform as TranslateTransform
-            ?? throw new InvalidOperationException("DesktopCardActionsSheet requires a TranslateTransform.");
-
-    private void FocusFirstAction()
+    private void FocusFirstAction(int presentationVersion)
     {
-        if (!IsVisible)
+        if (!IsVisible || presentationVersion != _presentationVersion)
             return;
 
         var firstButton = ActionsList.GetVisualDescendants()
             .OfType<Button>()
             .FirstOrDefault();
-        firstButton?.Focus();
+        firstButton?.Focus(NavigationMethod.Tab);
     }
 
     private void Close()
     {
-        StopAnimation();
-        ResetVisuals();
+        var presentationVersion = Interlocked.Increment(ref _presentationVersion);
+        CancelPendingTransition();
+        ResetVisuals(useTransitions: false);
         IsVisible = false;
         TitleTextBlock.Text = string.Empty;
         Actions.Clear();
         _selectionAction = null;
+
+        var focusTarget = _previousFocus;
+        _previousFocus = null;
+        if (focusTarget is { Focusable: true, IsEffectivelyVisible: true })
+        {
+            Dispatcher.UIThread.Post(
+                () =>
+                {
+                    if (!IsVisible && presentationVersion == _presentationVersion)
+                        focusTarget.Focus(NavigationMethod.Unspecified);
+                },
+                DispatcherPriority.Input);
+        }
     }
 }

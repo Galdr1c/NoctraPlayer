@@ -25,11 +25,21 @@
       <Setter Property="ZIndex" Value="10"/>
       <Setter Property="RenderTransform" Value="scale(1.035)"/>
     </Style>
+    <Style Selector="controls|DesktopPressableCard.CardContainer:focus">
+      <Setter Property="ZIndex" Value="10"/>
+      <Setter Property="RenderTransform" Value="scale(1.035)"/>
+    </Style>
     <Style Selector="controls|DesktopPressableCard.CardContainer:pointerover Border.HoverOverlay">
+      <Setter Property="Opacity" Value="1"/>
+    </Style>
+    <Style Selector="controls|DesktopPressableCard.CardContainer:focus Border.HoverOverlay">
       <Setter Property="Opacity" Value="1"/>
     </Style>
     <Style Selector="controls|DesktopPressableCard.CardContainer:pressed">
       <Setter Property="RenderTransform" Value="scale(0.98)"/>
+    </Style>
+    <Style Selector="controls|DesktopPressableCard.CardContainer:command-disabled">
+      <Setter Property="Opacity" Value="0.55"/>
     </Style>
     <Style Selector="Border.HoverOverlay">
       <Setter Property="Opacity" Value="0"/>
@@ -39,6 +49,7 @@
                                    CardRightTapped="OnCardRightTapped"
                                    Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}"
                                    CommandParameter="{Binding}"
+                                   AutomationProperties.Name="{Binding Name}"
                                    Padding="0"
                                   Background="Transparent"
                                   BorderThickness="0"

@@ -27,11 +27,21 @@
       <Setter Property="ZIndex" Value="10"/>
       <Setter Property="RenderTransform" Value="scale(1.03)"/>
     </Style>
+    <Style Selector="controls|DesktopPressableCard.CardContainer:focus">
+      <Setter Property="ZIndex" Value="10"/>
+      <Setter Property="RenderTransform" Value="scale(1.03)"/>
+    </Style>
     <Style Selector="controls|DesktopPressableCard.CardContainer:pointerover Border.HoverOverlay">
+      <Setter Property="Opacity" Value="1"/>
+    </Style>
+    <Style Selector="controls|DesktopPressableCard.CardContainer:focus Border.HoverOverlay">
       <Setter Property="Opacity" Value="1"/>
     </Style>
     <Style Selector="controls|DesktopPressableCard.CardContainer:pressed">
       <Setter Property="RenderTransform" Value="scale(0.98)"/>
+    </Style>
+    <Style Selector="controls|DesktopPressableCard.CardContainer:command-disabled">
+      <Setter Property="Opacity" Value="0.55"/>
     </Style>
     <Style Selector="Border.HoverOverlay">
       <Setter Property="Opacity" Value="0"/>
@@ -48,7 +58,8 @@
   <controls:DesktopPressableCard Classes="CardContainer"
                                    CardRightTapped="OnCardRightTapped"
                                    Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}"
-                                   CommandParameter="{Binding}">
+                                   CommandParameter="{Binding}"
+                                   AutomationProperties.Name="{Binding Name}">
     
     <Border CornerRadius="6" ClipToBounds="True" Background="{DynamicResource Surface0Brush}" BoxShadow="0 2 8 0 #40000000">
       <Grid>
@@ -92,7 +103,7 @@
 
         <!-- Progress Bar (Netflix style at the very bottom) -->
         <ProgressBar x:Name="WatchProgressBar" VerticalAlignment="Bottom" Height="3" CornerRadius="0" Minimum="0" Maximum="100" Value="{Binding WatchedPercentage}"
-                     Foreground="{DynamicResource AccentBrush}" Background="#4D000000" BorderThickness="0"
+                     Foreground="{DynamicResource AccentBrush}" Background="{DynamicResource ThemePreviewDarkText}" BorderThickness="0"
                      IsVisible="{Binding ., Converter={StaticResource WatchedProgressVisibilityConverter}}">
             <ProgressBar.Transitions>
                 <Transitions>

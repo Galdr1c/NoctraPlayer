@@ -7,59 +7,23 @@ public sealed class DesktopCardInteractionTests
     private static readonly XNamespace Xaml =
         "http://schemas.microsoft.com/winfx/2006/xaml";
 
-    [Fact]
-    public void LiveCard_UsesFullSurfacePlaybackButtonAndDoesNotOfferMyList()
-    {
-        var document = LoadProjectXaml("LiveTvCard.axaml");
-        var playbackButton = FindNamedElement(document, "PlaybackButton");
-
-        Assert.Equal("3", (string?)playbackButton.Attribute("Grid.RowSpan"));
-        Assert.Contains(
-            "SelectMediaCommand",
-            (string?)playbackButton.Attribute("Command") ?? string.Empty);
-        Assert.DoesNotContain(
-            document.Descendants().Where(element => element.Name.LocalName == "MenuItem"),
-            item => (string?)item.Attribute("Click") == "Context_AddToMyList_Click");
-    }
-
     [Theory]
-    [InlineData("VodCard.axaml", "VodCardControl")]
-    [InlineData("SeriesCard.axaml", "SeriesCardControl")]
-    public void PersonalListCards_ShowOneContextActionPerMembership(
-        string fileName,
-        string controlName)
+    [InlineData("LiveTvCard.axaml")]
+    [InlineData("VodCard.axaml")]
+    [InlineData("SeriesCard.axaml")]
+    [InlineData("ContinueWatchingCard.axaml")]
+    public void Cards_UseDesktopPressableCardWithSelectMediaCommand(string fileName)
     {
         var document = LoadProjectXaml(fileName);
-        var menuItems = document.Descendants()
-            .Where(element => element.Name.LocalName == "MenuItem")
-            .ToArray();
-
-        var toggleMyList = menuItems.Single(
-            item => (string?)item.Attribute("Click") == "Context_AddToMyList_Click");
-        var removeMyList = menuItems.Single(
-            item => (string?)item.Attribute("Click") == "Context_RemoveFromMyList_Click");
-        var toggleFavorite = menuItems.Single(
-            item => (string?)item.Attribute("Click") == "Context_ToggleFavorite_Click");
-        var removeFavorite = menuItems.Single(
-            item => (string?)item.Attribute("Click") == "Context_RemoveFromFavorites_Click");
+        var container = document.Descendants()
+            .Single(element => element.Name.LocalName == "DesktopPressableCard");
 
         Assert.Contains(
-            $"#{controlName}.ShowRemoveMyListMenu",
-            (string?)toggleMyList.Attribute("IsVisible") ?? string.Empty);
-        Assert.Contains(
-            "InverseBoolConverter",
-            (string?)toggleMyList.Attribute("IsVisible") ?? string.Empty);
-        Assert.Contains("MyList.Remove", (string?)removeMyList.Attribute("Header") ?? string.Empty);
-
-        Assert.Contains(
-            $"#{controlName}.ShowRemoveFavoriteMenu",
-            (string?)toggleFavorite.Attribute("IsVisible") ?? string.Empty);
-        Assert.Contains(
-            "InverseBoolConverter",
-            (string?)toggleFavorite.Attribute("IsVisible") ?? string.Empty);
-        Assert.Contains(
-            "Context.Favorite.Toggle",
-            (string?)removeFavorite.Attribute("Header") ?? string.Empty);
+            "SelectMediaCommand",
+            (string?)container.Attribute("Command") ?? string.Empty);
+        Assert.Equal(
+            "OnCardRightTapped",
+            (string?)container.Attribute("CardRightTapped"));
     }
 
     private static XElement FindNamedElement(XDocument document, string name)

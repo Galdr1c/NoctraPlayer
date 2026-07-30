@@ -1,10 +1,7 @@
-using System;
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Input;
 using Avalonia.Interactivity;
 using Noctra.Models;
-using Noctra.ViewModels;
 
 namespace Noctra.Avalonia.Controls;
 
@@ -23,9 +20,6 @@ public partial class SeriesCard : UserControl
 
     public SeriesCard() => InitializeComponent();
 
-    private MainViewModel? ViewModel
-        => VisualRoot is Control root ? root.DataContext as MainViewModel : null;
-
     internal void OnCardRightTapped(object? sender, RoutedEventArgs e)
     {
         if (DataContext is Series series)
@@ -34,32 +28,19 @@ public partial class SeriesCard : UserControl
                 this,
                 series,
                 DesktopCardGridKind.Default,
-                DesktopCardPresentationMode.Default);
+                ResolvePresentationMode());
+            e.Handled = true;
         }
     }
 
-    internal void HandleAction(DesktopCardActionKind action)
+    private DesktopCardPresentationMode ResolvePresentationMode()
     {
-        if (DataContext is not Series series || ViewModel is null)
-            return;
-
-        switch (action)
-        {
-            case DesktopCardActionKind.AddToMyList:
-                ViewModel.AddToMyListCommand.Execute(series);
-                break;
-            case DesktopCardActionKind.ToggleFavorite:
-                ViewModel.ToggleFavoriteCommand.Execute(series);
-                break;
-            case DesktopCardActionKind.RemoveFromHistory:
-                ViewModel.RemoveFromHistoryCommand.Execute(series);
-                break;
-            case DesktopCardActionKind.RemoveFromFavorites:
-                ViewModel.RemoveFromFavoritesCommand.Execute(series);
-                break;
-            case DesktopCardActionKind.RemoveFromMyList:
-                ViewModel.RemoveFromMyListCommand.Execute(series);
-                break;
-        }
+        if (ShowHistoryMenu)
+            return DesktopCardPresentationMode.History;
+        if (ShowRemoveFavoriteMenu)
+            return DesktopCardPresentationMode.Favorites;
+        if (ShowRemoveMyListMenu)
+            return DesktopCardPresentationMode.MyList;
+        return DesktopCardPresentationMode.Default;
     }
 }

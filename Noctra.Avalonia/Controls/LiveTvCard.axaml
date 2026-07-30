@@ -12,6 +12,7 @@
              HorizontalAlignment="Stretch" ClipToBounds="False">
   <UserControl.Styles>
     <Style Selector="controls|DesktopPressableCard.CardContainer">
+      <Setter Property="RenderTransformOrigin" Value="50%,50%"/>
       <Setter Property="Background" Value="Transparent"/>
       <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
       <Setter Property="BorderThickness" Value="0"/>
@@ -26,28 +27,18 @@
       </Setter>
     </Style>
     <Style Selector="controls|DesktopPressableCard.CardContainer:pointerover">
-      <Setter Property="Background" Value="{DynamicResource Surface1Brush}"/>
-      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+      <Setter Property="ZIndex" Value="10"/>
+      <Setter Property="RenderTransform" Value="scale(1.035)"/>
+    </Style>
+    <Style Selector="controls|DesktopPressableCard.CardContainer:focus">
+      <Setter Property="ZIndex" Value="10"/>
+      <Setter Property="RenderTransform" Value="scale(1.035)"/>
     </Style>
     <Style Selector="controls|DesktopPressableCard.CardContainer:pressed">
       <Setter Property="RenderTransform" Value="scale(0.98)"/>
     </Style>
-    <Style Selector="Button.CardContentBtn">
-      <Setter Property="Background" Value="Transparent"/>
-      <Setter Property="BorderThickness" Value="0"/>
-      <Setter Property="Padding" Value="12,8"/>
-      <Setter Property="CornerRadius" Value="8"/>
-      <Setter Property="HorizontalAlignment" Value="Stretch"/>
-      <Setter Property="VerticalAlignment" Value="Stretch"/>
-      <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-      <Setter Property="VerticalContentAlignment" Value="Stretch"/>
-    </Style>
-    <Style Selector="Button.CardContentBtn:pointerover /template/ ContentPresenter">
-      <Setter Property="Background" Value="{DynamicResource Surface1Brush}"/>
-      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-    </Style>
-    <Style Selector="Button.CardContentBtn:pressed /template/ ContentPresenter">
-      <Setter Property="Background" Value="{DynamicResource Surface2Brush}"/>
+    <Style Selector="controls|DesktopPressableCard.CardContainer:command-disabled">
+      <Setter Property="Opacity" Value="0.55"/>
     </Style>
     <Style Selector="Button.FavoriteBtn">
       <Setter Property="Opacity" Value="0.55"/>
@@ -64,21 +55,16 @@
                                    CardRightTapped="OnCardRightTapped"
                                    Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}"
                                    CommandParameter="{Binding}"
+                                   AutomationProperties.Name="{Binding Name}"
                                    HorizontalAlignment="Stretch"
                                    VerticalAlignment="Stretch">
-    <Grid RowDefinitions="*,Auto,Auto">
-      <Button x:Name="PlaybackButton"
-              Grid.RowSpan="3"
-              Classes="CardContentBtn"
-              Margin="0"
-              Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}"
-              CommandParameter="{Binding}"/>
-
-      <Grid Grid.RowSpan="3"
+    <Grid ColumnDefinitions="*,Auto">
+      <!-- Card content (non-interactive visuals) -->
+      <Grid Grid.Column="0"
             RowDefinitions="*,Auto,Auto"
             IsHitTestVisible="False">
         <Grid Grid.Row="0"
-              ColumnDefinitions="48,*,48"
+              ColumnDefinitions="48,*"
               VerticalAlignment="Center">
           <Border Grid.Column="0"
                   Width="46"
@@ -115,11 +101,11 @@
                      IsVisible="{Binding CurrentProgramTitle, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
       </Grid>
 
-      <Button Grid.Row="0"
+      <!-- Favorite button in its own column so it doesn't overlay the card body -->
+      <Button Grid.Column="1"
               Classes="FavoriteBtn"
               Width="44"
               Height="44"
-              HorizontalAlignment="Right"
               VerticalAlignment="Center"
               Background="Transparent"
               BorderThickness="0"

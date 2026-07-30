@@ -40,6 +40,25 @@
         <Setter Property="Opacity" Value="0.80" />
         <Setter Property="Background" Value="{DynamicResource PremiumBadgeBrush}" />
       </Style>
+      <Style Selector="Button.ResumePrimaryButton">
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="Padding" Value="14" />
+        <Setter Property="MinHeight" Value="52" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Background" Value="{DynamicResource PremiumBadgeBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource PremiumBadgeTextBrush}" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+      </Style>
+      <Style Selector="Button.ResumePrimaryButton:pointerover /template/ ContentPresenter">
+        <Setter Property="Opacity" Value="0.92" />
+        <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+      </Style>
+      <Style Selector="Button.ResumePrimaryButton:pressed /template/ ContentPresenter">
+        <Setter Property="Opacity" Value="0.80" />
+        <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+      </Style>
       <Style Selector="Button.iconBtn">
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Background" Value="Transparent"/>
@@ -1087,7 +1106,8 @@
                         <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
                           <Button Grid.Column="0"
                                   Command="{Binding PlayNextEpisodeCommand}"
-                                  Classes="UpgradeButton"
+                                  Theme="{StaticResource UpgradeButton}"
+                                  Margin="0"
                                   Background="{DynamicResource NextEpisodeHighlightColor}"
                                   Foreground="{DynamicResource TextPrimaryBrush}"
                                   BorderBrush="{DynamicResource PremiumBadgeBrush}"
@@ -1103,13 +1123,13 @@
                                   Background="{DynamicResource PlayerOverlayPanelBrush}"
                                   Foreground="{DynamicResource NextEpisodeCancel}"
                                   Theme="{StaticResource DangerButtonStyle}"
-                                  BorderThickness="1"
-                                  BorderBrush="#33FFFFFF"
-                                  MinHeight="15"
-                                  MaxHeight="30"
+                                  BorderThickness="0"
+                                  MinHeight="44"
+                                  MaxHeight="48"
                                   Padding="0"
                                   CornerRadius="6"
                                   Cursor="Hand"
+                                  VerticalContentAlignment="Center"
                                   HorizontalAlignment="Stretch">
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="6">
                               <materialIcons:MaterialIcon Kind="Close" Width="14" Height="14" Foreground="{DynamicResource NextEpisodeCancel}"/>
@@ -1168,11 +1188,9 @@
                         </Border>
 
                         <StackPanel Spacing="10">
-                          <Button Command="{Binding ResumeFromPositionCommand}"
-                                  Theme="{StaticResource UpgradeButton}"
-                                  BorderThickness="1"
+                          <Button Classes="ResumePrimaryButton"
+                                  Command="{Binding ResumeFromPositionCommand}"
                                   Margin="0"
-                                  HorizontalAlignment="Stretch"
                                   Cursor="Hand">
                             <Grid ColumnDefinitions="Auto,*,Auto"
                                   ColumnSpacing="10">
@@ -1182,7 +1200,23 @@
                               <TextBlock Grid.Column="1"
                                          Text="{loc:Translate Player.Resume.Continue}"
                                          FontWeight="Bold"
+                                         HorizontalAlignment="Center"
                                          VerticalAlignment="Center" />
+                              <Border Grid.Column="2"
+                                      Background="{DynamicResource PremiumBadgeBrush}"
+                                      CornerRadius="7"
+                                      Padding="7,4"
+                                      IsVisible="{Binding !IsPremiumResume}">
+                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                  <materialIcons:MaterialIcon Kind="Crown"
+                                                              Width="13" Height="13"
+                                                              Foreground="{DynamicResource PremiumBadgeTextBrush}" />
+                                  <TextBlock Text="{loc:Translate Upsell.Badge}"
+                                             FontSize="9"
+                                             FontWeight="Bold"
+                                             Foreground="{DynamicResource PremiumBadgeTextBrush}" />
+                                </StackPanel>
+                              </Border>
                             </Grid>
                           </Button>
 
@@ -1248,8 +1282,8 @@
                                    ZIndex="15000"
                                    IsVisible="False" />
 
-    <!-- Global Loading Overlay (Visible during refresh etc.) -->
-    <Grid Grid.RowSpan="3" Background="#AA000000" IsVisible="{Binding IsGlobalLoading}" ZIndex="10000">
+    <!-- Global Loading Overlay blocks every sheet/dialog while refresh is active. -->
+    <Grid Grid.RowSpan="3" Background="#AA000000" IsVisible="{Binding IsGlobalLoading}" ZIndex="20000">
         <Border Background="{DynamicResource Bg1Brush}" 
                 CornerRadius="16" 
                 Padding="32" 
