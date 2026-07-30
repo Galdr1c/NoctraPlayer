@@ -57,6 +57,8 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
     private readonly Timer _positionUpdateTimer;
     private int _positionUpdateQueued;
     private int _playbackGeneration;
+    private readonly AudioBecomingNoisyReceiver _audioBecomingNoisyReceiver;
+    private bool _isAudioBecomingNoisyReceiverRegistered;
 
     // Cached values to avoid cross-thread calls when queried outside main thread
     private bool _isPlaying;
@@ -144,6 +146,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
         _settingsService = settingsService;
         _networkService = networkService;
         _localizationService = localizationService;
+        _audioBecomingNoisyReceiver = new AudioBecomingNoisyReceiver(this);
         _positionUpdateTimer = new Timer(
             _ => QueuePositionUpdate(),
             null,
@@ -1459,6 +1462,47 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
         VodMkv
     }
 
+    // ── Audio Focus & Output Management ──────────────────────────────────────
+    private void UpdateAudioBecomingNoisyReceiver(bool register)
+    {
+        if (register && !_isAudioBecomingNoisyReceiverRegistered)
+        {
+            var filter = new IntentFilter(global::Android.Media.AudioManager.ActionAudioBecomingNoisy);
+            _applicationContext.RegisterReceiver(_audioBecomingNoisyReceiver, filter);
+            _isAudioBecomingNoisyReceiverRegistered = true;
+        }
+        else if (!register && _isAudioBecomingNoisyReceiverRegistered)
+        {
+            try
+            {
+                _applicationContext.UnregisterReceiver(_audioBecomingNoisyReceiver);
+            }
+            catch (Exception ex)
+            {
+                LogDebug($"Failed to unregister AudioBecomingNoisyReceiver: {ex.Message}");
+            }
+            _isAudioBecomingNoisyReceiverRegistered = false;
+        }
+    }
+
+    private sealed class AudioBecomingNoisyReceiver : BroadcastReceiver
+    {
+        private readonly AndroidVideoPlayerService _playerService;
+
+        public AudioBecomingNoisyReceiver(AndroidVideoPlayerService playerService)
+        {
+            _playerService = playerService;
+        }
+
+        public override void OnReceive(Context? context, Intent? intent)
+        {
+            if (intent?.Action == global::Android.Media.AudioManager.ActionAudioBecomingNoisy)
+            {
+                _playerService.Pause();
+            }
+        }
+    }
+
     // ── ExoPlayer Listener ───────────────────────────────────────────────────
     private sealed class PlayerListener : Java.Lang.Object, IPlayerListener
     {
@@ -1537,6 +1581,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
                 _service._state = isPlaying ? PlaybackState.Playing : PlaybackState.Paused;
             }
             _service.UpdatePositionPollingForLoadedMedia();
+            _service.UpdateAudioBecomingNoisyReceiver(isPlaying);
             _service.PlayingChanged?.Invoke(_service, isPlaying);
         }
 
