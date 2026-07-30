@@ -183,6 +183,8 @@
   "Player.Info.Cast": "Oyuncular",
   "Player.Settings.Title": "Ses ve Altyazı",
   "Player.Settings.RestartNote": "Ayarların uygulanabilmesi için oynatıcı anlık olarak yeniden başlatılır.",
+  "Player.Settings.SubtitleAppearance": "Altyazı Görünümü",
+  "Player.Settings.SubtitleAppearance.Preview": "Önizleme",
   "Player.Settings.SubtitleSize": "Altyazı Boyutu",
   "Player.Settings.SubtitleSize.Small": "Küçük",
   "Player.Settings.SubtitleSize.Normal": "Normal",

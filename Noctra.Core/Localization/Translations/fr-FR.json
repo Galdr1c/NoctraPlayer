@@ -183,6 +183,8 @@
   "Player.Info.Cast": "Distribution",
   "Player.Settings.Title": "Audio Et Sous-Titres",
   "Player.Settings.RestartNote": "Le lecteur va redémarrer brièvement pour appliquer les paramètres.",
+  "Player.Settings.SubtitleAppearance": "Apparence Des Sous-Titres",
+  "Player.Settings.SubtitleAppearance.Preview": "Aperçu",
   "Player.Settings.SubtitleSize": "Taille Des Sous-Titres",
   "Player.Settings.SubtitleSize.Small": "Petit",
   "Player.Settings.SubtitleSize.Normal": "Normal",

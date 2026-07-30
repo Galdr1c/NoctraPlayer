@@ -62,7 +62,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
     public enum SleepTimerOption { Off, Minutes15, Minutes30, Minutes60, EndOfEpisode }
     public enum FillMode { Fit, Fill, Stretch, Original }
-    public enum MobilePanelState { None, Actions, Audio, Quality, Info, Episodes, Sleep, Epg, Resume, NextEpisode }
+    public enum MobilePanelState { None, Actions, Audio, Quality, Info, Episodes, Sleep, Epg, Resume, NextEpisode, SubtitleAppearance }
 
     // ── Controllers / Subclasses (Decomposition Pattern) ────────────────────
     public PlayerPlaybackController PlaybackController { get; }
@@ -219,6 +219,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
             if (IsEpgPanelOpen) return MobilePanelState.Epg;
             if (IsActionsPanelOpen) return MobilePanelState.Actions;
             if (IsAudioSettingsOpen) return MobilePanelState.Audio;
+            if (IsSubtitleAppearanceSettingsOpen) return MobilePanelState.SubtitleAppearance;
             if (IsQualitySettingsOpen) return MobilePanelState.Quality;
             if (IsInfoPanelOpen) return MobilePanelState.Info;
             if (IsEpisodesPanelOpen) return MobilePanelState.Episodes;
@@ -235,6 +236,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     public bool IsMobileDetailPanelOpen =>
         IsActionsPanelOpen ||
         IsAudioSettingsOpen ||
+        IsSubtitleAppearanceSettingsOpen ||
         IsQualitySettingsOpen ||
         IsInfoPanelOpen ||
         IsEpisodesPanelOpen ||
@@ -255,6 +257,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
         IsActionsPanelOpen = state == MobilePanelState.Actions;
         IsAudioSettingsOpen = state == MobilePanelState.Audio;
+        IsSubtitleAppearanceSettingsOpen = state == MobilePanelState.SubtitleAppearance;
         IsQualitySettingsOpen = state == MobilePanelState.Quality;
         IsInfoPanelOpen = state == MobilePanelState.Info;
         IsEpisodesPanelOpen = state == MobilePanelState.Episodes;
@@ -433,6 +436,14 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     [NotifyPropertyChangedFor(nameof(IsBottomControlsVisible))]
     [NotifyPropertyChangedFor(nameof(IsMobileCompactControlsVisible))]
     private bool _isAudioSettingsOpen;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ActiveMobilePanelState))]
+    [NotifyPropertyChangedFor(nameof(IsPanelOpen))]
+    [NotifyPropertyChangedFor(nameof(IsMobileDetailPanelOpen))]
+    [NotifyPropertyChangedFor(nameof(IsBottomControlsVisible))]
+    [NotifyPropertyChangedFor(nameof(IsMobileCompactControlsVisible))]
+    private bool _isSubtitleAppearanceSettingsOpen;
 
     [ObservableProperty]
     private string _networkStatus = "Wi-Fi";
@@ -1588,6 +1599,9 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
     [RelayCommand]
     private void OpenQualitySettings() => OverlayManager.OpenQualitySettings();
+
+    [RelayCommand]
+    private void OpenSubtitleAppearanceSettings() => OverlayManager.OpenSubtitleAppearanceSettings();
 
     [RelayCommand]
     private void OpenInfoPanel() => OverlayManager.OpenInfoPanel();

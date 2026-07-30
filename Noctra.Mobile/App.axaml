@@ -46,6 +46,7 @@
         <converters:BoolToEpgBorderColorConverter x:Key="BoolToEpgBorderColorConverter" />
         <converters:BoolToSelectionBrushConverter x:Key="BoolToSelectionBrushConverter" />
         <converters:SubtitleBackgroundBrushConverter x:Key="SubtitleBackgroundBrushConverter" />
+        <converters:SubtitlePositionToAlignmentConverter x:Key="SubtitlePositionToAlignmentConverter" />
         <converters:EpisodeIdentityConverter x:Key="EpisodeIdentityConverter" />
         <converters:EqualityToBoolMultiConverter x:Key="EqualityToBoolMultiConverter" />
         <converters:EqualityToBrushMultiConverter x:Key="EqualityToBrushMultiConverter" />

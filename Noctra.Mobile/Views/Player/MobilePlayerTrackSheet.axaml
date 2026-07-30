@@ -142,5 +142,23 @@
         </ItemsControl.ItemTemplate>
       </ItemsControl>
     </StackPanel>
+
+    <!-- Subtitle Appearance Quick Setting -->
+    <Button Classes="SelectionSheetOption"
+            Command="{Binding OpenSubtitleAppearanceSettingsCommand}">
+      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" IsHitTestVisible="False">
+        <TextBlock Text="{loc:Translate Player.Settings.SubtitleAppearance}"
+                   Foreground="{DynamicResource TextPrimaryBrush}"
+                   FontSize="{DynamicResource FBodyL}"
+                   FontWeight="Normal"
+                   VerticalAlignment="Center" />
+        <icons:MaterialIcon Grid.Column="1"
+                            Kind="ChevronRight"
+                            Width="22"
+                            Height="22"
+                            Foreground="{DynamicResource TextMutedBrush}"
+                            VerticalAlignment="Center" />
+      </Grid>
+    </Button>
   </StackPanel>
 </UserControl>

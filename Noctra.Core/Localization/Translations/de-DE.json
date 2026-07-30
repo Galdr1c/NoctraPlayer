@@ -183,6 +183,8 @@
   "Player.Info.Cast": "Besetzung",
   "Player.Settings.Title": "Audio Und Untertitel",
   "Player.Settings.RestartNote": "Der Player wird kurz neu gestartet, um die Einstellungen zu übernehmen.",
+  "Player.Settings.SubtitleAppearance": "Untertitel-Anpassung",
+  "Player.Settings.SubtitleAppearance.Preview": "Vorschau",
   "Player.Settings.SubtitleSize": "Untertitelgröße",
   "Player.Settings.SubtitleSize.Small": "Klein",
   "Player.Settings.SubtitleSize.Normal": "Normal",

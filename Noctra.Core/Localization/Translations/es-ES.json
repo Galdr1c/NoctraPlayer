@@ -183,6 +183,8 @@
   "Player.Info.Cast": "Elenco",
   "Player.Settings.Title": "Audio Y Subtítulos",
   "Player.Settings.RestartNote": "El reproductor se reiniciará brevemente para aplicar la configuración.",
+  "Player.Settings.SubtitleAppearance": "Ajuste de subtítulos",
+  "Player.Settings.SubtitleAppearance.Preview": "Vista previa",
   "Player.Settings.SubtitleSize": "Tamaño De Subtítulos",
   "Player.Settings.SubtitleSize.Small": "Pequeño",
   "Player.Settings.SubtitleSize.Normal": "Normal",

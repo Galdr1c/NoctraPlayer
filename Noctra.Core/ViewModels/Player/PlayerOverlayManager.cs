@@ -56,6 +56,7 @@ public class PlayerOverlayManager
             && !_vm.IsActionsPanelOpen
             && !_vm.IsAudioSettingsOpen
             && !_vm.IsQualitySettingsOpen
+            && !_vm.IsSubtitleAppearanceSettingsOpen
             && !_vm.IsEpisodesPanelOpen
             && !_vm.IsInfoPanelOpen
             && !_vm.IsSleepTimerPanelOpen
@@ -93,6 +94,12 @@ public class PlayerOverlayManager
     {
         _vm.LogDebug("UI Action: OpenQualitySettings clicked");
         _vm.OpenChildPanel(MobilePanelState.Quality);
+    }
+
+    public void OpenSubtitleAppearanceSettings()
+    {
+        _vm.LogDebug("UI Action: OpenSubtitleAppearanceSettings clicked");
+        _vm.OpenChildPanel(MobilePanelState.SubtitleAppearance);
     }
 
     public void OpenInfoPanel()

@@ -1,4 +1,4 @@
-﻿<UserControl xmlns="https://github.com/avaloniaui"
+<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="clr-namespace:Noctra.ViewModels;assembly=Noctra.Core"
              xmlns:loc="using:Noctra.Mobile.Localization"
@@ -57,6 +57,11 @@
           <!-- Quality panel -->
           <player:MobilePlayerQualitySheet
               IsVisible="{Binding IsQualitySettingsOpen}"
+              Margin="14,0,14,14" />
+
+          <!-- Subtitle Appearance panel -->
+          <player:MobilePlayerSubtitleAppearanceSheet
+              IsVisible="{Binding IsSubtitleAppearanceSettingsOpen}"
               Margin="14,0,14,14" />
 
           <!-- Info panel -->
