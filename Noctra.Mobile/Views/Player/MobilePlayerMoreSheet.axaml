@@ -77,17 +77,17 @@
     <Button Classes="moreSheetRow"
             Command="{Binding OpenQualitySettingsCommand}">
       <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="14">
-        <icons:MaterialIcon Kind="Cog" Width="22" Height="22"
+        <icons:MaterialIcon Kind="InformationSlabBoxOutline" Width="22" Height="22"
                             Foreground="{DynamicResource PlayerOverlayTextBrush}"
                             VerticalAlignment="Center" />
         <TextBlock Grid.Column="1"
-                   Text="{loc:Translate Player.Mobile.Quality}"
+                   Text="{loc:Translate Player.Quality.Title}"
                    Foreground="{DynamicResource PlayerOverlayTextBrush}"
                    FontSize="15"
                    FontWeight="SemiBold"
                    VerticalAlignment="Center" />
         <TextBlock Grid.Column="2"
-                   Text="{Binding QualitySummary}"
+                   Text="{Binding QualityResolutionText}"
                    Foreground="{DynamicResource PlayerOverlaySecondaryTextBrush}"
                    FontSize="13"
                    VerticalAlignment="Center" />
