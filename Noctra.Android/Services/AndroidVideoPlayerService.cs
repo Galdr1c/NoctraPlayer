@@ -185,7 +185,14 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
     {
         if (_exoPlayer is not null) return;
 
-        var builder = new ExoPlayerBuilder(_applicationContext)
+        // Enable extension renderers (e.g. the bundled FFmpeg audio extension)
+        // so audio codecs without a platform MediaCodec decoder (such as MP2
+        // on some devices) can still be decoded in software. Extension renderers
+        // are only instantiated when a platform decoder cannot handle the format.
+        var renderersFactory = new DefaultRenderersFactory(_applicationContext)
+            .SetExtensionRendererMode(DefaultRenderersFactory.ExtensionRendererModeOn);
+
+        var builder = new ExoPlayerBuilder(_applicationContext, renderersFactory)
             .SetLoadControl(CreateLoadControl(_lastVideoBufferSize));
         
         // Configure AudioAttributes for automatic audio focus handling
@@ -1363,7 +1370,13 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
                 for (int i = 0; i < count; i++)
                 {
                     var itemPtr = JNIEnv.CallObjectMethod(listPtr, getId, new JValue(i));
-                    result[i] = Java.Lang.Object.GetObject<Tracks.Group>(itemPtr, JniHandleOwnership.TransferLocalRef)!;
+                    // Local references are thread-local and die with the JNI
+                    // frame, but the wrapper outlives this callback and is
+                    // finalized on another thread. Promote to a global ref so
+                    // ownership can be released safely from any thread.
+                    var globalPtr = JNIEnv.NewGlobalRef(itemPtr);
+                    JNIEnv.DeleteLocalRef(itemPtr);
+                    result[i] = Java.Lang.Object.GetObject<Tracks.Group>(globalPtr, JniHandleOwnership.TransferGlobalRef)!;
                 }
                 return result;
             }
@@ -1402,7 +1415,11 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
                 for (int i = 0; i < count; i++)
                 {
                     var itemPtr = JNIEnv.CallObjectMethod(listPtr, getId, new JValue(i));
-                    result[i] = Java.Lang.Object.GetObject<Cue>(itemPtr, JniHandleOwnership.TransferLocalRef)!;
+                    // See GetTrackGroups: promote to a global ref so finalization
+                    // on another thread never deletes a thread-local reference.
+                    var globalPtr = JNIEnv.NewGlobalRef(itemPtr);
+                    JNIEnv.DeleteLocalRef(itemPtr);
+                    result[i] = Java.Lang.Object.GetObject<Cue>(globalPtr, JniHandleOwnership.TransferGlobalRef)!;
                 }
                 return result;
             }

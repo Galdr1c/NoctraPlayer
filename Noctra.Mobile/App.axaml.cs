@@ -8,6 +8,7 @@ using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
 using Microsoft.EntityFrameworkCore;
 using Noctra.Data;
+using Noctra.Diagnostics;
 using Noctra.Mobile.Localization;
 using Noctra.Mobile.ViewModels;
 using Noctra.Mobile.Views;
@@ -86,12 +87,14 @@ public partial class App : Application
         {
             try
             {
+                PerformanceTrace.Mark("app.db.init.start");
                 using var db = dbContextFactory.CreateDbContext();
                 db.Database.EnsureCreated();
                 if (Services.GetService(typeof(IDatabaseSchemaFixupService)) is IDatabaseSchemaFixupService schemaFixups)
                 {
                     schemaFixups.ApplyAsync(db, DatabaseSchemaFixupProfile.Mobile).GetAwaiter().GetResult();
                 }
+                PerformanceTrace.Mark("app.db.init.end");
             }
             catch (Exception ex)
             {

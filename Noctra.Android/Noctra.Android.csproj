@@ -21,6 +21,10 @@
     <AndroidResource Remove="Resources\PlayStore_Assets\**\*" />
   </ItemGroup>
 
+  <ItemGroup>
+    <JavaLibrary Include="libs\ffmpeg\ffmpeg-extension.jar" />
+  </ItemGroup>
+
   <ItemGroup Condition="'$(Configuration)' == 'Debug'">
     <PackageReference Include="Avalonia.Markup.Xaml.Loader" Version="$(AvaloniaVersion)" PrivateAssets="All" Publish="True" />
     <PackageReference Include="HotAvalonia" Version="3.*" PrivateAssets="All" Publish="True" />
