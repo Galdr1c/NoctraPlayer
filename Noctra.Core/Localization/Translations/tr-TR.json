@@ -217,6 +217,7 @@
   "Series.Detail.DownloadedEpisodes": "İndirilen Bölümler",
   "Series.Detail.DownloadSeason": "Sezonu İndir",
   "Series.Detail.DownloadSeason.Tooltip": "Aktif sezondaki tüm bölümleri indirme kuyruğuna ekle",
+  "Series.Detail.Episodes": "Bölümler",
   "Player.Overlay.PlayPause.Tooltip": "Oynat / Duraklat",
   "Player.Overlay.NextEpisode.Now": "Şimdi İzle",
   "Player.Overlay.Watched": "İzlendi",

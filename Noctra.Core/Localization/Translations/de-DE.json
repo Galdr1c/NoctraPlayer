@@ -217,6 +217,7 @@
   "Series.Detail.DownloadedEpisodes": "Heruntergeladene Folgen",
   "Series.Detail.DownloadSeason": "Staffel herunterladen",
   "Series.Detail.DownloadSeason.Tooltip": "Alle Folgen der aktiven Staffel zur Download-Warteschlange hinzufügen",
+  "Series.Detail.Episodes": "Folgen",
   "Player.Overlay.PlayPause.Tooltip": "Wiedergabe / Pause",
   "Player.Overlay.NextEpisode.Now": "Jetzt ansehen",
   "Player.Overlay.Watched": "Gesehen",

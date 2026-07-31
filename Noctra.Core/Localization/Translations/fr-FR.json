@@ -217,6 +217,7 @@
   "Series.Detail.DownloadedEpisodes": "Épisodes téléchargés",
   "Series.Detail.DownloadSeason": "Télécharger la saison",
   "Series.Detail.DownloadSeason.Tooltip": "Ajouter tous les épisodes de la saison active à la file d'attente de téléchargement",
+  "Series.Detail.Episodes": "Épisodes",
   "Player.Overlay.PlayPause.Tooltip": "Lecture / Pause",
   "Player.Overlay.NextEpisode.Now": "Regarder maintenant",
   "Player.Overlay.Watched": "Regardé",

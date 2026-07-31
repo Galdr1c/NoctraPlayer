@@ -217,6 +217,7 @@
   "Series.Detail.DownloadedEpisodes": "Downloaded Episodes",
   "Series.Detail.DownloadSeason": "Download Season",
   "Series.Detail.DownloadSeason.Tooltip": "Add all episodes in the active season to the download queue",
+  "Series.Detail.Episodes": "Episodes",
   "Player.Overlay.PlayPause.Tooltip": "Play / Pause",
   "Player.Overlay.NextEpisode.Now": "Watch Now",
   "Player.Overlay.Watched": "Watched",
