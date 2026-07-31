@@ -40,7 +40,7 @@
         </ItemsControl.ItemsPanel>
         <ItemsControl.ItemTemplate>
           <DataTemplate x:DataType="models:Season">
-            <Button Command="{Binding #PlayerRoot.DataContext.SelectEpisodeSeasonCommand}"
+            <Button Command="{Binding $parent[ItemsControl].DataContext.SelectEpisodeSeasonCommand}"
                     CommandParameter="{Binding}"
                     MinHeight="44" Padding="14,8"
                     BorderThickness="1" CornerRadius="22" />
@@ -55,7 +55,7 @@
       <ItemsControl ItemsSource="{Binding SelectedEpisodeSeasonEpisodes}">
         <ItemsControl.ItemTemplate>
           <DataTemplate x:DataType="models:Episode">
-            <Button Command="{Binding #PlayerRoot.DataContext.PlayEpisodeFromOverlayCommand}"
+            <Button Command="{Binding $parent[ItemsControl].DataContext.PlayEpisodeFromOverlayCommand}"
                     CommandParameter="{Binding}"
                     MinHeight="92" Margin="0,0,0,10" Padding="0"
                     Background="Transparent" BorderThickness="0"

@@ -594,16 +594,25 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
 
     public void SetAudioTrack(int trackId)
     {
+        var sw = System.Diagnostics.Stopwatch.StartNew();
         RunOnMainThread(() =>
         {
-            if (_exoPlayer is null || !_hasLoadedMedia || trackId < 0) return;
+            if (_exoPlayer is null || !_hasLoadedMedia || trackId < 0)
+            {
+                System.Diagnostics.Debug.WriteLine($"[AndroidVideoPlayerService] SetAudioTrack({trackId}): skipped (exoPlayer={_exoPlayer != null}, loaded={_hasLoadedMedia}, trackId={trackId})");
+                return;
+            }
 
             int groupIndex = trackId / 1000;
             int trackIndex = trackId % 1000;
 
             var currentTracks = _exoPlayer.CurrentTracks;
             var groups = GetTrackGroups(currentTracks);
-            if (groupIndex >= groups.Length) return;
+            if (groupIndex >= groups.Length)
+            {
+                System.Diagnostics.Debug.WriteLine($"[AndroidVideoPlayerService] SetAudioTrack({trackId}): skipped (groupIndex {groupIndex} >= {groups.Length})");
+                return;
+            }
 
             var group = groups[groupIndex];
             var mediaTrackGroup = group.MediaTrackGroup;
@@ -616,14 +625,20 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
                 .Build();
 
             _selectedAudioTrack = trackId;
+            System.Diagnostics.Debug.WriteLine($"[AndroidVideoPlayerService] SetAudioTrack({trackId}): took {sw.ElapsedMilliseconds}ms");
         });
     }
 
     public void SetSubtitleTrack(int trackId)
     {
+        var sw = System.Diagnostics.Stopwatch.StartNew();
         RunOnMainThread(() =>
         {
-            if (_exoPlayer is null || !_hasLoadedMedia) return;
+            if (_exoPlayer is null || !_hasLoadedMedia)
+            {
+                System.Diagnostics.Debug.WriteLine($"[AndroidVideoPlayerService] SetSubtitleTrack({trackId}): skipped (exoPlayer={_exoPlayer != null}, loaded={_hasLoadedMedia})");
+                return;
+            }
 
             if (trackId < 0)
             {
@@ -632,6 +647,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
                     .Build();
                 _selectedSubtitleTrack = -1;
                 ClearCues();
+                System.Diagnostics.Debug.WriteLine($"[AndroidVideoPlayerService] SetSubtitleTrack({trackId}): took {sw.ElapsedMilliseconds}ms (disabled)");
                 return;
             }
 
@@ -640,7 +656,11 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
 
             var currentTracks = _exoPlayer.CurrentTracks;
             var groups = GetTrackGroups(currentTracks);
-            if (groupIndex >= groups.Length) return;
+            if (groupIndex >= groups.Length)
+            {
+                System.Diagnostics.Debug.WriteLine($"[AndroidVideoPlayerService] SetSubtitleTrack({trackId}): skipped (groupIndex {groupIndex} >= {groups.Length})");
+                return;
+            }
 
             var group = groups[groupIndex];
             var mediaTrackGroup = group.MediaTrackGroup;
@@ -654,6 +674,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
                 .Build();
 
             _selectedSubtitleTrack = trackId;
+            System.Diagnostics.Debug.WriteLine($"[AndroidVideoPlayerService] SetSubtitleTrack({trackId}): took {sw.ElapsedMilliseconds}ms");
         });
     }
 
@@ -1624,6 +1645,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
 
         public void OnTracksChanged(Tracks tracks)
         {
+            var sw = System.Diagnostics.Stopwatch.StartNew();
             var audio = new List<(int Id, string? Name)>();
             var subtitles = new List<(int Id, string? Name)>();
             var audioOrdinal = 1;
@@ -1666,6 +1688,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
                 _service._subtitleTracks.Clear();
                 _service._subtitleTracks.AddRange(subtitles);
             }
+            System.Diagnostics.Debug.WriteLine($"[AndroidVideoPlayerService] OnTracksChanged: took {sw.ElapsedMilliseconds}ms (audio={audio.Count}, subtitles={subtitles.Count})");
         }
 
         public void OnVideoSizeChanged(AndroidX.Media3.Common.VideoSize videoSize)

@@ -67,6 +67,7 @@ public class PlayerQualityMonitor
 
     public void UpdateMediaInfo()
     {
+        var swTotal = System.Diagnostics.Stopwatch.StartNew();
         UpdateDurationFromService(force: true);
 
         var offText = _vm.LocalizationService.GetString("Player.Track.Off");
@@ -84,7 +85,10 @@ public class PlayerQualityMonitor
             .ToList();
 
         subtitleTracks.Insert(0, new PlayerViewModel.TrackOption(-1, offText));
+        swTotal.Stop();
+        System.Diagnostics.Debug.WriteLine($"[PVM] UpdateMediaInfo: collections={swTotal.ElapsedMilliseconds}ms");
 
+        var swInvoke = System.Diagnostics.Stopwatch.StartNew();
         _vm.DispatcherService.Invoke(() => 
         {
             _vm.AudioTracks.Clear();
@@ -95,6 +99,8 @@ public class PlayerQualityMonitor
         });
 
         _vm.DispatcherService.Invoke(() => _vm.RaiseTrackSelectionPropertiesChanged());
+        swInvoke.Stop();
+        System.Diagnostics.Debug.WriteLine($"[PVM] UpdateMediaInfo: dispatcher={swInvoke.ElapsedMilliseconds}ms");
 
         if (!_vm._isPreferenceApplied)
         {

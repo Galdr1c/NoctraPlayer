@@ -862,7 +862,9 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         {
             // Bellek güncellendi: player'ın yeniden başlatılması disk kaydından bağımsız
             // hemen bildirilir (reinit debounce buradan başlar); dosya kaydı ayrı debounce ile yapılır.
+            var sw = System.Diagnostics.Stopwatch.StartNew();
             _settingsService.NotifySettingsChanged();
+            System.Diagnostics.Debug.WriteLine($"[PVM] QueueSubtitleSettingsSave: NotifySettingsChanged={sw.ElapsedMilliseconds}ms");
 
             var oldCts = _subtitleSaveCts;
             _subtitleSaveCts = new CancellationTokenSource();
@@ -876,12 +878,14 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
             _ = Task.Run(async () =>
             {
+                var swSave = System.Diagnostics.Stopwatch.StartNew();
                 try
                 {
                     await Task.Delay(1000, token);
                     if (!token.IsCancellationRequested)
                     {
                         await _settingsService.SaveAsync();
+                        System.Diagnostics.Debug.WriteLine($"[PVM] QueueSubtitleSettingsSave: SaveAsync={swSave.ElapsedMilliseconds}ms");
                     }
                 }
                 catch (OperationCanceledException) { }
