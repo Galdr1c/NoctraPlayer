@@ -318,10 +318,11 @@ public class PlaybackMediaMetadataTests
         public event EventHandler<bool>? PlayingChanged;
         public event EventHandler<double>? PositionChanged;
         public event EventHandler? PlayerReady;
+        public event EventHandler? MediaPlayerReleasing;
         public event EventHandler? PlaybackEnded;
         public event EventHandler<float>? BufferingChanged;
         public event EventHandler<string>? ErrorOccurred;
-        public event EventHandler<string?>? SubtitleTextChanged;
+        public event EventHandler<IReadOnlyList<SubtitleCueData>>? SubtitleCuesChanged;
         public event EventHandler<StreamQualityInfo>? QualityDetected;
 
         public Task PlayAsync(string url, double startTimeSeconds = 0)

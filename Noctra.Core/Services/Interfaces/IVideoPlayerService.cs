@@ -1,5 +1,7 @@
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Noctra.Models;
 
 namespace Noctra.Services.Interfaces;
 
@@ -42,10 +44,18 @@ public interface IVideoPlayerService : IDisposable
     event EventHandler<bool>? PlayingChanged;
     event EventHandler<double>? PositionChanged;
     event EventHandler? PlayerReady;
+
+    /// <summary>
+    /// Raised on the UI thread right before the underlying media player (and its
+    /// native resources) is disposed or replaced. Host views must release their
+    /// MediaPlayer reference here — calling into a disposed player causes a native
+    /// access violation that cannot be caught in managed code.
+    /// </summary>
+    event EventHandler? MediaPlayerReleasing;
     event EventHandler? PlaybackEnded;
     event EventHandler<float>? BufferingChanged;
     event EventHandler<string>? ErrorOccurred;
-    event EventHandler<string?>? SubtitleTextChanged;
+    event EventHandler<IReadOnlyList<SubtitleCueData>>? SubtitleCuesChanged;
 
     void SeekToTime(long milliseconds);
     void PlayLoadedMedia();

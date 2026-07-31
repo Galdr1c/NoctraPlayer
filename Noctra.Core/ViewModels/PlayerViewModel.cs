@@ -89,6 +89,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     [NotifyPropertyChangedFor(nameof(IsMobileDetailPanelOpen))]
     [NotifyPropertyChangedFor(nameof(IsBottomControlsVisible))]
     [NotifyPropertyChangedFor(nameof(IsMobileCompactControlsVisible))]
+    [NotifyPropertyChangedFor(nameof(EffectiveSubtitleBottomOffset))]
     private bool _isSleepTimerPanelOpen;
 
     public bool IsSleepTimerActive => SleepTimerMode != SleepTimerOption.Off;
@@ -144,6 +145,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     [NotifyPropertyChangedFor(nameof(IsTopOverlayVisible))]
     [NotifyPropertyChangedFor(nameof(IsBottomControlsVisible))]
     [NotifyPropertyChangedFor(nameof(IsMobileCompactControlsVisible))]
+    [NotifyPropertyChangedFor(nameof(EffectiveSubtitleBottomOffset))]
     private bool _isVisible = true;
 
     [ObservableProperty]
@@ -176,6 +178,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     [NotifyPropertyChangedFor(nameof(IsBottomControlsVisible))]
     [NotifyPropertyChangedFor(nameof(IsMobileCompactControlsVisible))]
     [NotifyPropertyChangedFor(nameof(LockAccessibilityName))]
+    [NotifyPropertyChangedFor(nameof(EffectiveSubtitleBottomOffset))]
     private bool _isLocked;
 
     [ObservableProperty]
@@ -190,6 +193,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     [NotifyPropertyChangedFor(nameof(IsTopOverlayVisible))]
     [NotifyPropertyChangedFor(nameof(IsBottomControlsVisible))]
     [NotifyPropertyChangedFor(nameof(IsMobileCompactControlsVisible))]
+    [NotifyPropertyChangedFor(nameof(EffectiveSubtitleBottomOffset))]
     private bool _isPiPMode;
 
     [ObservableProperty]
@@ -338,6 +342,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     [NotifyPropertyChangedFor(nameof(IsTopOverlayVisible))]
     [NotifyPropertyChangedFor(nameof(IsBottomControlsVisible))]
     [NotifyPropertyChangedFor(nameof(IsMobileCompactControlsVisible))]
+    [NotifyPropertyChangedFor(nameof(EffectiveSubtitleBottomOffset))]
     private bool _isEpgPanelOpen;
     [ObservableProperty] private bool _isEpgLoading;
     [ObservableProperty] private int _epgFocusRowIndex = -1;
@@ -427,6 +432,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     [NotifyPropertyChangedFor(nameof(IsMobileDetailPanelOpen))]
     [NotifyPropertyChangedFor(nameof(IsBottomControlsVisible))]
     [NotifyPropertyChangedFor(nameof(IsMobileCompactControlsVisible))]
+    [NotifyPropertyChangedFor(nameof(EffectiveSubtitleBottomOffset))]
     private bool _isActionsPanelOpen;
 
     [ObservableProperty]
@@ -435,6 +441,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     [NotifyPropertyChangedFor(nameof(IsMobileDetailPanelOpen))]
     [NotifyPropertyChangedFor(nameof(IsBottomControlsVisible))]
     [NotifyPropertyChangedFor(nameof(IsMobileCompactControlsVisible))]
+    [NotifyPropertyChangedFor(nameof(EffectiveSubtitleBottomOffset))]
     private bool _isAudioSettingsOpen;
 
     [ObservableProperty]
@@ -443,6 +450,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     [NotifyPropertyChangedFor(nameof(IsMobileDetailPanelOpen))]
     [NotifyPropertyChangedFor(nameof(IsBottomControlsVisible))]
     [NotifyPropertyChangedFor(nameof(IsMobileCompactControlsVisible))]
+    [NotifyPropertyChangedFor(nameof(EffectiveSubtitleBottomOffset))]
     private bool _isSubtitleAppearanceSettingsOpen;
 
     [ObservableProperty]
@@ -704,44 +712,138 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     private FillMode _videoFillMode = FillMode.Fit;
 
     [ObservableProperty]
-    private int _subtitleFontSize = 40;
+    [NotifyPropertyChangedFor(nameof(IsSubtitleSizeSmall))]
+    [NotifyPropertyChangedFor(nameof(IsSubtitleSizeNormal))]
+    [NotifyPropertyChangedFor(nameof(IsSubtitleSizeLarge))]
+    [NotifyPropertyChangedFor(nameof(IsSubtitleSizeExtraLarge))]
+    [NotifyPropertyChangedFor(nameof(EffectiveSubtitleFontSize))]
+    private SubtitleTextSize _subtitleTextSize = SubtitleAppearanceDefaults.DefaultTextSize;
 
     [ObservableProperty]
-    private int _subtitleBackgroundOpacity = 0;
+    [NotifyPropertyChangedFor(nameof(IsSubtitleBackgroundOff))]
+    [NotifyPropertyChangedFor(nameof(IsSubtitleBackgroundLight))]
+    [NotifyPropertyChangedFor(nameof(IsSubtitleBackgroundMedium))]
+    [NotifyPropertyChangedFor(nameof(IsSubtitleBackgroundDark))]
+    private int _subtitleBackgroundOpacity = SubtitleAppearanceDefaults.BackgroundOpacityPercent;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsMobileSubtitlePositionTop))]
+    [NotifyPropertyChangedFor(nameof(IsMobileSubtitlePositionUpperMiddle))]
+    [NotifyPropertyChangedFor(nameof(IsMobileSubtitlePositionLowerMiddle))]
     [NotifyPropertyChangedFor(nameof(IsMobileSubtitlePositionBottom))]
     [NotifyPropertyChangedFor(nameof(IsMobileSubtitleTopVisible))]
+    [NotifyPropertyChangedFor(nameof(IsMobileSubtitleUpperMiddleVisible))]
+    [NotifyPropertyChangedFor(nameof(IsMobileSubtitleLowerMiddleVisible))]
     [NotifyPropertyChangedFor(nameof(IsMobileSubtitleBottomVisible))]
-    private int _subtitleMargin = 40;
+    [NotifyPropertyChangedFor(nameof(IsSubtitlePositionTop))]
+    [NotifyPropertyChangedFor(nameof(IsSubtitlePositionUpperMiddle))]
+    [NotifyPropertyChangedFor(nameof(IsSubtitlePositionLowerMiddle))]
+    [NotifyPropertyChangedFor(nameof(IsSubtitlePositionBottom))]
+    private SubtitleVerticalPosition _subtitlePosition = SubtitleVerticalPosition.Bottom;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsMobileSubtitleVisible))]
     [NotifyPropertyChangedFor(nameof(IsMobileSubtitleTopVisible))]
+    [NotifyPropertyChangedFor(nameof(IsMobileSubtitleUpperMiddleVisible))]
+    [NotifyPropertyChangedFor(nameof(IsMobileSubtitleLowerMiddleVisible))]
     [NotifyPropertyChangedFor(nameof(IsMobileSubtitleBottomVisible))]
-    private string _currentSubtitleText = string.Empty;
+    [NotifyPropertyChangedFor(nameof(CurrentSubtitleText))]
+    private IReadOnlyList<SubtitleCueData> _activeSubtitleCues = [];
 
-    public bool IsMobileSubtitleVisible => !string.IsNullOrWhiteSpace(CurrentSubtitleText);
-    public bool IsMobileSubtitlePositionTop => SubtitleMargin >= 900;
-    public bool IsMobileSubtitlePositionBottom => !IsMobileSubtitlePositionTop;
+    public bool IsMobileSubtitleVisible => ActiveSubtitleCues.Count > 0;
+    public string CurrentSubtitleText => string.Join(Environment.NewLine, ActiveSubtitleCues.Select(x => x.Text));
+    public bool IsMobileSubtitlePositionTop => SubtitlePosition == Noctra.Models.SubtitleVerticalPosition.Top;
+    public bool IsMobileSubtitlePositionUpperMiddle => SubtitlePosition == Noctra.Models.SubtitleVerticalPosition.UpperMiddle;
+    public bool IsMobileSubtitlePositionLowerMiddle => SubtitlePosition == Noctra.Models.SubtitleVerticalPosition.LowerMiddle;
+    public bool IsMobileSubtitlePositionBottom => SubtitlePosition == Noctra.Models.SubtitleVerticalPosition.Bottom;
     public bool IsMobileSubtitleTopVisible => IsMobileSubtitleVisible && IsMobileSubtitlePositionTop;
+    public bool IsMobileSubtitleUpperMiddleVisible => IsMobileSubtitleVisible && IsMobileSubtitlePositionUpperMiddle;
+    public bool IsMobileSubtitleLowerMiddleVisible => IsMobileSubtitleVisible && IsMobileSubtitlePositionLowerMiddle;
     public bool IsMobileSubtitleBottomVisible => IsMobileSubtitleVisible && IsMobileSubtitlePositionBottom;
+
+    public bool IsSubtitleSizeSmall => SubtitleTextSize == Noctra.Models.SubtitleTextSize.Small;
+    public bool IsSubtitleSizeNormal => SubtitleTextSize == Noctra.Models.SubtitleTextSize.Medium;
+    public bool IsSubtitleSizeLarge => SubtitleTextSize == Noctra.Models.SubtitleTextSize.Large;
+    public bool IsSubtitleSizeExtraLarge => SubtitleTextSize == Noctra.Models.SubtitleTextSize.ExtraLarge;
+    public double EffectiveSubtitleFontSize => SubtitleAppearanceDefaults.ResolveMobileFontSize(SubtitleTextSize);
+
+    /// <summary>
+    /// Gerçek alt kontrol bar yüksekliği ölçülene kadar kullanılan tahmini değer.
+    /// MobilePlayerView, kontrolün gerçek Bounds.Height değerini MobilePlayerControlsHeight
+    /// özelliğine aktarır (landscape/DPI/kontrol tasarımı değişikliğinde çakışmayı önler).
+    /// </summary>
+    private const double MobilePlayerControlsBottomInsetFallback = 180;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(EffectiveSubtitleBottomOffset))]
+    private double _mobilePlayerControlsHeight = MobilePlayerControlsBottomInsetFallback;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(EffectiveSubtitleTopOffset))]
+    private double _subtitleTopSafeArea;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(EffectiveSubtitleBottomOffset))]
+    private double _subtitleBottomSafeArea;
+
+    public double EffectiveSubtitleTopOffset => Math.Max(0, SubtitleTopSafeArea) + 12;
+
+    public double EffectiveSubtitleBottomOffset =>
+        Math.Max(0, SubtitleBottomSafeArea) +
+        (IsBottomControlsVisible ? MobilePlayerControlsHeight + 12 : 18);
+    public bool IsSubtitleBackgroundOff => SubtitleBackgroundOpacity == 0;
+    public bool IsSubtitleBackgroundLight => SubtitleBackgroundOpacity == 30;
+    public bool IsSubtitleBackgroundMedium => SubtitleBackgroundOpacity == 60;
+    public bool IsSubtitleBackgroundDark => SubtitleBackgroundOpacity == 85;
+
+    public bool IsSubtitlePositionTop => IsMobileSubtitlePositionTop;
+    public bool IsSubtitlePositionUpperMiddle => IsMobileSubtitlePositionUpperMiddle;
+    public bool IsSubtitlePositionLowerMiddle => IsMobileSubtitlePositionLowerMiddle;
+    public bool IsSubtitlePositionBottom => IsMobileSubtitlePositionBottom;
+
+    [Obsolete("Use SubtitlePosition instead.")]
+    public int SubtitleMargin
+    {
+        get => SubtitleAppearanceDefaults.ToLegacyMargin(SubtitlePosition);
+        set => SubtitlePosition = SubtitleAppearanceDefaults.ResolveLegacyPosition(value);
+    }
+
+    [Obsolete("Use SubtitleTextSize instead.")]
+    public int SubtitleFontSize
+    {
+        get => SubtitleAppearanceDefaults.ResolveDesktopFontSize(SubtitleTextSize);
+        set => SubtitleTextSize = SubtitleAppearanceDefaults.ResolveTextSize(value);
+    }
 
     private CancellationTokenSource? _subtitleSaveCts;
 
-    partial void OnSubtitleFontSizeChanged(int value) => QueueSubtitleSettingsSave();
-    partial void OnSubtitleBackgroundOpacityChanged(int value) => QueueSubtitleSettingsSave();
-    partial void OnSubtitleMarginChanged(int value) => QueueSubtitleSettingsSave();
+    partial void OnSubtitleTextSizeChanged(SubtitleTextSize value) => QueueSubtitleSettingsSave();
+
+    partial void OnSubtitleBackgroundOpacityChanged(int value)
+    {
+        var normalized = SubtitleAppearanceDefaults.NormalizeOpacityPercent(value);
+        if (normalized != value)
+        {
+            SubtitleBackgroundOpacity = normalized;
+            return;
+        }
+        QueueSubtitleSettingsSave();
+    }
+
+    partial void OnSubtitlePositionChanged(SubtitleVerticalPosition value)
+    {
+        OnPropertyChanged(nameof(SubtitleMargin));
+        QueueSubtitleSettingsSave();
+    }
 
     private void QueueSubtitleSettingsSave()
     {
         if (_settingsService == null) return;
 
         bool changed = false;
-        if (_settingsService.Settings.SubtitleFontSize != SubtitleFontSize)
+        if (_settingsService.Settings.SubtitleTextSize != SubtitleTextSize)
         {
-            _settingsService.Settings.SubtitleFontSize = SubtitleFontSize;
+            _settingsService.Settings.SubtitleTextSize = SubtitleTextSize;
             changed = true;
         }
         if (_settingsService.Settings.SubtitleBackgroundOpacity != SubtitleBackgroundOpacity)
@@ -749,14 +851,19 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
             _settingsService.Settings.SubtitleBackgroundOpacity = SubtitleBackgroundOpacity;
             changed = true;
         }
-        if (_settingsService.Settings.SubtitleMargin != SubtitleMargin)
+        if (_settingsService.Settings.SubtitlePosition != SubtitlePosition)
         {
-            _settingsService.Settings.SubtitleMargin = SubtitleMargin;
+            _settingsService.Settings.SubtitlePosition = SubtitlePosition;
             changed = true;
         }
 
+
         if (changed)
         {
+            // Bellek güncellendi: player'ın yeniden başlatılması disk kaydından bağımsız
+            // hemen bildirilir (reinit debounce buradan başlar); dosya kaydı ayrı debounce ile yapılır.
+            _settingsService.NotifySettingsChanged();
+
             var oldCts = _subtitleSaveCts;
             _subtitleSaveCts = new CancellationTokenSource();
             var token = _subtitleSaveCts.Token;
@@ -781,7 +888,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
                 catch (ObjectDisposedException) { }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[PlayerViewModel] Failed to persist volume: {ex.Message}");
+                    System.Diagnostics.Debug.WriteLine($"[PlayerViewModel] Failed to persist subtitle appearance: {ex.Message}");
                 }
             }, token);
         }
@@ -894,6 +1001,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     [NotifyPropertyChangedFor(nameof(IsMobileDetailPanelOpen))]
     [NotifyPropertyChangedFor(nameof(IsBottomControlsVisible))]
     [NotifyPropertyChangedFor(nameof(IsMobileCompactControlsVisible))]
+    [NotifyPropertyChangedFor(nameof(EffectiveSubtitleBottomOffset))]
     private bool _isQualitySettingsOpen;
 
     [ObservableProperty]
@@ -902,6 +1010,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     [NotifyPropertyChangedFor(nameof(IsMobileDetailPanelOpen))]
     [NotifyPropertyChangedFor(nameof(IsBottomControlsVisible))]
     [NotifyPropertyChangedFor(nameof(IsMobileCompactControlsVisible))]
+    [NotifyPropertyChangedFor(nameof(EffectiveSubtitleBottomOffset))]
     private bool _isEpisodesPanelOpen;
 
     [ObservableProperty]
@@ -939,6 +1048,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     [NotifyPropertyChangedFor(nameof(IsMobileDetailPanelOpen))]
     [NotifyPropertyChangedFor(nameof(IsBottomControlsVisible))]
     [NotifyPropertyChangedFor(nameof(IsMobileCompactControlsVisible))]
+    [NotifyPropertyChangedFor(nameof(EffectiveSubtitleBottomOffset))]
     private bool _isInfoPanelOpen;
 
     [ObservableProperty]
@@ -989,6 +1099,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     [NotifyPropertyChangedFor(nameof(IsMobileDetailPanelOpen))]
     [NotifyPropertyChangedFor(nameof(IsBottomControlsVisible))]
     [NotifyPropertyChangedFor(nameof(IsMobileCompactControlsVisible))]
+    [NotifyPropertyChangedFor(nameof(EffectiveSubtitleBottomOffset))]
     private bool _isNextEpisodePromptVisible;
 
     [ObservableProperty]
@@ -1142,9 +1253,10 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
         if (_settingsService?.Settings != null)
         {
-            SubtitleFontSize = _settingsService.Settings.SubtitleFontSize;
-            SubtitleBackgroundOpacity = _settingsService.Settings.SubtitleBackgroundOpacity;
-            SubtitleMargin = _settingsService.Settings.SubtitleMargin;
+            SubtitleTextSize = _settingsService.Settings.SubtitleTextSize;
+            SubtitleBackgroundOpacity = SubtitleAppearanceDefaults.NormalizeOpacityPercent(_settingsService.Settings.SubtitleBackgroundOpacity);
+
+            SubtitlePosition = _settingsService.Settings.SubtitlePosition;
 
             // Sync initial volume and mute states from settings
             Volume = _settingsService.Settings.DefaultVolume;
@@ -1211,7 +1323,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         _videoPlayerService.ErrorOccurred += OnVideoPlayerServiceErrorOccurred;
         _videoPlayerService.PositionChanged += OnVideoPlayerServicePositionChanged;
         _videoPlayerService.VolumeChanged += OnVideoPlayerServiceVolumeChanged;
-        _videoPlayerService.SubtitleTextChanged += OnVideoPlayerServiceSubtitleTextChanged;
+        _videoPlayerService.SubtitleCuesChanged += OnVideoPlayerServiceCuesChanged;
 
         _licenseService.SubscriptionChanged += OnLicenseServiceSubscriptionChanged;
     }
@@ -1314,7 +1426,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         _isIntentionallyPaused = false;
         _livePauseRequiresHardRestart = false;
         PlayerLoadingWarningMessage = string.Empty;
-        CurrentSubtitleText = string.Empty;
+        ActiveSubtitleCues = [];
 
         if (stopCurrentPlayback)
         {
@@ -1653,7 +1765,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     private void SetSubtitleBackground(string opacity) => SettingsAdapter.SetSubtitleBackground(opacity);
 
     [RelayCommand]
-    private void SetSubtitlePosition(string margin) => SettingsAdapter.SetSubtitlePosition(margin);
+    private void SetSubtitlePosition(string position) => SettingsAdapter.SetSubtitlePosition(position);
 
     [RelayCommand]
     private void CycleVideoFillMode() => SettingsAdapter.CycleVideoFillMode();
@@ -2436,6 +2548,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     [NotifyPropertyChangedFor(nameof(IsBottomControlsVisible))]
     [NotifyPropertyChangedFor(nameof(IsMobileCompactControlsVisible))]
     [NotifyPropertyChangedFor(nameof(IsTopOverlayVisible))]
+    [NotifyPropertyChangedFor(nameof(EffectiveSubtitleBottomOffset))]
     private bool _isResumeDialogVisible;
     [ObservableProperty] private string _resumePositionText = string.Empty;
     [ObservableProperty] private bool _isPremiumResume;
@@ -2883,8 +2996,8 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     private void OnVideoPlayerServiceVolumeChanged(object? s, int vol)
         => PlaybackController.OnVideoPlayerServiceVolumeChanged(s, vol);
 
-    private void OnVideoPlayerServiceSubtitleTextChanged(object? s, string? text)
-        => _dispatcherService.BeginInvoke(() => CurrentSubtitleText = text ?? string.Empty);
+    private void OnVideoPlayerServiceCuesChanged(object? s, IReadOnlyList<SubtitleCueData> cues)
+        => _dispatcherService.BeginInvoke(() => ActiveSubtitleCues = cues);
 
     private void OnNetworkStatusChanged(object? sender, string status)
         => StallDetector.OnNetworkStatusChanged(sender, status);
@@ -2943,7 +3056,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
             _videoPlayerService.ErrorOccurred -= OnVideoPlayerServiceErrorOccurred;
             _videoPlayerService.PositionChanged -= OnVideoPlayerServicePositionChanged;
             _videoPlayerService.VolumeChanged -= OnVideoPlayerServiceVolumeChanged;
-            _videoPlayerService.SubtitleTextChanged -= OnVideoPlayerServiceSubtitleTextChanged;
+            _videoPlayerService.SubtitleCuesChanged -= OnVideoPlayerServiceCuesChanged;
         }
 
         if (_licenseService != null)
@@ -2964,11 +3077,31 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         _lockIndicatorVisibilityCts?.Dispose();
         _lockIndicatorVisibilityCts = null;
 
+        var hadPendingSubtitleSave = _subtitleSaveCts != null;
+        _subtitleSaveCts?.Cancel();
+        _subtitleSaveCts?.Dispose();
+        _subtitleSaveCts = null;
+
         EpisodeNavigator.Dispose();
 
         if (_settingsService != null)
         {
             _settingsService.SettingsChanged -= OnSettingsChanged;
+
+            // Bekleyen altyazı ayarı değişikliğini iptal etme, kapatmadan önce flush et:
+            // 1 sn'lik debounce içinde player'dan çıkılsa bile ayar kalıcı olmalı ve
+            // SettingsChanged ile sonraki oturum için uygulanmalıdır.
+            if (hadPendingSubtitleSave)
+            {
+                try
+                {
+                    _settingsService.SaveAsync().GetAwaiter().GetResult();
+                }
+                catch (Exception ex)
+                {
+                    LogDebug($"Failed to flush subtitle settings on close: {ex.Message}");
+                }
+            }
         }
         if (_networkService != null)
         {

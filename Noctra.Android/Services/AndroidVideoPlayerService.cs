@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
-using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -47,7 +46,6 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
     private float _playbackRate = 1f;
     private int _selectedAudioTrack = -1;
     private int _selectedSubtitleTrack = -1;
-    private int _subtitleSequence;
     private string _lastUserAgent = string.Empty;
     private BufferSize _lastVideoBufferSize = BufferSize.Normal;
     private bool _lastHardwareAcceleration = true;
@@ -122,10 +120,11 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
     public event EventHandler<bool>? PlayingChanged;
     public event EventHandler<double>? PositionChanged;
     public event EventHandler? PlayerReady;
+    public event EventHandler? MediaPlayerReleasing;
     public event EventHandler? PlaybackEnded;
     public event EventHandler<float>? BufferingChanged;
     public event EventHandler<string>? ErrorOccurred;
-    public event EventHandler<string?>? SubtitleTextChanged;
+    public event EventHandler<IReadOnlyList<SubtitleCueData>>? SubtitleCuesChanged;
     public event EventHandler<StreamQualityInfo>? QualityDetected;
     internal event Action<IExoPlayer>? PlayerChanged;
 
@@ -276,7 +275,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
         _selectedAudioTrack = -1;
         _selectedSubtitleTrack = -1;
         ClearTrackCache();
-        RaiseSubtitleTextChanged(null);
+        ClearCues();
         
         _state = PlaybackState.Buffering;
         BufferingChanged?.Invoke(this, 0);
@@ -401,7 +400,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
             catch (Exception ex)
             {
                 _state = PlaybackState.Error;
-                RaiseSubtitleTextChanged(null);
+                ClearCues();
                 ErrorOccurred?.Invoke(this, ex.Message);
                 completion.TrySetException(ex);
             }
@@ -478,7 +477,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
                 _duration = 0;
                 _bufferedPosition = 0;
                 ClearTrackCache();
-                RaiseSubtitleTextChanged(null);
+                ClearCues();
                 return;
             }
 
@@ -498,7 +497,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
                 _selectedAudioTrack = -1;
                 _selectedSubtitleTrack = -1;
                 ClearTrackCache();
-                RaiseSubtitleTextChanged(null);
+                ClearCues();
                 _state = PlaybackState.Stopped;
                 _isPlaying = false;
                 _currentTimeMs = 0;
@@ -546,7 +545,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
                 _selectedSubtitleTrack = -1;
 
                 ClearTrackCache();
-                RaiseSubtitleTextChanged(null);
+                ClearCues();
                 PlayingChanged?.Invoke(this, false);
 
                 completion.TrySetResult();
@@ -625,7 +624,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
                     .SetTrackTypeDisabled(C.TrackTypeText, true)
                     .Build();
                 _selectedSubtitleTrack = -1;
-                RaiseSubtitleTextChanged(null);
+                ClearCues();
                 return;
             }
 
@@ -1240,29 +1239,9 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
         }
     }
 
-    private void RaiseSubtitleTextChanged(string? text, long clearAfterMilliseconds = 0)
+    private void ClearCues()
     {
-        var normalizedText = string.IsNullOrWhiteSpace(text) ? string.Empty : text.Trim();
-        var sequence = Interlocked.Increment(ref _subtitleSequence);
-        SubtitleTextChanged?.Invoke(this, normalizedText);
-
-        if (normalizedText.Length == 0 || clearAfterMilliseconds <= 0) return;
-
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                await Task.Delay((int)Math.Clamp(clearAfterMilliseconds, 1, int.MaxValue)).ConfigureAwait(false);
-                if (sequence == Volatile.Read(ref _subtitleSequence))
-                {
-                    RaiseSubtitleTextChanged(null);
-                }
-            }
-            catch (Exception ex)
-            {
-                LogDebug($"Failed to clear subtitle text after cue timeout: {ex.Message}");
-            }
-        });
+        SubtitleCuesChanged?.Invoke(this, SubtitleCueData.Empty);
     }
 
     private void UpdateStreamQuality()
@@ -1523,6 +1502,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
                     _service._hasLoadedMedia = false;
                     _service._isPlaying = false;
                     _service.PlayingChanged?.Invoke(_service, false);
+                    _service.ClearCues();
                     break;
                 case BasePlayer.InterfaceConsts.StateBuffering:
                     _service._state = PlaybackState.Buffering;
@@ -1569,6 +1549,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
                     _service._isPlaying = false;
                     _service.PlayingChanged?.Invoke(_service, false);
                     _service.PlaybackEnded?.Invoke(_service, EventArgs.Empty);
+                    _service.ClearCues();
                     break;
             }
         }
@@ -1590,22 +1571,38 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
             _service.StopPositionUpdates();
             _service._state = PlaybackState.Error;
             _service._isPlaying = false;
+            _service.PlayingChanged?.Invoke(_service, false);
             _service.ErrorOccurred?.Invoke(_service, error.Message ?? "ExoPlayer error");
+            _service.ClearCues();
         }
 
         public void OnCues(CueGroup cueGroup)
         {
-            var sb = new StringBuilder();
             var cues = AndroidVideoPlayerService.GetCues(cueGroup);
+            if (cues.Length == 0)
+            {
+                _service.ClearCues();
+                return;
+            }
+
+            var list = new List<SubtitleCueData>(cues.Length);
+
             for (int i = 0; i < cues.Length; i++)
             {
-                var cue = cues[i];
-                if (cue.Text is { } txt)
-                {
-                    sb.AppendLine(txt.ToString());
-                }
+                var rawText = cues[i].Text?.ToString();
+                if (string.IsNullOrWhiteSpace(rawText)) continue;
+
+                var normalized = Regex.Replace(
+                    rawText.Replace("\r\n", "\n").Replace('\r', '\n'),
+                    @"[ \t]+", " ").Trim();
+
+                if (normalized.Length == 0) continue;
+                list.Add(new SubtitleCueData(normalized));
             }
-            _service.RaiseSubtitleTextChanged(sb.ToString().Trim());
+
+            _service.SubtitleCuesChanged?.Invoke(
+                _service,
+                list.Count == 0 ? SubtitleCueData.Empty : list.ToArray());
         }
 
         public void OnTracksChanged(Tracks tracks)

@@ -438,6 +438,11 @@ public partial class MainView : UserControl
         CategorySelectionOverlay.ApplySafeArea(safe);
         CardActionsSheet.ApplySafeArea(safe);
         _lastSafeArea = safe;
+        if (_playerViewModel is not null)
+        {
+            _playerViewModel.SubtitleTopSafeArea = safe.Top;
+            _playerViewModel.SubtitleBottomSafeArea = safe.Bottom;
+        }
         UpdatePlayerWatermarkInsets();
     }
 

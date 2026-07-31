@@ -1,0 +1,21 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:models="using:Noctra.Models"
+             x:Class="Noctra.Mobile.Views.Player.MobileSubtitlePreviewOverlay"
+             x:CompileBindings="False">
+  <Grid x:Name="LayoutGrid"
+        RowDefinitions="*,*,*,*">
+    <Border x:Name="SubtitleBorder"
+            HorizontalAlignment="Center"
+            MaxWidth="280"
+            Padding="14,8"
+            CornerRadius="8"
+            IsHitTestVisible="False">
+      <TextBlock x:Name="SubtitleText"
+                 Foreground="White"
+                 FontWeight="SemiBold"
+                 TextAlignment="Center"
+                 TextWrapping="Wrap" />
+    </Border>
+  </Grid>
+</UserControl>

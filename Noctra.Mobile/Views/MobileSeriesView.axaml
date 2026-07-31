@@ -91,7 +91,7 @@
 
       <controls:MobileEmptyStateView Grid.Row="2"
                   IsVisible="{Binding ShowEmptyChannels}"
-                  IconKind="TelevisionPlay"
+                  IconKind="MovieOutline"
                   Title="{loc:Translate Series.Empty.Title}"
                   Description="{loc:Translate Series.Empty.Description}" />
     </Grid>

@@ -79,15 +79,11 @@ public class PlayerQualityMonitor
             .ToList();
 
         var subtitleTracks = _vm.VideoPlayerService.SubtitleTracks
-            .Select(t => IsDisabledTrackLabel(t.Name)
-                ? new PlayerViewModel.TrackOption(t.Id, offText)
-                : BuildTrackOption(t.Id, t.Name, string.Format(subtitleFallbackFormat, t.Id)))
+            .Where(t => t.Id >= 0 && !IsDisabledTrackLabel(t.Name))
+            .Select(t => BuildTrackOption(t.Id, t.Name, string.Format(subtitleFallbackFormat, t.Id)))
             .ToList();
 
-        if (!subtitleTracks.Any(t => string.Equals(t.Name, offText, StringComparison.OrdinalIgnoreCase)))
-        {
-            subtitleTracks.Add(new PlayerViewModel.TrackOption(-1, offText));
-        }
+        subtitleTracks.Insert(0, new PlayerViewModel.TrackOption(-1, offText));
 
         _vm.DispatcherService.Invoke(() => 
         {

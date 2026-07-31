@@ -932,13 +932,15 @@
                                     <Border Height="1" Width="40" HorizontalAlignment="Left" Background="{DynamicResource Surface1Brush}" Opacity="0.5"/>
                                 </StackPanel>
                                 <StackPanel Margin="0,0,0,24" IsVisible="{Binding !IsLiveContent}">
-                                    <UniformGrid Columns="3" Margin="0,0,0,8">
-                                        <Button Command="{Binding SetSubtitleSizeCommand}" CommandParameter="28" Content="{loc:Translate Player.Settings.SubtitleSize.Small}" Classes="listItemBtn" HorizontalContentAlignment="Center" Margin="0,0,8,0"
-                                                Background="{Binding SubtitleFontSize, Converter={StaticResource EqualityToSelectionBrushConverter}, ConverterParameter=28}"/>
-                                        <Button Command="{Binding SetSubtitleSizeCommand}" CommandParameter="40" Content="{loc:Translate Player.Settings.SubtitleSize.Normal}" Classes="listItemBtn" HorizontalContentAlignment="Center" Margin="4,0,4,0"
-                                                Background="{Binding SubtitleFontSize, Converter={StaticResource EqualityToSelectionBrushConverter}, ConverterParameter=40}"/>
-                                        <Button Command="{Binding SetSubtitleSizeCommand}" CommandParameter="60" Content="{loc:Translate Player.Settings.SubtitleSize.Large}" Classes="listItemBtn" HorizontalContentAlignment="Center" Margin="8,0,0,0"
-                                                Background="{Binding SubtitleFontSize, Converter={StaticResource EqualityToSelectionBrushConverter}, ConverterParameter=60}"/>
+                                    <UniformGrid Columns="4" Margin="0,0,0,8">
+                                        <Button Command="{Binding SetSubtitleSizeCommand}" CommandParameter="Small" Content="{loc:Translate Player.Settings.SubtitleSize.Small}" Classes="listItemBtn" HorizontalContentAlignment="Center" Margin="0,0,4,0"
+                                                Background="{Binding SubtitleTextSize, Converter={StaticResource EqualityToSelectionBrushConverter}, ConverterParameter=Small}"/>
+                                        <Button Command="{Binding SetSubtitleSizeCommand}" CommandParameter="Medium" Content="{loc:Translate Player.Settings.SubtitleSize.Normal}" Classes="listItemBtn" HorizontalContentAlignment="Center" Margin="4,0,4,0"
+                                                Background="{Binding SubtitleTextSize, Converter={StaticResource EqualityToSelectionBrushConverter}, ConverterParameter=Medium}"/>
+                                        <Button Command="{Binding SetSubtitleSizeCommand}" CommandParameter="Large" Content="{loc:Translate Player.Settings.SubtitleSize.Large}" Classes="listItemBtn" HorizontalContentAlignment="Center" Margin="4,0,4,0"
+                                                Background="{Binding SubtitleTextSize, Converter={StaticResource EqualityToSelectionBrushConverter}, ConverterParameter=Large}"/>
+                                        <Button Command="{Binding SetSubtitleSizeCommand}" CommandParameter="ExtraLarge" Content="{loc:Translate Player.Settings.SubtitleSize.ExtraLarge}" Classes="listItemBtn" HorizontalContentAlignment="Center" Margin="4,0,0,0"
+                                                Background="{Binding SubtitleTextSize, Converter={StaticResource EqualityToSelectionBrushConverter}, ConverterParameter=ExtraLarge}"/>
                                     </UniformGrid>
                                 </StackPanel>
 
@@ -947,13 +949,15 @@
                                     <Border Height="1" Width="60" HorizontalAlignment="Left" Background="{DynamicResource Surface1Brush}" Opacity="0.5"/>
                                 </StackPanel>
                                 <StackPanel Margin="0,0,0,24" IsVisible="{Binding !IsLiveContent}">
-                                    <UniformGrid Columns="3" Margin="0,0,0,8">
-                                        <Button Command="{Binding SetSubtitleBackgroundCommand}" CommandParameter="0" Content="{loc:Translate Player.Settings.SubtitleBackground.Off}" Classes="listItemBtn" HorizontalContentAlignment="Center" Margin="0,0,8,0"
+                                    <UniformGrid Columns="4" Margin="0,0,0,8">
+                                        <Button Command="{Binding SetSubtitleBackgroundCommand}" CommandParameter="0" Content="{loc:Translate Player.Settings.SubtitleBackground.Off}" Classes="listItemBtn" HorizontalContentAlignment="Center" Margin="0,0,4,0"
                                                 Background="{Binding SubtitleBackgroundOpacity, Converter={StaticResource EqualityToSelectionBrushConverter}, ConverterParameter=0}"/>
-                                        <Button Command="{Binding SetSubtitleBackgroundCommand}" CommandParameter="128" Content="{loc:Translate Player.Settings.SubtitleBackground.Semi}" Classes="listItemBtn" HorizontalContentAlignment="Center" Margin="4,0,4,0"
-                                                Background="{Binding SubtitleBackgroundOpacity, Converter={StaticResource EqualityToSelectionBrushConverter}, ConverterParameter=128}"/>
-                                        <Button Command="{Binding SetSubtitleBackgroundCommand}" CommandParameter="255" Content="{loc:Translate Player.Settings.SubtitleBackground.Black}" Classes="listItemBtn" HorizontalContentAlignment="Center" Margin="8,0,0,0"
-                                                Background="{Binding SubtitleBackgroundOpacity, Converter={StaticResource EqualityToSelectionBrushConverter}, ConverterParameter=255}"/>
+                                        <Button Command="{Binding SetSubtitleBackgroundCommand}" CommandParameter="30" Content="{loc:Translate Player.Settings.SubtitleBackground.Light}" Classes="listItemBtn" HorizontalContentAlignment="Center" Margin="4,0,4,0"
+                                                Background="{Binding SubtitleBackgroundOpacity, Converter={StaticResource EqualityToSelectionBrushConverter}, ConverterParameter=30}"/>
+                                        <Button Command="{Binding SetSubtitleBackgroundCommand}" CommandParameter="60" Content="{loc:Translate Player.Settings.SubtitleBackground.Medium}" Classes="listItemBtn" HorizontalContentAlignment="Center" Margin="4,0,4,0"
+                                                Background="{Binding SubtitleBackgroundOpacity, Converter={StaticResource EqualityToSelectionBrushConverter}, ConverterParameter=60}"/>
+                                        <Button Command="{Binding SetSubtitleBackgroundCommand}" CommandParameter="85" Content="{loc:Translate Player.Settings.SubtitleBackground.Dark}" Classes="listItemBtn" HorizontalContentAlignment="Center" Margin="4,0,0,0"
+                                                Background="{Binding SubtitleBackgroundOpacity, Converter={StaticResource EqualityToSelectionBrushConverter}, ConverterParameter=85}"/>
                                     </UniformGrid>
                                 </StackPanel>
 
@@ -963,10 +967,10 @@
                                 </StackPanel>
                                 <StackPanel Margin="0,0,0,32" IsVisible="{Binding !IsLiveContent}">
                                     <UniformGrid Columns="2" Margin="0,0,0,8">
-                                        <Button Command="{Binding SetSubtitlePositionCommand}" CommandParameter="40" Content="{loc:Translate Player.Settings.SubtitlePosition.Bottom}" Classes="listItemBtn" HorizontalContentAlignment="Center" Margin="0,0,4,0"
-                                                Background="{Binding SubtitleMargin, Converter={StaticResource EqualityToSelectionBrushConverter}, ConverterParameter=40}"/>
-                                        <Button Command="{Binding SetSubtitlePositionCommand}" CommandParameter="900" Content="{loc:Translate Player.Settings.SubtitlePosition.Top}" Classes="listItemBtn" HorizontalContentAlignment="Center" Margin="4,0,0,0"
-                                                Background="{Binding SubtitleMargin, Converter={StaticResource EqualityToSelectionBrushConverter}, ConverterParameter=900}"/>
+                                        <Button Command="{Binding SetSubtitlePositionCommand}" CommandParameter="Bottom" Content="{loc:Translate Player.Settings.SubtitlePosition.Bottom}" Classes="listItemBtn" HorizontalContentAlignment="Center" Margin="0,0,4,0"
+                                                Background="{Binding SubtitlePosition, Converter={StaticResource EqualityToSelectionBrushConverter}, ConverterParameter=Bottom}"/>
+                                        <Button Command="{Binding SetSubtitlePositionCommand}" CommandParameter="Top" Content="{loc:Translate Player.Settings.SubtitlePosition.Top}" Classes="listItemBtn" HorizontalContentAlignment="Center" Margin="4,0,0,0"
+                                                Background="{Binding SubtitlePosition, Converter={StaticResource EqualityToSelectionBrushConverter}, ConverterParameter=Top}"/>
                                     </UniformGrid>
                                 </StackPanel>
 

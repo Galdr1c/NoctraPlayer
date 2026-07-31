@@ -546,7 +546,7 @@ public sealed class VideoOverlayInputSurfaceTests
             trackSheet, StringComparison.Ordinal);
         Assert.Contains("SelectedSubtitleTrack",
             trackSheet, StringComparison.Ordinal);
-        Assert.Equal(2,
+        Assert.Equal(3,
             trackSheet.Split("IsHitTestVisible=\"False\"", StringSplitOptions.None).Length - 1);
     }
 

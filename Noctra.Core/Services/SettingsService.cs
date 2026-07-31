@@ -20,6 +20,12 @@ public class SettingsService : ISettingsService
     public AppSettings Settings => _currentSettings;
 
     public event Action? SettingsChanged;
+
+    /// <summary>
+    /// Bellekteki ayarların değiştiğini dinleyicilere anında bildirir.
+    /// Disk kaydından bağımsızdır; player reinit gibi tepkiler dosya yazımını beklememelidir.
+    /// </summary>
+    public void NotifySettingsChanged() => SettingsChanged?.Invoke();
     
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -221,6 +227,38 @@ public class SettingsService : ISettingsService
             using var document = JsonDocument.Parse(json);
             var root = document.RootElement;
 
+            var hasCanonicalSubtitleFields =
+                HasProperty(root, "subtitleTextSize", "SubtitleTextSize") ||
+                HasProperty(root, "subtitlePosition", "SubtitlePosition");
+
+            if (!HasProperty(root, "subtitleTextSize", "SubtitleTextSize") &&
+                ReadInt(root, "subtitleFontSize", "SubtitleFontSize") is int legacyFontSize)
+            {
+                settings.SubtitleTextSize = SubtitleAppearanceDefaults.ResolveTextSize(legacyFontSize);
+            }
+
+            if (!HasProperty(root, "subtitlePosition", "SubtitlePosition") &&
+                ReadInt(root, "subtitleMargin", "SubtitleMargin") is int legacyMargin)
+            {
+                settings.SubtitlePosition = SubtitleAppearanceDefaults.ResolveLegacyPosition(legacyMargin);
+            }
+
+            var storedOpacity =
+                ReadInt(root, "subtitleBackgroundOpacity", "SubtitleBackgroundOpacity") ??
+                settings.SubtitleBackgroundOpacity;
+
+            var hasSubtitleSchemaVersion = HasProperty(
+                root,
+                "subtitleAppearanceSchemaVersion",
+                "SubtitleAppearanceSchemaVersion");
+
+            settings.SubtitleBackgroundOpacity =
+                !hasSubtitleSchemaVersion && !hasCanonicalSubtitleFields
+                    ? SubtitleAppearanceDefaults.LegacyAlphaToOpacityPercent(storedOpacity)
+                    : SubtitleAppearanceDefaults.NormalizeOpacityPercent(storedOpacity);
+
+            settings.SubtitleAppearanceSchemaVersion = SubtitleAppearanceDefaults.CurrentSchemaVersion;
+
             if (string.IsNullOrWhiteSpace(settings.PromoGrant))
             {
                 settings.ActivePromoCode = ReadString(root, "activePromoCode", "ActivePromoCode");
@@ -239,6 +277,34 @@ public class SettingsService : ISettingsService
             settings.PromoPremiumExpiresAtUtc = null;
             settings.RedeemedPromoCodes.Clear();
         }
+    }
+
+    private static bool HasProperty(JsonElement root, params string[] names)
+    {
+        foreach (var name in names)
+        {
+            if (root.TryGetProperty(name, out _))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static int? ReadInt(JsonElement root, params string[] names)
+    {
+        foreach (var name in names)
+        {
+            if (root.TryGetProperty(name, out var value) &&
+                value.ValueKind == JsonValueKind.Number &&
+                value.TryGetInt32(out var number))
+            {
+                return number;
+            }
+        }
+
+        return null;
     }
 
     private static bool? ReadBoolean(JsonElement root, params string[] names)
@@ -313,7 +379,11 @@ public class SettingsService : ISettingsService
         try
         {
             var profileId = Settings.ProfileId;
-            
+
+            // Önce dinleyicileri bilgilendir: bellek ayarları zaten güncel olduğundan
+            // player reinit gibi tepkiler disk I/O'sunu beklememeli.
+            SettingsChanged?.Invoke();
+
             // 1. Save current profile settings
             var path = GetSettingsPath(profileId);
             var json = SerializePersistableSettings(Settings, profileId);
@@ -333,8 +403,6 @@ public class SettingsService : ISettingsService
                 await WriteAllTextAtomicallyAsync(globalPath, globalJson);
                 _logger?.LogInformation("Global settings updated from profile {Id}", profileId);
             }
-            
-            SettingsChanged?.Invoke();
         }
         catch (Exception ex)
         {

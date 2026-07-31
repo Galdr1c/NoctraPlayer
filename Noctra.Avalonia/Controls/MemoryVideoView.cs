@@ -143,6 +143,11 @@ public class MemoryVideoView : NativeControlHost
     {
         if (_mediaPlayer == null || _platformHandle == null) return;
 
+        // Güvenlik: Dispose edilmiş bir player'ın native yöntemine çağrı yapmak
+        // managed kodda yakalanamayan AccessViolationException'a yol açar.
+        // (ReinitializeAsync, player'ı görünüm hâlâ referans tutarken dispose edebilir.)
+        if (_mediaPlayer.NativeReference == IntPtr.Zero) return;
+
         try
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -164,6 +169,9 @@ public class MemoryVideoView : NativeControlHost
 
         var player = _mediaPlayer;
         var handle = _platformHandle.Handle;
+
+        // Dispose edilmiş bir player'a native çağrı yapma (bkz. Attach açıklaması).
+        if (player.NativeReference == IntPtr.Zero) return;
 
         // Note: We don't use Post here because we want to detach 
         // immediately before the control is destroyed or handle becomes invalid.

@@ -68,7 +68,6 @@
           <Border.IsVisible>
             <Binding Path="#BackdropImage.IsImageLoaded" Converter="{StaticResource InverseBoolConverter}"/>
           </Border.IsVisible>
-          <materialIcons:MaterialIcon Kind="MoviePlay" Width="30" Height="30" Foreground="{DynamicResource TextMutedBrush}" Opacity="0.3"/>
         </Border>
 
         <!-- Landscape Image (Backdrop prioritized) -->

@@ -1,3 +1,4 @@
+using System;
 using System.Text.Json.Serialization;
 
 namespace Noctra.Models;
@@ -30,6 +31,104 @@ public enum BufferSize
     Small,  // 2sn
     Normal, // 5sn
     Large   // 10sn
+}
+
+/// <summary>
+/// Altyazının video içindeki dikey konumu.
+/// </summary>
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum SubtitleVerticalPosition
+{
+    Bottom,
+    LowerMiddle,
+    UpperMiddle,
+    Top
+}
+
+/// <summary>
+/// Kullanıcı tarafından seçilebilir altyazı metin boyutu seviyesi.
+/// Platforma özel gerçek boyut SubtitleAppearanceDefaults ile hesaplanır.
+/// </summary>
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum SubtitleTextSize
+{
+    Small,
+    Medium,
+    Large,
+    ExtraLarge
+}
+
+/// <summary>
+/// Platformlar arasında ortak altyazı görünümü varsayılanları ve eski ayar dönüşümleri.
+/// </summary>
+public static class SubtitleAppearanceDefaults
+{
+    public const int CurrentSchemaVersion = 1;
+    public const int BackgroundOpacityPercent = 0;
+
+    public const SubtitleTextSize DefaultTextSize = SubtitleTextSize.Medium;
+
+    public static int ResolveMobileFontSize(SubtitleTextSize size)
+        => size switch
+        {
+            SubtitleTextSize.Small => 18,
+            SubtitleTextSize.Medium => 24,
+            SubtitleTextSize.Large => 32,
+            SubtitleTextSize.ExtraLarge => 40,
+            _ => 24
+        };
+
+    public static int ResolveDesktopFontSize(SubtitleTextSize size)
+        => size switch
+        {
+            SubtitleTextSize.Small => 28,
+            SubtitleTextSize.Medium => 40,
+            SubtitleTextSize.Large => 60,
+            SubtitleTextSize.ExtraLarge => 72,
+            _ => 40
+        };
+
+    public static SubtitleTextSize ResolveTextSize(int legacyFontSize)
+        => legacyFontSize switch
+        {
+            <= 32 => SubtitleTextSize.Small,
+            <= 50 => SubtitleTextSize.Medium,
+            <= 66 => SubtitleTextSize.Large,
+            _ => SubtitleTextSize.ExtraLarge
+        };
+
+    public static int NormalizeOpacityPercent(int value)
+        => value <= 100
+            ? Math.Clamp(value, 0, 100)
+            : LegacyAlphaToOpacityPercent(value);
+
+    public static int LegacyAlphaToOpacityPercent(int alpha)
+        => Math.Clamp((int)Math.Round(Math.Clamp(alpha, 0, 255) / 255d * 100d), 0, 100);
+
+    public static byte OpacityPercentToAlpha(int percent)
+        => (byte)Math.Round(Math.Clamp(percent, 0, 100) * 255d / 100d);
+
+    public static SubtitleVerticalPosition ResolveLegacyPosition(int margin)
+        => margin switch
+        {
+            >= 751 => SubtitleVerticalPosition.Top,
+            >= 411 => SubtitleVerticalPosition.UpperMiddle,
+            >= 131 => SubtitleVerticalPosition.LowerMiddle,
+            _ => SubtitleVerticalPosition.Bottom
+        };
+
+    public static int ToLegacyMargin(SubtitleVerticalPosition position)
+        => position switch
+        {
+            // Masaüstünde yalnızca Bottom ve Top güvenlidir: ara konumlar mutlak
+            // margin (220/600) çözünürlüğe bağlı olduğundan (720p/4K/küçük pencere)
+            // en yakın güvenli uca eşlenir. Top (>=900) VideoPlayerService'te
+            // video yüksekliğine göre dinamik hesaplanır (videoHeight * 0.85).
+            SubtitleVerticalPosition.Top => 900,
+            SubtitleVerticalPosition.UpperMiddle => 900,
+            SubtitleVerticalPosition.LowerMiddle => 40,
+            _ => 40
+        };
 }
 
 /// <summary>
@@ -90,19 +189,47 @@ public class AppSettings
     public string SubtitleLanguage { get; set; } = "en";
 
     /// <summary>
-    /// Altyazı yazı tipi boyutu (varsayılan: 40)
+    /// Altyazı görünümü ayarlarının kalıcı veri şema sürümü.
     /// </summary>
-    public int SubtitleFontSize { get; set; } = 40;
+    public int SubtitleAppearanceSchemaVersion { get; set; } = SubtitleAppearanceDefaults.CurrentSchemaVersion;
 
     /// <summary>
-    /// Altyazı arka plan şeffaflığı (0: Kapalı, 128: Yarı Saydam, 255: Siyah)
+    /// Altyazı metin boyutu seviyesi.
     /// </summary>
-    public int SubtitleBackgroundOpacity { get; set; } = 0;
+    public SubtitleTextSize SubtitleTextSize { get; set; } = SubtitleAppearanceDefaults.DefaultTextSize;
 
     /// <summary>
-    /// Altyazı alttan boşluk (Margin) miktarı
+    /// Eski sürümlerle uyumluluk için altyazı yazı tipi boyutu (DIP).
+    /// Yeni kod SubtitleTextSize kullanmalıdır.
     /// </summary>
-    public int SubtitleMargin { get; set; } = 40;
+    [Obsolete("Use SubtitleTextSize instead.")]
+    [JsonIgnore]
+    public int SubtitleFontSize
+    {
+        get => SubtitleAppearanceDefaults.ResolveDesktopFontSize(SubtitleTextSize);
+        set => SubtitleTextSize = SubtitleAppearanceDefaults.ResolveTextSize(value);
+    }
+
+    /// <summary>
+    /// Altyazı arka plan opaklığı, yüzde olarak 0-100.
+    /// </summary>
+    public int SubtitleBackgroundOpacity { get; set; } = SubtitleAppearanceDefaults.BackgroundOpacityPercent;
+
+    /// <summary>
+    /// Altyazının dikey konumu.
+    /// </summary>
+    public SubtitleVerticalPosition SubtitlePosition { get; set; } = SubtitleVerticalPosition.Bottom;
+
+    /// <summary>
+    /// Eski sürümlerle ayar dosyası uyumluluğu. Yeni kod SubtitlePosition kullanmalıdır.
+    /// </summary>
+    [Obsolete("Use SubtitlePosition instead.")]
+    [JsonIgnore]
+    public int SubtitleMargin
+    {
+        get => SubtitleAppearanceDefaults.ToLegacyMargin(SubtitlePosition);
+        set => SubtitlePosition = SubtitleAppearanceDefaults.ResolveLegacyPosition(value);
+    }
 
     /// <summary>
     /// Tercih edilen ses dili (örn: "tr", "en")

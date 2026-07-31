@@ -60,6 +60,7 @@ public class SettingsProfileSaveTests
             SettingsChanged?.Invoke();
             return Task.CompletedTask;
         }
+        public void NotifySettingsChanged() => SettingsChanged?.Invoke();
 
         public void ResetToDefaults()
         {

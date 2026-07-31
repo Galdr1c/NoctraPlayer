@@ -75,7 +75,7 @@
     <Setter Property="Background" Value="{DynamicResource Surface1Brush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="10" />
+    <Setter Property="CornerRadius" Value="6" />
   </Style>
 
   <Style Selector="Border.DesktopSheetSurface">

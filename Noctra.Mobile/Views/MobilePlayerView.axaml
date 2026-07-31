@@ -133,45 +133,16 @@
       </views:MobilePlayerCompactControls.Styles>
     </views:MobilePlayerCompactControls>
 
-    <!-- Subtitles (alt konum) -->
-    <Border Grid.ColumnSpan="2"
-            ZIndex="15"
-            HorizontalAlignment="Stretch"
-            VerticalAlignment="Bottom"
-            Margin="18,0,18,96"
-            Padding="10,6"
-            CornerRadius="8"
-            Background="{Binding SubtitleBackgroundOpacity, Converter={StaticResource SubtitleBackgroundBrushConverter}}"
-            IsHitTestVisible="False"
-            IsVisible="{Binding IsMobileSubtitleBottomVisible}">
-      <TextBlock Text="{Binding CurrentSubtitleText}"
-                 Foreground="{DynamicResource PlayerOverlayTextBrush}"
-                 FontSize="{Binding SubtitleFontSize}"
-                 FontWeight="SemiBold"
-                 TextAlignment="Center"
-                 TextWrapping="Wrap"
-                 MaxLines="3" />
-    </Border>
-
-    <!-- Subtitles (üst konum) -->
-    <Border Grid.ColumnSpan="2"
-            ZIndex="15"
-            HorizontalAlignment="Stretch"
-            VerticalAlignment="Top"
-            Margin="18,72,18,0"
-            Padding="10,6"
-            CornerRadius="8"
-            Background="{Binding SubtitleBackgroundOpacity, Converter={StaticResource SubtitleBackgroundBrushConverter}}"
-            IsHitTestVisible="False"
-            IsVisible="{Binding IsMobileSubtitleTopVisible}">
-      <TextBlock Text="{Binding CurrentSubtitleText}"
-                 Foreground="{DynamicResource PlayerOverlayTextBrush}"
-                 FontSize="{Binding SubtitleFontSize}"
-                 FontWeight="SemiBold"
-                 TextAlignment="Center"
-                 TextWrapping="Wrap"
-                 MaxLines="3" />
-    </Border>
+    <!-- Subtitles (tek host, konum enum ile kontrol edilir) -->
+    <player:MobileSubtitleOverlay Grid.ColumnSpan="2"
+                                  ZIndex="15"
+                                  IsVisible="{Binding IsMobileSubtitleVisible}"
+                                  Cues="{Binding ActiveSubtitleCues}"
+                                  FontSize="{Binding EffectiveSubtitleFontSize}"
+                                  BackgroundOpacity="{Binding SubtitleBackgroundOpacity}"
+                                  Position="{Binding SubtitlePosition}"
+                                  TopOffset="{Binding EffectiveSubtitleTopOffset}"
+                                  BottomOffset="{Binding EffectiveSubtitleBottomOffset}" />
 
     <!-- Buffering shield -->
     <Border Grid.ColumnSpan="2"

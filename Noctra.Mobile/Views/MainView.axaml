@@ -292,7 +292,7 @@
           <DockPanel>
             <Border Classes="RailIndicator" DockPanel.Dock="Left" />
             <StackPanel Orientation="Horizontal" Spacing="10" Margin="8,0,0,0">
-              <icons:MaterialIcon Kind="TelevisionPlay" Width="20" Height="20" />
+              <icons:MaterialIcon Kind="MovieOutline" Width="20" Height="20" />
               <TextBlock Text="{loc:Translate Shell.Nav.Series}" />
             </StackPanel>
           </DockPanel>

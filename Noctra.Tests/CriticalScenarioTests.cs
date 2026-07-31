@@ -51,8 +51,9 @@ namespace Noctra.Tests
         public event EventHandler<StreamQualityInfo>? QualityDetected;
         public event EventHandler<int>? VolumeChanged;
         public event EventHandler<float>? BufferingChanged;
-        public event EventHandler<string?>? SubtitleTextChanged;
+        public event EventHandler<IReadOnlyList<SubtitleCueData>>? SubtitleCuesChanged;
         public event EventHandler? PlayerReady;
+        public event EventHandler? MediaPlayerReleasing;
 
         public Task PlayAsync(string url, double startTimeSeconds = 0)
         {
@@ -120,6 +121,7 @@ namespace Noctra.Tests
         public Task LoadProfileSettingsAsync(int profileId) => Task.CompletedTask;
         public Task<AppSettings?> PeekProfileSettingsAsync(int profileId) => Task.FromResult<AppSettings?>(Settings);
         public Task SaveAsync() => Task.CompletedTask;
+        public void NotifySettingsChanged() { }
         public void ResetToDefaults() { }
     }
 

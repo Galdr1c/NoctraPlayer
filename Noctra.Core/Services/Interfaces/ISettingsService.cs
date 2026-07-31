@@ -33,6 +33,12 @@ public interface ISettingsService
     Task SaveAsync();
     
     /// <summary>
+    /// Bellekteki ayarların değiştiğini anında bildirir (disk kaydından bağımsız).
+    /// Player'ların reinit gibi tepkileri dosya yazımını beklemeden başlatması için kullanılır.
+    /// </summary>
+    void NotifySettingsChanged();
+    
+    /// <summary>
     /// Ayarları varsayılana sıfırlar
     /// </summary>
     void ResetToDefaults();

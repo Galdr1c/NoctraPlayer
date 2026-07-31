@@ -62,6 +62,7 @@ namespace Noctra.Tests
         public PlaybackMediaMetadata? MetadataAtPlay { get; private set; }
 
         public event EventHandler? PlayerReady;
+        public event EventHandler? MediaPlayerReleasing;
         public event EventHandler<bool>? PlayingChanged;
         public event EventHandler<double>? PositionChanged;
         public event EventHandler? PlaybackEnded;
@@ -69,7 +70,7 @@ namespace Noctra.Tests
         public event EventHandler<StreamQualityInfo>? QualityDetected;
         public event EventHandler<int>? VolumeChanged;
         public event EventHandler<float>? BufferingChanged;
-        public event EventHandler<string?>? SubtitleTextChanged;
+        public event EventHandler<IReadOnlyList<SubtitleCueData>>? SubtitleCuesChanged;
         public Func<CancellationToken, Task>? EndSessionHandler { get; set; }
 
         public Task PlayAsync(string url, double startTimeSeconds = 0)
@@ -184,8 +185,10 @@ namespace Noctra.Tests
     internal sealed class FakeSettingsService : ISettingsService
     {
         public AppSettings Settings { get; } = new AppSettings { DefaultVolume = 100 };
+        public int SaveCount { get; private set; }
         public event Action? SettingsChanged;
-        public Task SaveAsync() => Task.CompletedTask;
+        public Task SaveAsync() { SaveCount++; return Task.CompletedTask; }
+        public void NotifySettingsChanged() => SettingsChanged?.Invoke();
         public Task LoadAsync() => Task.CompletedTask;
         public Task<int> CleanOrphanedSettingsAsync(IEnumerable<int> activeProfileIds) => Task.FromResult(0);
         public Task LoadProfileSettingsAsync(int profileId) => Task.CompletedTask;
@@ -318,6 +321,56 @@ namespace Noctra.Tests
 
             Assert.True(ctx.VM.IsLocked);
             Assert.True(ctx.VM.IsLockIndicatorVisible);
+        }
+
+        [Fact]
+        public void Dispose_WithPendingSubtitleSave_FlushesSettingsToDisk()
+        {
+            var ctx = new PlayerTestContext();
+            var saveCountBefore = ctx.Settings.SaveCount;
+
+            ctx.VM.SubtitleTextSize = SubtitleTextSize.Small;
+
+            Assert.Equal(SubtitleTextSize.Small, ctx.Settings.Settings.SubtitleTextSize);
+            Assert.Equal(saveCountBefore, ctx.Settings.SaveCount);
+
+            ctx.VM.Dispose();
+
+            Assert.True(ctx.Settings.SaveCount > saveCountBefore,
+                "Pending subtitle save must be flushed on dispose, not cancelled.");
+        }
+
+        [Fact]
+        public void Dispose_WithoutPendingSubtitleSave_DoesNotFlushUnnecessarily()
+        {
+            var ctx = new PlayerTestContext();
+            var saveCountBefore = ctx.Settings.SaveCount;
+
+            ctx.VM.Dispose();
+
+            Assert.Equal(saveCountBefore, ctx.Settings.SaveCount);
+        }
+
+        [Fact]
+        public void EffectiveSubtitleBottomOffset_UsesMeasuredControlsHeight()
+        {
+            var ctx = new PlayerTestContext();
+            ctx.VM.SubtitleBottomSafeArea = 20;
+            ctx.VM.MobilePlayerControlsHeight = 240;
+
+            Assert.Equal(20 + 240 + 12, ctx.VM.EffectiveSubtitleBottomOffset);
+
+            ctx.VM.IsVisible = false;
+            Assert.Equal(20 + 18, ctx.VM.EffectiveSubtitleBottomOffset);
+        }
+
+        [Fact]
+        public void EffectiveSubtitleBottomOffset_DefaultsToFallbackUntilMeasured()
+        {
+            var ctx = new PlayerTestContext();
+            ctx.VM.SubtitleBottomSafeArea = 0;
+
+            Assert.Equal(180 + 12, ctx.VM.EffectiveSubtitleBottomOffset);
         }
 
         [Fact]

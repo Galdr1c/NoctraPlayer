@@ -342,7 +342,7 @@
             <Panel>
               <Border Classes="ActiveIndicator" />
               <StackPanel Classes="ItemContent" Orientation="Horizontal" VerticalAlignment="Center">
-                <materialIcons:MaterialIcon Kind="TelevisionPlay" />
+                <materialIcons:MaterialIcon Kind="MovieOutline" />
                         <TextBlock x:Name="NavSeriesText" Text="{loc:Translate Shell.Nav.Series}" VerticalAlignment="Center" IsVisible="False"/>
               </StackPanel>
             </Panel>

@@ -281,6 +281,27 @@ public partial class MobilePlayerView : UserControl
         if (_boundVm is not null)
         {
             UpdateVideoSurfaceLayout();
+            PushPlayerControlsHeight();
+        }
+    }
+
+    /// <summary>
+    /// Alt kontrol barının gerçek yüksekliğini ViewModel'e aktarır. Altyazı overlay'i
+    /// tahmini sabit (180) yerine ölçülen değeri kullanır; böylece farklı ekran
+    /// yoğunluğu, landscape veya kontrol tasarımı değişikliğinde altyazı ile
+    /// kontroller çakışmaz.
+    /// </summary>
+    private void PushPlayerControlsHeight()
+    {
+        if (_boundVm is null)
+        {
+            return;
+        }
+
+        var height = PlayerControls.Bounds.Height;
+        if (height > 0 && Math.Abs(height - _boundVm.MobilePlayerControlsHeight) > 0.5)
+        {
+            _boundVm.MobilePlayerControlsHeight = height;
         }
     }
 

@@ -1,0 +1,27 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:models="using:Noctra.Models"
+             x:Class="Noctra.Mobile.Views.Player.MobileSubtitleOverlay"
+             x:CompileBindings="False">
+  <Grid x:Name="LayoutGrid" RowDefinitions="*,*,*,*">
+    <Border x:Name="SubtitleBorder"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center"
+            Padding="10,6"
+            CornerRadius="8"
+            IsHitTestVisible="False">
+      <ItemsControl x:Name="CuesList" Focusable="False">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="models:SubtitleCueData">
+            <TextBlock Text="{Binding Text}"
+                       Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                       FontWeight="SemiBold"
+                       TextAlignment="Center"
+                       TextWrapping="Wrap"
+                       MaxLines="3" />
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </Border>
+  </Grid>
+</UserControl>

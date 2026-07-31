@@ -39,8 +39,10 @@ public class VideoPlayerService : IVideoPlayerService
     private CancellationTokenSource? _reinitCts;
     
     // Altyazı ve Ses seçimi durumu reinit sonrası kaybolmasın diye
-    private int? _restoredAudioTrack;
-    private int? _restoredSpu;
+    // Sadece sayısal ID değil, track ismi de saklanır: reinit sonrası
+    // LibVLC track ID'leri değişebileceği için isimle eşleştirme yapılır.
+    private TrackRestore? _restoredAudioTrack;
+    private TrackRestore? _restoredSpu;
 
     private void LogDebug(string msg)
     {
@@ -49,6 +51,7 @@ public class VideoPlayerService : IVideoPlayerService
 
 
     public event EventHandler? PlayerReady;
+    public event EventHandler? MediaPlayerReleasing;
     public event EventHandler<bool>? PlayingChanged;
 
     public event EventHandler<double>? PositionChanged;
@@ -57,7 +60,7 @@ public class VideoPlayerService : IVideoPlayerService
     public event EventHandler<StreamQualityInfo>? QualityDetected;
     public event EventHandler<int>? VolumeChanged;
     // Desktop LibVLC renders subtitles natively; this event is mainly used by mobile where subtitles are drawn in Avalonia overlay.
-    public event EventHandler<string?>? SubtitleTextChanged;
+    public event EventHandler<IReadOnlyList<SubtitleCueData>>? SubtitleCuesChanged;
 
     public string? CurrentUrl { get; private set; }
     public StreamQualityInfo? StreamQuality { get; private set; }
@@ -234,7 +237,7 @@ public class VideoPlayerService : IVideoPlayerService
 
                     // Altyaz ayarlarını buraya ekle
                     $"--freetype-fontsize={_lastSubtitleFontSize}", // Altyazı boyutu
-                    $"--freetype-background-opacity={_lastSubtitleBackgroundOpacity}", // Arkaplan şeffaflığı
+                    $"--freetype-background-opacity={SubtitleAppearanceDefaults.OpacityPercentToAlpha(_lastSubtitleBackgroundOpacity)}", // Arkaplan şeffaflığı
                     "--freetype-background-color=0x000000",         // Arkaplan rengi siyah
                     $"--sub-margin={_lastSubtitleMargin}",          // Alttan yukarı doğru marjin
                 };
@@ -287,20 +290,23 @@ public class VideoPlayerService : IVideoPlayerService
         var wasPlaying = IsPlaying;
         var currentPosition = Position;
         
-        // Ses ve altyazı seçimini kaydet
+        // Ses ve altyazı seçimini kaydet (ID + isim; ID'ler reinit sonrası değişebilir)
         if (_mediaPlayer != null)
         {
-            _restoredAudioTrack = _mediaPlayer.AudioTrack;
-            _restoredSpu = _mediaPlayer.Spu;
+            _restoredAudioTrack = CaptureTrackRestore(_mediaPlayer.AudioTrack, AudioTracks);
+            _restoredSpu = CaptureTrackRestore(_mediaPlayer.Spu, SubtitleTracks);
         }
         
         // 2. Oynatmayı durdur
         Stop();
 
-        // 3. UI üzerindeki MediaPlayer referansını kaldır (crash önlemek için çok kritik)
+        // 3. UI üzerindeki MediaPlayer referansını kaldır (crash önlemek için çok kritik).
+        //    Not: PlayerReady burada tetiklenmemeli — o olay view'a yeni player'ı bağlatır,
+        //    ancak bu aşamada eski player henüz dispose edilmediği için view ölü bir
+        //    native referansı tutmaya devam ederdi (native AccessViolation).
         await _dispatcherService.InvokeAsync(() =>
         {
-            PlayerReady?.Invoke(this, EventArgs.Empty);
+            MediaPlayerReleasing?.Invoke(this, EventArgs.Empty);
             return Task.CompletedTask;
         });
         
@@ -373,7 +379,7 @@ public class VideoPlayerService : IVideoPlayerService
             });
 
             // Kaydedilmiş ses veya altyazı track seçimleri varsa geri yükle
-            if (_restoredAudioTrack.HasValue || _restoredSpu.HasValue)
+            if (_restoredAudioTrack != null || _restoredSpu != null)
             {
                 var audioToRestore = _restoredAudioTrack;
                 var spuToRestore = _restoredSpu;
@@ -383,18 +389,16 @@ public class VideoPlayerService : IVideoPlayerService
                 _ = Task.Run(async () =>
                 {
                     // Tracklerin VLC tarafından tam yüklenmesi için ufak bir gecikme
-                    await Task.Delay(500); 
+                    await Task.Delay(500);
                     if (_mediaPlayer == null || !_mediaPlayer.IsPlaying) return;
 
-                    if (audioToRestore.HasValue && audioToRestore.Value >= 0)
+                    if (audioToRestore != null)
                     {
-                        LogDebug($"Restoring AudioTrack: {audioToRestore.Value}");
-                        _mediaPlayer.SetAudioTrack(audioToRestore.Value);
+                        await RestoreAudioTrackAsync(audioToRestore);
                     }
-                    if (spuToRestore.HasValue)
+                    if (spuToRestore != null)
                     {
-                        LogDebug($"Restoring SPU: {spuToRestore.Value}");
-                        SetSubtitleTrack(spuToRestore.Value);
+                        await RestoreSpuTrackAsync(spuToRestore);
                     }
                 });
             }
@@ -999,6 +1003,15 @@ public class VideoPlayerService : IVideoPlayerService
 
     public Task EndSessionAsync(CancellationToken cancellationToken = default)
     {
+        if (_mediaPlayer is not null)
+        {
+            _dispatcherService.InvokeAsync(() =>
+            {
+                MediaPlayerReleasing?.Invoke(this, EventArgs.Empty);
+                return Task.CompletedTask;
+            });
+        }
+
         Stop();
         if (_mediaPlayer is not null)
         {
@@ -1008,6 +1021,13 @@ public class VideoPlayerService : IVideoPlayerService
 
         _libVLC?.Dispose();
         _libVLC = null;
+
+        // Çok kritik: Player tamamen dispose edildiği için sonraki PlayAsync çağrısı
+        // InitializeAsync ile yeni bir LibVLC/MediaPlayer oluşturmalı. Bu bayrak
+        // sıfırlanmazsa sonraki tüm oynatma istekleri "_mediaPlayer is null" ile
+        // sessizce başarısız olur (uygulama yeniden başlatılana kadar hiçbir
+        // içerik açılamaz).
+        _isInitialized = false;
 
         return Task.CompletedTask;
     }
@@ -1193,6 +1213,82 @@ public class VideoPlayerService : IVideoPlayerService
         if (_mediaPlayer.Spu != -1)
         {
             _mediaPlayer.SetSpu(0);
+        }
+    }
+
+    // ─── Track restorasyonu (reinit sonrası) ─────────────────────────────────────
+
+    /// <summary>
+    /// Reinit öncesi seçili track'in ID'si ve ismi.
+    /// ID'ler player yeniden oluşturulduğunda değişebileceğinden isim de saklanır.
+    /// </summary>
+    private sealed record TrackRestore(int Id, string? Name);
+
+    private static TrackRestore CaptureTrackRestore(int currentId, IReadOnlyList<(int Id, string? Name)> tracks)
+    {
+        var name = tracks.FirstOrDefault(t => t.Id == currentId).Name;
+        return new TrackRestore(currentId, name);
+    }
+
+    /// <summary>
+    /// Kaydedilen track seçimini yeni track listesinde isimle (case-insensitive) eşleştirir.
+    /// İsimle bulunamazsa eski ID'yi fallback olarak döndürür.
+    /// </summary>
+    internal static int ResolveTrackId(string? savedName, int savedId, IReadOnlyList<(int Id, string? Name)> currentTracks)
+    {
+        if (!string.IsNullOrWhiteSpace(savedName))
+        {
+            foreach (var track in currentTracks)
+            {
+                if (string.Equals(track.Name, savedName, StringComparison.OrdinalIgnoreCase))
+                {
+                    return track.Id;
+                }
+            }
+        }
+
+        return savedId;
+    }
+
+    private async Task RestoreAudioTrackAsync(TrackRestore restore)
+    {
+        if (restore.Id < 0) return;
+
+        for (int attempt = 0; attempt < 4; attempt++)
+        {
+            if (_mediaPlayer == null || !_mediaPlayer.IsPlaying) return;
+
+            var tracks = AudioTracks;
+            if (tracks.Count > 0)
+            {
+                var resolved = ResolveTrackId(restore.Name, restore.Id, tracks);
+                LogDebug($"Restoring AudioTrack: saved=(id:{restore.Id}, name:'{restore.Name}') resolved={resolved}");
+                SetAudioTrack(resolved);
+                return;
+            }
+
+            // Track listesi henüz oluşmadı; bekle ve tekrar dene
+            await Task.Delay(500);
+        }
+    }
+
+    private async Task RestoreSpuTrackAsync(TrackRestore restore)
+    {
+        for (int attempt = 0; attempt < 8; attempt++)
+        {
+            if (_mediaPlayer == null || !_mediaPlayer.IsPlaying) return;
+
+            var tracks = SubtitleTracks;
+            if (tracks.Count > 0)
+            {
+                var resolved = ResolveTrackId(restore.Name, restore.Id, tracks);
+                LogDebug($"Restoring SPU: saved=(id:{restore.Id}, name:'{restore.Name}') resolved={resolved}");
+                SetSubtitleTrack(resolved);
+                return;
+            }
+
+            // Harici/sonradan keşfedilen altyazılar geç yüklenebilir; listeyi bekle
+            await Task.Delay(500);
         }
     }
 

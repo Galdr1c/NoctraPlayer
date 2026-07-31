@@ -42,7 +42,7 @@
         </StackPanel>
         <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
                     IsVisible="{Binding ShowEmptyChannels}">
-          <icons:MaterialIcon Kind="MovieFilter" Width="64" Height="64"
+          <icons:MaterialIcon Kind="MovieOutline" Width="64" Height="64"
                               Foreground="{DynamicResource TextMutedBrush}" Opacity="0.5" />
           <TextBlock Text="{loc:Translate Series.Empty.Title}" FontSize="20" FontWeight="SemiBold"
                      TextAlignment="Center" Margin="0,14,0,6" />

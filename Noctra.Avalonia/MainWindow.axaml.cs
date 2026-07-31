@@ -104,6 +104,7 @@ public partial class MainWindow : Window
         PiPWatermark.DataContext = _mainViewModel.WatermarkViewModel;
         VideoSurface.MediaPlayer = GetDesktopMediaPlayer();
         _videoPlayerService.PlayerReady += VideoPlayerService_PlayerReady;
+        _videoPlayerService.MediaPlayerReleasing += VideoPlayerService_MediaPlayerReleasing;
         // MiniVideoSurface.MediaPlayer = null;
 
         AddHandler(KeyDownEvent, MainWindow_KeyDown, RoutingStrategies.Tunnel, handledEventsToo: true);
@@ -318,6 +319,7 @@ public partial class MainWindow : Window
         _playerViewModel.PiPRequested -= PlayerViewModel_PiPRequested;
         _playerViewModel.PremiumUpsellRequested -= PlayerViewModel_PremiumUpsellRequested;
         _videoPlayerService.PlayerReady -= VideoPlayerService_PlayerReady;
+        _videoPlayerService.MediaPlayerReleasing -= VideoPlayerService_MediaPlayerReleasing;
 
         _mediaSelectionCts.Cancel();
         _mediaSelectionCts.Dispose();
@@ -332,6 +334,11 @@ public partial class MainWindow : Window
     private void VideoPlayerService_PlayerReady(object? sender, EventArgs e)
     {
         VideoSurface.MediaPlayer = GetDesktopMediaPlayer();
+    }
+
+    private void VideoPlayerService_MediaPlayerReleasing(object? sender, EventArgs e)
+    {
+        VideoSurface.MediaPlayer = null;
     }
 
     private LibVLCSharp.Shared.MediaPlayer? GetDesktopMediaPlayer() =>

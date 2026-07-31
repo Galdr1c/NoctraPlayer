@@ -3,6 +3,7 @@
              xmlns:vm="clr-namespace:Noctra.ViewModels;assembly=Noctra.Core"
              xmlns:loc="using:Noctra.Mobile.Localization"
              xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             xmlns:player="using:Noctra.Mobile.Views.Player"
              x:Class="Noctra.Mobile.Views.Player.MobilePlayerSubtitleAppearanceSheet"
              x:DataType="vm:PlayerViewModel"
              x:CompileBindings="False">
@@ -47,20 +48,50 @@
                      FontSize="11" FontWeight="Bold"
                      Foreground="{DynamicResource PlayerOverlaySecondaryTextBrush}"
                      LetterSpacing="1" />
-          <Border Height="90"
-                  Background="Green"
-                  CornerRadius="6">
-            <Border VerticalAlignment="{Binding SubtitleMargin, Converter={StaticResource SubtitlePositionToAlignmentConverter}}">
-              <Border Background="{Binding SubtitleBackgroundOpacity, Converter={StaticResource SubtitleBackgroundBrushConverter}}"
-                      CornerRadius="6"
-                      Padding="16,8"
-                      Margin="12,0">
-                <TextBlock Text="Noctra Subtitles"
-                           Foreground="White"
-                           FontSize="{Binding SubtitleFontSize}"
-                           HorizontalAlignment="Center" />
+          <Border MinHeight="150"
+                  MaxHeight="190"
+                  CornerRadius="14"
+                  ClipToBounds="True"
+                  BorderBrush="{DynamicResource BorderBrush}"
+                  BorderThickness="1">
+            <Grid>
+              <!-- Video hissi veren gradient arka plan -->
+              <Border>
+                <Border.Background>
+                  <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
+                    <GradientStop Offset="0" Color="#202633" />
+                    <GradientStop Offset="0.48" Color="#394052" />
+                    <GradientStop Offset="1" Color="#151821" />
+                  </LinearGradientBrush>
+                </Border.Background>
               </Border>
-            </Border>
+
+              <!-- Işık alanı / siluet -->
+              <Ellipse Width="180"
+                       Height="180"
+                       HorizontalAlignment="Right"
+                       VerticalAlignment="Top"
+                       Margin="0,-70,-45,0"
+                       Fill="#26FFFFFF" />
+
+              <!-- Alt video gradient -->
+              <Border VerticalAlignment="Bottom"
+                      Height="70">
+                <Border.Background>
+                  <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                    <GradientStop Offset="0" Color="#00000000" />
+                    <GradientStop Offset="1" Color="#99000000" />
+                  </LinearGradientBrush>
+                </Border.Background>
+              </Border>
+
+              <!-- Altyazı önizleme katmanı -->
+              <player:MobileSubtitlePreviewOverlay
+                  Text="{loc:Translate Player.Settings.SubtitleAppearance.Sample}"
+                  FontSize="{Binding EffectiveSubtitleFontSize}"
+                  BackgroundOpacity="{Binding SubtitleBackgroundOpacity}"
+                  Position="{Binding SubtitlePosition}" />
+            </Grid>
           </Border>
         </StackPanel>
 
@@ -70,16 +101,16 @@
                      FontSize="11" FontWeight="Bold"
                      Foreground="{DynamicResource PlayerOverlaySecondaryTextBrush}"
                      LetterSpacing="1" />
-          <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
+          <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="8">
             <Button Classes="SelectionSheetOption"
                     Command="{Binding SetSubtitleSizeCommand}"
-                    CommandParameter="28">
+                    CommandParameter="Small">
               <Grid IsHitTestVisible="False">
                 <Border Background="{DynamicResource AccentSubtleBrush}" CornerRadius="8">
                   <Border.IsVisible>
                     <MultiBinding Converter="{StaticResource EqualityToBoolMultiConverter}">
-                      <Binding Source="28" />
-                      <Binding Path="SubtitleFontSize" />
+                      <Binding Source="Small" />
+                      <Binding Path="SubtitleTextSize" />
                     </MultiBinding>
                   </Border.IsVisible>
                 </Border>
@@ -96,8 +127,8 @@
                                       Foreground="{DynamicResource AccentBrush}">
                     <icons:MaterialIcon.IsVisible>
                       <MultiBinding Converter="{StaticResource EqualityToBoolMultiConverter}">
-                        <Binding Source="28" />
-                        <Binding Path="SubtitleFontSize" />
+                        <Binding Source="Small" />
+                        <Binding Path="SubtitleTextSize" />
                       </MultiBinding>
                     </icons:MaterialIcon.IsVisible>
                   </icons:MaterialIcon>
@@ -107,13 +138,13 @@
             <Button Grid.Column="1"
                     Classes="SelectionSheetOption"
                     Command="{Binding SetSubtitleSizeCommand}"
-                    CommandParameter="40">
+                    CommandParameter="Medium">
               <Grid IsHitTestVisible="False">
                 <Border Background="{DynamicResource AccentSubtleBrush}" CornerRadius="8">
                   <Border.IsVisible>
                     <MultiBinding Converter="{StaticResource EqualityToBoolMultiConverter}">
-                      <Binding Source="40" />
-                      <Binding Path="SubtitleFontSize" />
+                      <Binding Source="Medium" />
+                      <Binding Path="SubtitleTextSize" />
                     </MultiBinding>
                   </Border.IsVisible>
                 </Border>
@@ -130,8 +161,8 @@
                                       Foreground="{DynamicResource AccentBrush}">
                     <icons:MaterialIcon.IsVisible>
                       <MultiBinding Converter="{StaticResource EqualityToBoolMultiConverter}">
-                        <Binding Source="40" />
-                        <Binding Path="SubtitleFontSize" />
+                        <Binding Source="Medium" />
+                        <Binding Path="SubtitleTextSize" />
                       </MultiBinding>
                     </icons:MaterialIcon.IsVisible>
                   </icons:MaterialIcon>
@@ -141,13 +172,13 @@
             <Button Grid.Column="2"
                     Classes="SelectionSheetOption"
                     Command="{Binding SetSubtitleSizeCommand}"
-                    CommandParameter="60">
+                    CommandParameter="Large">
               <Grid IsHitTestVisible="False">
                 <Border Background="{DynamicResource AccentSubtleBrush}" CornerRadius="8">
                   <Border.IsVisible>
                     <MultiBinding Converter="{StaticResource EqualityToBoolMultiConverter}">
-                      <Binding Source="60" />
-                      <Binding Path="SubtitleFontSize" />
+                      <Binding Source="Large" />
+                      <Binding Path="SubtitleTextSize" />
                     </MultiBinding>
                   </Border.IsVisible>
                 </Border>
@@ -164,8 +195,42 @@
                                       Foreground="{DynamicResource AccentBrush}">
                     <icons:MaterialIcon.IsVisible>
                       <MultiBinding Converter="{StaticResource EqualityToBoolMultiConverter}">
-                        <Binding Source="60" />
-                        <Binding Path="SubtitleFontSize" />
+                        <Binding Source="Large" />
+                        <Binding Path="SubtitleTextSize" />
+                      </MultiBinding>
+                    </icons:MaterialIcon.IsVisible>
+                  </icons:MaterialIcon>
+                </Grid>
+              </Grid>
+            </Button>
+            <Button Grid.Column="3"
+                    Classes="SelectionSheetOption"
+                    Command="{Binding SetSubtitleSizeCommand}"
+                    CommandParameter="ExtraLarge">
+              <Grid IsHitTestVisible="False">
+                <Border Background="{DynamicResource AccentSubtleBrush}" CornerRadius="8">
+                  <Border.IsVisible>
+                    <MultiBinding Converter="{StaticResource EqualityToBoolMultiConverter}">
+                      <Binding Source="ExtraLarge" />
+                      <Binding Path="SubtitleTextSize" />
+                    </MultiBinding>
+                  </Border.IsVisible>
+                </Border>
+                <Grid ColumnDefinitions="*,Auto">
+                  <TextBlock Text="{loc:Translate Player.Settings.SubtitleSize.ExtraLarge}"
+                             Foreground="{DynamicResource TextPrimaryBrush}"
+                             FontWeight="Normal"
+                             VerticalAlignment="Center" />
+                  <icons:MaterialIcon Grid.Column="1"
+                                      Kind="RadioboxMarked"
+                                      Width="20"
+                                      Height="20"
+                                      Margin="4,0"
+                                      Foreground="{DynamicResource AccentBrush}">
+                    <icons:MaterialIcon.IsVisible>
+                      <MultiBinding Converter="{StaticResource EqualityToBoolMultiConverter}">
+                        <Binding Source="ExtraLarge" />
+                        <Binding Path="SubtitleTextSize" />
                       </MultiBinding>
                     </icons:MaterialIcon.IsVisible>
                   </icons:MaterialIcon>
@@ -181,7 +246,7 @@
                      FontSize="11" FontWeight="Bold"
                      Foreground="{DynamicResource PlayerOverlaySecondaryTextBrush}"
                      LetterSpacing="1" />
-          <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
+          <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="8">
             <Button Classes="SelectionSheetOption"
                     Command="{Binding SetSubtitleBackgroundCommand}"
                     CommandParameter="0">
@@ -218,18 +283,18 @@
             <Button Grid.Column="1"
                     Classes="SelectionSheetOption"
                     Command="{Binding SetSubtitleBackgroundCommand}"
-                    CommandParameter="40">
+                    CommandParameter="30">
               <Grid IsHitTestVisible="False">
                 <Border Background="{DynamicResource AccentSubtleBrush}" CornerRadius="8">
                   <Border.IsVisible>
                     <MultiBinding Converter="{StaticResource EqualityToBoolMultiConverter}">
-                      <Binding Source="40" />
+                      <Binding Source="30" />
                       <Binding Path="SubtitleBackgroundOpacity" />
                     </MultiBinding>
                   </Border.IsVisible>
                 </Border>
                 <Grid ColumnDefinitions="*,Auto">
-                  <TextBlock Text="{loc:Translate Player.Settings.SubtitleBackground.Semi}"
+                  <TextBlock Text="{loc:Translate Player.Settings.SubtitleBackground.Light}"
                              Foreground="{DynamicResource TextPrimaryBrush}"
                              FontWeight="Normal"
                              VerticalAlignment="Center" />
@@ -241,7 +306,7 @@
                                       Foreground="{DynamicResource AccentBrush}">
                     <icons:MaterialIcon.IsVisible>
                       <MultiBinding Converter="{StaticResource EqualityToBoolMultiConverter}">
-                        <Binding Source="40" />
+                        <Binding Source="30" />
                         <Binding Path="SubtitleBackgroundOpacity" />
                       </MultiBinding>
                     </icons:MaterialIcon.IsVisible>
@@ -252,18 +317,18 @@
             <Button Grid.Column="2"
                     Classes="SelectionSheetOption"
                     Command="{Binding SetSubtitleBackgroundCommand}"
-                    CommandParameter="100">
+                    CommandParameter="60">
               <Grid IsHitTestVisible="False">
                 <Border Background="{DynamicResource AccentSubtleBrush}" CornerRadius="8">
                   <Border.IsVisible>
                     <MultiBinding Converter="{StaticResource EqualityToBoolMultiConverter}">
-                      <Binding Source="100" />
+                      <Binding Source="60" />
                       <Binding Path="SubtitleBackgroundOpacity" />
                     </MultiBinding>
                   </Border.IsVisible>
                 </Border>
                 <Grid ColumnDefinitions="*,Auto">
-                  <TextBlock Text="{loc:Translate Player.Settings.SubtitleBackground.Black}"
+                  <TextBlock Text="{loc:Translate Player.Settings.SubtitleBackground.Medium}"
                              Foreground="{DynamicResource TextPrimaryBrush}"
                              FontWeight="Normal"
                              VerticalAlignment="Center" />
@@ -275,7 +340,41 @@
                                       Foreground="{DynamicResource AccentBrush}">
                     <icons:MaterialIcon.IsVisible>
                       <MultiBinding Converter="{StaticResource EqualityToBoolMultiConverter}">
-                        <Binding Source="100" />
+                        <Binding Source="60" />
+                        <Binding Path="SubtitleBackgroundOpacity" />
+                      </MultiBinding>
+                    </icons:MaterialIcon.IsVisible>
+                  </icons:MaterialIcon>
+                </Grid>
+              </Grid>
+            </Button>
+            <Button Grid.Column="3"
+                    Classes="SelectionSheetOption"
+                    Command="{Binding SetSubtitleBackgroundCommand}"
+                    CommandParameter="85">
+              <Grid IsHitTestVisible="False">
+                <Border Background="{DynamicResource AccentSubtleBrush}" CornerRadius="8">
+                  <Border.IsVisible>
+                    <MultiBinding Converter="{StaticResource EqualityToBoolMultiConverter}">
+                      <Binding Source="85" />
+                      <Binding Path="SubtitleBackgroundOpacity" />
+                    </MultiBinding>
+                  </Border.IsVisible>
+                </Border>
+                <Grid ColumnDefinitions="*,Auto">
+                  <TextBlock Text="{loc:Translate Player.Settings.SubtitleBackground.Dark}"
+                             Foreground="{DynamicResource TextPrimaryBrush}"
+                             FontWeight="Normal"
+                             VerticalAlignment="Center" />
+                  <icons:MaterialIcon Grid.Column="1"
+                                      Kind="RadioboxMarked"
+                                      Width="20"
+                                      Height="20"
+                                      Margin="4,0"
+                                      Foreground="{DynamicResource AccentBrush}">
+                    <icons:MaterialIcon.IsVisible>
+                      <MultiBinding Converter="{StaticResource EqualityToBoolMultiConverter}">
+                        <Binding Source="85" />
                         <Binding Path="SubtitleBackgroundOpacity" />
                       </MultiBinding>
                     </icons:MaterialIcon.IsVisible>
@@ -295,13 +394,13 @@
           <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
             <Button Classes="SelectionSheetOption"
                     Command="{Binding SetSubtitlePositionCommand}"
-                    CommandParameter="40">
+                    CommandParameter="Bottom">
               <Grid IsHitTestVisible="False">
                 <Border Background="{DynamicResource AccentSubtleBrush}" CornerRadius="8">
                   <Border.IsVisible>
                     <MultiBinding Converter="{StaticResource EqualityToBoolMultiConverter}">
-                      <Binding Source="40" />
-                      <Binding Path="SubtitleMargin" />
+                      <Binding Source="Bottom" />
+                      <Binding Path="SubtitlePosition" />
                     </MultiBinding>
                   </Border.IsVisible>
                 </Border>
@@ -318,8 +417,8 @@
                                       Foreground="{DynamicResource AccentBrush}">
                     <icons:MaterialIcon.IsVisible>
                       <MultiBinding Converter="{StaticResource EqualityToBoolMultiConverter}">
-                        <Binding Source="40" />
-                        <Binding Path="SubtitleMargin" />
+                        <Binding Source="Bottom" />
+                        <Binding Path="SubtitlePosition" />
                       </MultiBinding>
                     </icons:MaterialIcon.IsVisible>
                   </icons:MaterialIcon>
@@ -329,13 +428,82 @@
             <Button Grid.Column="1"
                     Classes="SelectionSheetOption"
                     Command="{Binding SetSubtitlePositionCommand}"
-                    CommandParameter="900">
+                    CommandParameter="LowerMiddle">
               <Grid IsHitTestVisible="False">
                 <Border Background="{DynamicResource AccentSubtleBrush}" CornerRadius="8">
                   <Border.IsVisible>
                     <MultiBinding Converter="{StaticResource EqualityToBoolMultiConverter}">
-                      <Binding Source="900" />
-                      <Binding Path="SubtitleMargin" />
+                      <Binding Source="LowerMiddle" />
+                      <Binding Path="SubtitlePosition" />
+                    </MultiBinding>
+                  </Border.IsVisible>
+                </Border>
+                <Grid ColumnDefinitions="*,Auto">
+                  <TextBlock Text="{loc:Translate Player.Settings.SubtitlePosition.LowerMiddle}"
+                             Foreground="{DynamicResource TextPrimaryBrush}"
+                             FontWeight="Normal"
+                             VerticalAlignment="Center" />
+                  <icons:MaterialIcon Grid.Column="1"
+                                      Kind="RadioboxMarked"
+                                      Width="20"
+                                      Height="20"
+                                      Margin="4,0"
+                                      Foreground="{DynamicResource AccentBrush}">
+                    <icons:MaterialIcon.IsVisible>
+                      <MultiBinding Converter="{StaticResource EqualityToBoolMultiConverter}">
+                        <Binding Source="LowerMiddle" />
+                        <Binding Path="SubtitlePosition" />
+                      </MultiBinding>
+                    </icons:MaterialIcon.IsVisible>
+                  </icons:MaterialIcon>
+                </Grid>
+              </Grid>
+            </Button>
+          </Grid>
+          <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+            <Button Classes="SelectionSheetOption"
+                    Command="{Binding SetSubtitlePositionCommand}"
+                    CommandParameter="UpperMiddle">
+              <Grid IsHitTestVisible="False">
+                <Border Background="{DynamicResource AccentSubtleBrush}" CornerRadius="8">
+                  <Border.IsVisible>
+                    <MultiBinding Converter="{StaticResource EqualityToBoolMultiConverter}">
+                      <Binding Source="UpperMiddle" />
+                      <Binding Path="SubtitlePosition" />
+                    </MultiBinding>
+                  </Border.IsVisible>
+                </Border>
+                <Grid ColumnDefinitions="*,Auto">
+                  <TextBlock Text="{loc:Translate Player.Settings.SubtitlePosition.UpperMiddle}"
+                             Foreground="{DynamicResource TextPrimaryBrush}"
+                             FontWeight="Normal"
+                             VerticalAlignment="Center" />
+                  <icons:MaterialIcon Grid.Column="1"
+                                      Kind="RadioboxMarked"
+                                      Width="20"
+                                      Height="20"
+                                      Margin="4,0"
+                                      Foreground="{DynamicResource AccentBrush}">
+                    <icons:MaterialIcon.IsVisible>
+                      <MultiBinding Converter="{StaticResource EqualityToBoolMultiConverter}">
+                        <Binding Source="UpperMiddle" />
+                        <Binding Path="SubtitlePosition" />
+                      </MultiBinding>
+                    </icons:MaterialIcon.IsVisible>
+                  </icons:MaterialIcon>
+                </Grid>
+              </Grid>
+            </Button>
+            <Button Grid.Column="1"
+                    Classes="SelectionSheetOption"
+                    Command="{Binding SetSubtitlePositionCommand}"
+                    CommandParameter="Top">
+              <Grid IsHitTestVisible="False">
+                <Border Background="{DynamicResource AccentSubtleBrush}" CornerRadius="8">
+                  <Border.IsVisible>
+                    <MultiBinding Converter="{StaticResource EqualityToBoolMultiConverter}">
+                      <Binding Source="Top" />
+                      <Binding Path="SubtitlePosition" />
                     </MultiBinding>
                   </Border.IsVisible>
                 </Border>
@@ -352,8 +520,8 @@
                                       Foreground="{DynamicResource AccentBrush}">
                     <icons:MaterialIcon.IsVisible>
                       <MultiBinding Converter="{StaticResource EqualityToBoolMultiConverter}">
-                        <Binding Source="900" />
-                        <Binding Path="SubtitleMargin" />
+                        <Binding Source="Top" />
+                        <Binding Path="SubtitlePosition" />
                       </MultiBinding>
                     </icons:MaterialIcon.IsVisible>
                   </icons:MaterialIcon>

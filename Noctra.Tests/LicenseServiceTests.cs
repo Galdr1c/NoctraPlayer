@@ -260,6 +260,7 @@ namespace Noctra.Tests
                 SettingsChanged?.Invoke();
                 return Task.CompletedTask;
             }
+            public void NotifySettingsChanged() => SettingsChanged?.Invoke();
             public void ResetToDefaults() => SettingsChanged?.Invoke();
             public Task<int> CleanOrphanedSettingsAsync(IEnumerable<int> activeProfileIds) => Task.FromResult(0);
         }

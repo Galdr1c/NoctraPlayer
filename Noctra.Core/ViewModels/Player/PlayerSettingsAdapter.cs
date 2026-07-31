@@ -16,19 +16,41 @@ public class PlayerSettingsAdapter
     public void SetSubtitleSize(string size)
     {
         _vm.LogDebug($"UI Action: SetSubtitleSize clicked (Size={size})");
-        _vm.SubtitleFontSize = int.Parse(size);
+        if (Enum.TryParse<SubtitleTextSize>(size, ignoreCase: true, out var parsed))
+        {
+            _vm.SubtitleTextSize = parsed;
+            return;
+        }
+
+        if (int.TryParse(size, out var legacyValue))
+        {
+            _vm.SubtitleTextSize = SubtitleAppearanceDefaults.ResolveTextSize(legacyValue);
+        }
     }
 
     public void SetSubtitleBackground(string opacity)
     {
         _vm.LogDebug($"UI Action: SetSubtitleBackground clicked (Opacity={opacity})");
-        _vm.SubtitleBackgroundOpacity = int.Parse(opacity);
+        if (int.TryParse(opacity, out var parsed))
+        {
+            _vm.SubtitleBackgroundOpacity = SubtitleAppearanceDefaults.NormalizeOpacityPercent(parsed);
+        }
     }
 
-    public void SetSubtitlePosition(string margin)
+    public void SetSubtitlePosition(string position)
     {
-        _vm.LogDebug($"UI Action: SetSubtitlePosition clicked (Margin={margin})");
-        _vm.SubtitleMargin = int.Parse(margin);
+        _vm.LogDebug($"UI Action: SetSubtitlePosition clicked (Position={position})");
+        if (Enum.TryParse<SubtitleVerticalPosition>(position, ignoreCase: true, out var parsed))
+        {
+            _vm.SubtitlePosition = parsed;
+            return;
+        }
+
+        // Eski XAML komut parametreleriyle geriye uyumluluk.
+        if (int.TryParse(position, out var legacyMargin))
+        {
+            _vm.SubtitlePosition = SubtitleAppearanceDefaults.ResolveLegacyPosition(legacyMargin);
+        }
     }
 
     public void CycleVideoFillMode()
@@ -64,10 +86,11 @@ public class PlayerSettingsAdapter
         {
             if (_vm.SettingsService?.Settings != null)
             {
-                _vm.SubtitleFontSize = _vm.SettingsService.Settings.SubtitleFontSize;
-                _vm.SubtitleBackgroundOpacity = _vm.SettingsService.Settings.SubtitleBackgroundOpacity;
-                _vm.SubtitleMargin = _vm.SettingsService.Settings.SubtitleMargin;
-                
+                _vm.SubtitleTextSize = _vm.SettingsService.Settings.SubtitleTextSize;
+                _vm.SubtitleBackgroundOpacity = SubtitleAppearanceDefaults.NormalizeOpacityPercent(_vm.SettingsService.Settings.SubtitleBackgroundOpacity);
+
+                _vm.SubtitlePosition = _vm.SettingsService.Settings.SubtitlePosition;
+
                 // Sync volume and mute states!
                 _vm.Volume = _vm.SettingsService.Settings.DefaultVolume;
                 _vm.IsMuted = _vm.SettingsService.Settings.IsMuted;
