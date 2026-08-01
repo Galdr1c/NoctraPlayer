@@ -2266,6 +2266,8 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
             LogDebug($"Exit history flush failed: {ex.Message}");
         }
 
+        _mainViewModel?.EndPlayerPlaybackSession();
+
         ResetPlayerAfterExit();
 
         _dispatcherService.Invoke(() =>

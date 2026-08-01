@@ -2675,14 +2675,24 @@ public partial class MainViewModel : ObservableObject
                 .Take(10)
                 .ToList();
 
+            // A refresh may have started just before playback became active.
+            // Never rebuild the hidden Home rail over the player.
+            if (!_continueWatchingRefreshGate.RequestRefresh())
+            {
+                return;
+            }
+
             _dispatcherService.Invoke(() => SetItems(ContinueWatching, combinedContinue));
             _dispatcherService.Invoke(() => OnPropertyChanged(nameof(ContinueWatching)));
         }
         catch (Exception ex)
         {
             _logger?.LogError(ex, "Error updating Continue Watching rail");
-            _dispatcherService.Invoke(() => SetItems(ContinueWatching, Enumerable.Empty<Channel>()));
-            _dispatcherService.Invoke(() => OnPropertyChanged(nameof(ContinueWatching)));
+            if (_continueWatchingRefreshGate.RequestRefresh())
+            {
+                _dispatcherService.Invoke(() => SetItems(ContinueWatching, Enumerable.Empty<Channel>()));
+                _dispatcherService.Invoke(() => OnPropertyChanged(nameof(ContinueWatching)));
+            }
         }
     }
 
@@ -2995,6 +3005,7 @@ public partial class MainViewModel : ObservableObject
     private List<Channel>? _cachedEpisodeContinue;
     private bool _isEpisodeContinueDirty = true;
     private CancellationTokenSource? _continueWatchingDebounceCts;
+    private readonly ContinueWatchingRefreshGate _continueWatchingRefreshGate = new();
     private async Task ThrottledLoadChannelsAsync(int playlistId)
     {
         lock (this)
@@ -3045,6 +3056,14 @@ public partial class MainViewModel : ObservableObject
             }
         }
 
+        if (_continueWatchingRefreshGate.IsPlaybackActive)
+        {
+            _isEpisodeContinueDirty = true;
+            _cachedEpisodeContinue = null;
+            _continueWatchingRefreshGate.RequestRefresh();
+            return;
+        }
+
         RefreshContinueWatchingRail(episodeContinueDirty: true);
         _ = UpdateHistoryBucketsAsync();
     }
@@ -3057,7 +3076,31 @@ public partial class MainViewModel : ObservableObject
             _cachedEpisodeContinue = null;
         }
 
+        if (!_continueWatchingRefreshGate.RequestRefresh())
+        {
+            return;
+        }
+
         _ = UpdateContinueWatchingRailAsync();
+    }
+
+    internal void BeginPlayerPlaybackSession()
+    {
+        _continueWatchingRefreshGate.BeginPlayback();
+    }
+
+    internal void EndPlayerPlaybackSession()
+    {
+        if (!_continueWatchingRefreshGate.EndPlayback())
+        {
+            return;
+        }
+
+        // Release one coalesced refresh after the exit snapshot has been
+        // persisted, keeping Home and History correct without rebuilding them
+        // during playback.
+        RefreshContinueWatchingRail(episodeContinueDirty: true);
+        _ = UpdateHistoryBucketsAsync();
     }
 
     private void ResetIncrementalState()

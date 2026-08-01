@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Reflection;
 using Noctra.Models;
 using Noctra.Services;
 using Noctra.ViewModels;
@@ -169,6 +170,31 @@ namespace Noctra.Tests
 
             // Assert: VLC PlayAsync must not have been called with this channel's url
             Assert.Null(ctx.VideoService.CurrentUrl);
+        }
+
+        [Fact]
+        public async Task ResumePlaybackAsync_PreservesResumeTargetWhenReconnectFails()
+        {
+            var ctx = new PlayerTestContext();
+            const double resumePosition = 2264.223;
+
+            ctx.VM.SetResumePosition(resumePosition);
+            ctx.VideoService.FailNextPlay = true;
+
+            await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                ctx.VM.PlaybackController.ResumePlaybackAsync(
+                    ctx.VM.CurrentChannel!.StreamUrl!,
+                    hasLoadedMedia: false));
+
+            var pendingField = typeof(PlayerViewModel).GetField(
+                "_pendingResumeSeekPosition",
+                BindingFlags.Instance | BindingFlags.NonPublic);
+
+            Assert.NotNull(pendingField);
+            Assert.Equal(
+                resumePosition,
+                (double)pendingField!.GetValue(ctx.VM)!,
+                precision: 3);
         }
     }
 }

@@ -324,6 +324,7 @@ public class PlayerPlaybackController
         _vm._lastWatchHistoryUpdateUtc = DateTime.UtcNow;
         _vm._sessionPlaybackStartTimeUtc = DateTime.UtcNow;
         _vm._watchHistoryTimer.Start();
+        _vm.MainViewModel?.BeginPlayerPlaybackSession();
 
         var program = await _vm.EpgService.GetCurrentProgramAsync(channel);
         if (requestVersion == _vm._playRequestVersion && _vm.CurrentChannel?.Id == channel.Id)
@@ -529,7 +530,11 @@ public class PlayerPlaybackController
             {
                 if (!IsStillCurrent()) return;
                 _vm.LogDebug($"ResumePlaybackAsync: Significant drift detected, using HardSeekAsync for HTTP stream to {targetPosition}s");
-                _vm._pendingResumeSeekPosition = 0;
+                // Keep the target armed until a position callback confirms that
+                // the reconnect actually landed there. A transient seek/network
+                // failure must never turn an interrupted resume into a 0-second
+                // restart.
+                _vm._pendingResumeSeekPosition = targetPosition;
                 _vm._pendingResumeSeekAttempts = 0;
                 await _vm.VideoPlayerService.HardSeekAsync(targetPosition);
                 await EnsurePlaybackStartedAsync(streamUrl);
@@ -547,7 +552,11 @@ public class PlayerPlaybackController
             {
                 if (!IsStillCurrent()) return;
                 _vm.LogDebug($"ResumePlaybackAsync: Fresh play for HTTP stream, passing startTime={targetPosition}s to PlayAsync");
-                _vm._pendingResumeSeekPosition = 0;
+                // Keep the resume target through the reconnect. ExoPlayer/VLC
+                // may accept the new stream while still reporting position 0;
+                // TryApplyPendingResumeSeek and PositionChanged will clear it
+                // only after the target is confirmed.
+                _vm._pendingResumeSeekPosition = targetPosition;
                 _vm._pendingResumeSeekAttempts = 0;
                 await _vm.VideoPlayerService.PlayAsync(streamUrl, targetPosition);
                 await EnsurePlaybackStartedAsync(streamUrl);
@@ -725,6 +734,7 @@ public class PlayerPlaybackController
         ResetSeekInteractionState();
         _vm._watchHistoryTimer.Stop();
         await _vm.FlushWatchHistoryAsync(force: true);
+        _vm.MainViewModel?.EndPlayerPlaybackSession();
         _vm.VideoPlayerService.Stop();
         _vm._livePauseRequiresHardRestart = false;
         _vm._lastLiveProgressAtUtc = DateTime.MinValue;

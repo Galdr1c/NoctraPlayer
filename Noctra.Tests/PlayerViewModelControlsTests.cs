@@ -60,6 +60,7 @@ namespace Noctra.Tests
         public IReadOnlyList<(int Id, string? Name)> SubtitleTracks => Array.Empty<(int, string?)>();
         public PlaybackMediaMetadata? LastMetadata { get; private set; }
         public PlaybackMediaMetadata? MetadataAtPlay { get; private set; }
+        public bool FailNextPlay { get; set; }
 
         public event EventHandler? PlayerReady;
         public event EventHandler? MediaPlayerReleasing;
@@ -75,6 +76,12 @@ namespace Noctra.Tests
 
         public Task PlayAsync(string url, double startTimeSeconds = 0)
         {
+            if (FailNextPlay)
+            {
+                FailNextPlay = false;
+                return Task.FromException(new InvalidOperationException("simulated reconnect failure"));
+            }
+
             MetadataAtPlay = LastMetadata;
             CurrentUrl = url;
             IsPlaying = true;
