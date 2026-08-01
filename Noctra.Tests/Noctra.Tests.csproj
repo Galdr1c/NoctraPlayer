@@ -29,5 +29,12 @@
     <ProjectReference Include="..\tools\Noctra.Performance\Noctra.Performance.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Pure overscroll math is linked so it can be tested without referencing
+         the Android/Avalonia mobile application project. -->
+    <Compile Include="..\Noctra.Mobile\Behaviors\MobileOverscrollPhysics.cs"
+             Link="Behaviors\MobileOverscrollPhysics.cs" />
+  </ItemGroup>
+
 </Project>
 

@@ -4,7 +4,7 @@ namespace Noctra.Tests;
 
 /// <summary>
 /// Behavioral tests for the mobile landscape collapsible navigation rail,
-/// scroll edge feedback controller, and navigation race condition fixes.
+/// stretch overscroll controller, and navigation race condition fixes.
 /// Uses source-code verification to ensure the intended behavior is preserved.
 /// </summary>
 public sealed class MobileNavigationBehaviorTests
@@ -126,39 +126,155 @@ public sealed class MobileNavigationBehaviorTests
     }
 
     // ──────────────────────────────────────────────────────────────
-    //  4. Scroll edge feedback — Hide() resets gesture state
+    //  4. Mobile stretch overscroll
     // ──────────────────────────────────────────────────────────────
 
     [Fact]
-    public void ScrollEdgeFeedback_Hide_ResetsGestureState()
+    public void StretchOverscroll_TransformsScrollableContent_NotGlobalOverlay()
     {
-        var controller = ReadProjectFile("Noctra.Mobile", "Behaviors", "MobileScrollEdgeFeedbackController.cs");
+        var controller = ReadProjectFile(
+            "Noctra.Mobile", "Behaviors", "MobileStretchOverscrollController.cs");
 
-        // Hide() must reset _isScrollGestureActive and _lastFeedbackUtc
-        var hideMethod = ExtractMethod(controller, "Hide");
-        Assert.Contains("_isScrollGestureActive = false", hideMethod);
-        Assert.Contains("_lastFeedbackUtc = DateTime.MinValue", hideMethod);
+        Assert.Contains("ScrollContentPresenter", controller);
+        Assert.Contains("presenter?.Child", controller);
+        Assert.Contains("TransformGroup", controller);
+        Assert.Contains("ScaleTransform", controller);
+        Assert.Contains("TranslateTransform", controller);
+        Assert.DoesNotContain("Canvas", controller);
+        Assert.DoesNotContain("Border", controller);
+        Assert.DoesNotContain("AccentBrush", controller);
+        Assert.DoesNotContain("ZIndex", controller);
     }
 
     [Fact]
-    public void ScrollEdgeFeedback_TracksScrollGestureLifecycle()
+    public void StretchOverscroll_IsTouchOnly_AndNeverHooksMouseWheel()
     {
-        var controller = ReadProjectFile("Noctra.Mobile", "Behaviors", "MobileScrollEdgeFeedbackController.cs");
+        var controller = ReadProjectFile(
+            "Noctra.Mobile", "Behaviors", "MobileStretchOverscrollController.cs");
 
-        // Must subscribe to ScrollGestureEndedEvent
-        Assert.Contains("ScrollGestureEndedEvent", controller);
-        Assert.Contains("_isScrollGestureActive = true", controller);
-        Assert.Contains("_isScrollGestureActive = false", controller);
+        Assert.Contains("PointerType.Touch or PointerType.Pen", controller);
+        Assert.Contains("PointerPressedEvent", controller);
+        Assert.Contains("PointerMovedEvent", controller);
+        Assert.Contains("PointerReleasedEvent", controller);
+        Assert.DoesNotContain("PointerWheelChangedEvent", controller);
+        Assert.DoesNotContain("OnPointerWheel", controller);
+        Assert.Contains("GetTapSize(pointerType)", controller);
+        Assert.Contains("_verticalGestureRejected", controller);
     }
 
     [Fact]
-    public void ScrollEdgeFeedback_FadeSkipsDuringActiveGesture()
+    public void StretchOverscroll_ObservesPointerMovesBeforeScrollConsumption()
     {
-        var controller = ReadProjectFile("Noctra.Mobile", "Behaviors", "MobileScrollEdgeFeedbackController.cs");
+        var controller = ReadProjectFile(
+            "Noctra.Mobile", "Behaviors", "MobileStretchOverscrollController.cs");
 
-        // OnFadeTimerTick must check _isScrollGestureActive before fading
-        var fadeMethod = ExtractMethod(controller, "OnFadeTimerTick");
-        Assert.Contains("if (_isScrollGestureActive)", fadeMethod);
+        Assert.Contains("RoutingStrategies.Tunnel", controller);
+        Assert.Contains("already-reached edge react immediately", controller);
+        Assert.Contains("_edgeProbeViewer", controller);
+    }
+
+    [Fact]
+    public void StretchOverscroll_DoesNotStealDirectManipulationControls()
+    {
+        var controller = ReadProjectFile(
+            "Noctra.Mobile", "Behaviors", "MobileStretchOverscrollController.cs");
+        var exclusion = ExtractMethod(controller, "IsExcludedGestureSource");
+
+        Assert.Contains("TextBox", exclusion);
+        Assert.Contains("Slider", exclusion);
+        Assert.Contains("ScrollBar", exclusion);
+        Assert.Contains("Thumb", exclusion);
+    }
+
+    [Fact]
+    public void StretchOverscroll_GuardsPointerCaptureTransitionsAndCancellation()
+    {
+        var controller = ReadProjectFile(
+            "Noctra.Mobile", "Behaviors", "MobileStretchOverscrollController.cs");
+
+        Assert.Contains("_suppressCaptureLost", controller);
+        Assert.Contains("PointerCaptureLostEvent", controller);
+        Assert.Contains("ResetPointerTracking();",
+            ExtractMethod(controller, "OnPointerCaptureLost"));
+    }
+
+    [Fact]
+    public void StretchOverscroll_RespectsNestedScrollChaining()
+    {
+        var controller = ReadProjectFile(
+            "Noctra.Mobile", "Behaviors", "MobileStretchOverscrollController.cs");
+        var resolver = ExtractMethod(controller, "ResolveOverscrollTarget");
+
+        Assert.Contains("canConsume", resolver);
+        Assert.Contains("return null", resolver);
+        Assert.Contains("IsScrollChainingEnabled", resolver);
+        Assert.Contains("e.Handled", controller);
+    }
+
+    [Fact]
+    public void StretchOverscroll_UsesFrameTimedRelease_NotDispatcherTimerFade()
+    {
+        var controller = ReadProjectFile(
+            "Noctra.Mobile", "Behaviors", "MobileStretchOverscrollController.cs");
+        var physics = ReadProjectFile(
+            "Noctra.Mobile", "Behaviors", "MobileOverscrollPhysics.cs");
+
+        Assert.Contains("RequestAnimationFrame", controller);
+        Assert.Contains("GetSpringRemaining", controller);
+        Assert.Contains("Math.Exp", physics);
+        Assert.DoesNotContain("DispatcherTimer", controller);
+        Assert.DoesNotContain("Opacity", controller);
+    }
+
+    [Fact]
+    public void StretchOverscroll_PreservesExistingRenderTransform()
+    {
+        var controller = ReadProjectFile(
+            "Noctra.Mobile", "Behaviors", "MobileStretchOverscrollController.cs");
+
+        Assert.Contains("OriginalTransform", controller);
+        Assert.Contains("OriginalOrigin", controller);
+        Assert.Contains("Visual.RenderTransformProperty, group", controller);
+        Assert.Contains("_session.OriginalTransform", controller);
+        Assert.Contains("SetCurrentValue", controller);
+        Assert.Contains("_session.OriginalOrigin", controller);
+    }
+
+    [Fact]
+    public void StretchOverscroll_CanBeDisabledForInheritedVisualSubtree()
+    {
+        var behavior = ReadProjectFile(
+            "Noctra.Mobile", "Behaviors", "MobileOverscroll.cs");
+
+        Assert.Contains("AttachedProperty<bool> IsEnabledProperty", behavior);
+        Assert.Contains("defaultValue: true", behavior);
+        Assert.Contains("inherits: true", behavior);
+        Assert.Contains("MobileOverscroll.GetIsEnabled(viewer)",
+            ReadProjectFile(
+                "Noctra.Mobile", "Behaviors", "MobileStretchOverscrollController.cs"));
+    }
+
+    [Fact]
+    public void MainView_UsesStretchOverscrollController()
+    {
+        var mainView = ReadProjectFile("Noctra.Mobile", "Views", "MainView.axaml.cs");
+
+        Assert.Contains("MobileStretchOverscrollController", mainView);
+        Assert.Contains("_overscrollController.RefreshVisualTree()", mainView);
+        Assert.Contains("_overscrollController.Hide()", mainView);
+        Assert.DoesNotContain("MobileScrollEdgeFeedbackController", mainView);
+    }
+
+    [Fact]
+    public void StretchOverscroll_CancelsCardLongPressWhenItClaimsGesture()
+    {
+        var controller = ReadProjectFile(
+            "Noctra.Mobile", "Behaviors", "MobileStretchOverscrollController.cs");
+        var card = ReadProjectFile(
+            "Noctra.Mobile", "Controls", "MobilePressableCard.cs");
+
+        Assert.Contains("CancelLongPressForScroll", controller);
+        Assert.Contains("CancelLongPressForScroll", card);
     }
 
     // ──────────────────────────────────────────────────────────────

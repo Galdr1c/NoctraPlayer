@@ -70,6 +70,13 @@ public sealed class MobilePressableCard : Border
         return true;
     }
 
+    /// <summary>
+    /// Cancels the pending long-press when a parent scroll surface claims the
+    /// pointer for an edge pull. A captured overscroll pointer no longer routes
+    /// moves through this card, so the card must be cancelled explicitly.
+    /// </summary>
+    internal void CancelLongPressForScroll() => CancelForScroll();
+
     private void OnPointerPressed(object? sender, PointerPressedEventArgs e)
     {
         if (_activePointer is not null || OriginatesFromNestedButton(e.Source))

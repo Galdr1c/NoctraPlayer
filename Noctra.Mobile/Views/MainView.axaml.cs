@@ -58,7 +58,7 @@ public partial class MainView : UserControl
     private readonly Stack<string> _navigationHistory = new();
     private bool _isNavigatingBack;
     private MobileCollapsibleNavigationRail? _navigationRailController;
-    private readonly MobileScrollEdgeFeedbackController _scrollEdgeFeedbackController;
+    private readonly MobileStretchOverscrollController _overscrollController;
     private long _navigationVersion;
     private readonly object _settingsReleaseSync = new();
     private Task _pendingSettingsRelease = Task.CompletedTask;
@@ -94,7 +94,7 @@ public partial class MainView : UserControl
             _navigationRailController.ApplyCurrentState();
         }
 
-        _scrollEdgeFeedbackController.RefreshVisualTree();
+        _overscrollController.RefreshVisualTree();
 
         UpdateNavigationMode(Bounds.Width);
         UpdateContentVisibility(_currentDestination);
@@ -120,7 +120,7 @@ public partial class MainView : UserControl
         _bottomNavBasePadding = BottomNavigation.Padding;
 
         _navigationRailController = new MobileCollapsibleNavigationRail(NavigationRail);
-        _scrollEdgeFeedbackController = new MobileScrollEdgeFeedbackController(this);
+        _overscrollController = new MobileStretchOverscrollController(this);
     }
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
@@ -402,7 +402,7 @@ public partial class MainView : UserControl
 
         OverlayProfileList.ProfileLoaded -= OverlayProfileList_ProfileLoaded;
         _backExitToastTimer.Stop();
-        _scrollEdgeFeedbackController.Hide();
+        _overscrollController.Hide();
         CardActionsSheet.TryClose();
         CategorySelectionOverlay.TryClose();
         RemoveHandler(
