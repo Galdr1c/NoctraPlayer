@@ -47,6 +47,26 @@ public sealed class MobileStretchOverscrollSourceTests
         Assert.Contains("GetSpringRemaining", source, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void StretchController_UsesSpringSynchronizedNonInteractiveEdgeGlow()
+    {
+        var source = ReadProjectFile(
+            "Noctra.Mobile", "Behaviors", "MobileStretchOverscrollController.cs");
+        var zIndexes = ReadProjectFile(
+            "Noctra.Mobile", "Controls", "MobileZIndex.cs");
+
+        Assert.Contains("LinearGradientBrush", source, StringComparison.Ordinal);
+        Assert.Contains("IsHitTestVisible = false", source, StringComparison.Ordinal);
+        Assert.Contains("UpdateGlow", source, StringComparison.Ordinal);
+        Assert.Contains("GetGlowOpacity", source, StringComparison.Ordinal);
+        Assert.Contains("GetGlowDepth", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("DispatcherTimer", source, StringComparison.Ordinal);
+        Assert.Contains(
+            "ShellEdgeFeedback = 46_000",
+            zIndexes,
+            StringComparison.Ordinal);
+    }
+
     private static string ReadProjectFile(params string[] parts)
     {
         var root = FindRepositoryRoot();

@@ -130,7 +130,7 @@ public sealed class MobileNavigationBehaviorTests
     // ──────────────────────────────────────────────────────────────
 
     [Fact]
-    public void StretchOverscroll_TransformsScrollableContent_NotGlobalOverlay()
+    public void StretchOverscroll_TransformsContent_AndScopesGlowToActiveViewer()
     {
         var controller = ReadProjectFile(
             "Noctra.Mobile", "Behaviors", "MobileStretchOverscrollController.cs");
@@ -140,10 +140,10 @@ public sealed class MobileNavigationBehaviorTests
         Assert.Contains("TransformGroup", controller);
         Assert.Contains("ScaleTransform", controller);
         Assert.Contains("TranslateTransform", controller);
-        Assert.DoesNotContain("Canvas", controller);
-        Assert.DoesNotContain("Border", controller);
-        Assert.DoesNotContain("AccentBrush", controller);
-        Assert.DoesNotContain("ZIndex", controller);
+        Assert.Contains("TranslatePoint", controller);
+        Assert.Contains("_session.Viewer.Bounds", controller);
+        Assert.Contains("AccentBrush", controller);
+        Assert.Contains("IsHitTestVisible = false", controller);
     }
 
     [Fact]
@@ -223,7 +223,7 @@ public sealed class MobileNavigationBehaviorTests
         Assert.Contains("GetSpringRemaining", controller);
         Assert.Contains("Math.Exp", physics);
         Assert.DoesNotContain("DispatcherTimer", controller);
-        Assert.DoesNotContain("Opacity", controller);
+        Assert.Contains("UpdateGlow", controller);
     }
 
     [Fact]
@@ -275,6 +275,15 @@ public sealed class MobileNavigationBehaviorTests
 
         Assert.Contains("CancelLongPressForScroll", controller);
         Assert.Contains("CancelLongPressForScroll", card);
+    }
+
+    [Fact]
+    public void NavigateToDestination_CancelsAnyOverscrollSessionFromPreviousPage()
+    {
+        var mainView = ReadProjectFile("Noctra.Mobile", "Views", "MainView.axaml.cs");
+        var navigation = ExtractMethod(mainView, "NavigateToDestinationAsync");
+
+        Assert.Contains("_overscrollController.Hide()", navigation);
     }
 
     // ──────────────────────────────────────────────────────────────

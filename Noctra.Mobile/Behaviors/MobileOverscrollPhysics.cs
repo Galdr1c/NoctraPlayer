@@ -8,6 +8,8 @@ internal static class MobileOverscrollPhysics
     public const double FallbackActivationDistance = 5;
     public const double AxisLockRatio = 1.15;
     public const double MaxScaleDelta = 0.026;
+    public const double MaxGlowOpacity = 0.22;
+    public const double MaxGlowDepth = 24;
     public const double FlingBounceDistance = 8;
     public static readonly TimeSpan ReleaseDuration = TimeSpan.FromMilliseconds(280);
     public static readonly TimeSpan FlingReleaseDuration = TimeSpan.FromMilliseconds(210);
@@ -31,10 +33,15 @@ internal static class MobileOverscrollPhysics
 
     public static double GetScale(double translation, double viewportHeight)
     {
-        var maximum = GetMaximumTranslation(viewportHeight);
-        var progress = maximum <= 0 ? 0 : Math.Clamp(translation / maximum, 0, 1);
+        var progress = GetVisualProgress(translation, viewportHeight);
         return 1 + (MaxScaleDelta * progress);
     }
+
+    public static double GetGlowOpacity(double translation, double viewportHeight)
+        => MaxGlowOpacity * GetVisualProgress(translation, viewportHeight);
+
+    public static double GetGlowDepth(double translation, double viewportHeight)
+        => MaxGlowDepth * GetVisualProgress(translation, viewportHeight);
 
     public static double EstimatePullDistance(double translation, double viewportHeight)
     {
@@ -58,5 +65,13 @@ internal static class MobileOverscrollPhysics
         var spring = (1 + (8 * progress)) * Math.Exp(-8 * progress);
         var exactRestEnvelope = 1 - (progress * progress * (3 - (2 * progress)));
         return spring * exactRestEnvelope;
+    }
+
+    private static double GetVisualProgress(double translation, double viewportHeight)
+    {
+        var maximum = GetMaximumTranslation(viewportHeight);
+        return maximum <= 0
+            ? 0
+            : Math.Clamp(translation / maximum, 0, 1);
     }
 }

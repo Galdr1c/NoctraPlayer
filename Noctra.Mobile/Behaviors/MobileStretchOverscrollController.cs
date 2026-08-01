@@ -52,6 +52,10 @@ internal sealed class MobileStretchOverscrollController : IDisposable
     }
 
     private readonly UserControl _host;
+    private Grid? _feedbackRoot;
+    private Canvas? _feedbackLayer;
+    private Border? _topGlow;
+    private Border? _bottomGlow;
     private IPointer? _pointer;
     private Visual? _pressedSource;
     private Point _pressPosition;
@@ -102,6 +106,8 @@ internal sealed class MobileStretchOverscrollController : IDisposable
             OnScrollGesture,
             RoutingStrategies.Bubble,
             handledEventsToo: true);
+
+        RefreshVisualTree();
     }
 
     public void RefreshVisualTree()
@@ -119,6 +125,8 @@ internal sealed class MobileStretchOverscrollController : IDisposable
                 _session.Content.RenderTransform,
                 _session.AppliedTransform));
         }
+
+        EnsureFeedbackLayer();
     }
 
     public void Hide()
@@ -137,6 +145,7 @@ internal sealed class MobileStretchOverscrollController : IDisposable
 
         _disposed = true;
         Hide();
+        DetachFeedbackLayer();
         _host.RemoveHandler(InputElement.PointerPressedEvent, OnPointerPressed);
         _host.RemoveHandler(InputElement.PointerMovedEvent, OnPointerMoved);
         _host.RemoveHandler(InputElement.PointerReleasedEvent, OnPointerReleased);
@@ -477,6 +486,8 @@ internal sealed class MobileStretchOverscrollController : IDisposable
             content.SetCurrentValue(Visual.RenderTransformProperty, group);
         }
 
+        EnsureFeedbackLayer();
+        RefreshGlowBrushes();
         SwitchEdge(edge);
         _state = edge == OverscrollEdge.Top
             ? OverscrollState.PullingTop
@@ -520,6 +531,221 @@ internal sealed class MobileStretchOverscrollController : IDisposable
             translation,
             viewportHeight);
         _session.Scale.ScaleX = 1;
+        UpdateGlow(Math.Abs(_session.Translation.Y));
+    }
+
+    private void EnsureFeedbackLayer()
+    {
+        if (_host.Content is not Grid rootGrid)
+        {
+            DetachFeedbackLayer();
+            return;
+        }
+
+        if (ReferenceEquals(_feedbackRoot, rootGrid) &&
+            _feedbackLayer is not null &&
+            rootGrid.Children.Contains(_feedbackLayer))
+        {
+            return;
+        }
+
+        DetachFeedbackLayer();
+
+        _feedbackRoot = rootGrid;
+        _topGlow = CreateGlowBorder(isTop: true);
+        _bottomGlow = CreateGlowBorder(isTop: false);
+        _feedbackLayer = new Canvas
+        {
+            Name = "ScrollEdgeGlowLayer",
+            IsVisible = false,
+            IsHitTestVisible = false,
+            ClipToBounds = true,
+            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch,
+            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Stretch,
+            ZIndex = MobileZIndex.ShellEdgeFeedback
+        };
+        _feedbackLayer.Children.Add(_topGlow);
+        _feedbackLayer.Children.Add(_bottomGlow);
+
+        Grid.SetRowSpan(
+            _feedbackLayer,
+            Math.Max(1, rootGrid.RowDefinitions.Count));
+        Grid.SetColumnSpan(
+            _feedbackLayer,
+            Math.Max(1, rootGrid.ColumnDefinitions.Count));
+        rootGrid.Children.Add(_feedbackLayer);
+    }
+
+    private Border CreateGlowBorder(bool isTop)
+        => new()
+        {
+            IsVisible = false,
+            IsHitTestVisible = false,
+            Opacity = 0,
+            Background = CreateGlowBrush(isTop)
+        };
+
+    private LinearGradientBrush CreateGlowBrush(bool isTop)
+    {
+        var accent = ResolveAccentColor();
+        var transparent = Color.FromArgb(0, accent.R, accent.G, accent.B);
+
+        return new LinearGradientBrush
+        {
+            StartPoint = new RelativePoint(0, 0, RelativeUnit.Relative),
+            EndPoint = new RelativePoint(0, 1, RelativeUnit.Relative),
+            GradientStops = isTop
+                ?
+                [
+                    new GradientStop(accent, 0),
+                    new GradientStop(transparent, 1)
+                ]
+                :
+                [
+                    new GradientStop(transparent, 0),
+                    new GradientStop(accent, 1)
+                ]
+        };
+    }
+
+    private Color ResolveAccentColor()
+    {
+        if (_host.TryFindResource(
+                "AccentBrush",
+                _host.ActualThemeVariant,
+                out var resource) &&
+            resource is ISolidColorBrush solidBrush)
+        {
+            return solidBrush.Color;
+        }
+
+        return Color.FromRgb(139, 92, 246);
+    }
+
+    private void RefreshGlowBrushes()
+    {
+        if (_topGlow is not null)
+        {
+            _topGlow.Background = CreateGlowBrush(isTop: true);
+        }
+
+        if (_bottomGlow is not null)
+        {
+            _bottomGlow.Background = CreateGlowBrush(isTop: false);
+        }
+    }
+
+    private void UpdateGlow(double translation)
+    {
+        if (_session is null || translation <= 0)
+        {
+            HideGlow();
+            return;
+        }
+
+        EnsureFeedbackLayer();
+        if (_feedbackRoot is null || _feedbackLayer is null ||
+            _topGlow is null || _bottomGlow is null)
+        {
+            return;
+        }
+
+        var origin = _session.Viewer.TranslatePoint(default, _feedbackRoot);
+        if (origin is not { } viewerOrigin)
+        {
+            HideGlow();
+            return;
+        }
+
+        var rootWidth = _feedbackRoot.Bounds.Width;
+        var rootHeight = _feedbackRoot.Bounds.Height;
+        var viewerWidth = _session.Viewer.Bounds.Width;
+        var viewerHeight = _session.Viewer.Bounds.Height;
+        if (rootWidth <= 0 || rootHeight <= 0 ||
+            viewerWidth <= 0 || viewerHeight <= 0)
+        {
+            HideGlow();
+            return;
+        }
+
+        var left = Math.Clamp(viewerOrigin.X, 0, rootWidth);
+        var top = Math.Clamp(viewerOrigin.Y, 0, rootHeight);
+        var right = Math.Clamp(viewerOrigin.X + viewerWidth, left, rootWidth);
+        var bottom = Math.Clamp(viewerOrigin.Y + viewerHeight, top, rootHeight);
+        if (right <= left || bottom <= top)
+        {
+            HideGlow();
+            return;
+        }
+
+        var viewportHeight = GetViewportHeight(_session);
+        var depth = Math.Min(
+            MobileOverscrollPhysics.GetGlowDepth(translation, viewportHeight),
+            bottom - top);
+        var opacity = MobileOverscrollPhysics.GetGlowOpacity(
+            translation,
+            viewportHeight);
+        if (depth <= 0 || opacity <= 0)
+        {
+            HideGlow();
+            return;
+        }
+
+        var activeGlow = _session.Edge == OverscrollEdge.Top
+            ? _topGlow
+            : _bottomGlow;
+        var inactiveGlow = _session.Edge == OverscrollEdge.Top
+            ? _bottomGlow
+            : _topGlow;
+
+        activeGlow.Width = right - left;
+        activeGlow.Height = depth;
+        activeGlow.Opacity = opacity;
+        activeGlow.IsVisible = true;
+        HideGlow(inactiveGlow);
+
+        Canvas.SetLeft(activeGlow, left);
+        Canvas.SetTop(
+            activeGlow,
+            _session.Edge == OverscrollEdge.Top
+                ? top
+                : bottom - depth);
+        _feedbackLayer.IsVisible = true;
+    }
+
+    private void HideGlow()
+    {
+        HideGlow(_topGlow);
+        HideGlow(_bottomGlow);
+        if (_feedbackLayer is not null)
+        {
+            _feedbackLayer.IsVisible = false;
+        }
+    }
+
+    private static void HideGlow(Border? glow)
+    {
+        if (glow is null)
+        {
+            return;
+        }
+
+        glow.Opacity = 0;
+        glow.IsVisible = false;
+    }
+
+    private void DetachFeedbackLayer()
+    {
+        HideGlow();
+        if (_feedbackRoot is not null && _feedbackLayer is not null)
+        {
+            _feedbackRoot.Children.Remove(_feedbackLayer);
+        }
+
+        _feedbackRoot = null;
+        _feedbackLayer = null;
+        _topGlow = null;
+        _bottomGlow = null;
     }
 
     private void BeginRelease(TimeSpan duration)
@@ -558,6 +784,7 @@ internal sealed class MobileStretchOverscrollController : IDisposable
 
             _session.Translation.Y = startTranslation * remaining;
             _session.Scale.ScaleY = 1 + ((startScale - 1) * remaining);
+            UpdateGlow(Math.Abs(_session.Translation.Y));
 
             if (progress >= 1 ||
                 (Math.Abs(_session.Translation.Y) < 0.05 &&
@@ -601,6 +828,7 @@ internal sealed class MobileStretchOverscrollController : IDisposable
 
         _session = null;
         _rawPullDistance = 0;
+        HideGlow();
         ResetEdgeProbe();
         _state = OverscrollState.Idle;
     }

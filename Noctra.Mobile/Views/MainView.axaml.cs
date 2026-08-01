@@ -919,6 +919,11 @@ public partial class MainView : UserControl
             return;
         }
 
+        // A page switch invalidates the ScrollViewer/content pair owned by an
+        // active or releasing overscroll session. Cancel it before changing
+        // visibility so the next page always starts from a clean gesture state.
+        _overscrollController.Hide();
+
         var version = Interlocked.Increment(ref _navigationVersion);
 
         // Navigation history management: push when navigating from More to a sub-page,

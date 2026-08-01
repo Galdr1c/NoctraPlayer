@@ -5,7 +5,7 @@ namespace Noctra.Mobile.Controls;
 ///
 /// Keep the numeric bands stable: player-local layers live below 1,000,
 /// page sheets use 1,000, shell overlays use 47,000-55,000, and the
-/// edge-feedback adorners stay above every shell overlay at 60,000.
+/// edge feedback stays below shell overlays at 46,000.
 /// XAML should reference these names instead of embedding numeric values.
 /// </summary>
 public static class MobileZIndex
@@ -50,6 +50,6 @@ public static class MobileZIndex
     public const int ShellReviewPrompt = 52_000;
     public const int ShellProfiles = 55_000;
 
-    // Always above shell overlays; used by transient edge feedback adorners.
-    public const int ShellEdgeFeedback = 60_000;
+    // Above normal shell content, below sheets, player, toasts, and modal overlays.
+    public const int ShellEdgeFeedback = 46_000;
 }

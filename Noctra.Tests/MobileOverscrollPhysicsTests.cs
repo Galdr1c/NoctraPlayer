@@ -1,4 +1,5 @@
 using Noctra.Mobile.Behaviors;
+using System.Reflection;
 
 namespace Noctra.Tests;
 
@@ -72,5 +73,51 @@ public sealed class MobileOverscrollPhysicsTests
         }
 
         Assert.Equal(0, previous, precision: 6);
+    }
+
+    [Fact]
+    public void GlowOpacity_IsMonotonicClampedAndZeroAtRest()
+    {
+        var method = typeof(MobileOverscrollPhysics).GetMethod(
+            "GetGlowOpacity",
+            BindingFlags.Public | BindingFlags.Static);
+
+        Assert.NotNull(method);
+
+        static double Invoke(MethodInfo methodInfo, double translation) =>
+            (double)methodInfo.Invoke(null, new object[] { translation, 800d })!;
+
+        var atRest = Invoke(method!, 0);
+        var small = Invoke(method!, 4);
+        var medium = Invoke(method!, 14);
+        var saturated = Invoke(method!, 100_000);
+
+        Assert.Equal(0, atRest, precision: 6);
+        Assert.InRange(small, 0.001, medium);
+        Assert.InRange(medium, small, 0.12);
+        Assert.Equal(0.12, saturated, precision: 6);
+    }
+
+    [Fact]
+    public void GlowDepth_IsMonotonicClampedAndZeroAtRest()
+    {
+        var method = typeof(MobileOverscrollPhysics).GetMethod(
+            "GetGlowDepth",
+            BindingFlags.Public | BindingFlags.Static);
+
+        Assert.NotNull(method);
+
+        static double Invoke(MethodInfo methodInfo, double translation) =>
+            (double)methodInfo.Invoke(null, new object[] { translation, 800d })!;
+
+        var atRest = Invoke(method!, 0);
+        var small = Invoke(method!, 4);
+        var medium = Invoke(method!, 14);
+        var saturated = Invoke(method!, 100_000);
+
+        Assert.Equal(0, atRest, precision: 6);
+        Assert.InRange(small, 0.001, medium);
+        Assert.InRange(medium, small, 24);
+        Assert.Equal(24, saturated, precision: 6);
     }
 }
