@@ -81,18 +81,14 @@ public class PlayerOverlayManager
 
     public void OpenAudioSettings()
     {
-        var swTotal = System.Diagnostics.Stopwatch.StartNew();
         _vm.LogDebug("UI Action: OpenAudioSettings clicked");
-        var swPanel = System.Diagnostics.Stopwatch.StartNew();
         _vm.OpenChildPanel(MobilePanelState.Audio);
-        swPanel.Stop();
         if (_vm.IsAudioSettingsOpen)
         {
-            var swInfo = System.Diagnostics.Stopwatch.StartNew();
-            _vm.UpdateMediaInfo();
-            swInfo.Stop();
+            // Let the sheet render first. Track discovery/reconciliation is
+            // retried off the input callback so opening the panel cannot make
+            // the first frame wait for collection/layout work.
             _ = _vm.RefreshTracksWithRetryAsync();
-            _vm.LogDebug($"OpenAudioSettings: OpenChildPanel={swPanel.ElapsedMilliseconds}ms UpdateMediaInfo={swInfo.ElapsedMilliseconds}ms TOTAL={swTotal.ElapsedMilliseconds}ms");
         }
     }
 

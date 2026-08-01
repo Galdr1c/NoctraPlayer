@@ -24,6 +24,17 @@ public partial class App : Application
 
     public IServiceProvider? Services { get; private set; }
 
+    private Task? _databaseInitializationTask;
+
+    /// <summary>
+    /// Completes when the one-time database creation/schema maintenance has
+    /// finished.  The task is intentionally started in the background so the
+    /// Android activity can attach its first visual tree without waiting for
+    /// SQLite maintenance.
+    /// </summary>
+    public Task DatabaseInitializationTask =>
+        Volatile.Read(ref _databaseInitializationTask) ?? Task.CompletedTask;
+
     public override void Initialize()
     {
         RegisterCrashHandlers();
@@ -85,21 +96,8 @@ public partial class App : Application
         // ── DB Initialization ────────────────────────────────────────────────
         if (Services.GetService(typeof(IDbContextFactory<AppDbContext>)) is IDbContextFactory<AppDbContext> dbContextFactory)
         {
-            try
-            {
-                PerformanceTrace.Mark("app.db.init.start");
-                using var db = dbContextFactory.CreateDbContext();
-                db.Database.EnsureCreated();
-                if (Services.GetService(typeof(IDatabaseSchemaFixupService)) is IDatabaseSchemaFixupService schemaFixups)
-                {
-                    schemaFixups.ApplyAsync(db, DatabaseSchemaFixupProfile.Mobile).GetAwaiter().GetResult();
-                }
-                PerformanceTrace.Mark("app.db.init.end");
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"[Mobile.App] Database initialization/schema fixup failed: {ex}");
-            }
+            var schemaFixups = Services.GetService(typeof(IDatabaseSchemaFixupService)) as IDatabaseSchemaFixupService;
+            _databaseInitializationTask = InitializeDatabaseAsync(dbContextFactory, schemaFixups);
         }
 
         // ── Localization ─────────────────────────────────────────────────────
@@ -159,6 +157,36 @@ public partial class App : Application
         }
 
         return Services;
+    }
+
+    private static Task InitializeDatabaseAsync(
+        IDbContextFactory<AppDbContext> dbContextFactory,
+        IDatabaseSchemaFixupService? schemaFixups)
+    {
+        return Task.Run(async () =>
+        {
+            try
+            {
+                PerformanceTrace.Mark("app.db.init.start");
+                await using var db = await dbContextFactory
+                    .CreateDbContextAsync()
+                    .ConfigureAwait(false);
+                await db.Database.EnsureCreatedAsync().ConfigureAwait(false);
+
+                if (schemaFixups is not null)
+                {
+                    await schemaFixups
+                        .ApplyAsync(db, DatabaseSchemaFixupProfile.Mobile)
+                        .ConfigureAwait(false);
+                }
+
+                PerformanceTrace.Mark("app.db.init.end");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[Mobile.App] Database initialization/schema fixup failed: {ex}");
+            }
+        });
     }
 
     // ── Schema Fixups ────────────────────────────────────────────────────────

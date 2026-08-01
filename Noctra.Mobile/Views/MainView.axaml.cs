@@ -188,6 +188,12 @@ public partial class MainView : UserControl
         var coreVm = resolver?.GetCoreMainViewModel();
         if (coreVm?.CurrentProfile is not null)
         {
+            var destination = "Home";
+            if (DataContext is MobileMainViewModel mobileViewModel)
+            {
+                destination = mobileViewModel.SelectedDestination;
+            }
+
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
                 ProfilesOverlay.IsVisible = false;
@@ -195,14 +201,15 @@ public partial class MainView : UserControl
                 HeaderBar.IsVisible = true;
                 HeaderProfileButton.DataContext = coreVm;
                 UpdateNavigationMode(Bounds.Width);
-
-                string dest = "Home";
-                if (DataContext is MobileMainViewModel viewModel)
-                {
-                    dest = viewModel.SelectedDestination;
-                }
-                NavigateToDestination(dest);
+                ShellContent.IsVisible = false;
+                CoreContentHost.IsVisible = true;
             });
+
+            // Keep the shell responsive while one-time SQLite maintenance is
+            // finishing.  Content queries start only after the schema is
+            // ready, avoiding both a startup stall and a schema race.
+            await WaitForDatabaseInitializationAsync();
+            await Dispatcher.UIThread.InvokeAsync(() => NavigateToDestination(destination));
             return;
         }
 
@@ -221,6 +228,14 @@ public partial class MainView : UserControl
     private async Task ShowLegalConsentIfNeededAsync()
     {
         await LegalConsentOverlay.ShowConsentFlowAsync();
+    }
+
+    private static async Task WaitForDatabaseInitializationAsync()
+    {
+        if (Application.Current is App app)
+        {
+            await app.DatabaseInitializationTask.ConfigureAwait(false);
+        }
     }
 
     private async Task TryShowReviewPromptAsync()

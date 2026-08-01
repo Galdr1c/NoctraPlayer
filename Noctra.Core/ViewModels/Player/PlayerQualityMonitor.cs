@@ -11,6 +11,7 @@ namespace Noctra.ViewModels;
 public class PlayerQualityMonitor
 {
     private readonly PlayerViewModel _vm;
+    private CancellationTokenSource? _trackRefreshCts;
 
     public PlayerQualityMonitor(PlayerViewModel vm)
     {
@@ -47,21 +48,41 @@ public class PlayerQualityMonitor
 
     public async Task RefreshTracksWithRetryAsync()
     {
+        var cts = new CancellationTokenSource();
+        var previous = Interlocked.Exchange(ref _trackRefreshCts, cts);
+        previous?.Cancel();
+
         var delays = new[] { 250, 800, 1600, 3000 };
-        foreach (var delay in delays)
+        try
         {
-            await Task.Delay(delay);
-            if (!_vm.IsPlaying || _vm.CurrentChannel == null)
+            foreach (var delay in delays)
             {
-                return;
+                await Task.Delay(delay, cts.Token).ConfigureAwait(false);
+                if (cts.IsCancellationRequested || !_vm.IsPlaying || _vm.CurrentChannel == null)
+                {
+                    return;
+                }
+
+                _vm.DispatcherService.Invoke(UpdateMediaInfo);
+
+                if (_vm.AudioTracks.Any(t => t.Id >= 0) && (_vm.SubtitleTracks.Any(t => t.Id >= 0) || delay >= 1600))
+                {
+                    return;
+                }
+            }
+        }
+        catch (OperationCanceledException) when (cts.IsCancellationRequested)
+        {
+            // A newer playback/sheet request owns the retry loop now.
+        }
+        finally
+        {
+            if (ReferenceEquals(Volatile.Read(ref _trackRefreshCts), cts))
+            {
+                Interlocked.CompareExchange(ref _trackRefreshCts, null, cts);
             }
 
-            _vm.DispatcherService.Invoke(UpdateMediaInfo);
-
-            if (_vm.AudioTracks.Any(t => t.Id >= 0) && (_vm.SubtitleTracks.Any(t => t.Id >= 0) || delay >= 1600))
-            {
-                return;
-            }
+            cts.Dispose();
         }
     }
 
@@ -88,17 +109,30 @@ public class PlayerQualityMonitor
         swTotal.Stop();
         System.Diagnostics.Debug.WriteLine($"[PVM] UpdateMediaInfo: collections={swTotal.ElapsedMilliseconds}ms");
 
+        var audioChanged = !TrackOptionsMatch(_vm.AudioTracks, audioTracks);
+        var subtitleChanged = !TrackOptionsMatch(_vm.SubtitleTracks, subtitleTracks);
+
         var swInvoke = System.Diagnostics.Stopwatch.StartNew();
-        _vm.DispatcherService.Invoke(() => 
+        if (audioChanged || subtitleChanged)
         {
-            _vm.AudioTracks.Clear();
-            foreach (var t in audioTracks) _vm.AudioTracks.Add(t);
+            _vm.DispatcherService.Invoke(() =>
+            {
+                if (audioChanged)
+                {
+                    _vm.AudioTracks.Clear();
+                    foreach (var t in audioTracks) _vm.AudioTracks.Add(t);
+                }
 
-            _vm.SubtitleTracks.Clear();
-            foreach (var t in subtitleTracks) _vm.SubtitleTracks.Add(t);
-        });
+                if (subtitleChanged)
+                {
+                    _vm.SubtitleTracks.Clear();
+                    foreach (var t in subtitleTracks) _vm.SubtitleTracks.Add(t);
+                }
+            });
 
-        _vm.DispatcherService.Invoke(() => _vm.RaiseTrackSelectionPropertiesChanged());
+            _vm.DispatcherService.Invoke(() => _vm.RaiseTrackSelectionPropertiesChanged());
+        }
+
         swInvoke.Stop();
         System.Diagnostics.Debug.WriteLine($"[PVM] UpdateMediaInfo: dispatcher={swInvoke.ElapsedMilliseconds}ms");
 
@@ -113,16 +147,44 @@ public class PlayerQualityMonitor
         }
         else
         {
-            if (_vm.SelectedAudioTrack >= 0 && audioTracks.Any(t => t.Id == _vm.SelectedAudioTrack))
+            if (audioChanged &&
+                _vm.SelectedAudioTrack >= 0 &&
+                audioTracks.Any(t => t.Id == _vm.SelectedAudioTrack))
             {
                 _vm.VideoPlayerService.SetAudioTrack(_vm.SelectedAudioTrack);
             }
 
-            if (_vm.SelectedSubtitleTrack >= -1 && subtitleTracks.Any(t => t.Id == _vm.SelectedSubtitleTrack))
+            if (subtitleChanged &&
+                _vm.SelectedSubtitleTrack >= -1 &&
+                subtitleTracks.Any(t => t.Id == _vm.SelectedSubtitleTrack))
             {
                 _vm.VideoPlayerService.SetSubtitleTrack(_vm.SelectedSubtitleTrack);
             }
         }
+    }
+
+    private static bool TrackOptionsMatch(
+        IReadOnlyList<PlayerViewModel.TrackOption> current,
+        IReadOnlyList<PlayerViewModel.TrackOption> incoming)
+    {
+        if (current.Count != incoming.Count)
+        {
+            return false;
+        }
+
+        for (var index = 0; index < current.Count; index++)
+        {
+            var existing = current[index];
+            var next = incoming[index];
+            if (existing.Id != next.Id ||
+                !string.Equals(existing.Name, next.Name, StringComparison.Ordinal) ||
+                !string.Equals(existing.LanguageCode, next.LanguageCode, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     public void ApplyDefaultTracks(
