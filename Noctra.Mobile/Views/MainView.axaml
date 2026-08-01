@@ -261,16 +261,6 @@
             Background="{DynamicResource Bg1Brush}"
             IsVisible="False"
             ClipToBounds="True">
-      <Border.Transitions>
-        <Transitions>
-          <DoubleTransition Property="Width"
-                            Duration="0:0:0.2"
-                            Easing="CubicEaseOut" />
-          <ThicknessTransition Property="Padding"
-                               Duration="0:0:0.2"
-                               Easing="CubicEaseOut" />
-        </Transitions>
-      </Border.Transitions>
       <StackPanel Spacing="0">
         <Button Classes="navRail" Tag="Home" Click="OnDestinationClick">
           <DockPanel>

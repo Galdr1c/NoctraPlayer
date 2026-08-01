@@ -18,6 +18,7 @@ public sealed class MobilePressableCard : Border
     private static readonly TimeSpan LongPressDuration = TimeSpan.FromMilliseconds(500);
 
     private IPointer? _activePointer;
+    private ScrollViewer? _ancestorScrollViewer;
     private Point _pressOrigin;
     private readonly DispatcherTimer _longPressTimer;
     private bool _suppressNextTap;
@@ -48,8 +49,14 @@ public sealed class MobilePressableCard : Border
             OnPointerCaptureLost,
             RoutingStrategies.Bubble,
             handledEventsToo: true);
+        AddHandler(
+            InputElement.ScrollGestureEvent,
+            OnScrollGesture,
+            RoutingStrategies.Bubble,
+            handledEventsToo: true);
         PointerExited += OnPointerExited;
-        DetachedFromVisualTree += (_, _) => ResetPressedState();
+        AttachedToVisualTree += OnAttachedToVisualTree;
+        DetachedFromVisualTree += OnDetachedFromVisualTree;
     }
 
     public bool ConsumeLongPressTapSuppression()
@@ -69,6 +76,8 @@ public sealed class MobilePressableCard : Border
         {
             return;
         }
+
+        EnsureAncestorScrollViewer();
 
         var point = e.GetCurrentPoint(this);
         if (e.Pointer.Type == PointerType.Mouse &&
@@ -98,7 +107,7 @@ public sealed class MobilePressableCard : Border
         if ((deltaX * deltaX) + (deltaY * deltaY) >=
             ScrollCancellationDistance * ScrollCancellationDistance)
         {
-            ResetPressedState();
+            CancelForScroll();
         }
     }
 
@@ -111,14 +120,76 @@ public sealed class MobilePressableCard : Border
     }
 
     private void OnPointerCaptureLost(object? sender, PointerCaptureLostEventArgs e) =>
-        ResetPressedState();
+        CancelForScroll();
 
     private void OnPointerExited(object? sender, PointerEventArgs e)
     {
         if (ReferenceEquals(e.Pointer, _activePointer))
         {
-            ResetPressedState();
+            CancelForScroll();
         }
+    }
+
+    private void OnScrollGesture(object? sender, ScrollGestureEventArgs e)
+    {
+        if (_activePointer is not null)
+        {
+            CancelForScroll();
+        }
+    }
+
+    private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
+    {
+        EnsureAncestorScrollViewer();
+    }
+
+    private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
+    {
+        DetachFromAncestorScrollViewer();
+        _suppressNextTap = false;
+        ResetPressedState();
+    }
+
+    private void EnsureAncestorScrollViewer()
+    {
+        var scrollViewer = this.FindAncestorOfType<ScrollViewer>();
+        if (ReferenceEquals(scrollViewer, _ancestorScrollViewer))
+        {
+            return;
+        }
+
+        DetachFromAncestorScrollViewer();
+        if (scrollViewer is null)
+        {
+            return;
+        }
+
+        _ancestorScrollViewer = scrollViewer;
+        _ancestorScrollViewer.ScrollChanged += OnAncestorScrollChanged;
+        _ancestorScrollViewer.AddHandler(
+            InputElement.ScrollGestureEvent,
+            OnScrollGesture,
+            RoutingStrategies.Bubble,
+            handledEventsToo: true);
+    }
+
+    private void DetachFromAncestorScrollViewer()
+    {
+        if (_ancestorScrollViewer is null)
+        {
+            return;
+        }
+
+        _ancestorScrollViewer.ScrollChanged -= OnAncestorScrollChanged;
+        _ancestorScrollViewer.RemoveHandler(
+            InputElement.ScrollGestureEvent,
+            OnScrollGesture);
+        _ancestorScrollViewer = null;
+    }
+
+    private void OnAncestorScrollChanged(object? sender, ScrollChangedEventArgs e)
+    {
+        CancelForScroll();
     }
 
     private bool OriginatesFromNestedButton(object? source)
@@ -148,6 +219,19 @@ public sealed class MobilePressableCard : Border
         var longPressed = LongPressed;
         ResetPressedState();
         longPressed?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void CancelForScroll()
+    {
+        if (_activePointer is null)
+        {
+            return;
+        }
+
+        // A scroll gesture must never be interpreted as a card tap after the
+        // ScrollViewer releases the pointer back to the card.
+        _suppressNextTap = true;
+        ResetPressedState();
     }
 
     private void ResetPressedState()

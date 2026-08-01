@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Animation;
 using Avalonia.Controls;
@@ -26,7 +25,6 @@ internal sealed class MobileCollapsibleNavigationRail
     private readonly List<NavigationItemVisualState> _items = new();
     private Button? _toggleButton;
     private MaterialIcon? _toggleIcon;
-    private int _stateGeneration;
 
     public MobileCollapsibleNavigationRail(
         Border navigationRail,
@@ -50,74 +48,36 @@ internal sealed class MobileCollapsibleNavigationRail
             return;
         }
 
-        var generation = ++_stateGeneration;
         var expanding = IsExpanded;
 
-        // Use CSS class for compact mode instead of hardcoded Width/Padding.
-        // This preserves the DynamicResource NavRailWidth when expanded.
+        // Apply the rail width and its children in one layout transaction.
+        // Animating the rail width while labels are still visible makes the
+        // content grid remeasure through transient widths and clips labels.
         _navigationRail.Classes.Set("compact", !expanding);
 
         foreach (var item in _items)
         {
             if (expanding)
             {
-                // Expanded layout applies immediately; labels fade in after a
-                // beat so their first paint happens while invisible.
                 item.ContentPanel.Spacing = item.ExpandedSpacing;
                 item.ContentPanel.Margin = item.ExpandedMargin;
                 item.ContentPanel.HorizontalAlignment = item.ExpandedHorizontalAlignment;
                 item.Label.IsVisible = true;
-                item.Label.Opacity = 0;
+                item.Label.Opacity = 1;
                 ToolTip.SetTip(item.Button, null);
             }
             else
             {
-                // Fade labels out, then drop them from layout once invisible.
+                item.ContentPanel.Spacing = 0;
+                item.ContentPanel.Margin = default;
+                item.ContentPanel.HorizontalAlignment = HorizontalAlignment.Center;
                 item.Label.Opacity = 0;
+                item.Label.IsVisible = false;
+                ToolTip.SetTip(item.Button, item.ToolTipText);
             }
         }
 
         UpdateToggleIcon();
-
-        _ = expanding
-            ? FadeLabelsInAsync(generation)
-            : FinalizeCollapseAsync(generation);
-    }
-
-    private async Task FadeLabelsInAsync(int generation)
-    {
-        await Task.Delay(30);
-        if (generation != _stateGeneration)
-        {
-            return;
-        }
-
-        foreach (var item in _items)
-        {
-            if (item.Label.IsVisible)
-            {
-                item.Label.Opacity = 1;
-            }
-        }
-    }
-
-    private async Task FinalizeCollapseAsync(int generation)
-    {
-        await Task.Delay(170);
-        if (generation != _stateGeneration)
-        {
-            return;
-        }
-
-        foreach (var item in _items)
-        {
-            item.Label.IsVisible = false;
-            item.Label.Opacity = 1;
-            item.ContentPanel.Spacing = 0;
-            item.ContentPanel.Margin = default;
-            item.ContentPanel.HorizontalAlignment = HorizontalAlignment.Center;
-            ToolTip.SetTip(item.Button, item.ToolTipText);
-        }
     }
 
     private void Initialize()

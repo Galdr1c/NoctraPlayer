@@ -198,6 +198,88 @@ public sealed class MobileNavigationBehaviorTests
     }
 
     [Fact]
+    public void NavigationRail_DoesNotAnimateLayoutWidthOrPadding()
+    {
+        var mainView = ReadProjectFile("Noctra.Mobile", "Views", "MainView.axaml");
+        var railStart = mainView.IndexOf(
+            "<Border x:Name=\"NavigationRail\"",
+            StringComparison.Ordinal);
+        var railContentStart = mainView.IndexOf(
+            "<StackPanel Spacing=\"0\">",
+            railStart,
+            StringComparison.Ordinal);
+
+        Assert.True(railStart >= 0 && railContentStart > railStart);
+        var rail = mainView[railStart..railContentStart];
+
+        // The rail must switch layout width atomically. Animating Width makes
+        // every content grid remeasure through transient column counts.
+        Assert.DoesNotContain("<DoubleTransition Property=\"Width\"", rail);
+        Assert.DoesNotContain("<ThicknessTransition Property=\"Padding\"", rail);
+    }
+
+    [Fact]
+    public void NavigationRail_ApplyCurrentState_DoesNotQueueDelayedLabelLayout()
+    {
+        var rail = ReadProjectFile("Noctra.Mobile", "Controls", "MobileCollapsibleNavigationRail.cs");
+
+        // Labels must be changed in the same layout transaction as the rail;
+        // delayed tasks leave clipped labels while cards already reflow.
+        Assert.DoesNotContain("Task.Delay", rail);
+        Assert.DoesNotContain("FadeLabelsInAsync", rail);
+        Assert.DoesNotContain("FinalizeCollapseAsync", rail);
+    }
+
+    [Fact]
+    public void MobilePressableCard_CancelsTapWhenScrollGestureStarts()
+    {
+        var card = ReadProjectFile("Noctra.Mobile", "Controls", "MobilePressableCard.cs");
+
+        Assert.Contains("InputElement.ScrollGestureEvent", card);
+        Assert.Contains("_suppressNextTap = true", card);
+        Assert.Contains("OnScrollGesture", card);
+    }
+
+    [Fact]
+    public void MobilePressableCard_CancelsTapAfterScrollDistance()
+    {
+        var card = ReadProjectFile("Noctra.Mobile", "Controls", "MobilePressableCard.cs");
+
+        Assert.Contains("ScrollCancellationDistance", card);
+        Assert.Contains("CancelForScroll", card);
+        Assert.Contains("ConsumeLongPressTapSuppression", card);
+    }
+
+    [Fact]
+    public void MobilePressableCard_ObservesAncestorScrollViewer()
+    {
+        var card = ReadProjectFile("Noctra.Mobile", "Controls", "MobilePressableCard.cs");
+
+        // Android may promote the pointer to the ScrollViewer before the
+        // card receives PointerMoved. The card must cancel from the ancestor
+        // scroll lifecycle as well.
+        Assert.Contains("FindAncestorOfType<ScrollViewer>()", card);
+        Assert.Contains("ScrollChanged", card);
+        Assert.Contains("AttachedToVisualTree", card);
+    }
+
+    [Fact]
+    public void MobilePressableCard_TreatsPointerCaptureLossAsCancelledTap()
+    {
+        var card = ReadProjectFile("Noctra.Mobile", "Controls", "MobilePressableCard.cs");
+        var handlerStart = card.IndexOf(
+            "private void OnPointerCaptureLost",
+            StringComparison.Ordinal);
+        var handlerEnd = card.IndexOf(
+            "private void OnPointerExited",
+            handlerStart,
+            StringComparison.Ordinal);
+
+        Assert.True(handlerStart >= 0 && handlerEnd > handlerStart);
+        Assert.Contains("CancelForScroll()", card[handlerStart..handlerEnd]);
+    }
+
+    [Fact]
     public void NavigationRail_ToggleClick_TogglesCompactClass()
     {
         var rail = ReadProjectFile("Noctra.Mobile", "Controls", "MobileCollapsibleNavigationRail.cs");
