@@ -80,6 +80,7 @@ public partial class MainViewModel : ObservableObject
     private readonly ConcurrentDictionary<string, byte> _pendingVisualEnrichmentKeys = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<int, byte> _pendingSeriesMetadataEnrichmentIds = new();
     private readonly ConcurrentDictionary<string, byte> _seriesVisualNoPosterKeys = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<PersonalStateKey, SemaphoreSlim> _personalStateGates = new();
     private long _downloadLandingStoredBytes;
     private readonly SemaphoreSlim _channelVisualEnrichmentSemaphore = new(3, 3);
     private readonly SemaphoreSlim _seriesVisualEnrichmentSemaphore = new(3, 3);
@@ -4486,81 +4487,134 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private async Task ToggleFavoriteAsync(object media)
     {
-        var toggleSw = System.Diagnostics.Stopwatch.StartNew();
-        if (!CurrentProfileId.HasValue)
+        var profileId = CurrentProfileId;
+        if (!profileId.HasValue)
         {
             StatusMessage = _localizationService.GetString("Main.Status.SelectProfileFirst");
             return;
         }
 
-        // Optimistic flip: reflect the new state immediately so the UI does not
-        // wait for the DB round-trips below (series + seasons + episodes load and
-        // related-channel lookup can take hundreds of ms on mobile). The flip runs
-        // synchronously on the UI thread; everything after it is persisted and
-        // refreshed on a background thread so the frame renders right away.
-        bool shouldFavorite = media switch
+        if (!TryGetPersonalStateKey(profileId.Value, media, out var stateKey))
         {
-            Channel ch => ch.IsFavorite = !ch.IsFavorite,
-            Series s => s.IsFavorite = !s.IsFavorite,
-            _ => false
-        };
-        System.Diagnostics.Debug.WriteLine($"[PVM] ToggleFavorite tick={Environment.TickCount} flip={shouldFavorite} entryMs={toggleSw.ElapsedMilliseconds}");
+            return;
+        }
 
-        await Task.Run(() => PersistFavoriteToggleAsync(media, shouldFavorite));
-        System.Diagnostics.Debug.WriteLine($"[PVM] ToggleFavorite doneMs={toggleSw.ElapsedMilliseconds}");
+        var gate = _personalStateGates.GetOrAdd(stateKey, _ => new SemaphoreSlim(1, 1));
+        await gate.WaitAsync();
+        try
+        {
+            if (CurrentProfileId != profileId)
+            {
+                return;
+            }
+
+            PersonalStateSnapshot snapshot;
+            if (media is Channel channel)
+            {
+                var previousFavorite = channel.IsFavorite;
+                snapshot = CreatePersonalStateSnapshot(
+                    channel,
+                    profileId.Value,
+                    previousFavorite,
+                    !previousFavorite,
+                    channel.IsInMyList,
+                    channel.IsInMyList);
+                channel.IsFavorite = snapshot.DesiredFavorite;
+            }
+            else if (media is Series series)
+            {
+                var previousFavorite = series.IsFavorite;
+                snapshot = CreatePersonalStateSnapshot(
+                    series,
+                    profileId.Value,
+                    previousFavorite,
+                    !previousFavorite,
+                    series.IsInMyList,
+                    series.IsInMyList);
+                series.IsFavorite = snapshot.DesiredFavorite;
+            }
+            else
+            {
+                return;
+            }
+
+            try
+            {
+                var persisted = await Task.Run(() => PersistFavoriteToggleSnapshotAsync(snapshot));
+                if (!persisted)
+                {
+                    RollbackPersonalState(snapshot);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Failed to persist favorite state for profile {ProfileId}.", profileId.Value);
+                RollbackPersonalState(snapshot);
+            }
+        }
+        finally
+        {
+            gate.Release();
+        }
     }
 
-    private async Task PersistFavoriteToggleAsync(object media, bool shouldFavorite)
+    private async Task<bool> PersistFavoriteToggleSnapshotAsync(PersonalStateSnapshot snapshot)
     {
-        string? statusMessageKey = null;
-
+        string? statusMessageKey;
         using var db = await _contextFactory.CreateDbContextAsync();
 
-        if (media is Channel channel)
+        if (snapshot.MediaKind == PersonalMediaKind.Channel)
         {
+            var channel = new Channel
+            {
+                Id = snapshot.Id,
+                Name = snapshot.Name,
+                StreamUrl = snapshot.StreamUrl,
+                PlaylistId = snapshot.PlaylistId > 0 ? snapshot.PlaylistId : snapshot.SelectedPlaylistId,
+                IsFavorite = snapshot.DesiredFavorite,
+                IsInMyList = snapshot.DesiredMyList,
+                LastWatched = snapshot.LastWatched
+            };
+
             if (channel.PlaylistId <= 0)
             {
-                channel.PlaylistId = SelectedPlaylist?.Id
-                    ?? await db.Playlists
-                        .AsNoTracking()
-                        .Where(p => p.ProfileId == CurrentProfileId.Value && p.IsActive)
-                        .Select(p => p.Id)
-                        .FirstOrDefaultAsync();
+                channel.PlaylistId = await FindProfilePlaylistIdAsync(db, snapshot.ProfileId);
             }
 
             await _channelService.UpdateChannelAsync(channel);
-            statusMessageKey = channel.IsFavorite
+            statusMessageKey = snapshot.DesiredFavorite
                 ? "Main.Status.FavoriteAdded"
                 : "Main.Status.FavoriteRemoved";
         }
-        else if (media is Series series)
+        else
         {
+            var series = new Series
+            {
+                Id = snapshot.Id,
+                Name = snapshot.Name,
+                PlaylistId = snapshot.PlaylistId > 0 ? snapshot.PlaylistId : snapshot.SelectedPlaylistId,
+                IsFavorite = snapshot.DesiredFavorite,
+                IsInMyList = snapshot.DesiredMyList
+            };
+
             if (series.PlaylistId <= 0)
             {
-                series.PlaylistId = SelectedPlaylist?.Id
-                    ?? await db.Playlists
-                        .AsNoTracking()
-                        .Where(p => p.ProfileId == CurrentProfileId.Value && p.IsActive)
-                        .Select(p => p.Id)
-                        .FirstOrDefaultAsync();
+                series.PlaylistId = await FindProfilePlaylistIdAsync(db, snapshot.ProfileId);
             }
 
             var seriesFromDb = await db.Series
                 .Include(s => s.Seasons)
                 .ThenInclude(sn => sn.Episodes)
                 .FirstOrDefaultAsync(s =>
-                    s.Id == series.Id ||
-                    (s.PlaylistId == series.PlaylistId && s.Name == series.Name));
+                    (snapshot.Id > 0 && s.Id == snapshot.Id) ||
+                    (series.PlaylistId > 0 && s.PlaylistId == series.PlaylistId && s.Name == snapshot.Name));
 
             if (seriesFromDb == null)
             {
-                // Series is not persisted; undo the optimistic flip.
-                await _dispatcherService.InvokeAsync(() => series.IsFavorite = !shouldFavorite);
-                return;
+                return false;
             }
 
-            seriesFromDb.IsFavorite = shouldFavorite;
-
+            seriesFromDb.IsFavorite = snapshot.DesiredFavorite;
             var episodeUrls = seriesFromDb.Seasons
                 .SelectMany(sn => sn.Episodes)
                 .Select(ep => ep.StreamUrl)
@@ -4576,36 +4630,59 @@ public partial class MainViewModel : ObservableObject
 
                 foreach (var relatedChannel in relatedChannels)
                 {
-                    relatedChannel.IsFavorite = shouldFavorite;
+                    relatedChannel.IsFavorite = snapshot.DesiredFavorite;
                 }
             }
 
             await db.SaveChangesAsync();
-            statusMessageKey = shouldFavorite
+            statusMessageKey = snapshot.DesiredFavorite
                 ? "Main.Status.FavoriteAdded"
                 : "Main.Status.FavoriteRemoved";
         }
-        else
+
+        await PublishPersonalStateAsync(snapshot.ProfileId, statusMessageKey, refreshFavoriteContent: true);
+        return true;
+    }
+
+    // Kept as a narrow compatibility wrapper for callers that still invoke the
+    // original persistence helper directly; command paths pass an immutable
+    // snapshot to the overload above.
+    private async Task PersistFavoriteToggleAsync(object media, bool shouldFavorite)
+    {
+        var profileId = CurrentProfileId;
+        if (!profileId.HasValue)
         {
             return;
         }
 
-        _dispatcherService.Invoke(() =>
+        if (media is not Channel && media is not Series)
         {
-            if (statusMessageKey != null)
-            {
-                StatusMessage = _localizationService.GetString(statusMessageKey);
-            }
-            UpdateMyList();
-            UpdateFavoriteChannels();
-            UpdateHistoryChannels();
-        });
+            return;
+        }
 
-        await _dispatcherService.InvokeAsync(new Func<Task>(async () =>
+        PersonalStateSnapshot snapshot = media switch
         {
-            await RefreshPersonalListsFromDatabaseAsync();
-            RefreshVisibleContentAfterFavoriteChange();
-        }));
+            Channel channel => CreatePersonalStateSnapshot(
+                channel,
+                profileId.Value,
+                !shouldFavorite,
+                shouldFavorite,
+                channel.IsInMyList,
+                channel.IsInMyList),
+            Series series => CreatePersonalStateSnapshot(
+                series,
+                profileId.Value,
+                !shouldFavorite,
+                shouldFavorite,
+                series.IsInMyList,
+                series.IsInMyList),
+            _ => throw new ArgumentException("Unsupported media type.", nameof(media))
+        };
+
+        if (!await PersistFavoriteToggleSnapshotAsync(snapshot))
+        {
+            RollbackPersonalState(snapshot);
+        }
     }
 
     private void RefreshVisibleContentAfterFavoriteChange()
@@ -4622,6 +4699,200 @@ public partial class MainViewModel : ObservableObject
                 "favorite-filter-membership",
                 nameof(ToggleFavoriteAsync));
         }
+    }
+
+    private async Task<int> FindProfilePlaylistIdAsync(AppDbContext db, int profileId)
+    {
+        return await db.Playlists
+            .AsNoTracking()
+            .Where(p => p.ProfileId == profileId && p.IsActive)
+            .Select(p => p.Id)
+            .FirstOrDefaultAsync();
+    }
+
+    private async Task PublishPersonalStateAsync(int profileId, string statusMessageKey, bool refreshFavoriteContent)
+    {
+        try
+        {
+            _dispatcherService.Invoke(() =>
+            {
+                if (CurrentProfileId != profileId)
+                {
+                    return;
+                }
+
+                StatusMessage = _localizationService.GetString(statusMessageKey);
+                UpdateMyList();
+                UpdateFavoriteChannels();
+                UpdateHistoryChannels();
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogDebug(ex, "Failed to publish personal-state UI update for profile {ProfileId}.", profileId);
+        }
+
+        try
+        {
+            await _dispatcherService.InvokeAsync(new Func<Task>(async () =>
+            {
+                if (CurrentProfileId != profileId)
+                {
+                    return;
+                }
+
+                await RefreshPersonalListsFromDatabaseAsync();
+                if (refreshFavoriteContent)
+                {
+                    RefreshVisibleContentAfterFavoriteChange();
+                }
+            }));
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogDebug(ex, "Failed to refresh personal-state UI for profile {ProfileId}.", profileId);
+        }
+    }
+
+    private void RollbackPersonalState(PersonalStateSnapshot snapshot)
+    {
+        _dispatcherService.Invoke(() =>
+        {
+            if (CurrentProfileId != snapshot.ProfileId)
+            {
+                return;
+            }
+
+            if (snapshot.MediaKind == PersonalMediaKind.Channel && snapshot.Media is Channel channel)
+            {
+                if (channel.IsFavorite == snapshot.DesiredFavorite)
+                {
+                    channel.IsFavorite = snapshot.PreviousFavorite;
+                }
+
+                if (channel.IsInMyList == snapshot.DesiredMyList)
+                {
+                    channel.IsInMyList = snapshot.PreviousMyList;
+                }
+            }
+            else if (snapshot.Media is Series series)
+            {
+                if (series.IsFavorite == snapshot.DesiredFavorite)
+                {
+                    series.IsFavorite = snapshot.PreviousFavorite;
+                }
+
+                if (series.IsInMyList == snapshot.DesiredMyList)
+                {
+                    series.IsInMyList = snapshot.PreviousMyList;
+                }
+            }
+        });
+    }
+
+    private PersonalStateSnapshot CreatePersonalStateSnapshot(
+        Channel channel,
+        int profileId,
+        bool previousFavorite,
+        bool desiredFavorite,
+        bool previousMyList,
+        bool desiredMyList)
+    {
+        return new PersonalStateSnapshot(
+            channel,
+            PersonalMediaKind.Channel,
+            profileId,
+            channel.Id,
+            channel.Name,
+            channel.StreamUrl,
+            channel.PlaylistId,
+            CurrentProfileId == profileId ? SelectedPlaylist?.Id ?? 0 : 0,
+            channel.LastWatched,
+            previousFavorite,
+            desiredFavorite,
+            previousMyList,
+            desiredMyList);
+    }
+
+    private PersonalStateSnapshot CreatePersonalStateSnapshot(
+        Series series,
+        int profileId,
+        bool previousFavorite,
+        bool desiredFavorite,
+        bool previousMyList,
+        bool desiredMyList)
+    {
+        return new PersonalStateSnapshot(
+            series,
+            PersonalMediaKind.Series,
+            profileId,
+            series.Id,
+            series.Name,
+            string.Empty,
+            series.PlaylistId,
+            CurrentProfileId == profileId ? SelectedPlaylist?.Id ?? 0 : 0,
+            null,
+            previousFavorite,
+            desiredFavorite,
+            previousMyList,
+            desiredMyList);
+    }
+
+    private static bool TryGetPersonalStateKey(
+        int profileId,
+        object? media,
+        out PersonalStateKey key)
+    {
+        switch (media)
+        {
+            case Channel channel:
+                key = new PersonalStateKey(
+                    profileId,
+                    PersonalMediaKind.Channel,
+                    channel.Id,
+                    channel.Id > 0 ? 0 : channel.PlaylistId,
+                    channel.Id > 0 ? string.Empty : $"{channel.StreamUrl}\u001f{channel.Name}");
+                return true;
+            case Series series:
+                key = new PersonalStateKey(
+                    profileId,
+                    PersonalMediaKind.Series,
+                    series.Id,
+                    series.Id > 0 ? 0 : series.PlaylistId,
+                    series.Id > 0 ? string.Empty : series.Name);
+                return true;
+            default:
+                key = default;
+                return false;
+        }
+    }
+
+    private readonly record struct PersonalStateKey(
+        int ProfileId,
+        PersonalMediaKind MediaKind,
+        int Id,
+        int PlaylistId,
+        string Identity);
+
+    private sealed record PersonalStateSnapshot(
+        object Media,
+        PersonalMediaKind MediaKind,
+        int ProfileId,
+        int Id,
+        string Name,
+        string StreamUrl,
+        int PlaylistId,
+        int SelectedPlaylistId,
+        DateTime? LastWatched,
+        bool PreviousFavorite,
+        bool DesiredFavorite,
+        bool PreviousMyList,
+        bool DesiredMyList);
+
+    private enum PersonalMediaKind
+    {
+        Channel,
+        Series
     }
 
     [RelayCommand]
@@ -8044,8 +8315,8 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private async Task AddToMyList(object media)
     {
-        var toggleSw = System.Diagnostics.Stopwatch.StartNew();
-        if (!CurrentProfileId.HasValue)
+        var profileId = CurrentProfileId;
+        if (!profileId.HasValue)
         {
             StatusMessage = _localizationService.GetString("Main.Status.SelectProfileFirst");
             return;
@@ -8057,111 +8328,194 @@ public partial class MainViewModel : ObservableObject
             return;
         }
 
-        // Optimistic flip: reflect the new state immediately so the UI does not
-        // wait for the DB round-trips below (context creation + full series load).
-        // The flip runs synchronously on the UI thread; persistence and list
-        // refresh run on a background thread so the frame renders right away.
-        if (media is Channel channel0)
-        {
-            channel0.IsInMyList = !channel0.IsInMyList;
-        }
-        else if (media is Series series0)
-        {
-            series0.IsInMyList = !series0.IsInMyList;
-        }
-        else
+        if (!TryGetPersonalStateKey(profileId.Value, media, out var stateKey))
         {
             return;
         }
-        System.Diagnostics.Debug.WriteLine($"[PVM] AddToMyList tick={Environment.TickCount} entryMs={toggleSw.ElapsedMilliseconds}");
 
-        await Task.Run(() => PersistAddToMyListAsync(media));
-        System.Diagnostics.Debug.WriteLine($"[PVM] AddToMyList doneMs={toggleSw.ElapsedMilliseconds}");
+        var gate = _personalStateGates.GetOrAdd(stateKey, _ => new SemaphoreSlim(1, 1));
+        await gate.WaitAsync();
+        try
+        {
+            if (CurrentProfileId != profileId)
+            {
+                return;
+            }
+
+            PersonalStateSnapshot snapshot;
+            if (media is Channel channel)
+            {
+                var previousMyList = channel.IsInMyList;
+                snapshot = CreatePersonalStateSnapshot(
+                    channel,
+                    profileId.Value,
+                    channel.IsFavorite,
+                    channel.IsFavorite,
+                    previousMyList,
+                    !previousMyList);
+                channel.IsInMyList = snapshot.DesiredMyList;
+            }
+            else if (media is Series series)
+            {
+                var previousMyList = series.IsInMyList;
+                snapshot = CreatePersonalStateSnapshot(
+                    series,
+                    profileId.Value,
+                    series.IsFavorite,
+                    series.IsFavorite,
+                    previousMyList,
+                    !previousMyList);
+                series.IsInMyList = snapshot.DesiredMyList;
+            }
+            else
+            {
+                return;
+            }
+
+            try
+            {
+                var persisted = await Task.Run(() => PersistAddToMyListSnapshotAsync(snapshot));
+                if (!persisted)
+                {
+                    RollbackPersonalState(snapshot);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Failed to persist My List state for profile {ProfileId}.", profileId.Value);
+                RollbackPersonalState(snapshot);
+            }
+        }
+        finally
+        {
+            gate.Release();
+        }
     }
 
-    private async Task PersistAddToMyListAsync(object media)
+    private async Task<bool> PersistAddToMyListSnapshotAsync(PersonalStateSnapshot snapshot)
     {
-        string? statusMessageKey = null;
-
+        string statusMessageKey;
         using var db = await _contextFactory.CreateDbContextAsync();
 
-        if (media is Channel channel)
+        if (snapshot.MediaKind == PersonalMediaKind.Channel)
         {
+            var channel = new Channel
+            {
+                Id = snapshot.Id,
+                Name = snapshot.Name,
+                StreamUrl = snapshot.StreamUrl,
+                PlaylistId = snapshot.PlaylistId > 0 ? snapshot.PlaylistId : snapshot.SelectedPlaylistId,
+                IsFavorite = snapshot.DesiredFavorite,
+                IsInMyList = snapshot.DesiredMyList,
+                LastWatched = snapshot.LastWatched
+            };
+
             if (channel.PlaylistId <= 0)
             {
-                channel.PlaylistId = SelectedPlaylist?.Id
-                    ?? await db.Playlists
-                        .AsNoTracking()
-                        .Where(p => p.ProfileId == CurrentProfileId.Value && p.IsActive)
-                        .Select(p => p.Id)
-                        .FirstOrDefaultAsync();
+                channel.PlaylistId = await FindProfilePlaylistIdAsync(db, snapshot.ProfileId);
             }
 
             await _channelService.UpdateChannelAsync(channel);
-            statusMessageKey = channel.IsInMyList
+            statusMessageKey = snapshot.DesiredMyList
                 ? "Main.Status.ListAdded"
                 : "Main.Status.RemovedFromList";
         }
-        else if (media is Series series)
+        else
         {
+            var series = new Series
+            {
+                Id = snapshot.Id,
+                Name = snapshot.Name,
+                PlaylistId = snapshot.PlaylistId > 0 ? snapshot.PlaylistId : snapshot.SelectedPlaylistId,
+                IsFavorite = snapshot.DesiredFavorite,
+                IsInMyList = snapshot.DesiredMyList
+            };
+
+            if (series.PlaylistId <= 0)
+            {
+                series.PlaylistId = await FindProfilePlaylistIdAsync(db, snapshot.ProfileId);
+            }
+
             await _mediaService.UpdateSeriesAsync(series);
             var seriesFromDb = await db.Series
                 .Include(s => s.Seasons)
                 .ThenInclude(sn => sn.Episodes)
-                .FirstOrDefaultAsync(s => s.Id == series.Id);
+                .FirstOrDefaultAsync(s =>
+                    (snapshot.Id > 0 && s.Id == snapshot.Id) ||
+                    (series.PlaylistId > 0 && s.PlaylistId == series.PlaylistId && s.Name == snapshot.Name));
 
-            if (seriesFromDb != null)
+            if (seriesFromDb == null)
             {
-                var episodeUrls = seriesFromDb.Seasons
-                    .SelectMany(sn => sn.Episodes)
-                    .Select(ep => ep.StreamUrl)
-                    .Where(url => !string.IsNullOrWhiteSpace(url))
-                    .Distinct()
-                    .ToList();
+                return false;
+            }
 
-                if (episodeUrls.Count > 0)
+            seriesFromDb.IsInMyList = snapshot.DesiredMyList;
+            var episodeUrls = seriesFromDb.Seasons
+                .SelectMany(sn => sn.Episodes)
+                .Select(ep => ep.StreamUrl)
+                .Where(url => !string.IsNullOrWhiteSpace(url))
+                .Distinct()
+                .ToList();
+
+            if (episodeUrls.Count > 0)
+            {
+                var relatedChannels = await db.Channels
+                    .Where(c => episodeUrls.Contains(c.StreamUrl))
+                    .ToListAsync();
+
+                foreach (var relatedChannel in relatedChannels)
                 {
-                    var relatedChannels = await db.Channels
-                        .Where(c => episodeUrls.Contains(c.StreamUrl))
-                        .ToListAsync();
-
-                    foreach (var relatedChannel in relatedChannels)
-                    {
-                        relatedChannel.IsInMyList = series.IsInMyList;
-                    }
-
-                    await db.SaveChangesAsync();
+                    relatedChannel.IsInMyList = snapshot.DesiredMyList;
                 }
             }
 
-            statusMessageKey = series.IsInMyList
+            await db.SaveChangesAsync();
+            statusMessageKey = snapshot.DesiredMyList
                 ? "Main.Status.ListAdded"
                 : "Main.Status.RemovedFromList";
         }
-        else
+
+        await PublishPersonalStateAsync(snapshot.ProfileId, statusMessageKey, refreshFavoriteContent: false);
+        return true;
+    }
+
+    // Compatibility wrapper for the pre-snapshot helper signature.
+    private async Task PersistAddToMyListAsync(object media)
+    {
+        var profileId = CurrentProfileId;
+        if (!profileId.HasValue)
         {
             return;
         }
 
-        _dispatcherService.Invoke(() =>
+        if (media is not Channel && media is not Series)
         {
-            if (statusMessageKey != null)
-            {
-                StatusMessage = _localizationService.GetString(statusMessageKey);
-            }
-            UpdateMyList();
-            UpdateFavoriteChannels();
-            UpdateHistoryChannels();
-        });
+            return;
+        }
 
-        await _dispatcherService.InvokeAsync(new Func<Task>(async () =>
+        PersonalStateSnapshot snapshot = media switch
         {
-            await RefreshPersonalListsFromDatabaseAsync();
-        }));
+            Channel channel => CreatePersonalStateSnapshot(
+                channel,
+                profileId.Value,
+                channel.IsFavorite,
+                channel.IsFavorite,
+                !channel.IsInMyList,
+                channel.IsInMyList),
+            Series series => CreatePersonalStateSnapshot(
+                series,
+                profileId.Value,
+                series.IsFavorite,
+                series.IsFavorite,
+                !series.IsInMyList,
+                series.IsInMyList),
+            _ => throw new ArgumentException("Unsupported media type.", nameof(media))
+        };
 
-        // IsInMyList is observable and does not participate in the Live/Movie/Series
-        // content query. Do not rebuild FilteredChannels: doing so replaces the
-        // virtualized grid source and makes the page appear to restart.
+        if (!await PersistAddToMyListSnapshotAsync(snapshot))
+        {
+            RollbackPersonalState(snapshot);
+        }
     }
 
     [RelayCommand]
