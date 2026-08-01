@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:loc="using:Noctra.Mobile.Localization"
+             xmlns:controls="using:Noctra.Mobile.Controls"
              xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="Noctra.Mobile.Views.MobileCategorySelectionView"
              x:Name="CategorySelectionRoot"
@@ -198,7 +199,7 @@
         <!-- Undo snackbar: BackExitToast ile aynı tasarım -->
         <Border x:Name="UndoSnackbar"
                 Grid.RowSpan="2"
-                ZIndex="49000"
+                ZIndex="{x:Static controls:MobileZIndex.ShellCategoryUndoToast}"
                 HorizontalAlignment="Center"
                 VerticalAlignment="Bottom"
                 Margin="20,0,20,96"
@@ -233,7 +234,7 @@
         <!-- Error snackbar: Hata durumunda kısa süreli gösterilir -->
         <Border x:Name="ErrorSnackbar"
                 Grid.RowSpan="2"
-                ZIndex="49001"
+                ZIndex="{x:Static controls:MobileZIndex.ShellCategoryErrorToast}"
                 HorizontalAlignment="Center"
                 VerticalAlignment="Bottom"
                 Margin="20,0,20,96"

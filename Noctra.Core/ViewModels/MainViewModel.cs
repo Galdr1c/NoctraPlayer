@@ -268,6 +268,15 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private string _statusMessage = "";
 
+    // Download feedback is kept separate from the general profile status so
+    // mobile detail views can mirror the player snackbar without reacting to
+    // unrelated background/profile messages.
+    [ObservableProperty]
+    private bool _isDownloadInProgress;
+
+    [ObservableProperty]
+    private string _downloadStatusMessage = string.Empty;
+
     [ObservableProperty]
     private bool _isChannelLoading;
 
@@ -8855,10 +8864,16 @@ public partial class MainViewModel : ObservableObject
 
         if (string.IsNullOrWhiteSpace(episode.StreamUrl))
         {
-            StatusMessage = string.Format(CultureInfo.CurrentCulture,
+            var message = string.Format(CultureInfo.CurrentCulture,
                 _localizationService.GetString("Download.Error.SourceNotFoundFormat"), episode.Name);
+            DownloadStatusMessage = message;
+            StatusMessage = message;
             return;
         }
+
+        DownloadStatusMessage = _localizationService.GetString("Download.Status.Starting");
+        StatusMessage = DownloadStatusMessage;
+        IsDownloadInProgress = true;
 
         try
         {
@@ -8873,6 +8888,10 @@ public partial class MainViewModel : ObservableObject
                 episode.Id);
 
             var result = await _contentDownloadService.QueueDownloadAsync(request);
+            // Keep the mobile detail feedback identical to the player sheet:
+            // the service owns the exact queued/already-downloaded/already-in-
+            // queue message, so do not replace it with a generic success text.
+            DownloadStatusMessage = result.Message;
             StatusMessage = result.Success
                 ? string.Format(CultureInfo.CurrentCulture,
                     _localizationService.GetString("Download.Status.AddedFormat"), episode.Name)
@@ -8885,8 +8904,14 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger?.LogWarning(ex, "Episode download failed: {Name}", episode.Name);
-            StatusMessage = string.Format(CultureInfo.CurrentCulture,
+            var message = string.Format(CultureInfo.CurrentCulture,
                 _localizationService.GetString("Download.Status.ExceptionFormat"), ex.Message);
+            DownloadStatusMessage = message;
+            StatusMessage = message;
+        }
+        finally
+        {
+            IsDownloadInProgress = false;
         }
     }
 
@@ -8905,55 +8930,68 @@ public partial class MainViewModel : ObservableObject
         int skipped = 0;
         int failed = 0;
 
-        StatusMessage = string.Format(CultureInfo.CurrentCulture,
+        DownloadStatusMessage = string.Format(CultureInfo.CurrentCulture,
             _localizationService.GetString("Download.Season.StartingFormat"),
             SelectedSeason.SeasonNumber,
             episodes.Count);
+        StatusMessage = DownloadStatusMessage;
+        IsDownloadInProgress = true;
 
-        foreach (var episode in episodes)
+        try
         {
-            if (string.IsNullOrWhiteSpace(episode.StreamUrl))
+            foreach (var episode in episodes)
             {
-                failed++;
-                continue;
+                if (string.IsNullOrWhiteSpace(episode.StreamUrl))
+                {
+                    failed++;
+                    continue;
+                }
+
+                try
+                {
+                    var request = new DownloadContentRequest(
+                        CurrentProfileId.Value,
+                        DownloadItemType.SeriesEpisode,
+                        episode.Name,
+                        episode.StreamUrl,
+                        SelectedSeries?.CoverUrl,
+                        SelectedPlaylist?.Id ?? 0,
+                        0,
+                        episode.Id);
+
+                    var result = await _contentDownloadService.QueueDownloadAsync(request);
+                    if (result.Success) queued++;
+                    else if (result.AlreadyExists) skipped++;
+                    else failed++;
+                }
+                catch (Exception ex)
+                {
+                    failed++;
+                    _logger?.LogWarning(ex, "Season download failed for episode: {Name}", episode.Name);
+                }
             }
 
-            try
-            {
-                var request = new DownloadContentRequest(
-                    CurrentProfileId.Value,
-                    DownloadItemType.SeriesEpisode,
-                    episode.Name,
-                    episode.StreamUrl,
-                    SelectedSeries?.CoverUrl,
-                    SelectedPlaylist?.Id ?? 0,
-                    0,
-                    episode.Id);
-
-                var result = await _contentDownloadService.QueueDownloadAsync(request);
-                if (result.Success) queued++;
-                else if (result.AlreadyExists) skipped++;
-            }
-            catch (Exception ex)
-            {
-                _logger?.LogWarning(ex, "Season download failed for episode: {Name}", episode.Name);
-            }
+            var parts = new List<string>();
+            if (queued > 0)
+                parts.Add(string.Format(CultureInfo.CurrentCulture,
+                    _localizationService.GetString("Download.Season.Result.QueuedFormat"), queued));
+            if (failed > 0)
+                parts.Add(string.Format(CultureInfo.CurrentCulture,
+                    _localizationService.GetString("Download.Season.Result.FailedFormat"), failed));
+            if (skipped > 0)
+                parts.Add(string.Format(CultureInfo.CurrentCulture,
+                    _localizationService.GetString("Download.Season.Result.SkippedFormat"), skipped));
+            var message = string.Format(CultureInfo.CurrentCulture,
+                _localizationService.GetString("Download.Season.ResultFormat"),
+                SelectedSeason.SeasonNumber,
+                string.Join(", ", parts));
+            DownloadStatusMessage = message;
+            StatusMessage = message;
         }
-
-        var parts = new List<string>();
-        if (queued > 0)
-            parts.Add(string.Format(CultureInfo.CurrentCulture,
-                _localizationService.GetString("Download.Season.Result.QueuedFormat"), queued));
-        if (failed > 0)
-            parts.Add(string.Format(CultureInfo.CurrentCulture,
-                _localizationService.GetString("Download.Season.Result.FailedFormat"), failed));
-        if (skipped > 0)
-            parts.Add(string.Format(CultureInfo.CurrentCulture,
-                _localizationService.GetString("Download.Season.Result.SkippedFormat"), skipped));
-        StatusMessage = string.Format(CultureInfo.CurrentCulture,
-            _localizationService.GetString("Download.Season.ResultFormat"),
-            SelectedSeason.SeasonNumber,
-            string.Join(", ", parts));
+        finally
+        {
+            IsDownloadInProgress = false;
+        }
     }
 
     private async Task PlayEpisodeSafeAsync(Episode? episode)

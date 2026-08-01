@@ -33,6 +33,33 @@ public sealed class MobileRecentRegressionTests
     }
 
     [Fact]
+    public void MobileSeriesDetail_DownloadActionsExposeStatusToast()
+    {
+        var view = File.ReadAllText(ProjectFile("Noctra.Mobile", "Views", "MobileSeriesDetailView.axaml"));
+        var codeBehind = File.ReadAllText(ProjectFile("Noctra.Mobile", "Views", "MobileSeriesDetailView.axaml.cs"));
+        var mainViewModel = File.ReadAllText(ProjectFile("Noctra.Core", "ViewModels", "MainViewModel.cs"));
+        var zIndex = File.ReadAllText(ProjectFile("Noctra.Mobile", "Controls", "MobileZIndex.cs"));
+
+        Assert.Contains("Command=\"{Binding DownloadSelectedSeasonCommand}\"", view, StringComparison.Ordinal);
+        Assert.Contains("DownloadEpisodeCommand", view, StringComparison.Ordinal);
+        Assert.Contains("IsStatusToastVisible", view, StringComparison.Ordinal);
+        Assert.Contains("protected override void OnDataContextChanged(EventArgs e)", codeBehind, StringComparison.Ordinal);
+        Assert.DoesNotContain("DataContextChanged += OnDataContextChanged", codeBehind, StringComparison.Ordinal);
+        Assert.Contains("nameof(MainViewModel.DownloadStatusMessage)", codeBehind, StringComparison.Ordinal);
+        Assert.Contains("nameof(MainViewModel.IsDownloadInProgress)", codeBehind, StringComparison.Ordinal);
+        Assert.Contains("DownloadStatusMessage", mainViewModel, StringComparison.Ordinal);
+        Assert.Contains("DownloadStatusMessage = result.Message", mainViewModel, StringComparison.Ordinal);
+        Assert.Contains("PlayerSheet = 100", zIndex, StringComparison.Ordinal);
+        Assert.Contains("PlayerDownloadToast = 110", zIndex, StringComparison.Ordinal);
+
+        var rootTagEnd = view.IndexOf('>');
+        Assert.True(rootTagEnd > 0, "Series detail root element could not be located.");
+        var rootTag = view[..(rootTagEnd + 1)];
+        Assert.Contains("x:Name=\"SeriesDetailRoot\"", rootTag, StringComparison.Ordinal);
+        Assert.DoesNotContain("<Grid x:Name=\"SeriesDetailRoot\"", view, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void MobileCategorySelection_VirtualizesRowsAndRefreshesInOneBatch()
     {
         var view = File.ReadAllText(ProjectFile("Noctra.Mobile", "Views", "MobileCategorySelectionView.axaml"));
@@ -468,7 +495,7 @@ public sealed class MobileRecentRegressionTests
             1,
             xaml.Split("<views:MobileCardActionsSheet ", StringSplitOptions.None).Length - 1);
         Assert.Contains("x:Name=\"CardActionsSheet\"", xaml, StringComparison.Ordinal);
-        Assert.Contains("ZIndex=\"47500\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("MobileZIndex.ShellCardActions", xaml, StringComparison.Ordinal);
         Assert.True(
             codeBehind.IndexOf("if (CardActionsSheet.TryClose())", StringComparison.Ordinal) <
             codeBehind.IndexOf("if (CategorySelectionOverlay.TryClose())", StringComparison.Ordinal));

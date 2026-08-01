@@ -96,7 +96,7 @@
                   Description="{loc:Translate Live.Empty.Description}" />
     </Grid>
     <views:MobileSelectionSheet x:Name="SelectionSheetHost"
-                                ZIndex="1000"
+                                ZIndex="{x:Static controls:MobileZIndex.SelectionSheet}"
                                 IsVisible="False" />
   </Grid>
 </UserControl>

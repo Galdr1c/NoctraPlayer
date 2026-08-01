@@ -5,6 +5,7 @@ using Avalonia.Data;
 using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Threading;
+using Noctra.Mobile.Controls;
 using Noctra.Mobile.Localization;
 using Noctra.Models;
 using Noctra.ViewModels;
@@ -99,7 +100,7 @@ public partial class MobilePlayerEpgPanel : UserControl
             Width = 1.5,
             Height = 36,
             Background = nowBrush,
-            ZIndex = 10
+            ZIndex = MobileZIndex.EpgNowLine
         };
         Canvas.SetLeft(nowLine, PlayerViewModel.EpgNowPixelPos);
         canvas.Children.Add(nowLine);
@@ -123,7 +124,7 @@ public partial class MobilePlayerEpgPanel : UserControl
             Height = 17,
             CornerRadius = new CornerRadius(4),
             Background = accentBrush,
-            ZIndex = 11,
+            ZIndex = MobileZIndex.EpgNowBadge,
             Child = nowLabel
         };
         Canvas.SetLeft(nowBadge, PlayerViewModel.EpgNowPixelPos - 13);

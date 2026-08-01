@@ -115,7 +115,9 @@
           <Grid Grid.Row="1" ColumnDefinitions="112,*" ClipToBounds="True"
                 Background="{DynamicResource Bg0Brush}">
             <!-- Left: fixed channel header and channel list. -->
-            <Grid RowDefinitions="36,*" Background="#0D0D0D" ZIndex="20" ClipToBounds="True">
+            <Grid RowDefinitions="36,*" Background="#0D0D0D"
+                  ZIndex="{x:Static controls:MobileZIndex.EpgChannelOverlay}"
+                  ClipToBounds="True">
               <Border Grid.Row="0" Background="#131313"
                       BorderBrush="#1AFFFFFF" BorderThickness="0,0,1,1">
                 <TextBlock Text="{loc:Translate Player.Epg.ChannelHeader}"
@@ -249,13 +251,14 @@
                           <Border Width="1.5" HorizontalAlignment="Left" VerticalAlignment="Stretch"
                                   Background="#CC7B2FBE"
                                   Margin="{Binding NowLineLeft, Converter={StaticResource DoubleToLeftMarginConverter}}"
-                                  IsHitTestVisible="False" ZIndex="10" />
+                                  IsHitTestVisible="False"
+                                  ZIndex="{x:Static controls:MobileZIndex.EpgNowLine}" />
 
                           <Border PointerReleased="EpgRow_PointerReleased"
                                   Background="Transparent"
                                   HorizontalAlignment="Stretch"
                                   VerticalAlignment="Stretch"
-                                  ZIndex="20"
+                                  ZIndex="{x:Static controls:MobileZIndex.EpgChannelOverlay}"
                                   IsVisible="{Binding IsCurrentChannel, Converter={StaticResource InverseBoolConverter}}" />
                         </Grid>
                       </DataTemplate>

@@ -7,6 +7,7 @@ using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using Noctra.Mobile.Controls;
 
 namespace Noctra.Mobile.Behaviors;
 
@@ -90,7 +91,7 @@ internal sealed class MobileScrollEdgeFeedbackController
             ClipToBounds = true,
             HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch,
             VerticalAlignment = Avalonia.Layout.VerticalAlignment.Stretch,
-            ZIndex = 60000
+            ZIndex = MobileZIndex.ShellEdgeFeedback
         };
         _feedbackLayer.Children.Add(_topFeedback);
         _feedbackLayer.Children.Add(_bottomFeedback);

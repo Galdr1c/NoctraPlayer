@@ -63,7 +63,7 @@
               <TextBlock Text="{loc:Translate Downloads.Storage.Title}"
                          Foreground="{DynamicResource TextPrimaryBrush}"
                          FontWeight="SemiBold"
-                         FontSize="{DynamicResource FHeadline}" />
+                         FontSize="{DynamicResource FTitleL}" />
               <TextBlock Grid.Column="1"
                          Text="{Binding StorageUsageDetailText}"
                          Foreground="{DynamicResource TextMutedBrush}"
@@ -361,36 +361,6 @@
 
           <StackPanel Spacing="14"
                       Margin="0,14,0,0">
-            <Border Background="{DynamicResource Surface0Brush}"
-                    CornerRadius="8"
-                    Padding="16">
-              <Grid ColumnDefinitions="Auto,*,Auto"
-                    RowDefinitions="Auto,Auto"
-                    ColumnSpacing="10"
-                    RowSpacing="4">
-                <icons:MaterialIcon Grid.RowSpan="2"
-                                    Kind="Speedometer"
-                                    Foreground="{DynamicResource AccentBrush}"
-                                    Width="28"
-                                    Height="28"
-                                    VerticalAlignment="Center" />
-                <TextBlock Grid.Column="1"
-                           Text="{loc:Translate Downloads.Stats.Speed.Label}"
-                           Foreground="{DynamicResource TextPrimaryBrush}"
-                           FontWeight="SemiBold" />
-                <TextBlock Grid.Column="2"
-                           Text="{Binding ActiveDownloadCount, Converter={StaticResource StringFormatConverter}, ConverterParameter='Downloads.Stats.Active.Format'}"
-                           Foreground="{DynamicResource TextMutedBrush}"
-                           FontSize="{DynamicResource FCaption}" />
-                <TextBlock Grid.Row="1"
-                           Grid.Column="1"
-                           Grid.ColumnSpan="2"
-                           Text="{Binding ActiveDownloadsTotalSpeedText}"
-                           Foreground="{DynamicResource TextMutedBrush}"
-                           FontSize="{DynamicResource FCaption}" />
-              </Grid>
-            </Border>
-
             <!-- Ongoing Section -->
             <Grid ColumnDefinitions="*,Auto"
                   ColumnSpacing="10">
@@ -453,7 +423,7 @@
                           <TextBlock Text="{Binding StatusText}"
                                      Foreground="{DynamicResource TextMutedBrush}"
                                      FontSize="{DynamicResource FCaption}"
-                                     TextTrimming="CharacterEllipsis" />
+                                     TextWrapping="Wrap" />
                         </StackPanel>
                         <TextBlock Grid.Column="2"
                                    Text="{Binding ProgressText}"
@@ -611,7 +581,7 @@
     </StackPanel>
   </ScrollViewer>
   <views:MobileSelectionSheet x:Name="SelectionSheetHost"
-                              ZIndex="1000"
+                              ZIndex="{x:Static controls:MobileZIndex.SelectionSheet}"
                               IsVisible="False" />
   </Grid>
 </UserControl>

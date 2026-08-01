@@ -78,7 +78,8 @@
             BorderThickness="0.5"
             CornerRadius="8"
             Padding="20,18"
-            IsVisible="{Binding IsSearching}" ZIndex="49000">
+             IsVisible="{Binding IsSearching}"
+             ZIndex="{x:Static controls:MobileZIndex.ShellSearchProgress}">
       <StackPanel HorizontalAlignment="Center" Spacing="14">
         <controls:PremiumSpinner Width="54" Height="54"
                                  HorizontalAlignment="Center" />

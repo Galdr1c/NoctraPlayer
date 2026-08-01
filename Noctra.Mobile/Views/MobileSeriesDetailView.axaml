@@ -9,6 +9,7 @@
              xmlns:loc="using:Noctra.Mobile.Localization"
              xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="Noctra.Mobile.Views.MobileSeriesDetailView"
+             x:Name="SeriesDetailRoot"
              x:DataType="vm:MainViewModel"
              x:CompileBindings="False"
              IsVisible="{Binding IsSeriesDetailVisible}"
@@ -30,10 +31,6 @@
       </Setter>
     </Style>
     <Style Selector="Button.detailAction:pressed /template/ ContentPresenter">
-      <!-- FluentTheme supplies a dark pressed surface by default. Keep personal
-           action buttons transparent so the short press feedback never looks
-           like a long-running disabled state. -->
-      <Setter Property="Background" Value="Transparent" />
       <Setter Property="Opacity" Value="0.60" />
       <Setter Property="RenderTransform" Value="scale(0.97)"/>
     </Style>
@@ -580,6 +577,35 @@
           </StackPanel>
         </StackPanel>
       </ScrollViewer>
+
+      <!-- Download/status feedback belongs to the detail view, not the player.
+           Keep it above the scroll content without intercepting touch input. -->
+      <Border x:Name="StatusToast"
+              ZIndex="{x:Static controls:MobileZIndex.PageStatusToast}"
+              HorizontalAlignment="Center"
+              VerticalAlignment="Bottom"
+              Margin="24,0,24,32"
+              Padding="16,11"
+              MaxWidth="620"
+              CornerRadius="8"
+              Background="{DynamicResource PlayerOverlayStrongBrush}"
+              IsHitTestVisible="False"
+              IsVisible="{Binding #SeriesDetailRoot.IsStatusToastVisible}">
+        <StackPanel Orientation="Horizontal" Spacing="9">
+          <icons:MaterialIcon Kind="DownloadOutline"
+                              Width="20"
+                              Height="20"
+                              Foreground="{DynamicResource AccentBrush}"
+                              VerticalAlignment="Center" />
+          <TextBlock Text="{Binding #SeriesDetailRoot.StatusToastText}"
+                     Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                     FontSize="{DynamicResource FBody}"
+                     FontWeight="SemiBold"
+                     TextWrapping="Wrap"
+                     MaxWidth="540"
+                     VerticalAlignment="Center" />
+        </StackPanel>
+      </Border>
     </Grid>
   </Border>
 </UserControl>
