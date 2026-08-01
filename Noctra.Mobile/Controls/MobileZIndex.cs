@@ -50,6 +50,8 @@ public static class MobileZIndex
     public const int ShellReviewPrompt = 52_000;
     public const int ShellProfiles = 55_000;
 
-    // Above normal shell content, below sheets, player, toasts, and modal overlays.
+    // Root-level decorative feedback sits above normal page content and
+    // below shell-owned sheets, player, toasts, and modal overlays. Page-local
+    // overlays remain responsible for their own stacking inside a page.
     public const int ShellEdgeFeedback = 46_000;
 }

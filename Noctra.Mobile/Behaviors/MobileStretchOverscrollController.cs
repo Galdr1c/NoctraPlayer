@@ -582,7 +582,14 @@ internal sealed class MobileStretchOverscrollController : IDisposable
             IsVisible = false,
             IsHitTestVisible = false,
             Opacity = 0,
-            Background = CreateGlowBrush(isTop)
+            Background = CreateGlowBrush(isTop),
+            // Keep the geometry stable during the gesture. The spring only
+            // changes ScaleY, so glow feedback does not invalidate layout on
+            // every pointer/animation frame.
+            RenderTransform = new ScaleTransform(1, 0),
+            RenderTransformOrigin = isTop
+                ? new RelativePoint(0.5, 0, RelativeUnit.Relative)
+                : new RelativePoint(0.5, 1, RelativeUnit.Relative)
         };
 
     private LinearGradientBrush CreateGlowBrush(bool isTop)
@@ -682,10 +689,13 @@ internal sealed class MobileStretchOverscrollController : IDisposable
         var depth = Math.Min(
             MobileOverscrollPhysics.GetGlowDepth(translation, viewportHeight),
             bottom - top);
+        var baseDepth = Math.Min(
+            MobileOverscrollPhysics.MaxGlowDepth,
+            bottom - top);
         var opacity = MobileOverscrollPhysics.GetGlowOpacity(
             translation,
             viewportHeight);
-        if (depth <= 0 || opacity <= 0)
+        if (depth <= 0 || baseDepth <= 0 || opacity <= 0)
         {
             HideGlow();
             return;
@@ -698,20 +708,61 @@ internal sealed class MobileStretchOverscrollController : IDisposable
             ? _bottomGlow
             : _topGlow;
 
-        activeGlow.Width = right - left;
-        activeGlow.Height = depth;
+        SetGlowGeometry(
+            activeGlow,
+            left,
+            _session.Edge == OverscrollEdge.Top
+                ? top
+                : bottom - baseDepth,
+            right - left,
+            baseDepth);
+
+        if (activeGlow.RenderTransform is not ScaleTransform glowScale)
+        {
+            glowScale = new ScaleTransform(1, 0);
+            activeGlow.RenderTransform = glowScale;
+        }
+
+        glowScale.ScaleY = Math.Clamp(depth / baseDepth, 0, 1);
         activeGlow.Opacity = opacity;
         activeGlow.IsVisible = true;
         HideGlow(inactiveGlow);
-
-        Canvas.SetLeft(activeGlow, left);
-        Canvas.SetTop(
-            activeGlow,
-            _session.Edge == OverscrollEdge.Top
-                ? top
-                : bottom - depth);
         _feedbackLayer.IsVisible = true;
     }
+
+    private static void SetGlowGeometry(
+        Border glow,
+        double left,
+        double top,
+        double width,
+        double height)
+    {
+        // Width, height and Canvas coordinates are layout properties. They
+        // are only assigned when the active viewer geometry actually changes
+        // (orientation, navigation or a resize), never for pull distance.
+        if (!AreClose(glow.Width, width))
+        {
+            glow.Width = width;
+        }
+
+        if (!AreClose(glow.Height, height))
+        {
+            glow.Height = height;
+        }
+
+        if (!AreClose(Canvas.GetLeft(glow), left))
+        {
+            Canvas.SetLeft(glow, left);
+        }
+
+        if (!AreClose(Canvas.GetTop(glow), top))
+        {
+            Canvas.SetTop(glow, top);
+        }
+    }
+
+    private static bool AreClose(double current, double next)
+        => double.IsNaN(current) || Math.Abs(current - next) > 0.1;
 
     private void HideGlow()
     {
@@ -728,6 +779,11 @@ internal sealed class MobileStretchOverscrollController : IDisposable
         if (glow is null)
         {
             return;
+        }
+
+        if (glow.RenderTransform is ScaleTransform glowScale)
+        {
+            glowScale.ScaleY = 0;
         }
 
         glow.Opacity = 0;

@@ -67,6 +67,20 @@ public sealed class MobileStretchOverscrollSourceTests
             StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void StretchController_AnimatesGlowDepthWithRenderTransform()
+    {
+        var source = ReadProjectFile(
+            "Noctra.Mobile", "Behaviors", "MobileStretchOverscrollController.cs");
+
+        Assert.Contains(
+            "RenderTransform = new ScaleTransform(1, 0)",
+            source,
+            StringComparison.Ordinal);
+        Assert.Contains("glowScale.ScaleY", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("activeGlow.Height = depth", source, StringComparison.Ordinal);
+    }
+
     private static string ReadProjectFile(params string[] parts)
     {
         var root = FindRepositoryRoot();

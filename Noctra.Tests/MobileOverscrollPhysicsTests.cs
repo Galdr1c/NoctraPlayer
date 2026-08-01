@@ -94,8 +94,14 @@ public sealed class MobileOverscrollPhysicsTests
 
         Assert.Equal(0, atRest, precision: 6);
         Assert.InRange(small, 0.001, medium);
-        Assert.InRange(medium, small, 0.12);
-        Assert.Equal(0.12, saturated, precision: 6);
+        Assert.InRange(
+            medium,
+            small,
+            MobileOverscrollPhysics.MaxGlowOpacity);
+        Assert.Equal(
+            MobileOverscrollPhysics.MaxGlowOpacity,
+            saturated,
+            precision: 6);
     }
 
     [Fact]
