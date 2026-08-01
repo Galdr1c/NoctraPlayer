@@ -1,5 +1,6 @@
-using System;
 using Avalonia.Controls;
+using Avalonia.Input;
+using Noctra.ViewModels;
 
 namespace Noctra.Mobile.Views;
 
@@ -8,8 +9,37 @@ public partial class MobileSeriesDetailView : UserControl
     public MobileSeriesDetailView()
     {
         InitializeComponent();
-        MyListToggleButton.Click += (_, _) => Console.WriteLine($"[UI] MyListButton click tick={Environment.TickCount}");
-        FavoriteToggleButton.Click += (_, _) => Console.WriteLine($"[UI] FavoriteButton click tick={Environment.TickCount}");
+    }
+
+    private void MyListToggleButton_Tapped(object? sender, TappedEventArgs e)
+    {
+        e.Handled = true;
+
+        if (DataContext is not MainViewModel viewModel ||
+            viewModel.SelectedSeries is not { } series ||
+            !viewModel.AddToMyListCommand.CanExecute(series))
+        {
+            return;
+        }
+
+        // AsyncRelayCommand remains the single-flight gate. The Button is
+        // intentionally event-driven so its visual state does not become a
+        // disabled/grey surface while the database write is in progress.
+        viewModel.AddToMyListCommand.Execute(series);
+    }
+
+    private void FavoriteToggleButton_Tapped(object? sender, TappedEventArgs e)
+    {
+        e.Handled = true;
+
+        if (DataContext is not MainViewModel viewModel ||
+            viewModel.SelectedSeries is not { } series ||
+            !viewModel.ToggleFavoriteCommand.CanExecute(series))
+        {
+            return;
+        }
+
+        viewModel.ToggleFavoriteCommand.Execute(series);
     }
 
     private static void ClearTransientSelection(object? sender, SelectionChangedEventArgs e)

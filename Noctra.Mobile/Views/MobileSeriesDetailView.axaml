@@ -30,6 +30,10 @@
       </Setter>
     </Style>
     <Style Selector="Button.detailAction:pressed /template/ ContentPresenter">
+      <!-- FluentTheme supplies a dark pressed surface by default. Keep personal
+           action buttons transparent so the short press feedback never looks
+           like a long-running disabled state. -->
+      <Setter Property="Background" Value="Transparent" />
       <Setter Property="Opacity" Value="0.60" />
       <Setter Property="RenderTransform" Value="scale(0.97)"/>
     </Style>
@@ -277,9 +281,8 @@
                       IsVisible="{Binding !IsDownloadedSeriesDetailMode}">
             <Button Classes="detailAction"
                     x:Name="MyListToggleButton"
-                    Command="{Binding AddToMyListCommand}"
                     Width="40" Height="40"
-                    CommandParameter="{Binding SelectedSeries}">
+                    Tapped="MyListToggleButton_Tapped">
               <Panel>
                 <icons:MaterialIcon Kind="Bookmark" Width="24" Height="24" Foreground="{DynamicResource AccentBrush}"
                                     IsVisible="{Binding SelectedSeries.IsInMyList}" />
@@ -289,9 +292,8 @@
             </Button>
             <Button Classes="detailAction"
                     x:Name="FavoriteToggleButton"
-                    Command="{Binding ToggleFavoriteCommand}"
                     Width="40" Height="40"
-                    CommandParameter="{Binding SelectedSeries}">
+                    Tapped="FavoriteToggleButton_Tapped">
               <Panel>
                 <icons:MaterialIcon Kind="Heart" Width="22" Height="22" Foreground="{DynamicResource ErrorBrush}"
                                     IsVisible="{Binding SelectedSeries.IsFavorite}" />

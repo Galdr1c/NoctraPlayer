@@ -47,6 +47,10 @@
       <Setter Property="Opacity" Value="1" />
       <Setter Property="RenderTransform" Value="scale(1.1)"/>
     </Style>
+    <Style Selector="Button.FavoriteBtn:pressed /template/ ContentPresenter">
+      <!-- Do not let FluentTheme paint a grey pressed surface over the heart. -->
+      <Setter Property="Background" Value="Transparent" />
+    </Style>
     <Style Selector="Button.FavoriteBtn.active">
       <Setter Property="Opacity" Value="1" />
     </Style>
