@@ -816,6 +816,9 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     }
 
     private CancellationTokenSource? _subtitleSaveCts;
+    private Task? _subtitleSaveTask;
+    private int _subtitleSaveInFlight;
+    private readonly object _subtitleSaveSync = new();
 
     partial void OnSubtitleTextSizeChanged(SubtitleTextSize value) => QueueSubtitleSettingsSave();
 
@@ -866,35 +869,71 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
             _settingsService.NotifySettingsChanged();
             System.Diagnostics.Debug.WriteLine($"[PVM] QueueSubtitleSettingsSave: NotifySettingsChanged={sw.ElapsedMilliseconds}ms");
 
-            var oldCts = _subtitleSaveCts;
-            _subtitleSaveCts = new CancellationTokenSource();
-            var token = _subtitleSaveCts.Token;
-
-            if (oldCts != null)
+            var nextCts = new CancellationTokenSource();
+            CancellationTokenSource? oldCts;
+            lock (_subtitleSaveSync)
             {
-                oldCts.Cancel();
-                oldCts.Dispose();
+                oldCts = _subtitleSaveCts;
+                _subtitleSaveCts = nextCts;
             }
 
-            _ = Task.Run(async () =>
+            try
             {
-                var swSave = System.Diagnostics.Stopwatch.StartNew();
-                try
+                oldCts?.Cancel();
+            }
+            catch (ObjectDisposedException)
+            {
+                // The previous debounce may have completed and disposed its
+                // source between the swap and cancellation.
+            }
+
+            var saveTask = PersistSubtitleSettingsAsync(nextCts);
+            lock (_subtitleSaveSync)
+            {
+                if (ReferenceEquals(_subtitleSaveCts, nextCts))
                 {
-                    await Task.Delay(1000, token);
-                    if (!token.IsCancellationRequested)
-                    {
-                        await _settingsService.SaveAsync();
-                        System.Diagnostics.Debug.WriteLine($"[PVM] QueueSubtitleSettingsSave: SaveAsync={swSave.ElapsedMilliseconds}ms");
-                    }
+                    _subtitleSaveTask = saveTask;
                 }
-                catch (OperationCanceledException) { }
-                catch (ObjectDisposedException) { }
-                catch (Exception ex)
+            }
+        }
+    }
+
+    private async Task PersistSubtitleSettingsAsync(CancellationTokenSource cts)
+    {
+        try
+        {
+            await Task.Delay(1000, cts.Token).ConfigureAwait(false);
+            if (cts.IsCancellationRequested)
+            {
+                return;
+            }
+
+            Interlocked.Exchange(ref _subtitleSaveInFlight, 1);
+            await _settingsService.SaveAsync().ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (ObjectDisposedException)
+        {
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine(
+                $"[PlayerViewModel] Failed to persist subtitle appearance: {ex.Message}");
+        }
+        finally
+        {
+            Interlocked.Exchange(ref _subtitleSaveInFlight, 0);
+            lock (_subtitleSaveSync)
+            {
+                if (ReferenceEquals(_subtitleSaveCts, cts))
                 {
-                    System.Diagnostics.Debug.WriteLine($"[PlayerViewModel] Failed to persist subtitle appearance: {ex.Message}");
+                    _subtitleSaveCts = null;
+                    _subtitleSaveTask = null;
                 }
-            }, token);
+            }
+            cts.Dispose();
         }
     }
 
@@ -3081,10 +3120,23 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         _lockIndicatorVisibilityCts?.Dispose();
         _lockIndicatorVisibilityCts = null;
 
-        var hadPendingSubtitleSave = _subtitleSaveCts != null;
-        _subtitleSaveCts?.Cancel();
-        _subtitleSaveCts?.Dispose();
-        _subtitleSaveCts = null;
+        CancellationTokenSource? pendingSubtitleSaveCts;
+        Task? pendingSubtitleSaveTask;
+        lock (_subtitleSaveSync)
+        {
+            pendingSubtitleSaveCts = _subtitleSaveCts;
+            pendingSubtitleSaveTask = _subtitleSaveTask;
+            _subtitleSaveCts = null;
+            _subtitleSaveTask = null;
+        }
+        try
+        {
+            pendingSubtitleSaveCts?.Cancel();
+        }
+        catch (ObjectDisposedException)
+        {
+            // The debounce worker already completed its cleanup.
+        }
 
         EpisodeNavigator.Dispose();
 
@@ -3095,11 +3147,20 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
             // Bekleyen altyazı ayarı değişikliğini iptal etme, kapatmadan önce flush et:
             // 1 sn'lik debounce içinde player'dan çıkılsa bile ayar kalıcı olmalı ve
             // SettingsChanged ile sonraki oturum için uygulanmalıdır.
-            if (hadPendingSubtitleSave)
+            if (pendingSubtitleSaveCts is not null &&
+                (pendingSubtitleSaveTask is null || !pendingSubtitleSaveTask.IsCompleted))
             {
                 try
                 {
-                    _settingsService.SaveAsync().GetAwaiter().GetResult();
+                    if (Volatile.Read(ref _subtitleSaveInFlight) == 1 &&
+                        pendingSubtitleSaveTask is not null)
+                    {
+                        pendingSubtitleSaveTask.GetAwaiter().GetResult();
+                    }
+                    else
+                    {
+                        _settingsService.SaveAsync().GetAwaiter().GetResult();
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -3107,6 +3168,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
                 }
             }
         }
+        pendingSubtitleSaveCts?.Dispose();
         if (_networkService != null)
         {
             _networkService.NetworkStatusChanged -= OnNetworkStatusChanged;

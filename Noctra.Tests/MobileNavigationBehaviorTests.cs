@@ -171,7 +171,7 @@ public sealed class MobileNavigationBehaviorTests
         var rail = ReadProjectFile("Noctra.Mobile", "Controls", "MobileCollapsibleNavigationRail.cs");
 
         // Must use Classes.Set instead of hardcoded Width
-        Assert.Contains("Classes.Set(\"compact\", !IsExpanded)", rail);
+        Assert.Contains("Classes.Set(\"compact\", !expanding)", rail);
         Assert.DoesNotContain("_navigationRail.Width =", rail);
     }
 
@@ -213,7 +213,7 @@ public sealed class MobileNavigationBehaviorTests
         var rail = ReadProjectFile("Noctra.Mobile", "Controls", "MobileCollapsibleNavigationRail.cs");
 
         // ApplyCurrentState must set compact class based on IsExpanded
-        Assert.Contains("Classes.Set(\"compact\", !IsExpanded)", rail);
+        Assert.Contains("Classes.Set(\"compact\", !expanding)", rail);
     }
 
     [Fact]
@@ -370,7 +370,7 @@ public sealed class MobileNavigationBehaviorTests
 
         // UpdateToggleIcon must set tooltip based on IsExpanded state
         Assert.Contains("ToolTip.SetTip", rail);
-        Assert.Contains("IsExpanded ? null : item.ToolTipText", rail);
+        Assert.Contains("IsExpanded ? null : \"Menu\"", rail);
     }
 
     // ──────────────────────────────────────────────────────────────
@@ -396,9 +396,11 @@ public sealed class MobileNavigationBehaviorTests
     {
         var mainViewModel = ReadProjectFile("Noctra.Core", "ViewModels", "MainViewModel.cs");
         var toggleMethod = ExtractMethod(mainViewModel, "ToggleFavoriteAsync");
+        var persistenceMethod = ExtractMethod(mainViewModel, "PersistFavoriteToggleSnapshotAsync");
         var refreshMethod = ExtractMethod(mainViewModel, "RefreshVisibleContentAfterFavoriteChange");
 
-        Assert.Contains("RefreshVisibleContentAfterFavoriteChange();", toggleMethod);
+        Assert.Contains("PersistFavoriteToggleSnapshotAsync(snapshot)", toggleMethod);
+        Assert.Contains("refreshFavoriteContent: true", persistenceMethod);
         Assert.DoesNotContain("ScheduleImmediateFilter();", toggleMethod);
         Assert.Contains("if (ShowOnlyFavorites)", refreshMethod);
         Assert.Contains("favorite-filter-membership", refreshMethod);
@@ -409,9 +411,11 @@ public sealed class MobileNavigationBehaviorTests
     {
         var mainViewModel = ReadProjectFile("Noctra.Core", "ViewModels", "MainViewModel.cs");
         var addToMyListMethod = ExtractMethod(mainViewModel, "AddToMyList");
+        var persistenceMethod = ExtractMethod(mainViewModel, "PersistAddToMyListSnapshotAsync");
 
         Assert.DoesNotContain("ScheduleImmediateFilter", addToMyListMethod);
-        Assert.Contains("RefreshPersonalListsFromDatabaseAsync", addToMyListMethod);
+        Assert.Contains("PersistAddToMyListSnapshotAsync(snapshot)", addToMyListMethod);
+        Assert.Contains("refreshFavoriteContent: false", persistenceMethod);
     }
 
     // ──────────────────────────────────────────────────────────────

@@ -183,6 +183,11 @@ _pkginfo.txt
 # Project Specific
 # FFmpeg binaries (large files)
 **/FFmpeg/
+# The Android FFmpeg runtime is a required, checked-in build input.  The
+# historical rule above is case-insensitive on Windows, so explicitly opt
+# this lowercase path back in.
+!Noctra.Android/libs/ffmpeg/
+!Noctra.Android/libs/ffmpeg/**
 *.dll
 !**/obj/**/*.dll
 !**/bin/**/*.dll

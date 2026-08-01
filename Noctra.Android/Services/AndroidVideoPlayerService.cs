@@ -868,6 +868,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
 
     private void ReleasePlayer()
     {
+        UpdateAudioBecomingNoisyReceiver(false);
         StopPositionUpdates();
 
         if (_exoPlayer is null)

@@ -155,7 +155,10 @@ public sealed class PerformanceInstrumentationContractTests
         try
         {
             traceType.GetMethod("Mark")!.Invoke(null, ["profile.tap", 17L, "profile-3"]);
-            Assert.Equal(("profile.tap", 17L, "profile-3"), Assert.Single(recorder.Events));
+            // Other integration tests may emit their own marks while the
+            // process-wide probe is installed. Verify forwarding of this
+            // event without assuming it is the only concurrent event.
+            Assert.Contains(("profile.tap", 17L, "profile-3"), recorder.Events);
         }
         finally
         {

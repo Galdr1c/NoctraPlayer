@@ -37,6 +37,8 @@ public class VideoPlayerService : IVideoPlayerService
     private bool _isInitialized;
     private CancellationTokenSource? _volumeSaveCts;
     private CancellationTokenSource? _reinitCts;
+    private readonly SemaphoreSlim _reinitializeLock = new(1, 1);
+    private long _reinitializeGeneration;
     
     // Altyazı ve Ses seçimi durumu reinit sonrası kaybolmasın diye
     // Sadece sayısal ID değil, track ismi de saklanır: reinit sonrası
@@ -178,7 +180,7 @@ public class VideoPlayerService : IVideoPlayerService
                     await Task.Delay(500, token);
                     if (!token.IsCancellationRequested)
                     {
-                        await ReinitializeAsync();
+                        await ReinitializeAsync(token);
                     }
                 }
                 catch (OperationCanceledException) { }
@@ -193,10 +195,15 @@ public class VideoPlayerService : IVideoPlayerService
 
     private async Task InitializeAsync()
     {
+        if (_disposed)
+        {
+            return;
+        }
+
         await _initLock.WaitAsync();
         try
         {
-            if (_isInitialized) return;
+            if (_disposed || _isInitialized) return;
 
             await Task.Run(() => 
             {
@@ -283,8 +290,44 @@ public class VideoPlayerService : IVideoPlayerService
         }
     }
 
-    public async Task ReinitializeAsync()
+    public Task ReinitializeAsync()
+        => ReinitializeAsync(CancellationToken.None);
+
+    private async Task ReinitializeAsync(CancellationToken cancellationToken)
     {
+        if (_disposed)
+        {
+            return;
+        }
+
+        var generation = Interlocked.Increment(ref _reinitializeGeneration);
+        await _reinitializeLock.WaitAsync(cancellationToken);
+
+        try
+        {
+            if (generation != Volatile.Read(ref _reinitializeGeneration))
+            {
+                return;
+            }
+
+            await ReinitializeCoreAsync(cancellationToken, generation);
+        }
+        finally
+        {
+            _reinitializeLock.Release();
+        }
+    }
+
+    private async Task ReinitializeCoreAsync(
+        CancellationToken cancellationToken,
+        long generation)
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
         // 1. Durumu kaydet
         var currentUrl = CurrentUrl;
         var wasPlaying = IsPlaying;
@@ -331,7 +374,18 @@ public class VideoPlayerService : IVideoPlayerService
         // 5. Yeni ayarlarla tekrar başlat
         await InitializeAsync();
 
-        // 6. Eğer bir şey çalıyorsa kaldığı yerden devam ettir
+        if (_disposed)
+        {
+            return;
+        }
+
+        // 6. Eğer bir şey çalıyorsa kaldığı yerden devam ettir. Ayar değişikliği
+        // native teardown sırasında geldiyse generation artık eski olabilir;
+        // yine de bu çağrının başında yakaladığımız oynatma durumunu geri yüklemek
+        // gerekir. Aksi hâlde sonraki reinitialize yeni player'ı boş/paused görüp
+        // videoyu siyah ekranda bırakabilir. İlk InitializeAsync zaten en güncel
+        // ayar alanlarını kullandığından bu replay güvenlidir; sonraki çağrı
+        // yalnızca varsa yeni ayarları uygular.
         if (!string.IsNullOrEmpty(currentUrl))
         {
             // Position saniye cinsindendir
@@ -700,11 +754,11 @@ public class VideoPlayerService : IVideoPlayerService
                 if (_lastSubtitleMargin >= 900 || _lastSubtitleFontSize > 0)
                 {
                     // Video çözünürlüğünü öğrenebilmek için kısa bir parse yap
-                    var tcs = new CancellationTokenSource(2000); // En fazla 2 saniye bekle
                     try
                     {
-                        var combinedToken = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, tcs.Token).Token;
-                        await media.Parse(MediaParseOptions.ParseNetwork, timeout: 2000);
+                        cancellationToken.ThrowIfCancellationRequested();
+                        // Track metadata is populated after playback starts. Do not
+                        // perform a second network request on the critical open path.
                         
                         uint videoHeight = 1080; // Default varsayım
                         var tracks = media.Tracks;
@@ -729,10 +783,8 @@ public class VideoPlayerService : IVideoPlayerService
                         }
 
                         // Font Boyutu Hesaplaması (Netflix standartları)
-                        double fontPercentage = 0.045; // Varsayılan: Orta (~%4.5)
-                        if (_lastSubtitleFontSize <= 28) fontPercentage = 0.03; // Küçük (~%3)
-                        else if (_lastSubtitleFontSize >= 60) fontPercentage = 0.085; // Büyük (~%8.5)
-
+                        // Preserve all four desktop levels relative to the 1080p baseline.
+                        double fontPercentage = _lastSubtitleFontSize / 1080d;
                         int calculatedFontSize = (int)(videoHeight * fontPercentage);
                         // VLC freetype modülüne parametreyi anlık akış bazlı iletiyoruz
                         media.AddOption($":freetype-fontsize={calculatedFontSize}");
@@ -1001,11 +1053,13 @@ public class VideoPlayerService : IVideoPlayerService
         currentMedia?.Dispose();
     }
 
-    public Task EndSessionAsync(CancellationToken cancellationToken = default)
+    public async Task EndSessionAsync(CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         if (_mediaPlayer is not null)
         {
-            _dispatcherService.InvokeAsync(() =>
+            await _dispatcherService.InvokeAsync(() =>
             {
                 MediaPlayerReleasing?.Invoke(this, EventArgs.Empty);
                 return Task.CompletedTask;
@@ -1029,7 +1083,6 @@ public class VideoPlayerService : IVideoPlayerService
         // içerik açılamaz).
         _isInitialized = false;
 
-        return Task.CompletedTask;
     }
 
     public int Volume
@@ -1458,6 +1511,11 @@ public class VideoPlayerService : IVideoPlayerService
     public void Dispose()
     {
         if (_disposed) return;
+
+        // Mark disposed before cancelling background work so a reinitialize
+        // that is currently between teardown and InitializeAsync cannot bring
+        // the native player back after this method returns.
+        _disposed = true;
         
         if (_settingsService != null)
         {
@@ -1472,13 +1530,20 @@ public class VideoPlayerService : IVideoPlayerService
         _volumeSaveCts?.Dispose();
         _volumeSaveCts = null;
 
+        // Stop a debounced settings reinitialization before tearing down the
+        // native player.  Otherwise a queued callback can recreate LibVLC
+        // after this service has already been disposed.
+        _reinitCts?.Cancel();
+        _reinitCts?.Dispose();
+        _reinitCts = null;
+        Interlocked.Increment(ref _reinitializeGeneration);
+
         StopQualityMonitoring();
         _mediaPlayer?.Stop();
         _mediaPlayer?.Dispose();
         _libVLC?.Dispose();
         _initLock.Dispose();
         
-        _disposed = true;
         GC.SuppressFinalize(this);
     }
 

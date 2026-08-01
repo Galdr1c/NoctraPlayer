@@ -68,4 +68,115 @@ public sealed class VideoPlayerServiceTrackRestoreTests
 
         Assert.Equal(101, VideoPlayerService.ResolveTrackId("English", 5, current));
     }
+
+    [Fact]
+    public void SubtitleLayout_DoesNotPerformNetworkParseBeforePlayback()
+    {
+        var source = ReadProjectFile("Noctra.Core", "Services", "VideoPlayerService.cs");
+
+        Assert.DoesNotContain(
+            "media.Parse(MediaParseOptions.ParseNetwork, timeout: 2000)",
+            source,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            "CreateLinkedTokenSource(cancellationToken, tcs.Token)",
+            source,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "media.AddOption($\":sub-margin={_lastSubtitleMargin}\")",
+            source,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void DesktopSubtitleScaling_PreservesLargeAndExtraLargeDifference()
+    {
+        var source = ReadProjectFile("Noctra.Core", "Services", "VideoPlayerService.cs");
+
+        Assert.Contains(
+            "fontPercentage = _lastSubtitleFontSize / 1080d",
+            source,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            "_lastSubtitleFontSize >= 60",
+            source,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ReinitializeAndEndSession_SerializeNativePlayerRelease()
+    {
+        var source = ReadProjectFile("Noctra.Core", "Services", "VideoPlayerService.cs");
+        var endSession = ExtractMethod(source, "public async Task EndSessionAsync");
+
+        Assert.Contains("_reinitializeLock", source, StringComparison.Ordinal);
+        Assert.Contains("await _reinitializeLock.WaitAsync", source, StringComparison.Ordinal);
+        Assert.Contains("await _dispatcherService.InvokeAsync", endSession, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void SubtitleDebounce_ClearsCompletedSaveState()
+    {
+        var source = ReadProjectFile("Noctra.Core", "ViewModels", "PlayerViewModel.cs");
+
+        Assert.Contains("finally", source, StringComparison.Ordinal);
+        Assert.Contains("ReferenceEquals(_subtitleSaveCts, cts)", source, StringComparison.Ordinal);
+        Assert.Contains("_subtitleSaveCts = null", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void SettingsSaves_AreSerializedAcrossProfileAndBackgroundWrites()
+    {
+        var source = ReadProjectFile("Noctra.Core", "Services", "SettingsService.cs");
+        var saveMethod = ExtractMethod(source, "public async Task SaveAsync");
+
+        Assert.Contains("SemaphoreSlim _saveLock", source, StringComparison.Ordinal);
+        Assert.Contains("await _saveLock.WaitAsync", saveMethod, StringComparison.Ordinal);
+        Assert.Contains("_saveLock.Release()", saveMethod, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void AndroidRelease_UnregistersAudioNoisyReceiver()
+    {
+        var source = ReadProjectFile(
+            "Noctra.Android",
+            "Services",
+            "AndroidVideoPlayerService.cs");
+        var releasePlayer = ExtractMethod(source, "private void ReleasePlayer");
+
+        Assert.Contains(
+            "UpdateAudioBecomingNoisyReceiver(false)",
+            releasePlayer,
+            StringComparison.Ordinal);
+    }
+
+    private static string ReadProjectFile(params string[] relativeParts)
+        => File.ReadAllText(FindProjectFile(relativeParts));
+
+    private static string FindProjectFile(params string[] relativeParts)
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null &&
+               !Directory.Exists(Path.Combine(directory.FullName, "Noctra.Core")))
+        {
+            directory = directory.Parent;
+        }
+
+        Assert.NotNull(directory);
+        return Path.Combine([directory!.FullName, .. relativeParts]);
+    }
+
+    private static string ExtractMethod(string source, string methodName)
+    {
+        var start = source.IndexOf(methodName, StringComparison.Ordinal);
+        Assert.True(start >= 0, $"Method {methodName} not found");
+
+        var nextMethod = source.IndexOf("\n    public ", start + methodName.Length, StringComparison.Ordinal);
+        if (nextMethod < 0)
+        {
+            nextMethod = source.Length;
+        }
+
+        return source[start..nextMethod];
+    }
 }

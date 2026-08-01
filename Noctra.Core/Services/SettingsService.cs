@@ -15,6 +15,10 @@ public class SettingsService : ISettingsService
     private readonly ILogger<SettingsService>? _logger;
     private readonly IAppPathService _appPaths;
     private readonly string _basePath;
+    // Settings can be saved by several debounced UI actions and background
+    // services. Serialize the complete profile/global write so an older JSON
+    // snapshot cannot finish after a newer one.
+    private readonly SemaphoreSlim _saveLock = new(1, 1);
     private AppSettings _currentSettings;
 
     public AppSettings Settings => _currentSettings;
@@ -376,6 +380,7 @@ public class SettingsService : ISettingsService
     
     public async Task SaveAsync()
     {
+        await _saveLock.WaitAsync().ConfigureAwait(false);
         try
         {
             var profileId = Settings.ProfileId;
@@ -387,7 +392,7 @@ public class SettingsService : ISettingsService
             // 1. Save current profile settings
             var path = GetSettingsPath(profileId);
             var json = SerializePersistableSettings(Settings, profileId);
-            await WriteAllTextAtomicallyAsync(path, json);
+            await WriteAllTextAtomicallyAsync(path, json).ConfigureAwait(false);
             _logger?.LogInformation("Settings saved for profile {Id}", profileId);
 
             // 2. If it's a sub-profile, update the master global settings too
@@ -400,13 +405,17 @@ public class SettingsService : ISettingsService
                 SyncGlobalSettings(globalSettings, Settings);
                 
                 var globalJson = SerializePersistableSettings(globalSettings, 0);
-                await WriteAllTextAtomicallyAsync(globalPath, globalJson);
+                await WriteAllTextAtomicallyAsync(globalPath, globalJson).ConfigureAwait(false);
                 _logger?.LogInformation("Global settings updated from profile {Id}", profileId);
             }
         }
         catch (Exception ex)
         {
             _logger?.LogError(ex, "Failed to save settings");
+        }
+        finally
+        {
+            _saveLock.Release();
         }
     }
 
