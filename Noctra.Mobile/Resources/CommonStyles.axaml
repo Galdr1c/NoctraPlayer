@@ -30,7 +30,7 @@
     <Setter Property="Background" Value="{DynamicResource Surface1Brush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="{DynamicResource RadiusPill}" />
+    <Setter Property="CornerRadius" Value="4" />
     <Setter Property="Padding" Value="10,4" />
   </Style>
 

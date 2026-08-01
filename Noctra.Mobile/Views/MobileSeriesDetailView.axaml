@@ -29,7 +29,7 @@
         </Transitions>
       </Setter>
     </Style>
-    <Style Selector="Button.detailAction:pressed">
+    <Style Selector="Button.detailAction:pressed /template/ ContentPresenter">
       <Setter Property="Opacity" Value="0.60" />
       <Setter Property="RenderTransform" Value="scale(0.97)"/>
     </Style>
@@ -276,6 +276,7 @@
                       Margin="0,10,0,0"
                       IsVisible="{Binding !IsDownloadedSeriesDetailMode}">
             <Button Classes="detailAction"
+                    x:Name="MyListToggleButton"
                     Command="{Binding AddToMyListCommand}"
                     Width="40" Height="40"
                     CommandParameter="{Binding SelectedSeries}">
@@ -287,6 +288,7 @@
               </Panel>
             </Button>
             <Button Classes="detailAction"
+                    x:Name="FavoriteToggleButton"
                     Command="{Binding ToggleFavoriteCommand}"
                     Width="40" Height="40"
                     CommandParameter="{Binding SelectedSeries}">

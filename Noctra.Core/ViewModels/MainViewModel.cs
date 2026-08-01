@@ -4486,11 +4486,33 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private async Task ToggleFavoriteAsync(object media)
     {
+        var toggleSw = System.Diagnostics.Stopwatch.StartNew();
         if (!CurrentProfileId.HasValue)
         {
             StatusMessage = _localizationService.GetString("Main.Status.SelectProfileFirst");
             return;
         }
+
+        // Optimistic flip: reflect the new state immediately so the UI does not
+        // wait for the DB round-trips below (series + seasons + episodes load and
+        // related-channel lookup can take hundreds of ms on mobile). The flip runs
+        // synchronously on the UI thread; everything after it is persisted and
+        // refreshed on a background thread so the frame renders right away.
+        bool shouldFavorite = media switch
+        {
+            Channel ch => ch.IsFavorite = !ch.IsFavorite,
+            Series s => s.IsFavorite = !s.IsFavorite,
+            _ => false
+        };
+        System.Diagnostics.Debug.WriteLine($"[PVM] ToggleFavorite tick={Environment.TickCount} flip={shouldFavorite} entryMs={toggleSw.ElapsedMilliseconds}");
+
+        await Task.Run(() => PersistFavoriteToggleAsync(media, shouldFavorite));
+        System.Diagnostics.Debug.WriteLine($"[PVM] ToggleFavorite doneMs={toggleSw.ElapsedMilliseconds}");
+    }
+
+    private async Task PersistFavoriteToggleAsync(object media, bool shouldFavorite)
+    {
+        string? statusMessageKey = null;
 
         using var db = await _contextFactory.CreateDbContextAsync();
 
@@ -4506,11 +4528,10 @@ public partial class MainViewModel : ObservableObject
                         .FirstOrDefaultAsync();
             }
 
-            channel.IsFavorite = !channel.IsFavorite;
             await _channelService.UpdateChannelAsync(channel);
-            StatusMessage = channel.IsFavorite
-                ? _localizationService.GetString("Main.Status.FavoriteAdded")
-                : _localizationService.GetString("Main.Status.FavoriteRemoved");
+            statusMessageKey = channel.IsFavorite
+                ? "Main.Status.FavoriteAdded"
+                : "Main.Status.FavoriteRemoved";
         }
         else if (media is Series series)
         {
@@ -4533,12 +4554,12 @@ public partial class MainViewModel : ObservableObject
 
             if (seriesFromDb == null)
             {
+                // Series is not persisted; undo the optimistic flip.
+                await _dispatcherService.InvokeAsync(() => series.IsFavorite = !shouldFavorite);
                 return;
             }
 
-            var shouldFavorite = !seriesFromDb.IsFavorite;
             seriesFromDb.IsFavorite = shouldFavorite;
-            series.IsFavorite = shouldFavorite;
 
             var episodeUrls = seriesFromDb.Seasons
                 .SelectMany(sn => sn.Episodes)
@@ -4560,20 +4581,31 @@ public partial class MainViewModel : ObservableObject
             }
 
             await db.SaveChangesAsync();
-            StatusMessage = shouldFavorite
-                ? _localizationService.GetString("Main.Status.FavoriteAdded")
-                : _localizationService.GetString("Main.Status.FavoriteRemoved");
+            statusMessageKey = shouldFavorite
+                ? "Main.Status.FavoriteAdded"
+                : "Main.Status.FavoriteRemoved";
         }
         else
         {
             return;
         }
 
-        UpdateMyList();
-        UpdateFavoriteChannels();
-        UpdateHistoryChannels();
-        await RefreshPersonalListsFromDatabaseAsync();
-        RefreshVisibleContentAfterFavoriteChange();
+        _dispatcherService.Invoke(() =>
+        {
+            if (statusMessageKey != null)
+            {
+                StatusMessage = _localizationService.GetString(statusMessageKey);
+            }
+            UpdateMyList();
+            UpdateFavoriteChannels();
+            UpdateHistoryChannels();
+        });
+
+        await _dispatcherService.InvokeAsync(new Func<Task>(async () =>
+        {
+            await RefreshPersonalListsFromDatabaseAsync();
+            RefreshVisibleContentAfterFavoriteChange();
+        }));
     }
 
     private void RefreshVisibleContentAfterFavoriteChange()
@@ -8012,23 +8044,49 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private async Task AddToMyList(object media)
     {
+        var toggleSw = System.Diagnostics.Stopwatch.StartNew();
         if (!CurrentProfileId.HasValue)
         {
             StatusMessage = _localizationService.GetString("Main.Status.SelectProfileFirst");
             return;
         }
 
+        if (media is Channel { Type: ChannelType.Live })
+        {
+            StatusMessage = _localizationService.GetString("Main.Status.LiveCannotAddToList");
+            return;
+        }
+
+        // Optimistic flip: reflect the new state immediately so the UI does not
+        // wait for the DB round-trips below (context creation + full series load).
+        // The flip runs synchronously on the UI thread; persistence and list
+        // refresh run on a background thread so the frame renders right away.
+        if (media is Channel channel0)
+        {
+            channel0.IsInMyList = !channel0.IsInMyList;
+        }
+        else if (media is Series series0)
+        {
+            series0.IsInMyList = !series0.IsInMyList;
+        }
+        else
+        {
+            return;
+        }
+        System.Diagnostics.Debug.WriteLine($"[PVM] AddToMyList tick={Environment.TickCount} entryMs={toggleSw.ElapsedMilliseconds}");
+
+        await Task.Run(() => PersistAddToMyListAsync(media));
+        System.Diagnostics.Debug.WriteLine($"[PVM] AddToMyList doneMs={toggleSw.ElapsedMilliseconds}");
+    }
+
+    private async Task PersistAddToMyListAsync(object media)
+    {
+        string? statusMessageKey = null;
+
         using var db = await _contextFactory.CreateDbContextAsync();
-        
+
         if (media is Channel channel)
         {
-
-            if (channel.Type == ChannelType.Live)
-            {
-                StatusMessage = _localizationService.GetString("Main.Status.LiveCannotAddToList");
-                return;
-            }
-
             if (channel.PlaylistId <= 0)
             {
                 channel.PlaylistId = SelectedPlaylist?.Id
@@ -8039,15 +8097,13 @@ public partial class MainViewModel : ObservableObject
                         .FirstOrDefaultAsync();
             }
 
-            channel.IsInMyList = !channel.IsInMyList;
             await _channelService.UpdateChannelAsync(channel);
-            StatusMessage = channel.IsInMyList
-                ? _localizationService.GetString("Main.Status.ListAdded")
-                : _localizationService.GetString("Main.Status.RemovedFromList");
+            statusMessageKey = channel.IsInMyList
+                ? "Main.Status.ListAdded"
+                : "Main.Status.RemovedFromList";
         }
         else if (media is Series series)
         {
-            series.IsInMyList = !series.IsInMyList;
             await _mediaService.UpdateSeriesAsync(series);
             var seriesFromDb = await db.Series
                 .Include(s => s.Seasons)
@@ -8078,15 +8134,30 @@ public partial class MainViewModel : ObservableObject
                 }
             }
 
-            StatusMessage = series.IsInMyList
-                ? _localizationService.GetString("Main.Status.ListAdded")
-                : _localizationService.GetString("Main.Status.RemovedFromList");
+            statusMessageKey = series.IsInMyList
+                ? "Main.Status.ListAdded"
+                : "Main.Status.RemovedFromList";
+        }
+        else
+        {
+            return;
         }
 
-        UpdateMyList();
-        UpdateFavoriteChannels();
-        UpdateHistoryChannels();
-        await RefreshPersonalListsFromDatabaseAsync();
+        _dispatcherService.Invoke(() =>
+        {
+            if (statusMessageKey != null)
+            {
+                StatusMessage = _localizationService.GetString(statusMessageKey);
+            }
+            UpdateMyList();
+            UpdateFavoriteChannels();
+            UpdateHistoryChannels();
+        });
+
+        await _dispatcherService.InvokeAsync(new Func<Task>(async () =>
+        {
+            await RefreshPersonalListsFromDatabaseAsync();
+        }));
 
         // IsInMyList is observable and does not participate in the Live/Movie/Series
         // content query. Do not rebuild FilteredChannels: doing so replaces the
