@@ -48,7 +48,7 @@
                             <Grid x:Name="AvatarRoot" Width="150" Height="150" HorizontalAlignment="Center" VerticalAlignment="Center" ClipToBounds="False">
                                 <!-- 1. Kid Frame (gradyan kenarlık) -->
                                 <Border x:Name="KidFrame"
-                                        Width="142" Height="142"
+                                        Width="132" Height="132"
                                         CornerRadius="15"
                                         BorderThickness="3.5"
                                         IsVisible="{Binding IsChild}"
