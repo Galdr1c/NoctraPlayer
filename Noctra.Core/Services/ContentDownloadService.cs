@@ -667,8 +667,6 @@ public class ContentDownloadService : IContentDownloadService
 
     private async Task ExecuteDownloadAsync(int downloadId)
     {
-        var localCts = new CancellationTokenSource();
-        _activeDownloadCts[downloadId] = localCts;
         using var startDb = await _contextFactory.CreateDbContextAsync();
         var item = await startDb.DownloadItems.FirstOrDefaultAsync(d => d.Id == downloadId);
         if (item == null || 
@@ -676,11 +674,11 @@ public class ContentDownloadService : IContentDownloadService
             item.Status == DownloadStatus.Canceled ||
             item.Status == DownloadStatus.Paused)
         {
-            _activeDownloadCts.TryRemove(downloadId, out _);
-            localCts.Dispose();
             return;
         }
 
+        // Wi-Fi policy is checked before the CTS is registered so a rejected
+        // download can never leak a token in _activeDownloadCts.
         if (!TryCheckWifiPolicy(out var wifiMessage))
         {
             item.Status = DownloadStatus.Failed;
@@ -703,7 +701,6 @@ public class ContentDownloadService : IContentDownloadService
         var plainTempPath = string.IsNullOrWhiteSpace(item.TempFilePath)
             ? CreateUniquePath(downloadDirectory, safeName, extension + ".part")
             : item.TempFilePath!;
-        _activeTempFiles[downloadId] = plainTempPath;
         var candidates = BuildDownloadCandidates(item.SourceUrl);
         var resumedBytes = File.Exists(plainTempPath) ? new FileInfo(plainTempPath).Length : 0L;
         if (resumedBytes < 0)
@@ -711,7 +708,8 @@ public class ContentDownloadService : IContentDownloadService
             resumedBytes = 0;
         }
 
-        if (File.Exists(finalPath) && new FileInfo(finalPath).Length > 0)
+        var finalFileLength = File.Exists(finalPath) ? new FileInfo(finalPath).Length : 0L;
+        if (finalFileLength > 0)
         {
             // Never mark a previously saved HLS/DASH manifest as Completed.
             if (IsManifestFile(finalPath))
@@ -720,7 +718,9 @@ public class ContentDownloadService : IContentDownloadService
             }
             else
             {
-                await MarkCompletedAsync(downloadId, finalPath, resumedBytes, item.BytesTotal ?? resumedBytes, DateTime.UtcNow);
+                // Use the real size of the existing final file; resumedBytes
+                // reflects the .part file and can be zero without one.
+                await MarkCompletedAsync(downloadId, finalPath, finalFileLength, item.BytesTotal ?? finalFileLength, DateTime.UtcNow);
                 return;
             }
         }
@@ -755,6 +755,12 @@ public class ContentDownloadService : IContentDownloadService
         item.TempFilePath = plainTempPath;
         await startDb.SaveChangesAsync();
         DownloadsChanged?.Invoke(this, EventArgs.Empty);
+
+        // Registered only after every early-return path above, so a rejected or
+        // already-complete download can never leak an entry in these dictionaries.
+        var localCts = new CancellationTokenSource();
+        _activeDownloadCts[downloadId] = localCts;
+        _activeTempFiles[downloadId] = plainTempPath;
 
         try
         {
@@ -1351,20 +1357,20 @@ public class ContentDownloadService : IContentDownloadService
             // 2. Delete the media file, its poster and any leftover temp file.
             if (!string.IsNullOrWhiteSpace(item.LocalFilePath))
             {
-                TryDeleteFileWithRetry(item.LocalFilePath);
+                await TryDeleteFileWithRetryAsync(item.LocalFilePath, cancellationToken);
                 dirToCheck = Path.GetDirectoryName(item.LocalFilePath);
             }
 
             var posterPath = ResolveLocalPosterPath(item);
             if (posterPath != null)
             {
-                TryDeleteFileWithRetry(posterPath);
+                await TryDeleteFileWithRetryAsync(posterPath, cancellationToken);
                 dirToCheck ??= Path.GetDirectoryName(posterPath);
             }
 
             if (!string.IsNullOrWhiteSpace(item.TempFilePath))
             {
-                TryDeleteFileWithRetry(item.TempFilePath);
+                await TryDeleteFileWithRetryAsync(item.TempFilePath, cancellationToken);
                 dirToCheck ??= Path.GetDirectoryName(item.TempFilePath);
             }
 
@@ -1377,7 +1383,7 @@ public class ContentDownloadService : IContentDownloadService
 
         if (_activeTempFiles.TryRemove(downloadId, out var tempPath))
         {
-            TryDeleteFileWithRetry(tempPath);
+            await TryDeleteFileWithRetryAsync(tempPath, cancellationToken);
             dirToCheck ??= Path.GetDirectoryName(tempPath);
         }
 
@@ -1411,7 +1417,7 @@ public class ContentDownloadService : IContentDownloadService
 
             if (!string.IsNullOrWhiteSpace(item.TempFilePath))
             {
-                TryDeleteFileWithRetry(item.TempFilePath);
+                await TryDeleteFileWithRetryAsync(item.TempFilePath, cancellationToken);
                 item.TempFilePath = null;
                 item.UpdatedAt = DateTime.UtcNow;
                 changed = true;
@@ -2094,7 +2100,7 @@ public class ContentDownloadService : IContentDownloadService
         }
     }
 
-    private static void TryDeleteFileWithRetry(string? path)
+    private static async Task TryDeleteFileWithRetryAsync(string? path, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(path))
         {
@@ -2109,7 +2115,15 @@ public class ContentDownloadService : IContentDownloadService
                 return;
             }
 
-            Thread.Sleep(80);
+            try
+            {
+                await Task.Delay(80, cancellationToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                // Stop retrying; the caller decides how to handle cancellation.
+                return;
+            }
         }
     }
 
