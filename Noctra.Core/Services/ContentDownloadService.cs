@@ -46,6 +46,7 @@ public class ContentDownloadService : IContentDownloadService
     private readonly ConcurrentQueue<int> _pendingIds = new();
     private readonly ConcurrentDictionary<int, byte> _queuedIds = new();
     private readonly ConcurrentDictionary<int, CancellationTokenSource> _activeDownloadCts = new();
+    private readonly ConcurrentDictionary<int, Task> _activeDownloadTasks = new();
     private readonly ConcurrentDictionary<int, string> _activeTempFiles = new();
     private readonly ConcurrentDictionary<int, byte> _pauseRequestedIds = new();
     private readonly ConcurrentDictionary<int, byte> _cancelRequestedIds = new();
@@ -413,16 +414,45 @@ public class ContentDownloadService : IContentDownloadService
             .Select(d => d.Id)
             .ToListAsync(cancellationToken);
 
+        // Rows being removed by this same call must not be counted as poster
+        // sharers; otherwise the last episode of a series would keep its poster
+        // file (and file:// mapping) alive after every download is gone.
+        var siblingDeletionIds = new HashSet<int>(downloadIds);
+
         foreach (var downloadId in downloadIds)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            _cancelRequestedIds[downloadId] = 1;
+
             if (_activeDownloadCts.TryGetValue(downloadId, out var cts))
             {
+                // The item is being downloaded right now. Cancel the worker but
+                // DO NOT set the cancel flag: the worker's finally block must
+                // not run its own cleanup here, because DeleteAllDownloadsAsync
+                // performs it below — after the worker has fully unwound — so
+                // the shared-series-poster logic sees the complete set of rows
+                // being deleted. Awaiting the worker removes the previous race
+                // where both sides deleted the same file/row concurrently.
                 cts.Cancel();
+                if (_activeDownloadTasks.TryGetValue(downloadId, out var workerTask))
+                {
+                    try
+                    {
+                        await workerTask;
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger?.LogDebug(ex, "DeleteAllDownloadsAsync: awaited worker for {DownloadId}.", downloadId);
+                    }
+                }
+            }
+            else
+            {
+                // No worker is running; mark the row so a worker that starts in
+                // the brief pre-registration window still cleans up after itself.
+                _cancelRequestedIds[downloadId] = 1;
             }
 
-            await RemoveDownloadArtifactsAndRecordAsync(downloadId, cancellationToken);
+            await RemoveDownloadArtifactsAndRecordAsync(downloadId, cancellationToken, siblingDeletionIds);
         }
 
         CleanupEmptyDownloadDirectories();
@@ -578,13 +608,19 @@ public class ContentDownloadService : IContentDownloadService
             }
 
             _queuedIds.TryRemove(id, out _);
+            var workerTask = ExecuteDownloadAsync(id);
+            _activeDownloadTasks[id] = workerTask;
             try
             {
-                await ExecuteDownloadAsync(id);
+                await workerTask;
             }
             catch (Exception ex)
             {
                 _logger?.LogError(ex, "Download worker failed for {DownloadId}", id);
+            }
+            finally
+            {
+                _activeDownloadTasks.TryRemove(id, out _);
             }
         }
     }
@@ -761,6 +797,15 @@ public class ContentDownloadService : IContentDownloadService
         var localCts = new CancellationTokenSource();
         _activeDownloadCts[downloadId] = localCts;
         _activeTempFiles[downloadId] = plainTempPath;
+
+        // A DeleteAllDownloadsAsync that raced this CTS registration (the item
+        // was not yet visible as active, so DeleteAll removed the record and
+        // set the cancel flag) must not download into deleted paths. Honor the
+        // flag here: the worker unwinds and its finally block cleans up.
+        if (_cancelRequestedIds.ContainsKey(downloadId))
+        {
+            localCts.Cancel();
+        }
 
         try
         {
@@ -1334,7 +1379,10 @@ public class ContentDownloadService : IContentDownloadService
         return null;
     }
 
-    private async Task RemoveDownloadArtifactsAndRecordAsync(int downloadId, CancellationToken cancellationToken)
+    private async Task RemoveDownloadArtifactsAndRecordAsync(
+        int downloadId,
+        CancellationToken cancellationToken,
+        ISet<int>? siblingDeletionIds = null)
     {
         _pauseRequestedIds.TryRemove(downloadId, out _);
         _cancelRequestedIds.TryRemove(downloadId, out _);
@@ -1348,11 +1396,21 @@ public class ContentDownloadService : IContentDownloadService
         var item = await db.DownloadItems.FirstOrDefaultAsync(d => d.Id == downloadId, cancellationToken);
         if (item != null)
         {
+            var posterPath = ResolveLocalPosterPath(item);
+
+            // A series poster is shared by every downloaded episode of that
+            // series. Only delete the file (and restore the remote poster URL)
+            // when no other surviving download references the same poster path;
+            // siblingDeletionIds lists rows being removed by the same
+            // DeleteAllDownloadsAsync call, which therefore do not count.
+            var posterShared = posterPath != null &&
+                await IsPosterSharedByOtherItemAsync(db, item, posterPath, siblingDeletionIds, cancellationToken);
+
             // 1. Restore the original remote URLs (and posters) on the mapped
             //    Channel/Episode rows, then remove the download record — all in
             //    one transaction so a partial failure never leaves content
             //    pointing at a file that no longer exists.
-            await RestoreMappedEntitiesToSourceUrlAsync(db, item);
+            await RestoreMappedEntitiesToSourceUrlAsync(db, item, posterShared);
 
             // 2. Delete the media file, its poster and any leftover temp file.
             if (!string.IsNullOrWhiteSpace(item.LocalFilePath))
@@ -1361,8 +1419,7 @@ public class ContentDownloadService : IContentDownloadService
                 dirToCheck = Path.GetDirectoryName(item.LocalFilePath);
             }
 
-            var posterPath = ResolveLocalPosterPath(item);
-            if (posterPath != null)
+            if (posterPath != null && !posterShared)
             {
                 await TryDeleteFileWithRetryAsync(posterPath, cancellationToken);
                 dirToCheck ??= Path.GetDirectoryName(posterPath);
@@ -1635,12 +1692,21 @@ public class ContentDownloadService : IContentDownloadService
         }
     }
 
-    private static async Task RestoreMappedEntitiesToSourceUrlAsync(AppDbContext db, DownloadItem item)
+    private static async Task RestoreMappedEntitiesToSourceUrlAsync(
+        AppDbContext db,
+        DownloadItem item,
+        bool keepSharedPoster = false)
     {
         if (string.IsNullOrWhiteSpace(item.SourceUrl))
         {
             return;
         }
+
+        // When the poster file survives (shared by another episode), the mapped
+        // entities must keep the local file URI instead of restoring the remote
+        // poster URL, which would break their offline poster.
+        string? RestorePoster(string? current)
+            => keepSharedPoster ? current : RestoreMappedPoster(current, item);
 
         if (item.ChannelType == ChannelType.VOD)
         {
@@ -1650,7 +1716,7 @@ public class ContentDownloadService : IContentDownloadService
                 if (channel != null)
                 {
                     channel.StreamUrl = item.SourceUrl;
-                    channel.LogoUrl = RestoreMappedPoster(channel.LogoUrl, item);
+                    channel.LogoUrl = RestorePoster(channel.LogoUrl);
                 }
             }
             else
@@ -1662,7 +1728,7 @@ public class ContentDownloadService : IContentDownloadService
                 if (channel != null)
                 {
                     channel.StreamUrl = item.SourceUrl;
-                    channel.LogoUrl = RestoreMappedPoster(channel.LogoUrl, item);
+                    channel.LogoUrl = RestorePoster(channel.LogoUrl);
                 }
             }
 
@@ -1678,13 +1744,13 @@ public class ContentDownloadService : IContentDownloadService
             if (episode != null)
             {
                 episode.StreamUrl = item.SourceUrl;
-                episode.CoverUrl = RestoreMappedPoster(episode.CoverUrl, item);
+                episode.CoverUrl = RestorePoster(episode.CoverUrl);
                 if (episode.Season != null)
                 {
-                    episode.Season.CoverUrl = RestoreMappedPoster(episode.Season.CoverUrl, item);
+                    episode.Season.CoverUrl = RestorePoster(episode.Season.CoverUrl);
                     if (episode.Season.Series != null)
                     {
-                        episode.Season.Series.CoverUrl = RestoreMappedPoster(episode.Season.Series.CoverUrl, item);
+                        episode.Season.Series.CoverUrl = RestorePoster(episode.Season.Series.CoverUrl);
                     }
                 }
             }
@@ -1698,13 +1764,13 @@ public class ContentDownloadService : IContentDownloadService
             if (episode != null)
             {
                 episode.StreamUrl = item.SourceUrl;
-                episode.CoverUrl = RestoreMappedPoster(episode.CoverUrl, item);
+                episode.CoverUrl = RestorePoster(episode.CoverUrl);
                 if (episode.Season != null)
                 {
-                    episode.Season.CoverUrl = RestoreMappedPoster(episode.Season.CoverUrl, item);
+                    episode.Season.CoverUrl = RestorePoster(episode.Season.CoverUrl);
                     if (episode.Season.Series != null)
                     {
-                        episode.Season.Series.CoverUrl = RestoreMappedPoster(episode.Season.Series.CoverUrl, item);
+                        episode.Season.Series.CoverUrl = RestorePoster(episode.Season.Series.CoverUrl);
                     }
                 }
             }
@@ -1718,8 +1784,45 @@ public class ContentDownloadService : IContentDownloadService
         foreach (var channel in linkedSeriesChannels)
         {
             channel.StreamUrl = item.SourceUrl;
-            channel.LogoUrl = RestoreMappedPoster(channel.LogoUrl, item);
+            channel.LogoUrl = RestorePoster(channel.LogoUrl);
         }
+    }
+
+    /// <summary>
+    /// Returns true when another surviving download (not scheduled for deletion
+    /// by the same operation) maps to the same poster file, which happens for
+    /// every episode of a series sharing one folder-level poster.jpg.
+    /// </summary>
+    private static async Task<bool> IsPosterSharedByOtherItemAsync(
+        AppDbContext db,
+        DownloadItem item,
+        string posterPath,
+        ISet<int>? siblingDeletionIds,
+        CancellationToken cancellationToken)
+    {
+        var others = await db.DownloadItems
+            .AsNoTracking()
+            .Where(d => d.Id != item.Id &&
+                        d.Status != DownloadStatus.Failed &&
+                        d.Status != DownloadStatus.Canceled &&
+                        d.LocalFilePath != null)
+            .ToListAsync(cancellationToken);
+
+        foreach (var other in others)
+        {
+            if (siblingDeletionIds?.Contains(other.Id) == true)
+            {
+                continue;
+            }
+
+            var otherPoster = ResolveLocalPosterPath(other);
+            if (otherPoster != null && PathsReferToSameFile(otherPoster, posterPath))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>

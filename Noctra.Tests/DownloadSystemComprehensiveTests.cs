@@ -61,8 +61,11 @@ namespace Noctra.Tests
 
         public Task<string> ResolvePlayableUrlAsync(string url, CancellationToken ct = default)
         {
-            var item = MockItems.FirstOrDefault(i => i.SourceUrl == url && i.Status == DownloadStatus.Completed);
-            return Task.FromResult(item?.LocalFilePath ?? url);
+            // Production is a pass-through: the real service never rewrites the
+            // stream URL (ContentDownloadService.ResolvePlayableUrlAsync simply
+            // returns the input). The fake must match that contract or tests
+            // will validate behavior that does not exist in production.
+            return Task.FromResult(url);
         }
 
         public Task CleanupPlaybackCacheAsync(CancellationToken ct = default) => Task.CompletedTask;
@@ -458,8 +461,12 @@ namespace Noctra.Tests
         }
 
         [Fact]
-        public async Task PlayerViewModel_PreferLocalFile_WhenCompleted()
+        public async Task PlayerViewModel_ResolvePlayableUrl_IsPassThroughEvenWhenDownloaded()
         {
+            // The production resolver never maps a stream URL to the local file
+            // (ContentDownloadService.ResolvePlayableUrlAsync returns the input
+            // verbatim). Downloaded-file playback is driven by the Channel/Episode
+            // StreamUrl mapping, not by the resolver.
             var ctx = new DownloadTestContext();
             var url = "http://server.com/movie.mp4";
             var localPath = "C:\\Downloads\\movie.mp4";
@@ -473,7 +480,7 @@ namespace Noctra.Tests
 
             var resolved = await ctx.DownloadService.ResolvePlayableUrlAsync(url);
 
-            Assert.Equal(localPath, resolved);
+            Assert.Equal(url, resolved);
         }
 
         [Fact]

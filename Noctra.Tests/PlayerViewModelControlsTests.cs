@@ -168,10 +168,35 @@ namespace Noctra.Tests
 
     internal sealed class FakeContentDownloadService : IContentDownloadService
     {
+        public List<DownloadItem> MockItems { get; } = new();
+
         public event EventHandler? DownloadsChanged;
         public event EventHandler<DownloadItem>? DownloadCompleted;
 
-        public Task<DownloadContentResult> QueueDownloadAsync(DownloadContentRequest request, CancellationToken cancellationToken = default) => Task.FromResult(new DownloadContentResult(false, false, "stub"));
+        public Task<DownloadContentResult> QueueDownloadAsync(DownloadContentRequest request, CancellationToken cancellationToken = default)
+        {
+            // Mirrors the real service contract: an existing entry reports
+            // Success=true AND AlreadyExists=true (ToDuplicateResult), never a
+            // hard failure, so "already downloaded" is a skip, not an error.
+            if (MockItems.Any(i => i.SourceUrl == request.SourceUrl))
+            {
+                var existing = MockItems.First(i => i.SourceUrl == request.SourceUrl);
+                return Task.FromResult(new DownloadContentResult(true, true, "AlreadyInQueue", existing.Id));
+            }
+
+            var item = new DownloadItem
+            {
+                Id = MockItems.Count + 1,
+                DisplayName = request.DisplayName,
+                SourceUrl = request.SourceUrl,
+                Status = DownloadStatus.Queued,
+                ProfileId = request.ProfileId
+            };
+            MockItems.Add(item);
+            DownloadsChanged?.Invoke(this, EventArgs.Empty);
+            return Task.FromResult(new DownloadContentResult(true, false, "Queued", item.Id));
+        }
+
         public Task<string> ResolvePlayableUrlAsync(string streamUrl, CancellationToken cancellationToken = default) => Task.FromResult(streamUrl);
         public Task CleanupPlaybackCacheAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task<List<DownloadItem>> GetDownloadsAsync(int profileId, CancellationToken cancellationToken = default) => Task.FromResult(new List<DownloadItem>());
