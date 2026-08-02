@@ -79,4 +79,37 @@ public sealed class ContentDownloadServicePipelineTests
             seriesPoster,
             StringComparison.OrdinalIgnoreCase);
     }
+
+    [Fact]
+    public void RestoreMappedPoster_RestoresOriginalRemotePoster_WhenKnown()
+    {
+        var moviePath = Path.Combine("Downloads", "Movies", "Movie.mp4");
+        var localPoster = Path.Combine("Downloads", "Movies", "Movie.poster.jpg");
+        var item = new DownloadItem
+        {
+            SourcePosterUrl = "https://cdn.example/posters/movie.jpg",
+            LocalFilePath = moviePath
+        };
+
+        Assert.Equal(
+            "https://cdn.example/posters/movie.jpg",
+            ContentDownloadService.RestoreMappedPoster(localPoster, item));
+    }
+
+    [Fact]
+    public void RestoreMappedPoster_ClearsDeadLocalPoster_WhenSourceUnknown()
+    {
+        var moviePath = Path.Combine("Downloads", "Movies", "Movie.mp4");
+        var localPoster = Path.Combine("Downloads", "Movies", "Movie.poster.jpg");
+        var legacyItem = new DownloadItem
+        {
+            SourcePosterUrl = null,
+            LocalFilePath = moviePath
+        };
+
+        Assert.Null(ContentDownloadService.RestoreMappedPoster(localPoster, legacyItem));
+        Assert.Equal(
+            "https://kept.example/poster.jpg",
+            ContentDownloadService.RestoreMappedPoster("https://kept.example/poster.jpg", legacyItem));
+    }
 }

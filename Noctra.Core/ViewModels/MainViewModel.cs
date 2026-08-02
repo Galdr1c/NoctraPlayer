@@ -6922,6 +6922,22 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
+    private void TryDeleteFileSiblingPoster(string file)
+    {
+        try
+        {
+            var poster = Path.ChangeExtension(file, ".poster.jpg");
+            if (!string.IsNullOrWhiteSpace(poster) && File.Exists(poster))
+            {
+                File.Delete(poster);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogDebug(ex, "Failed to delete poster file: {File}", file);
+        }
+    }
+
     private void TryDeleteEmptyDownloadParents(string? startDirectory)
     {
         var root = ResolveGlobalDownloadRoot();
@@ -7208,42 +7224,54 @@ public partial class MainViewModel : ObservableObject
                 }
             }
 
-            // 1. Delete Files
-            foreach (var file in filesToDelete)
+            // 1. Tracked downloads are removed through the service so the
+            //    original remote URLs/posters are restored on the mapped
+            //    Channel/Episode rows and the files are deleted atomically.
+            using (var db = await _contextFactory.CreateDbContextAsync())
             {
-                try
+                var tracked = await db.DownloadItems
+                    .AsNoTracking()
+                    .Where(d => d.LocalFilePath != null && filesToDelete.Contains(d.LocalFilePath))
+                    .ToListAsync();
+
+                foreach (var record in tracked)
                 {
-                    if (File.Exists(file) && IsPathInsideDownloadRoot(file))
-                    {
-                        File.Delete(file);
-                    }
+                    await _contentDownloadService.DeleteDownloadAsync(record.Id);
                 }
-                catch (Exception ex)
+
+                var trackedPaths = new HashSet<string>(
+                    tracked.Where(t => !string.IsNullOrWhiteSpace(t.LocalFilePath))
+                           .Select(t => t.LocalFilePath!),
+                    StringComparer.OrdinalIgnoreCase);
+
+                // 2. Orphan files (not tracked in the DB) are removed directly.
+                foreach (var file in filesToDelete.Where(f => !trackedPaths.Contains(f)))
                 {
-                    _logger?.LogDebug(ex, "Failed to delete downloaded file: {File}", file);
+                    try
+                    {
+                        if (File.Exists(file) && IsPathInsideDownloadRoot(file))
+                        {
+                            File.Delete(file);
+                            TryDeleteFileSiblingPoster(file);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger?.LogDebug(ex, "Failed to delete downloaded file: {File}", file);
+                    }
+
+                    TryDeleteEmptyDownloadParents(Path.GetDirectoryName(file));
                 }
             }
 
+            // 3. Remove now-empty series directory trees that were not already
+            //    cleaned up by the service.
             foreach (var dir in seriesDirectoriesToDelete)
             {
                 TryDeleteDownloadDirectoryTree(dir);
             }
 
-            foreach (var file in filesToDelete)
-            {
-                TryDeleteEmptyDownloadParents(Path.GetDirectoryName(file));
-            }
-
-            // 2. Delete from DB
-            using var db = await _contextFactory.CreateDbContextAsync();
-            foreach (var file in filesToDelete)
-            {
-                var record = await db.DownloadItems.FirstOrDefaultAsync(d => d.LocalFilePath == file);
-                if (record != null) db.DownloadItems.Remove(record);
-            }
-            await db.SaveChangesAsync();
-
-            // 3. Refresh
+            // 4. Refresh
             await RefreshDownloadedItemsFromDatabaseAsync();
         }
         catch (Exception ex)
@@ -7266,26 +7294,10 @@ public partial class MainViewModel : ObservableObject
 
         try
         {
-            var root = ResolveGlobalDownloadRoot();
-            if (Directory.Exists(root))
-            {
-                var files = Directory.GetFiles(root, "*.*", SearchOption.AllDirectories);
-                foreach (var file in files)
-                {
-                    try { File.Delete(file); } catch { /* ignore */ }
-                }
-                
-                var dirs = Directory.GetDirectories(root);
-                foreach (var dir in dirs)
-                {
-                    try { Directory.Delete(dir, true); } catch { /* ignore */ }
-                }
-            }
-
-            using var db = await _contextFactory.CreateDbContextAsync();
-            var items = await db.DownloadItems.ToListAsync();
-            db.DownloadItems.RemoveRange(items);
-            await db.SaveChangesAsync();
+            // Delete everything through the service so mapped entities are
+            // restored to their original remote URLs/posters before the
+            // download records and files are removed.
+            await _contentDownloadService.DeleteAllDownloadsAsync(0);
 
             await RefreshDownloadedItemsFromDatabaseAsync();
         }

@@ -77,6 +77,21 @@ namespace Noctra.Tests
             return Task.CompletedTask;
         }
 
+        public Task DeleteDownloadAsync(int downloadId, CancellationToken ct = default)
+        {
+            var item = MockItems.FirstOrDefault(i => i.Id == downloadId);
+            if (item != null) MockItems.Remove(item);
+            DownloadsChanged?.Invoke(this, EventArgs.Empty);
+            return Task.CompletedTask;
+        }
+
+        public Task DeleteAllDownloadsAsync(int profileId, CancellationToken ct = default)
+        {
+            MockItems.RemoveAll(i => profileId <= 0 || i.ProfileId == profileId);
+            DownloadsChanged?.Invoke(this, EventArgs.Empty);
+            return Task.CompletedTask;
+        }
+
         public Task PauseDownloadAsync(int id, CancellationToken ct = default)
         {
             var item = MockItems.FirstOrDefault(i => i.Id == id);

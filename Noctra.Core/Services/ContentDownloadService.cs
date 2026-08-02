@@ -118,6 +118,7 @@ public class ContentDownloadService : IContentDownloadService
             ChannelType = request.ItemType == DownloadItemType.SeriesEpisode ? ChannelType.Series : ChannelType.VOD,
             DisplayName = string.IsNullOrWhiteSpace(request.DisplayName) ? _localizationService.GetString("Download.DefaultName") : request.DisplayName.Trim(),
             PosterUrl = request.PosterUrl,
+            SourcePosterUrl = string.IsNullOrWhiteSpace(request.PosterUrl) ? null : request.PosterUrl.Trim(),
             SourceUrl = normalizedSource,
             AudioTracksJson = SerializeTrackList(request.AudioTracks),
             SubtitleTracksJson = SerializeTrackList(request.SubtitleTracks),
@@ -385,18 +386,18 @@ public class ContentDownloadService : IContentDownloadService
         DownloadsChanged?.Invoke(this, EventArgs.Empty);
     }
 
-    public async Task DeleteProfileDownloadsAsync(
+    public Task DeleteProfileDownloadsAsync(
+        int profileId,
+        CancellationToken cancellationToken = default)
+        => DeleteAllDownloadsAsync(profileId, cancellationToken);
+
+    public async Task DeleteAllDownloadsAsync(
         int profileId,
         CancellationToken cancellationToken = default)
     {
-        if (profileId <= 0)
-        {
-            return;
-        }
-
         using var db = await _contextFactory.CreateDbContextAsync(cancellationToken);
         var downloadIds = await db.DownloadItems
-            .Where(d => d.ProfileId == profileId)
+            .Where(d => profileId <= 0 || d.ProfileId == profileId)
             .Select(d => d.Id)
             .ToListAsync(cancellationToken);
 
@@ -416,7 +417,7 @@ public class ContentDownloadService : IContentDownloadService
         DownloadsChanged?.Invoke(this, EventArgs.Empty);
     }
 
-    public async Task CancelDownloadAsync(
+    public async Task DeleteDownloadAsync(
         int downloadId,
         CancellationToken cancellationToken = default)
     {
@@ -428,18 +429,23 @@ public class ContentDownloadService : IContentDownloadService
         _pauseRequestedIds.TryRemove(downloadId, out _);
         _cancelRequestedIds[downloadId] = 1;
 
+        // If the item is actively downloading, cancel the worker first. The
+        // worker's finally block detects the pending cancel flag, performs the
+        // cleanup and raises DownloadsChanged exactly once.
         if (_activeDownloadCts.TryGetValue(downloadId, out var cts))
         {
             cts.Cancel();
-            // UI responsiveness first: cleanup happens asynchronously in worker finally block.
-            DownloadsChanged?.Invoke(this, EventArgs.Empty);
+            return;
         }
-        else
-        {
-            await RemoveDownloadArtifactsAndRecordAsync(downloadId, cancellationToken);
-            DownloadsChanged?.Invoke(this, EventArgs.Empty);
-        }
+
+        await RemoveDownloadArtifactsAndRecordAsync(downloadId, cancellationToken);
+        DownloadsChanged?.Invoke(this, EventArgs.Empty);
     }
+
+    public Task CancelDownloadAsync(
+        int downloadId,
+        CancellationToken cancellationToken = default)
+        => DeleteDownloadAsync(downloadId, cancellationToken);
 
     public async Task PauseDownloadAsync(
         int downloadId,
@@ -1128,26 +1134,42 @@ public class ContentDownloadService : IContentDownloadService
         string? dirToCheck = null;
 
         using var db = await _contextFactory.CreateDbContextAsync(cancellationToken);
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
         var item = await db.DownloadItems.FirstOrDefaultAsync(d => d.Id == downloadId, cancellationToken);
         if (item != null)
         {
+            // 1. Restore the original remote URLs (and posters) on the mapped
+            //    Channel/Episode rows, then remove the download record — all in
+            //    one transaction so a partial failure never leaves content
+            //    pointing at a file that no longer exists.
             await RestoreMappedEntitiesToSourceUrlAsync(db, item);
-            
+
+            // 2. Delete the media file, its poster and any leftover temp file.
             if (!string.IsNullOrWhiteSpace(item.LocalFilePath))
             {
                 TryDeleteFileWithRetry(item.LocalFilePath);
                 dirToCheck = Path.GetDirectoryName(item.LocalFilePath);
             }
+
+            var posterPath = ResolveLocalPosterPath(item);
+            if (posterPath != null)
+            {
+                TryDeleteFileWithRetry(posterPath);
+                dirToCheck ??= Path.GetDirectoryName(posterPath);
+            }
+
             if (!string.IsNullOrWhiteSpace(item.TempFilePath))
             {
                 TryDeleteFileWithRetry(item.TempFilePath);
                 dirToCheck ??= Path.GetDirectoryName(item.TempFilePath);
             }
-            
-            // Phase 27: Explicitly removing the row from DB on Cancel
+
+            // 3. Remove the DownloadItem record last.
             db.DownloadItems.Remove(item);
             await db.SaveChangesAsync(cancellationToken);
         }
+
+        await transaction.CommitAsync(cancellationToken);
 
         if (_activeTempFiles.TryRemove(downloadId, out var tempPath))
         {
@@ -1418,6 +1440,7 @@ public class ContentDownloadService : IContentDownloadService
                 if (channel != null)
                 {
                     channel.StreamUrl = item.SourceUrl;
+                    channel.LogoUrl = RestoreMappedPoster(channel.LogoUrl, item);
                 }
             }
             else
@@ -1429,6 +1452,7 @@ public class ContentDownloadService : IContentDownloadService
                 if (channel != null)
                 {
                     channel.StreamUrl = item.SourceUrl;
+                    channel.LogoUrl = RestoreMappedPoster(channel.LogoUrl, item);
                 }
             }
 
@@ -1437,18 +1461,42 @@ public class ContentDownloadService : IContentDownloadService
 
         if (item.EpisodeId.HasValue)
         {
-            var episode = await db.Episodes.FirstOrDefaultAsync(e => e.Id == item.EpisodeId.Value);
+            var episode = await db.Episodes
+                .Include(e => e.Season)
+                .ThenInclude(s => s!.Series)
+                .FirstOrDefaultAsync(e => e.Id == item.EpisodeId.Value);
             if (episode != null)
             {
                 episode.StreamUrl = item.SourceUrl;
+                episode.CoverUrl = RestoreMappedPoster(episode.CoverUrl, item);
+                if (episode.Season != null)
+                {
+                    episode.Season.CoverUrl = RestoreMappedPoster(episode.Season.CoverUrl, item);
+                    if (episode.Season.Series != null)
+                    {
+                        episode.Season.Series.CoverUrl = RestoreMappedPoster(episode.Season.Series.CoverUrl, item);
+                    }
+                }
             }
         }
         else
         {
-            var episode = await db.Episodes.FirstOrDefaultAsync(e => e.StreamUrl == item.LocalFilePath);
+            var episode = await db.Episodes
+                .Include(e => e.Season)
+                .ThenInclude(s => s!.Series)
+                .FirstOrDefaultAsync(e => e.StreamUrl == item.LocalFilePath);
             if (episode != null)
             {
                 episode.StreamUrl = item.SourceUrl;
+                episode.CoverUrl = RestoreMappedPoster(episode.CoverUrl, item);
+                if (episode.Season != null)
+                {
+                    episode.Season.CoverUrl = RestoreMappedPoster(episode.Season.CoverUrl, item);
+                    if (episode.Season.Series != null)
+                    {
+                        episode.Season.Series.CoverUrl = RestoreMappedPoster(episode.Season.Series.CoverUrl, item);
+                    }
+                }
             }
         }
 
@@ -1460,6 +1508,58 @@ public class ContentDownloadService : IContentDownloadService
         foreach (var channel in linkedSeriesChannels)
         {
             channel.StreamUrl = item.SourceUrl;
+            channel.LogoUrl = RestoreMappedPoster(channel.LogoUrl, item);
+        }
+    }
+
+    /// <summary>
+    /// Restores the poster a mapped entity had before the download overwrote it:
+    /// back to the original remote poster when known, otherwise null when the
+    /// current value is the (now deleted) local poster file.
+    /// </summary>
+    internal static string? RestoreMappedPoster(string? currentPoster, DownloadItem item)
+    {
+        if (!string.IsNullOrWhiteSpace(item.SourcePosterUrl))
+        {
+            return item.SourcePosterUrl;
+        }
+
+        var localPosterPath = ResolveLocalPosterPath(item);
+        return localPosterPath != null && PathsReferToSameFile(currentPoster, localPosterPath)
+            ? null
+            : currentPoster;
+    }
+
+    private static string? ResolveLocalPosterPath(DownloadItem item)
+        => string.IsNullOrWhiteSpace(item.LocalFilePath)
+            ? null
+            : BuildPosterPath(item, item.LocalFilePath);
+
+    private static bool PathsReferToSameFile(string? left, string? right)
+    {
+        if (string.IsNullOrWhiteSpace(left) || string.IsNullOrWhiteSpace(right))
+        {
+            return false;
+        }
+
+        var leftPath = left.Trim().Trim('"', '\'');
+        if (leftPath.StartsWith("file://", StringComparison.OrdinalIgnoreCase) &&
+            Uri.TryCreate(leftPath, UriKind.Absolute, out var leftUri) &&
+            leftUri.IsFile)
+        {
+            leftPath = leftUri.LocalPath;
+        }
+
+        try
+        {
+            return string.Equals(
+                Path.GetFullPath(leftPath),
+                Path.GetFullPath(right),
+                StringComparison.OrdinalIgnoreCase);
+        }
+        catch
+        {
+            return false;
         }
     }
 

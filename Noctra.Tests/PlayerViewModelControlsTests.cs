@@ -176,6 +176,8 @@ namespace Noctra.Tests
         public Task CleanupPlaybackCacheAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task<List<DownloadItem>> GetDownloadsAsync(int profileId, CancellationToken cancellationToken = default) => Task.FromResult(new List<DownloadItem>());
         public Task CancelDownloadAsync(int downloadId, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task DeleteDownloadAsync(int downloadId, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task DeleteAllDownloadsAsync(int profileId, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task PauseDownloadAsync(int downloadId, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task ResumeDownloadAsync(int downloadId, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task FailActiveDownloadsForProfileAsync(int profileId, string errorMessage, CancellationToken cancellationToken = default) => Task.CompletedTask;

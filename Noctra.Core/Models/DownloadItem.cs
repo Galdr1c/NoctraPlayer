@@ -30,6 +30,15 @@ public class DownloadItem
     public ChannelType ChannelType { get; set; } = ChannelType.VOD;
     public string DisplayName { get; set; } = string.Empty;
     public string? PosterUrl { get; set; }
+
+    /// <summary>
+    /// Original remote poster URL captured when the download was queued.
+    /// Unlike <see cref="PosterUrl"/> it is never overwritten with the local
+    /// poster path, so it can be restored onto mapped entities when the
+    /// download is deleted.
+    /// </summary>
+    public string? SourcePosterUrl { get; set; }
+
     public string SourceUrl { get; set; } = string.Empty;
     public string? LocalFilePath { get; set; }
     public string? TempFilePath { get; set; }
