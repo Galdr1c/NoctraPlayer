@@ -8877,6 +8877,13 @@ public partial class MainViewModel : ObservableObject
 
         try
         {
+            var seasonNumber = SelectedSeason?.SeasonNumber ?? 0;
+            if (seasonNumber <= 0 && SelectedSeries?.Seasons is { } seriesSeasons)
+            {
+                seasonNumber = seriesSeasons
+                    .FirstOrDefault(s => s.Id == episode.SeasonId)?.SeasonNumber ?? 0;
+            }
+
             var request = new DownloadContentRequest(
                 CurrentProfileId.Value,
                 DownloadItemType.SeriesEpisode,
@@ -8885,19 +8892,28 @@ public partial class MainViewModel : ObservableObject
                 SelectedSeries?.CoverUrl,
                 SelectedPlaylist?.Id ?? 0,
                 0,
-                episode.Id);
+                episode.Id,
+                null,
+                null,
+                SelectedSeries?.Id ?? 0,
+                SelectedSeries?.Name,
+                seasonNumber,
+                episode.EpisodeNumber,
+                string.IsNullOrWhiteSpace(episode.TmdbEpisodeName) ? episode.Name : episode.TmdbEpisodeName);
 
             var result = await _contentDownloadService.QueueDownloadAsync(request);
             // Keep the mobile detail feedback identical to the player sheet:
             // the service owns the exact queued/already-downloaded/already-in-
             // queue message, so do not replace it with a generic success text.
             DownloadStatusMessage = result.Message;
-            StatusMessage = result.Success
+            // AlreadyExists wins: the service reports Success=true for an
+            // already-queued/completed item, so it must be checked first.
+            StatusMessage = result.AlreadyExists
                 ? string.Format(CultureInfo.CurrentCulture,
-                    _localizationService.GetString("Download.Status.AddedFormat"), episode.Name)
-                : result.AlreadyExists
+                    _localizationService.GetString("Download.Status.AlreadyExistsFormat"), episode.Name)
+                : result.Success
                     ? string.Format(CultureInfo.CurrentCulture,
-                        _localizationService.GetString("Download.Status.AlreadyExistsFormat"), episode.Name)
+                        _localizationService.GetString("Download.Status.AddedFormat"), episode.Name)
                     : string.Format(CultureInfo.CurrentCulture,
                         _localizationService.GetString("Download.Status.ErrorFormat"), result.Message);
         }
@@ -8957,11 +8973,20 @@ public partial class MainViewModel : ObservableObject
                         SelectedSeries?.CoverUrl,
                         SelectedPlaylist?.Id ?? 0,
                         0,
-                        episode.Id);
+                        episode.Id,
+                        null,
+                        null,
+                        SelectedSeries?.Id ?? 0,
+                        SelectedSeries?.Name,
+                        SelectedSeason.SeasonNumber,
+                        episode.EpisodeNumber,
+                        string.IsNullOrWhiteSpace(episode.TmdbEpisodeName) ? episode.Name : episode.TmdbEpisodeName);
 
                     var result = await _contentDownloadService.QueueDownloadAsync(request);
-                    if (result.Success) queued++;
-                    else if (result.AlreadyExists) skipped++;
+                    // AlreadyExists wins: the service reports Success=true for
+                    // an already-queued/completed item, so it must be checked first.
+                    if (result.AlreadyExists) skipped++;
+                    else if (result.Success) queued++;
                     else failed++;
                 }
                 catch (Exception ex)

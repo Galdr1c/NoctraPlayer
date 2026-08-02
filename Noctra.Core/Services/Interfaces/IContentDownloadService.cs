@@ -20,7 +20,12 @@ public sealed record DownloadContentRequest(
     int ChannelId = 0,
     int EpisodeId = 0,
     IReadOnlyList<DownloadTrackOption>? AudioTracks = null,
-    IReadOnlyList<DownloadTrackOption>? SubtitleTracks = null);
+    IReadOnlyList<DownloadTrackOption>? SubtitleTracks = null,
+    int SeriesId = 0,
+    string? SeriesTitle = null,
+    int SeasonNumber = 0,
+    int EpisodeNumber = 0,
+    string? EpisodeTitle = null);
 
 public sealed record DownloadContentResult(
     bool Success,

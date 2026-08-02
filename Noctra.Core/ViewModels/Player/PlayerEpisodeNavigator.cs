@@ -462,17 +462,37 @@ public class PlayerEpisodeNavigator
 
         if (channel.Type == ChannelType.Series)
         {
+            var series = _vm._currentSeriesContext;
+            var episode = _vm.CurrentEpisode;
+            var seasonNumber = 0;
+            if (episode?.SeasonId is > 0 && series?.Seasons is { } seriesSeasons)
+            {
+                seasonNumber = seriesSeasons
+                    .FirstOrDefault(s => s.Id == episode.SeasonId)?.SeasonNumber ?? 0;
+            }
+            if (seasonNumber <= 0)
+            {
+                seasonNumber = episode?.Season?.SeasonNumber ?? 0;
+            }
+
             return new DownloadContentRequest(
                 profileId,
                 DownloadItemType.SeriesEpisode,
-                _vm.CurrentEpisode?.Name ?? channel.Name,
-                _vm.CurrentEpisode?.StreamUrl ?? channel.StreamUrl,
+                episode?.Name ?? channel.Name,
+                episode?.StreamUrl ?? channel.StreamUrl,
                 poster,
                 playlistId,
                 channel.Id,
-                _vm.CurrentEpisode?.Id ?? 0,
+                episode?.Id ?? 0,
                 audioTracks,
-                subtitleTracks);
+                subtitleTracks,
+                series?.Id ?? 0,
+                series?.Name,
+                seasonNumber,
+                episode?.EpisodeNumber ?? 0,
+                episode != null && !string.IsNullOrWhiteSpace(episode.TmdbEpisodeName)
+                    ? episode.TmdbEpisodeName
+                    : episode?.Name);
         }
 
         return new DownloadContentRequest(

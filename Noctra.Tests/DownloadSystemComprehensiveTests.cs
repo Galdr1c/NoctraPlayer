@@ -7,6 +7,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Moq;
+using Noctra.Core.Services;
 using Noctra.Data;
 using Noctra.Models;
 using Noctra.Services;
@@ -27,16 +29,16 @@ namespace Noctra.Tests
         public Task<T> InvokeAsync<T>(Func<Task<T>> func) => func();
     }
 
-    internal sealed class StatefulFakeDownloadService : IContentDownloadService
+    internal class StatefulFakeDownloadService : IContentDownloadService
     {
         public List<DownloadItem> MockItems = new();
         public event EventHandler? DownloadsChanged;
         public event EventHandler<DownloadItem>? DownloadCompleted;
 
-        public Task<DownloadContentResult> QueueDownloadAsync(DownloadContentRequest request, CancellationToken ct = default)
+        public virtual Task<DownloadContentResult> QueueDownloadAsync(DownloadContentRequest request, CancellationToken ct = default)
         {
             if (MockItems.Any(i => i.SourceUrl == request.SourceUrl))
-                return Task.FromResult(new DownloadContentResult(false, true, "Zaten var"));
+                return Task.FromResult(new DownloadContentResult(true, true, "Zaten var"));
 
             var item = new DownloadItem
             {
@@ -45,7 +47,12 @@ namespace Noctra.Tests
                 SourceUrl = request.SourceUrl,
                 Status = DownloadStatus.Queued,
                 ProfileId = request.ProfileId,
-                ChannelType = request.ItemType == DownloadItemType.Vod ? ChannelType.VOD : ChannelType.Series
+                ChannelType = request.ItemType == DownloadItemType.Vod ? ChannelType.VOD : ChannelType.Series,
+                SeriesId = request.SeriesId > 0 ? request.SeriesId : null,
+                SeriesTitle = request.SeriesTitle,
+                SeasonNumber = request.SeasonNumber,
+                EpisodeNumber = request.EpisodeNumber,
+                EpisodeTitle = request.EpisodeTitle
             };
             MockItems.Add(item);
             DownloadsChanged?.Invoke(this, EventArgs.Empty);
@@ -162,8 +169,234 @@ namespace Noctra.Tests
             await ctx.DownloadService.QueueDownloadAsync(req);
             var result2 = await ctx.DownloadService.QueueDownloadAsync(req);
 
-            Assert.False(result2.Success);
             Assert.True(result2.AlreadyExists);
+            Assert.Single(ctx.DownloadService.MockItems);
+        }
+
+        [Fact]
+        public async Task QueueDownload_PreservesStructuralSeriesMetadata()
+        {
+            var ctx = new DownloadTestContext();
+            var req = new DownloadContentRequest(
+                1,
+                DownloadItemType.SeriesEpisode,
+                "Episode 5",
+                "http://url.mp4",
+                null,
+                0,
+                0,
+                42,
+                null,
+                null,
+                SeriesId: 7,
+                SeriesTitle: "The 100",
+                SeasonNumber: 2,
+                EpisodeNumber: 5,
+                EpisodeTitle: "Hakeldama");
+
+            var result = await ctx.DownloadService.QueueDownloadAsync(req);
+
+            Assert.True(result.Success);
+            var item = Assert.Single(ctx.DownloadService.MockItems);
+            Assert.Equal(7, item.SeriesId);
+            Assert.Equal("The 100", item.SeriesTitle);
+            Assert.Equal(2, item.SeasonNumber);
+            Assert.Equal(5, item.EpisodeNumber);
+            Assert.Equal("Hakeldama", item.EpisodeTitle);
+        }
+
+        [Fact]
+        public void SeriesFolder_UsesStructuralMetadata_NotEpisodeDisplayName()
+        {
+            using var tempRoot = new TempDownloadRoot();
+            var service = CreateFolderService();
+            var item = new DownloadItem
+            {
+                ChannelType = ChannelType.Series,
+                DisplayName = "Episode 5",
+                SeriesTitle = "The 100",
+                SeasonNumber = 2,
+                ProfileId = 1
+            };
+
+            var folder = InvokeEnsureItemDownloadDirectory(service, tempRoot.Path, item);
+
+            Assert.EndsWith(
+                Path.Combine("Series", "The 100", "Season 02"),
+                folder,
+                StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("Episode 5", folder, StringComparison.OrdinalIgnoreCase);
+            Assert.False(Directory.Exists(Path.Combine(tempRoot.Path, "Series", "Episode 5")));
+        }
+
+        [Fact]
+        public void SeriesFolder_FallsBackToDisplayNameParse_WhenStructuralMetadataMissing()
+        {
+            using var tempRoot = new TempDownloadRoot();
+            var service = CreateFolderService();
+            var item = new DownloadItem
+            {
+                ChannelType = ChannelType.Series,
+                DisplayName = "The 100 - S01 E05",
+                ProfileId = 1
+            };
+
+            var folder = InvokeEnsureItemDownloadDirectory(service, tempRoot.Path, item);
+
+            Assert.EndsWith(
+                Path.Combine("Series", "The 100", "Season 01"),
+                folder,
+                StringComparison.OrdinalIgnoreCase);
+        }
+
+        [Fact]
+        public async Task SeasonDownload_AlreadyExistsEpisode_CountsAsSkippedNotQueued()
+        {
+            var downloadService = new RecordingDownloadService();
+            var viewModel = CreateSeasonDownloadViewModel(downloadService);
+
+            viewModel.CurrentProfileId = 1;
+            viewModel.SelectedSeries = new Series { Id = 7, Name = "The 100" };
+            viewModel.SelectedSeason = new Season
+            {
+                Id = 1,
+                SeasonNumber = 2,
+                SeriesId = 7,
+                Episodes =
+                {
+                    new Episode { Id = 11, SeasonId = 1, EpisodeNumber = 1, Name = "Episode 1", StreamUrl = "http://url/new-1.mp4" },
+                    new Episode { Id = 12, SeasonId = 1, EpisodeNumber = 2, Name = "Episode 2", StreamUrl = "http://url/old-2.mp4" }
+                }
+            };
+
+            // Second episode already exists in the queue — the real service reports
+            // Success=true AND AlreadyExists=true for this case.
+            downloadService.MockItems.Add(new DownloadItem
+            {
+                SourceUrl = "http://url/old-2.mp4",
+                Status = DownloadStatus.Completed,
+                ProfileId = 1
+            });
+
+            await viewModel.DownloadSelectedSeasonCommand.ExecuteAsync(null);
+
+            Assert.Contains("1 eklendi", viewModel.StatusMessage);
+            Assert.Contains("1 atlandı", viewModel.StatusMessage);
+            Assert.DoesNotContain("hata", viewModel.StatusMessage);
+
+            // Structural metadata must flow through the request, not the display name.
+            Assert.Equal(2, downloadService.Requests.Count);
+            Assert.All(downloadService.Requests, request =>
+            {
+                Assert.Equal(7, request.SeriesId);
+                Assert.Equal("The 100", request.SeriesTitle);
+                Assert.Equal(2, request.SeasonNumber);
+            });
+            Assert.Equal("Episode 1", downloadService.Requests[0].EpisodeTitle);
+            Assert.Equal("Episode 2", downloadService.Requests[1].EpisodeTitle);
+            Assert.Equal(1, downloadService.Requests[0].EpisodeNumber);
+            Assert.Equal(2, downloadService.Requests[1].EpisodeNumber);
+        }
+
+        private static MainViewModel CreateSeasonDownloadViewModel(IContentDownloadService downloadService)
+        {
+            var settings = new Mock<ISettingsService>();
+            settings.SetupGet(service => service.Settings).Returns(new AppSettings());
+
+            var dispatcher = new Mock<IDispatcherService>();
+            dispatcher.Setup(service => service.Invoke(It.IsAny<Action>()))
+                .Callback<Action>(action => action());
+            dispatcher.Setup(service => service.BeginInvoke(It.IsAny<Action>()))
+                .Callback<Action>(action => action());
+            dispatcher.Setup(service => service.InvokeAsync(It.IsAny<Func<Task>>()))
+                .Returns(Task.CompletedTask);
+
+            var localization = new Mock<ILocalizationService>();
+            localization.Setup(service => service.GetString(It.IsAny<string>())).Returns("Test");
+            localization.Setup(service => service.GetString("Download.Season.StartingFormat")).Returns("{0}. sezon - {1} bölüm başlatılıyor");
+            localization.Setup(service => service.GetString("Download.Season.Result.QueuedFormat")).Returns("{0} eklendi");
+            localization.Setup(service => service.GetString("Download.Season.Result.SkippedFormat")).Returns("{0} atlandı");
+            localization.Setup(service => service.GetString("Download.Season.Result.FailedFormat")).Returns("{0} hata");
+            localization.Setup(service => service.GetString("Download.Season.ResultFormat")).Returns("Sonuç: {0} - {1}");
+
+            return new MainViewModel(
+                settings.Object,
+                downloadService,
+                new Mock<IMetadataService>().Object,
+                dispatcher.Object,
+                new Mock<IDialogService>().Object,
+                null!,
+                new Mock<IChannelService>().Object,
+                new Mock<IMediaService>().Object,
+                new Mock<IEpgService>().Object,
+                new Mock<IPlaylistService>().Object,
+                new Mock<IWatchHistoryService>().Object,
+                new Mock<IXtreamCodesService>().Object,
+                new Mock<IStalkerPortalService>().Object,
+                null!,
+                null!,
+                new Mock<IDbContextFactory<AppDbContext>>().Object,
+                new Mock<ISecurityService>().Object,
+                new Mock<ITmdbSyncService>().Object,
+                new Mock<ILicenseService>().Object,
+                null!,
+                localization.Object);
+        }
+
+        private sealed class RecordingDownloadService : StatefulFakeDownloadService
+        {
+            public List<DownloadContentRequest> Requests { get; } = new();
+
+            public override Task<DownloadContentResult> QueueDownloadAsync(DownloadContentRequest request, CancellationToken ct = default)
+            {
+                Requests.Add(request);
+                return base.QueueDownloadAsync(request, ct);
+            }
+        }
+
+        private static ContentDownloadService CreateFolderService()
+        {
+            var settings = new FakeSettingsService();
+            var factory = Moq.Mock.Of<IDbContextFactory<AppDbContext>>();
+            return new ContentDownloadService(
+                settings,
+                factory,
+                new HttpClient(),
+                new LocalizationService(),
+                null,
+                new DesktopAppPathService(
+                    Path.Combine(Path.GetTempPath(), "Noctra-FolderTests"),
+                    Path.GetTempPath()),
+                new FakeNetworkService());
+        }
+
+        private static string InvokeEnsureItemDownloadDirectory(
+            ContentDownloadService service,
+            string profilePath,
+            DownloadItem item)
+        {
+            var method = typeof(ContentDownloadService).GetMethod(
+                "EnsureItemDownloadDirectory",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            return (string)method!.Invoke(service, new object[] { profilePath, item })!;
+        }
+
+        private sealed class TempDownloadRoot : IDisposable
+        {
+            public string Path { get; } = System.IO.Path.Combine(
+                System.IO.Path.GetTempPath(),
+                $"Noctra-DownloadFolder-{Guid.NewGuid():N}");
+
+            public void Dispose()
+            {
+                try
+                {
+                    Directory.Delete(Path, recursive: true);
+                }
+                catch
+                {
+                }
+            }
         }
 
         [Fact]

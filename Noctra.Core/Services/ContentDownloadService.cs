@@ -119,6 +119,11 @@ public class ContentDownloadService : IContentDownloadService
             PlaylistId = request.PlaylistId,
             ChannelId = request.ChannelId > 0 ? request.ChannelId : null,
             EpisodeId = request.EpisodeId > 0 ? request.EpisodeId : null,
+            SeriesId = request.SeriesId > 0 ? request.SeriesId : null,
+            SeriesTitle = string.IsNullOrWhiteSpace(request.SeriesTitle) ? null : request.SeriesTitle.Trim(),
+            SeasonNumber = request.SeasonNumber,
+            EpisodeNumber = request.EpisodeNumber,
+            EpisodeTitle = string.IsNullOrWhiteSpace(request.EpisodeTitle) ? null : request.EpisodeTitle.Trim(),
             ChannelType = request.ItemType == DownloadItemType.SeriesEpisode ? ChannelType.Series : ChannelType.VOD,
             DisplayName = string.IsNullOrWhiteSpace(request.DisplayName) ? _localizationService.GetString("Download.DefaultName") : request.DisplayName.Trim(),
             PosterUrl = request.PosterUrl,
@@ -1472,10 +1477,28 @@ public class ContentDownloadService : IContentDownloadService
             Directory.CreateDirectory(categoryPath);
         }
 
-        if (item.ChannelType == ChannelType.Series && !string.IsNullOrWhiteSpace(item.DisplayName))
+        if (item.ChannelType == ChannelType.Series)
         {
-            var parsed = SeriesInfoParser.Parse(item.DisplayName);
-            var seriesName = BuildSafeFileName(parsed.SeriesName);
+            // Folder structure must never depend on the visible episode name.
+            // Prefer the structural metadata (SeriesTitle/SeasonNumber); the
+            // DisplayName regex parse is only a fallback for legacy items.
+            string seriesName;
+            int seasonNumber;
+
+            if (!string.IsNullOrWhiteSpace(item.SeriesTitle))
+            {
+                var structural = SeriesInfoParser.Parse(item.SeriesTitle);
+                seriesName = BuildSafeFileName(structural.SeriesName);
+                seasonNumber = item.SeasonNumber > 0
+                    ? item.SeasonNumber
+                    : structural.Season > 0 ? structural.Season : 1;
+            }
+            else
+            {
+                var parsed = SeriesInfoParser.Parse(item.DisplayName);
+                seriesName = BuildSafeFileName(parsed.SeriesName);
+                seasonNumber = parsed.Season > 0 ? parsed.Season : 1;
+            }
 
             // Phase 27: Smart folder matching — scan existing series folders for a fuzzy match
             // so that "4400" from Provider A and "The 4400" from Provider B share the same folder.
@@ -1488,7 +1511,7 @@ public class ContentDownloadService : IContentDownloadService
             }
 
             // Phase 24: Use centralized parser for accurate Season folder grouping
-            var sNum = parsed.Season > 0 ? parsed.Season : 1;
+            var sNum = seasonNumber > 0 ? seasonNumber : 1;
             var seasonPath = Path.Combine(seriesPath, $"Season {sNum:D2}");
             if (!Directory.Exists(seasonPath))
             {

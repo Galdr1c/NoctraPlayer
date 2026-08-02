@@ -21,6 +21,11 @@ public class DownloadItem
     public int PlaylistId { get; set; }
     public int? ChannelId { get; set; }
     public int? EpisodeId { get; set; }
+    public int? SeriesId { get; set; }
+    public string? SeriesTitle { get; set; }
+    public int SeasonNumber { get; set; }
+    public int EpisodeNumber { get; set; }
+    public string? EpisodeTitle { get; set; }
     public ChannelType ChannelType { get; set; } = ChannelType.VOD;
     public string DisplayName { get; set; } = string.Empty;
     public string? PosterUrl { get; set; }

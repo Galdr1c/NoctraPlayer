@@ -128,6 +128,11 @@ public sealed class DatabaseSchemaFixupService : IDatabaseSchemaFixupService
                 PlaylistId INTEGER NOT NULL DEFAULT 0,
                 ChannelId INTEGER NULL,
                 EpisodeId INTEGER NULL,
+                SeriesId INTEGER NULL,
+                SeriesTitle TEXT NULL,
+                SeasonNumber INTEGER NOT NULL DEFAULT 0,
+                EpisodeNumber INTEGER NOT NULL DEFAULT 0,
+                EpisodeTitle TEXT NULL,
                 ChannelType INTEGER NOT NULL DEFAULT 1,
                 DisplayName TEXT NOT NULL,
                 PosterUrl TEXT NULL,
@@ -152,6 +157,11 @@ public sealed class DatabaseSchemaFixupService : IDatabaseSchemaFixupService
         await TryExecuteAsync(context, "CREATE INDEX IF NOT EXISTS IX_DownloadItems_Status ON DownloadItems(Status);", cancellationToken).ConfigureAwait(false);
         await TryExecuteAsync(context, "CREATE INDEX IF NOT EXISTS IX_DownloadItems_ProfileStatusCreated ON DownloadItems(ProfileId, Status, CreatedAt);", cancellationToken).ConfigureAwait(false);
         await RenameColumnIfPresentAsync(context, "DownloadItems", "LocalEncryptedPath", "LocalFilePath", cancellationToken).ConfigureAwait(false);
+        await AddColumnIfMissingAsync(context, "DownloadItems", "SeriesId", "INTEGER", cancellationToken).ConfigureAwait(false);
+        await AddColumnIfMissingAsync(context, "DownloadItems", "SeriesTitle", "TEXT", cancellationToken).ConfigureAwait(false);
+        await AddColumnIfMissingAsync(context, "DownloadItems", "SeasonNumber", "INTEGER NOT NULL DEFAULT 0", cancellationToken).ConfigureAwait(false);
+        await AddColumnIfMissingAsync(context, "DownloadItems", "EpisodeNumber", "INTEGER NOT NULL DEFAULT 0", cancellationToken).ConfigureAwait(false);
+        await AddColumnIfMissingAsync(context, "DownloadItems", "EpisodeTitle", "TEXT", cancellationToken).ConfigureAwait(false);
         await TryExecuteAsync(
             context,
             "UPDATE DownloadItems SET Status = 4, ErrorMessage = 'Eski format. Lütfen tekrar indirin.' WHERE LocalFilePath LIKE '%.nctra' AND Status = 3;",
