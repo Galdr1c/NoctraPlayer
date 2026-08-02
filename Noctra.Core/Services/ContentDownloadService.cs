@@ -15,6 +15,18 @@ using Noctra.Services.Interfaces;
 
 namespace Noctra.Services;
 
+/// <summary>
+/// Classification of a download target's stream format. Used to reject HLS/DASH
+/// streams early instead of saving a manifest text file and marking it Completed.
+/// </summary>
+internal enum DownloadContentKind
+{
+    DirectFile,
+    Hls,
+    Dash,
+    Unsupported
+}
+
 public class ContentDownloadService : IContentDownloadService
 {
     private const int ProgressPersistIntervalMs = 1800;
@@ -701,8 +713,16 @@ public class ContentDownloadService : IContentDownloadService
 
         if (File.Exists(finalPath) && new FileInfo(finalPath).Length > 0)
         {
-            await MarkCompletedAsync(downloadId, finalPath, resumedBytes, item.BytesTotal ?? resumedBytes, DateTime.UtcNow);
-            return;
+            // Never mark a previously saved HLS/DASH manifest as Completed.
+            if (IsManifestFile(finalPath))
+            {
+                TryDeleteFile(finalPath);
+            }
+            else
+            {
+                await MarkCompletedAsync(downloadId, finalPath, resumedBytes, item.BytesTotal ?? resumedBytes, DateTime.UtcNow);
+                return;
+            }
         }
 
         if (item.BytesTotal.HasValue &&
@@ -712,9 +732,16 @@ public class ContentDownloadService : IContentDownloadService
             var existingLength = new FileInfo(plainTempPath).Length;
             if (existingLength >= item.BytesTotal.Value || (item.BytesTotal.Value - existingLength < 1024 && existingLength > 1024 * 1024))
             {
-                File.Move(plainTempPath, finalPath, overwrite: true);
-                await MarkCompletedAsync(downloadId, finalPath, existingLength, item.BytesTotal, DateTime.UtcNow);
-                return;
+                if (IsManifestFile(plainTempPath))
+                {
+                    TryDeleteFile(plainTempPath);
+                }
+                else
+                {
+                    File.Move(plainTempPath, finalPath, overwrite: true);
+                    await MarkCompletedAsync(downloadId, finalPath, existingLength, item.BytesTotal, DateTime.UtcNow);
+                    return;
+                }
             }
         }
 
@@ -777,60 +804,85 @@ public class ContentDownloadService : IContentDownloadService
             long lastPersistedBytes = resumedBytes;
 
             await using (var sourceStream = await response.Content.ReadAsStreamAsync(localCts.Token))
-            await using (var output = new FileStream(
-                             plainTempPath,
-                             resumedBytes > 0 ? FileMode.Append : FileMode.Create,
-                             FileAccess.Write,
-                             FileShare.Read,
-                             1024 * 64,
-                             true))
             {
-                var buffer = new byte[1024 * 64];
-                long lastBytes = resumedBytes;
-                var lastTick = DateTime.UtcNow;
-
-                while (true)
+                // Sniff the head of the body: servers often serve HLS/DASH
+                // manifests with a generic content type (application/octet-stream)
+                // or from extension-less URLs, so headers alone are not enough.
+                var head = new byte[4096];
+                var headRead = resumedBytes > 0
+                    ? 0
+                    : await sourceStream.ReadAsync(head.AsMemory(0, head.Length), localCts.Token);
+                if (IsManifestContentKind(DetectContentKindFromContent(head.AsSpan(0, headRead))))
                 {
-                    localCts.Token.ThrowIfCancellationRequested();
-                    var read = await sourceStream.ReadAsync(buffer.AsMemory(0, buffer.Length), localCts.Token);
-                    if (read <= 0)
-                    {
-                        break;
-                    }
-
-                    await output.WriteAsync(buffer.AsMemory(0, read), localCts.Token);
-                    downloaded += read;
-
-                    var now = DateTime.UtcNow;
-                    if ((now - lastTick).TotalMilliseconds >= 800)
-                    {
-                        var deltaBytes = downloaded - lastBytes;
-                        var deltaSeconds = Math.Max(0.2, (now - lastTick).TotalSeconds);
-                        var speed = deltaBytes / deltaSeconds;
-                        var eta = speed > 0 && totalBytes.HasValue
-                            ? (int?)Math.Max(0, (int)Math.Ceiling((totalBytes.Value - downloaded) / speed))
-                            : null;
-                        var shouldPersistByTime = (now - lastPersistTick).TotalMilliseconds >= ProgressPersistIntervalMs;
-                        var shouldPersistByDelta = downloaded - lastPersistedBytes >= ProgressPersistMinDeltaBytes;
-                        if (shouldPersistByTime || shouldPersistByDelta)
-                        {
-                            item.BytesDownloaded = downloaded;
-                            item.BytesTotal = totalBytes;
-                            item.SpeedBytesPerSecond = speed;
-                            item.EstimatedSecondsRemaining = eta;
-                            item.UpdatedAt = DateTime.UtcNow;
-                            await startDb.SaveChangesAsync(localCts.Token);
-                            DownloadsChanged?.Invoke(this, EventArgs.Empty);
-                            lastPersistTick = now;
-                            lastPersistedBytes = downloaded;
-                        }
-
-                        lastTick = now;
-                        lastBytes = downloaded;
-                    }
+                    TryDeleteFile(plainTempPath);
+                    TryDeleteFile(finalPath);
+                    await MarkFailedAsync(
+                        downloadId,
+                        _localizationService.GetString("Download.Error.UnsupportedStreaming"));
+                    return;
                 }
 
-                await output.FlushAsync(localCts.Token);
+                await using (var output = new FileStream(
+                                 plainTempPath,
+                                 resumedBytes > 0 ? FileMode.Append : FileMode.Create,
+                                 FileAccess.Write,
+                                 FileShare.Read,
+                                 1024 * 64,
+                                 true))
+                {
+                    if (headRead > 0)
+                    {
+                        await output.WriteAsync(head.AsMemory(0, headRead), localCts.Token);
+                        downloaded += headRead;
+                    }
+
+                    var buffer = new byte[1024 * 64];
+                    long lastBytes = resumedBytes;
+                    var lastTick = DateTime.UtcNow;
+
+                    while (true)
+                    {
+                        localCts.Token.ThrowIfCancellationRequested();
+                        var read = await sourceStream.ReadAsync(buffer.AsMemory(0, buffer.Length), localCts.Token);
+                        if (read <= 0)
+                        {
+                            break;
+                        }
+
+                        await output.WriteAsync(buffer.AsMemory(0, read), localCts.Token);
+                        downloaded += read;
+
+                        var now = DateTime.UtcNow;
+                        if ((now - lastTick).TotalMilliseconds >= 800)
+                        {
+                            var deltaBytes = downloaded - lastBytes;
+                            var deltaSeconds = Math.Max(0.2, (now - lastTick).TotalSeconds);
+                            var speed = deltaBytes / deltaSeconds;
+                            var eta = speed > 0 && totalBytes.HasValue
+                                ? (int?)Math.Max(0, (int)Math.Ceiling((totalBytes.Value - downloaded) / speed))
+                                : null;
+                            var shouldPersistByTime = (now - lastPersistTick).TotalMilliseconds >= ProgressPersistIntervalMs;
+                            var shouldPersistByDelta = downloaded - lastPersistedBytes >= ProgressPersistMinDeltaBytes;
+                            if (shouldPersistByTime || shouldPersistByDelta)
+                            {
+                                item.BytesDownloaded = downloaded;
+                                item.BytesTotal = totalBytes;
+                                item.SpeedBytesPerSecond = speed;
+                                item.EstimatedSecondsRemaining = eta;
+                                item.UpdatedAt = DateTime.UtcNow;
+                                await startDb.SaveChangesAsync(localCts.Token);
+                                DownloadsChanged?.Invoke(this, EventArgs.Empty);
+                                lastPersistTick = now;
+                                lastPersistedBytes = downloaded;
+                            }
+
+                            lastTick = now;
+                            lastBytes = downloaded;
+                        }
+                    }
+
+                    await output.FlushAsync(localCts.Token);
+                }
             }
 
             if (downloaded <= 0)
@@ -871,6 +923,17 @@ public class ContentDownloadService : IContentDownloadService
 
             File.Move(plainTempPath, finalPath, overwrite: true);
             _autoResumeAttempts.TryRemove(downloadId, out _);
+
+            // Final safety net: never mark a manifest text file as Completed.
+            if (IsManifestFile(finalPath))
+            {
+                TryDeleteFile(finalPath);
+                await MarkFailedAsync(
+                    downloadId,
+                    _localizationService.GetString("Download.Error.UnsupportedStreaming"));
+                return;
+            }
+
             await MarkCompletedAsync(downloadId, finalPath, downloaded, totalBytes, startedAt);
         }
         catch (OperationCanceledException ex)
@@ -1028,10 +1091,21 @@ public class ContentDownloadService : IContentDownloadService
     }
 
     internal static bool IsSegmentedManifestUrl(string? sourceUrl)
+        => DetectContentKindFromUrl(sourceUrl) is DownloadContentKind.Hls or DownloadContentKind.Dash;
+
+    internal static bool IsSegmentedManifestContentType(string? mediaType)
+        => DetectContentKindFromContentType(mediaType) is DownloadContentKind.Hls or DownloadContentKind.Dash;
+
+    /// <summary>
+    /// Classifies a download target so HLS/DASH streams (which need a segment
+    /// download engine) can be rejected instead of saving a useless manifest
+    /// text file and marking it Completed.
+    /// </summary>
+    internal static DownloadContentKind DetectContentKindFromUrl(string? sourceUrl)
     {
         if (string.IsNullOrWhiteSpace(sourceUrl))
         {
-            return false;
+            return DownloadContentKind.Unsupported;
         }
 
         var normalized = sourceUrl.Trim().Trim('"', '\'');
@@ -1050,15 +1124,19 @@ public class ContentDownloadService : IContentDownloadService
         }
 
         if (path.EndsWith(".m3u8", StringComparison.OrdinalIgnoreCase) ||
-            path.EndsWith(".m3u", StringComparison.OrdinalIgnoreCase) ||
-            path.EndsWith(".mpd", StringComparison.OrdinalIgnoreCase))
+            path.EndsWith(".m3u", StringComparison.OrdinalIgnoreCase))
         {
-            return true;
+            return DownloadContentKind.Hls;
+        }
+
+        if (path.EndsWith(".mpd", StringComparison.OrdinalIgnoreCase))
+        {
+            return DownloadContentKind.Dash;
         }
 
         if (string.IsNullOrWhiteSpace(query))
         {
-            return false;
+            return DownloadContentKind.DirectFile;
         }
 
         foreach (var pair in query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries))
@@ -1071,37 +1149,163 @@ public class ContentDownloadService : IContentDownloadService
 
             var key = Uri.UnescapeDataString(pair[..separator]);
             var value = Uri.UnescapeDataString(pair[(separator + 1)..]);
-            if ((key.Equals("format", StringComparison.OrdinalIgnoreCase) ||
-                 key.Equals("output", StringComparison.OrdinalIgnoreCase) ||
-                 key.Equals("type", StringComparison.OrdinalIgnoreCase) ||
-                 key.Equals("container", StringComparison.OrdinalIgnoreCase) ||
-                 key.Equals("extension", StringComparison.OrdinalIgnoreCase)) &&
-                (value.Equals("m3u8", StringComparison.OrdinalIgnoreCase) ||
-                 value.Equals("m3u", StringComparison.OrdinalIgnoreCase) ||
-                 value.Equals("mpd", StringComparison.OrdinalIgnoreCase) ||
-                 value.Equals("hls", StringComparison.OrdinalIgnoreCase) ||
-                 value.Equals("dash", StringComparison.OrdinalIgnoreCase)))
+            if (key.Equals("format", StringComparison.OrdinalIgnoreCase) ||
+                key.Equals("output", StringComparison.OrdinalIgnoreCase) ||
+                key.Equals("type", StringComparison.OrdinalIgnoreCase) ||
+                key.Equals("container", StringComparison.OrdinalIgnoreCase) ||
+                key.Equals("extension", StringComparison.OrdinalIgnoreCase))
+            {
+                if (value.Equals("m3u8", StringComparison.OrdinalIgnoreCase) ||
+                    value.Equals("m3u", StringComparison.OrdinalIgnoreCase) ||
+                    value.Equals("hls", StringComparison.OrdinalIgnoreCase))
+                {
+                    return DownloadContentKind.Hls;
+                }
+
+                if (value.Equals("mpd", StringComparison.OrdinalIgnoreCase) ||
+                    value.Equals("dash", StringComparison.OrdinalIgnoreCase))
+                {
+                    return DownloadContentKind.Dash;
+                }
+            }
+        }
+
+        return DownloadContentKind.DirectFile;
+    }
+
+    internal static DownloadContentKind DetectContentKindFromContentType(string? mediaType)
+    {
+        if (string.IsNullOrWhiteSpace(mediaType))
+        {
+            return DownloadContentKind.DirectFile;
+        }
+
+        var normalized = mediaType.Trim();
+        if (normalized.Equals("application/vnd.apple.mpegurl", StringComparison.OrdinalIgnoreCase) ||
+            normalized.Equals("application/x-mpegurl", StringComparison.OrdinalIgnoreCase) ||
+            normalized.Equals("application/mpegurl", StringComparison.OrdinalIgnoreCase) ||
+            normalized.Equals("audio/mpegurl", StringComparison.OrdinalIgnoreCase) ||
+            normalized.Equals("audio/x-mpegurl", StringComparison.OrdinalIgnoreCase))
+        {
+            return DownloadContentKind.Hls;
+        }
+
+        if (normalized.Equals("application/dash+xml", StringComparison.OrdinalIgnoreCase))
+        {
+            return DownloadContentKind.Dash;
+        }
+
+        return DownloadContentKind.DirectFile;
+    }
+
+    /// <summary>
+    /// Sniffs the leading bytes of a response/file body. Servers frequently
+    /// serve manifests with a generic media type (e.g. application/octet-stream)
+    /// or from extension-less URLs, so the headers alone are not enough.
+    /// </summary>
+    internal static DownloadContentKind DetectContentKindFromContent(ReadOnlySpan<byte> head)
+    {
+        if (head.IsEmpty)
+        {
+            return DownloadContentKind.DirectFile;
+        }
+
+        var span = head;
+        if (span.Length >= 3 && span[0] == 0xEF && span[1] == 0xBB && span[2] == 0xBF)
+        {
+            span = span[3..];
+        }
+        else if (span.Length >= 2 &&
+                 ((span[0] == 0xFF && span[1] == 0xFE) || (span[0] == 0xFE && span[1] == 0xFF)))
+        {
+            span = span[2..];
+        }
+
+        // HLS playlists always start with the #EXTM3U tag; media playlists
+        // also carry #EXTINF lines.
+        if (StartsWithAscii(span, "#EXTM3U") || StartsWithAscii(span, "#EXTINF"))
+        {
+            return DownloadContentKind.Hls;
+        }
+
+        // DASH manifests are XML documents with an <MPD> root element.
+        if (ContainsAscii(span, "<mpd"))
+        {
+            return DownloadContentKind.Dash;
+        }
+
+        return DownloadContentKind.DirectFile;
+    }
+
+    internal static bool IsManifestContentKind(DownloadContentKind kind)
+        => kind is DownloadContentKind.Hls or DownloadContentKind.Dash;
+
+    private static bool IsManifestFile(string path)
+    {
+        try
+        {
+            using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            var head = new byte[4096];
+            var read = fs.Read(head, 0, head.Length);
+            return IsManifestContentKind(DetectContentKindFromContent(head.AsSpan(0, read)));
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static bool StartsWithAscii(ReadOnlySpan<byte> data, string prefix)
+    {
+        if (data.Length < prefix.Length)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < prefix.Length; i++)
+        {
+            var b = data[i];
+            if (b > 127)
+            {
+                return false;
+            }
+
+            if (char.ToLowerInvariant((char)b) != char.ToLowerInvariant(prefix[i]))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool ContainsAscii(ReadOnlySpan<byte> data, string pattern)
+    {
+        if (data.Length < pattern.Length)
+        {
+            return false;
+        }
+
+        for (var i = 0; i <= data.Length - pattern.Length; i++)
+        {
+            var match = true;
+            for (var j = 0; j < pattern.Length; j++)
+            {
+                var b = data[i + j];
+                if (b > 127 || char.ToLowerInvariant((char)b) != char.ToLowerInvariant(pattern[j]))
+                {
+                    match = false;
+                    break;
+                }
+            }
+
+            if (match)
             {
                 return true;
             }
         }
 
         return false;
-    }
-
-    internal static bool IsSegmentedManifestContentType(string? mediaType)
-    {
-        if (string.IsNullOrWhiteSpace(mediaType))
-        {
-            return false;
-        }
-
-        return mediaType.Equals("application/vnd.apple.mpegurl", StringComparison.OrdinalIgnoreCase) ||
-               mediaType.Equals("application/x-mpegurl", StringComparison.OrdinalIgnoreCase) ||
-               mediaType.Equals("application/mpegurl", StringComparison.OrdinalIgnoreCase) ||
-               mediaType.Equals("audio/mpegurl", StringComparison.OrdinalIgnoreCase) ||
-               mediaType.Equals("audio/x-mpegurl", StringComparison.OrdinalIgnoreCase) ||
-               mediaType.Equals("application/dash+xml", StringComparison.OrdinalIgnoreCase);
     }
 
     private static long? ResolveTotalBytes(HttpResponseMessage response, long resumedBytes)

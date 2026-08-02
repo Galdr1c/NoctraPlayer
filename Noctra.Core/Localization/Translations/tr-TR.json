@@ -1002,5 +1002,5 @@
   "Player.Overlay.Play": "Oynat",
   "Player.Overlay.Pause": "Duraklat",
   "Downloads.Storage.DetailFormat": "Noctra: {0} kullanıldı · Boş: {1}",
-  "Download.Error.UnsupportedStreaming": "HLS/DASH akışları doğrudan indirilemez."
+  "Download.Error.UnsupportedStreaming": "Bu yayın türü henüz çevrimdışı indirmeyi desteklemiyor."
 }

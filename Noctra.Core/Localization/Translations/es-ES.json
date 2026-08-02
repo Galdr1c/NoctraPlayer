@@ -1002,5 +1002,5 @@
   "Player.Overlay.Play": "Reproducir",
   "Player.Overlay.Pause": "Pausar",
   "Downloads.Storage.DetailFormat": "Noctra: {0} usado · Libre: {1}",
-  "Download.Error.UnsupportedStreaming": "Las transmisiones HLS/DASH no se pueden descargar directamente."
+  "Download.Error.UnsupportedStreaming": "Este tipo de transmisión aún no admite descargas sin conexión."
 }

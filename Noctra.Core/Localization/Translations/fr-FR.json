@@ -1002,5 +1002,5 @@
   "Player.Overlay.Play": "Lecture",
   "Player.Overlay.Pause": "Pause",
   "Downloads.Storage.DetailFormat": "Noctra : {0} utilisé · Libre : {1}",
-  "Download.Error.UnsupportedStreaming": "Les flux HLS/DASH ne peuvent pas être téléchargés directement."
+  "Download.Error.UnsupportedStreaming": "Ce type de flux ne prend pas encore en charge le téléchargement hors ligne."
 }

@@ -1002,5 +1002,5 @@
   "Player.Overlay.Play": "Wiedergabe",
   "Player.Overlay.Pause": "Pause",
   "Downloads.Storage.DetailFormat": "Noctra: {0} belegt · Frei: {1}",
-  "Download.Error.UnsupportedStreaming": "HLS/DASH-Streams können nicht direkt heruntergeladen werden."
+  "Download.Error.UnsupportedStreaming": "Dieser Stream-Typ unterstützt Offline-Downloads noch nicht."
 }
