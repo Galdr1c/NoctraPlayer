@@ -1001,5 +1001,6 @@
   "Mobile.More.Shortcuts": "Schnellzugriff",
   "Player.Overlay.Play": "Wiedergabe",
   "Player.Overlay.Pause": "Pause",
-  "Downloads.Storage.DetailFormat": "Noctra: {0} belegt · Frei: {1}"
+  "Downloads.Storage.DetailFormat": "Noctra: {0} belegt · Frei: {1}",
+  "Download.Error.UnsupportedStreaming": "HLS/DASH-Streams können nicht direkt heruntergeladen werden."
 }

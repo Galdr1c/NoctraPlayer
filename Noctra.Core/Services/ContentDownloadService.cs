@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Net.NetworkInformation;
+using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -19,6 +20,7 @@ public class ContentDownloadService : IContentDownloadService
     private const int ProgressPersistIntervalMs = 1800;
     private const long ProgressPersistMinDeltaBytes = 1024 * 1024; // 1 MB
     private const int MaxAutoResumeAttempts = 3;
+    private const int MaxPosterBytes = 10 * 1024 * 1024;
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = false };
 
     private readonly ISettingsService _settingsService;
@@ -78,6 +80,14 @@ public class ContentDownloadService : IContentDownloadService
         }
 
         var normalizedSource = request.SourceUrl.Trim().Trim('"', '\'');
+        if (IsSegmentedManifestUrl(normalizedSource))
+        {
+            return new DownloadContentResult(
+                false,
+                false,
+                _localizationService.GetString("Download.Error.UnsupportedStreaming"));
+        }
+
         if (IsLocalFilePath(normalizedSource))
         {
             return new DownloadContentResult(true, true, _localizationService.GetString("Download.Status.AlreadyDownloaded"));
@@ -617,6 +627,16 @@ public class ContentDownloadService : IContentDownloadService
                 return;
             }
 
+            if (IsSegmentedManifestContentType(response.Content.Headers.ContentType?.MediaType))
+            {
+                TryDeleteFile(plainTempPath);
+                TryDeleteFile(finalPath);
+                await MarkFailedAsync(
+                    downloadId,
+                    _localizationService.GetString("Download.Error.UnsupportedStreaming"));
+                return;
+            }
+
             var supportsRange = response.StatusCode == System.Net.HttpStatusCode.PartialContent;
             if (resumedBytes > 0 && !supportsRange)
             {
@@ -727,13 +747,17 @@ public class ContentDownloadService : IContentDownloadService
             _autoResumeAttempts.TryRemove(downloadId, out _);
             await MarkCompletedAsync(downloadId, finalPath, downloaded, totalBytes, startedAt);
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException ex)
         {
             var pausedRequested = _pauseRequestedIds.TryRemove(downloadId, out _);
             var cancelRequested = _cancelRequestedIds.ContainsKey(downloadId);
             if (pausedRequested)
             {
                 await MarkPausedAsync(downloadId);
+            }
+            else if (!localCts.IsCancellationRequested && IsTransientDownloadException(ex))
+            {
+                await TryAutoResumeAfterTransientInterruptionAsync(downloadId, ex.Message);
             }
             else if (!cancelRequested)
             {
@@ -745,7 +769,7 @@ public class ContentDownloadService : IContentDownloadService
         catch (Exception ex)
         {
             _logger?.LogWarning(ex, "Download failed for item {DownloadId}", downloadId);
-            if (IsTransientResponseEndedException(ex))
+            if (IsTransientDownloadException(ex))
             {
                 await TryAutoResumeAfterTransientInterruptionAsync(downloadId, ex.Message);
             }
@@ -776,6 +800,8 @@ public class ContentDownloadService : IContentDownloadService
         long startOffset,
         CancellationToken cancellationToken)
     {
+        Exception? lastTransientException = null;
+
         foreach (var candidate in candidates)
         {
             try
@@ -801,10 +827,23 @@ public class ContentDownloadService : IContentDownloadService
 
                 response.Dispose();
             }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex) when (IsTransientDownloadException(ex))
+            {
+                lastTransientException = ex;
+            }
             catch
             {
                 // Try next candidate.
             }
+        }
+
+        if (lastTransientException != null)
+        {
+            throw lastTransientException;
         }
 
         return null;
@@ -832,11 +871,16 @@ public class ContentDownloadService : IContentDownloadService
         await ResumeDownloadAsync(downloadId, CancellationToken.None);
     }
 
-    private static bool IsTransientResponseEndedException(Exception ex)
+    internal static bool IsTransientDownloadException(Exception ex)
     {
         var current = ex;
         while (current != null)
         {
+            if (current is HttpRequestException or IOException or SocketException or TimeoutException)
+            {
+                return true;
+            }
+
             var text = current.Message ?? string.Empty;
             if (!string.IsNullOrWhiteSpace(text))
             {
@@ -855,6 +899,83 @@ public class ContentDownloadService : IContentDownloadService
         }
 
         return false;
+    }
+
+    internal static bool IsSegmentedManifestUrl(string? sourceUrl)
+    {
+        if (string.IsNullOrWhiteSpace(sourceUrl))
+        {
+            return false;
+        }
+
+        var normalized = sourceUrl.Trim().Trim('"', '\'');
+        var path = normalized;
+        string? query = null;
+        if (Uri.TryCreate(normalized, UriKind.Absolute, out var uri))
+        {
+            path = uri.AbsolutePath;
+            query = uri.Query;
+        }
+
+        var queryStart = path.IndexOfAny(['?', '#']);
+        if (queryStart >= 0)
+        {
+            path = path[..queryStart];
+        }
+
+        if (path.EndsWith(".m3u8", StringComparison.OrdinalIgnoreCase) ||
+            path.EndsWith(".m3u", StringComparison.OrdinalIgnoreCase) ||
+            path.EndsWith(".mpd", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            return false;
+        }
+
+        foreach (var pair in query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var separator = pair.IndexOf('=');
+            if (separator <= 0 || separator == pair.Length - 1)
+            {
+                continue;
+            }
+
+            var key = Uri.UnescapeDataString(pair[..separator]);
+            var value = Uri.UnescapeDataString(pair[(separator + 1)..]);
+            if ((key.Equals("format", StringComparison.OrdinalIgnoreCase) ||
+                 key.Equals("output", StringComparison.OrdinalIgnoreCase) ||
+                 key.Equals("type", StringComparison.OrdinalIgnoreCase) ||
+                 key.Equals("container", StringComparison.OrdinalIgnoreCase) ||
+                 key.Equals("extension", StringComparison.OrdinalIgnoreCase)) &&
+                (value.Equals("m3u8", StringComparison.OrdinalIgnoreCase) ||
+                 value.Equals("m3u", StringComparison.OrdinalIgnoreCase) ||
+                 value.Equals("mpd", StringComparison.OrdinalIgnoreCase) ||
+                 value.Equals("hls", StringComparison.OrdinalIgnoreCase) ||
+                 value.Equals("dash", StringComparison.OrdinalIgnoreCase)))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    internal static bool IsSegmentedManifestContentType(string? mediaType)
+    {
+        if (string.IsNullOrWhiteSpace(mediaType))
+        {
+            return false;
+        }
+
+        return mediaType.Equals("application/vnd.apple.mpegurl", StringComparison.OrdinalIgnoreCase) ||
+               mediaType.Equals("application/x-mpegurl", StringComparison.OrdinalIgnoreCase) ||
+               mediaType.Equals("application/mpegurl", StringComparison.OrdinalIgnoreCase) ||
+               mediaType.Equals("audio/mpegurl", StringComparison.OrdinalIgnoreCase) ||
+               mediaType.Equals("audio/x-mpegurl", StringComparison.OrdinalIgnoreCase) ||
+               mediaType.Equals("application/dash+xml", StringComparison.OrdinalIgnoreCase);
     }
 
     private static long? ResolveTotalBytes(HttpResponseMessage response, long resumedBytes)
@@ -975,27 +1096,42 @@ public class ContentDownloadService : IContentDownloadService
         }
 
         // --- Poster Downloading Logic ---
-        if (item.ChannelType == ChannelType.Series && !string.IsNullOrWhiteSpace(item.PosterUrl) && item.PosterUrl.StartsWith("http"))
+        if ((item.ChannelType == ChannelType.Series || item.ChannelType == ChannelType.VOD) &&
+            !string.IsNullOrWhiteSpace(item.PosterUrl) &&
+            item.PosterUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
         {
             try
             {
-                var seriesDir = Path.GetDirectoryName(Path.GetDirectoryName(filePath));
-                if (seriesDir != null)
+                var posterPath = BuildPosterPath(item, filePath);
+                if (!File.Exists(posterPath))
                 {
-                    var posterPath = Path.Combine(seriesDir, "poster.jpg");
-                    if (!File.Exists(posterPath))
+                    using var posterResponse = await _httpClient.GetAsync(
+                        item.PosterUrl,
+                        HttpCompletionOption.ResponseHeadersRead);
+                    posterResponse.EnsureSuccessStatusCode();
+
+                    if (posterResponse.Content.Headers.ContentLength is > MaxPosterBytes)
                     {
-                        var posterBytes = await _httpClient.GetByteArrayAsync(item.PosterUrl);
-                        await File.WriteAllBytesAsync(posterPath, posterBytes);
+                        throw new InvalidDataException("Poster exceeds the download size limit.");
                     }
-                    
-                    // Replace URL with local file path
-                    item.PosterUrl = posterPath;
+
+                    var posterBytes = await posterResponse.Content.ReadAsByteArrayAsync();
+                    if (posterBytes.Length == 0 || posterBytes.Length > MaxPosterBytes)
+                    {
+                        throw new InvalidDataException("Poster has an invalid size.");
+                    }
+
+                    var posterTempPath = posterPath + ".part";
+                    await File.WriteAllBytesAsync(posterTempPath, posterBytes);
+                    File.Move(posterTempPath, posterPath, overwrite: true);
                 }
+
+                // MobileRemoteImage requires a canonical file URI for offline posters.
+                item.PosterUrl = ToFileUri(posterPath);
             }
             catch (Exception ex)
             {
-                _logger?.LogWarning(ex, "Failed to download poster for downloaded series: {Url}", item.PosterUrl);
+                _logger?.LogWarning(ex, "Failed to download poster for completed item: {Url}", item.PosterUrl);
             }
         }
         // --------------------------------
@@ -1422,6 +1558,36 @@ public class ContentDownloadService : IContentDownloadService
 
         // Phase 24: For Series, ensure the file name preserves critical SxE info but remains "BuildSafe"
         return BuildSafeFileName(item.DisplayName);
+    }
+
+    internal static string BuildPosterPath(DownloadItem item, string filePath)
+    {
+        var itemDirectory = Path.GetDirectoryName(filePath);
+        if (string.IsNullOrWhiteSpace(itemDirectory))
+        {
+            return filePath + ".poster.jpg";
+        }
+
+        if (item.ChannelType == ChannelType.Series)
+        {
+            var seriesDirectory = Directory.GetParent(itemDirectory)?.FullName;
+            return Path.Combine(seriesDirectory ?? itemDirectory, "poster.jpg");
+        }
+
+        var fileStem = Path.GetFileNameWithoutExtension(filePath);
+        return Path.Combine(itemDirectory, $"{fileStem}.poster.jpg");
+    }
+
+    private static string ToFileUri(string filePath)
+    {
+        try
+        {
+            return new Uri(Path.GetFullPath(filePath), UriKind.Absolute).AbsoluteUri;
+        }
+        catch
+        {
+            return $"file://{filePath}";
+        }
     }
 
 

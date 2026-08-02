@@ -1001,5 +1001,6 @@
   "Mobile.More.Shortcuts": "Hızlı erişim",
   "Player.Overlay.Play": "Oynat",
   "Player.Overlay.Pause": "Duraklat",
-  "Downloads.Storage.DetailFormat": "Noctra: {0} kullanıldı · Boş: {1}"
+  "Downloads.Storage.DetailFormat": "Noctra: {0} kullanıldı · Boş: {1}",
+  "Download.Error.UnsupportedStreaming": "HLS/DASH akışları doğrudan indirilemez."
 }

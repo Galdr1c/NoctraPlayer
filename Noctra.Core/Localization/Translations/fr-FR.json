@@ -1001,5 +1001,6 @@
   "Mobile.More.Shortcuts": "Accès rapide",
   "Player.Overlay.Play": "Lecture",
   "Player.Overlay.Pause": "Pause",
-  "Downloads.Storage.DetailFormat": "Noctra : {0} utilisé · Libre : {1}"
+  "Downloads.Storage.DetailFormat": "Noctra : {0} utilisé · Libre : {1}",
+  "Download.Error.UnsupportedStreaming": "Les flux HLS/DASH ne peuvent pas être téléchargés directement."
 }
