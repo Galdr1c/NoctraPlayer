@@ -1327,6 +1327,90 @@ public class DownloadStatusToBrushConverter : IValueConverter
 
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => null;
 }
+public class DownloadStatusToLocalizedTextConverter : IValueConverter
+{
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is not DownloadItem item)
+        {
+            return string.Empty;
+        }
+
+        var key = item.Status switch
+        {
+            DownloadStatus.Queued => "Downloads.Status.Queued",
+            DownloadStatus.Downloading => "Downloads.Status.Downloading",
+            DownloadStatus.Paused => "Downloads.Status.Paused",
+            DownloadStatus.Completed => "Downloads.Status.Completed",
+            DownloadStatus.Failed => "Downloads.Status.Failed",
+            DownloadStatus.Canceled => "Downloads.Status.Canceled",
+            _ => null
+        };
+
+        if (key is null)
+        {
+            return "-";
+        }
+
+        var text = LocalizationSource.Instance[key];
+
+        if ((item.Status == DownloadStatus.Failed || item.Status == DownloadStatus.Paused) &&
+            !string.IsNullOrWhiteSpace(item.ErrorMessage))
+        {
+            return $"{text} - {item.ErrorMessage}";
+        }
+
+        return text;
+    }
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => null;
+}
+public class DownloadEtaTextConverter : IValueConverter
+{
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is not DownloadItem item ||
+            !item.EstimatedSecondsRemaining.HasValue ||
+            item.EstimatedSecondsRemaining.Value <= 0)
+        {
+            return string.Empty;
+        }
+
+        var ts = TimeSpan.FromSeconds(item.EstimatedSecondsRemaining.Value);
+        var source = LocalizationSource.Instance;
+
+        if (ts.TotalHours >= 1)
+        {
+            return string.Format(CultureInfo.CurrentCulture, source["Downloads.Eta.HoursFormat"], (int)ts.TotalHours, ts.Minutes);
+        }
+
+        if (ts.TotalMinutes >= 1)
+        {
+            return string.Format(CultureInfo.CurrentCulture, source["Downloads.Eta.MinutesFormat"], (int)ts.TotalMinutes, ts.Seconds);
+        }
+
+        return string.Format(CultureInfo.CurrentCulture, source["Downloads.Eta.SecondsFormat"], ts.Seconds);
+    }
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => null;
+}
+public class DownloadSpeedTextConverter : IValueConverter
+{
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is not DownloadItem item || item.SpeedBytesPerSecond <= 0)
+        {
+            return "-";
+        }
+
+        return string.Format(
+            CultureInfo.CurrentCulture,
+            LocalizationSource.Instance["Downloads.Speed.PerSecondFormat"],
+            DownloadItem.FormatBytes((long)item.SpeedBytesPerSecond));
+    }
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => null;
+}
 public class FillModeToIconConverter : IValueConverter
 {
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)

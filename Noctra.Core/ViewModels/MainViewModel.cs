@@ -5912,7 +5912,7 @@ public partial class MainViewModel : ObservableObject
     private string _storageUsageDetailText = "0 B / 0 B";
 
     [ObservableProperty]
-    private string _activeDownloadsTotalSpeedText = "0 B/sn";
+    private string _activeDownloadsTotalSpeedText = "0 B/s";
 
     [ObservableProperty]
     private string _downloadFreeDiskSpaceText = "-";

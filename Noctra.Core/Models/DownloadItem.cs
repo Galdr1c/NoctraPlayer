@@ -77,14 +77,15 @@ public class DownloadItem
     {
         get
         {
+            // Neutral fallback; UI renders localized text via converters.
             var text = Status switch
             {
-                DownloadStatus.Queued => "Kuyrukta",
-                DownloadStatus.Downloading => "Indiriliyor",
-                DownloadStatus.Paused => "Duraklatildi",
-                DownloadStatus.Completed => "Tamamlandi",
-                DownloadStatus.Failed => "Hatali",
-                DownloadStatus.Canceled => "Iptal",
+                DownloadStatus.Queued => "Queued",
+                DownloadStatus.Downloading => "Downloading",
+                DownloadStatus.Paused => "Paused",
+                DownloadStatus.Completed => "Completed",
+                DownloadStatus.Failed => "Failed",
+                DownloadStatus.Canceled => "Canceled",
                 _ => "-"
             };
 
@@ -125,7 +126,7 @@ public class DownloadItem
                 return "-";
             }
 
-            return $"{FormatBytes((long)SpeedBytesPerSecond)}/sn";
+            return $"{FormatBytes((long)SpeedBytesPerSecond)}/s";
         }
     }
 
@@ -153,18 +154,19 @@ public class DownloadItem
                 return "-";
             }
 
+            // Neutral fallback; UI renders localized text via converters.
             var ts = TimeSpan.FromSeconds(EstimatedSecondsRemaining.Value);
             if (ts.TotalHours >= 1)
             {
-                return $"{(int)ts.TotalHours}sa {ts.Minutes:00}dk";
+                return $"{(int)ts.TotalHours}h {ts.Minutes:00}m";
             }
 
             if (ts.TotalMinutes >= 1)
             {
-                return $"{(int)ts.TotalMinutes}dk {ts.Seconds:00}sn";
+                return $"{(int)ts.TotalMinutes}m {ts.Seconds:00}s";
             }
 
-            return $"{ts.Seconds}sn";
+            return $"{ts.Seconds}s";
         }
     }
 
@@ -194,7 +196,7 @@ public class DownloadItem
 
     private static readonly string[] Units = ["B", "KB", "MB", "GB", "TB"];
 
-    private static string FormatBytes(long bytes)
+    internal static string FormatBytes(long bytes)
     {
         if (bytes <= 0)
         {

@@ -392,7 +392,7 @@
                     <!-- Info Center -->
                     <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="4">
                       <TextBlock Text="{Binding BaseDisplayName}" FontWeight="Bold" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                      <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="{DynamicResource TextMutedBrush}"/>
+                      <TextBlock Text="{Binding ., Converter={StaticResource DownloadStatusToLocalizedTextConverter}}" FontSize="12" Foreground="{DynamicResource TextMutedBrush}"/>
                     </StackPanel>
 
                     <!-- Speed/Percent Info (Overlaying progress area) -->
@@ -400,7 +400,10 @@
                       <StackPanel Spacing="6">
                          <Grid ColumnDefinitions="*,Auto">
                            <TextBlock Text="{Binding SizeText}" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
-                           <TextBlock Grid.Column="1" Text="{Binding SpeedText}" FontSize="11" Foreground="{DynamicResource TextMutedBrush}" FontWeight="SemiBold"/>
+                           <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
+                             <TextBlock Text="{Binding ., Converter={StaticResource DownloadSpeedTextConverter}}" FontSize="11" Foreground="{DynamicResource TextMutedBrush}" FontWeight="SemiBold"/>
+                             <TextBlock Text="{Binding ., Converter={StaticResource DownloadEtaTextConverter}}" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
+                           </StackPanel>
                          </Grid>
                          <ProgressBar Height="5" Minimum="0" Maximum="100" Value="{Binding ProgressPercent}" 
                                       Foreground="{Binding Status, Converter={StaticResource DownloadStatusToBrushConverter}}" 
@@ -420,7 +423,7 @@
 
                     <!-- Status Label End -->
                     <TextBlock Grid.Column="2" Grid.Row="1" 
-                               Text="{Binding StatusText}" 
+                               Text="{Binding ., Converter={StaticResource DownloadStatusToLocalizedTextConverter}}" 
                                IsVisible="{Binding !IsPaused}"
                                FontSize="11" Foreground="{DynamicResource AccentBrush}" 
                                FontWeight="Bold" VerticalAlignment="Bottom" HorizontalAlignment="Right" Margin="0,0,0,-18"/>
@@ -457,7 +460,7 @@
                     <!-- Title -->
                     <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="2">
                       <TextBlock Text="{Binding BaseDisplayName}" FontSize="13" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                      <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
+                      <TextBlock Text="{Binding ., Converter={StaticResource DownloadStatusToLocalizedTextConverter}}" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
                     </StackPanel>
 
                     <!-- Actions/Size -->

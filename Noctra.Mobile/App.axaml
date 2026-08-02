@@ -59,6 +59,9 @@
         <converters:PinDotConverter x:Key="PinDotConverter" />
         <converters:ProfileColorConverter x:Key="ProfileColorConverter" />
         <converters:DownloadStatusToBrushConverter x:Key="DownloadStatusToBrushConverter" />
+        <converters:DownloadStatusToLocalizedTextConverter x:Key="DownloadStatusToLocalizedTextConverter" />
+        <converters:DownloadEtaTextConverter x:Key="DownloadEtaTextConverter" />
+        <converters:DownloadSpeedTextConverter x:Key="DownloadSpeedTextConverter" />
         <converters:BoolToMaterialIconKindConverter x:Key="BoolToMaterialIconKindConverter" />
         <converters:BoolToLocalizedStringConverter x:Key="BoolToLocalizedStringConverter" />
         <converters:BytesToHumanConverter x:Key="BytesToHumanConverter" />

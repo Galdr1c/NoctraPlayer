@@ -56,6 +56,9 @@
   <converters:DoubleToStarGridLengthConverter x:Key="DoubleToStarGridLengthConverter" />
   <converters:BytesToHumanConverter x:Key="BytesToHumanConverter" />
   <converters:DownloadStatusToBrushConverter x:Key="DownloadStatusToBrushConverter" />
+  <converters:DownloadStatusToLocalizedTextConverter x:Key="DownloadStatusToLocalizedTextConverter" />
+  <converters:DownloadEtaTextConverter x:Key="DownloadEtaTextConverter" />
+  <converters:DownloadSpeedTextConverter x:Key="DownloadSpeedTextConverter" />
   <converters:FillModeToIconConverter x:Key="FillModeToIconConverter" />
   <converters:BoolToFavoriteIconConverter x:Key="BoolToFavoriteIconConverter" />
   <converters:PinDotConverter x:Key="PinDotConverter" />

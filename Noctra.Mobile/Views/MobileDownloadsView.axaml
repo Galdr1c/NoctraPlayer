@@ -420,7 +420,7 @@
                                      Foreground="{DynamicResource TextPrimaryBrush}"
                                      FontWeight="SemiBold"
                                      TextTrimming="CharacterEllipsis" />
-                          <TextBlock Text="{Binding StatusText}"
+                          <TextBlock Text="{Binding ., Converter={StaticResource DownloadStatusToLocalizedTextConverter}}"
                                      Foreground="{DynamicResource TextMutedBrush}"
                                      FontSize="{DynamicResource FCaption}"
                                      TextWrapping="Wrap" />
@@ -443,9 +443,14 @@
                           <TextBlock Text="{Binding SizeText}"
                                      Foreground="{DynamicResource TextMutedBrush}"
                                      FontSize="{DynamicResource FCaption}" />
-                          <TextBlock Text="{Binding SpeedText}"
-                                     Foreground="{DynamicResource TextMutedBrush}"
-                                     FontSize="{DynamicResource FCaption}" />
+                          <StackPanel Orientation="Horizontal" Spacing="6">
+                            <TextBlock Text="{Binding ., Converter={StaticResource DownloadSpeedTextConverter}}"
+                                       Foreground="{DynamicResource TextMutedBrush}"
+                                       FontSize="{DynamicResource FCaption}" />
+                            <TextBlock Text="{Binding ., Converter={StaticResource DownloadEtaTextConverter}}"
+                                       Foreground="{DynamicResource TextMutedBrush}"
+                                       FontSize="{DynamicResource FCaption}" />
+                          </StackPanel>
                         </StackPanel>
                         <StackPanel Grid.Column="1"
                                     Orientation="Horizontal"
@@ -540,7 +545,7 @@
                         <TextBlock Text="{Binding BaseDisplayName}"
                                    Foreground="{DynamicResource TextPrimaryBrush}"
                                    TextTrimming="CharacterEllipsis" />
-                        <TextBlock Text="{Binding StatusText}"
+                        <TextBlock Text="{Binding ., Converter={StaticResource DownloadStatusToLocalizedTextConverter}}"
                                    Foreground="{DynamicResource TextMutedBrush}"
                                    FontSize="{DynamicResource FCaption}"
                                    TextTrimming="CharacterEllipsis" />

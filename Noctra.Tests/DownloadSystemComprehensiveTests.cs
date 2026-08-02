@@ -542,7 +542,7 @@ namespace Noctra.Tests
                 EstimatedSecondsRemaining = 50
             };
 
-            Assert.Contains("50sn", item.EtaText);
+            Assert.Contains("50s", item.EtaText);
         }
     }
 }
