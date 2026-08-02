@@ -1037,9 +1037,12 @@ public partial class AddProfileViewModel : ObservableObject
         _localizationService = localizationService;
         _playlistFilePickerService = playlistFilePickerService;
 
-        // Initialize with default avatar
+        // Initialize with a random avatar instead of always the first one
         var avatars = _avatarService.GetAvatarsByCategory().Values.FirstOrDefault();
-        if (avatars != null && avatars.Any()) SelectedAvatar = avatars.First();
+        if (avatars != null && avatars.Count > 0)
+        {
+            SelectedAvatar = avatars[Random.Shared.Next(avatars.Count)];
+        }
     }
 
     public void InitializeForEdit(Profile profile)
