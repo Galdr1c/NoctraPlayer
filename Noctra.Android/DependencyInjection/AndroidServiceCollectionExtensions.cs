@@ -43,6 +43,8 @@ public static class AndroidServiceCollectionExtensions
         services.AddSingleton<GooglePlayUpdateService>();
         services.AddSingleton<IAppUpdateService>(sp => sp.GetRequiredService<GooglePlayUpdateService>());
         services.AddSingleton<IPlatformActionService, AndroidPlatformActionService>();
+        services.AddSingleton<IStorageInfoService>(serviceProvider =>
+            new AndroidStorageInfoService(serviceProvider.GetRequiredService<Context>()));
         services.AddSingleton<IThemeService, AndroidThemeService>();
         services.AddSingleton<IDiagnosticReportService, AndroidDiagnosticReportService>();
         services.AddSingleton<AndroidVideoSurfaceService>();

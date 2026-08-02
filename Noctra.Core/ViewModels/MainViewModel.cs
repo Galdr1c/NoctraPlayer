@@ -76,6 +76,7 @@ public partial class MainViewModel : ObservableObject
     private readonly IAppVersionService _appVersionService;
     private readonly IAppPathService _appPaths;
     private readonly IPlatformActionService _platformActions;
+    private readonly IStorageInfoService _storageInfo;
     private readonly DateTime _downloadCenterSessionStartUtc = DateTime.UtcNow;
     private readonly ConcurrentDictionary<string, byte> _pendingVisualEnrichmentKeys = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<int, byte> _pendingSeriesMetadataEnrichmentIds = new();
@@ -391,7 +392,8 @@ public partial class MainViewModel : ObservableObject
         IAppPathService? appPaths = null,
         IPlatformActionService? platformActions = null,
         IImportJobService? importJobService = null,
-        IContentQueryService? contentQueryService = null)
+        IContentQueryService? contentQueryService = null,
+        IStorageInfoService? storageInfo = null)
     {
         _localizationService = localizationService;
         _settingsService = settingsService;
@@ -421,6 +423,7 @@ public partial class MainViewModel : ObservableObject
         _appVersionService = appVersionService;
         _appPaths = appPaths ?? new DesktopAppPathService();
         _platformActions = platformActions ?? new DesktopPlatformActionService();
+        _storageInfo = storageInfo ?? new DesktopStorageInfoService();
         RebuildSortOptions();
         StatusMessage = _localizationService.GetString("Common.Ready");
         _downloadLandingStoredBytes = 0;
@@ -6654,12 +6657,11 @@ public partial class MainViewModel : ObservableObject
                 FormatDownloadBytes(totalSizeBytes));
 
             var root = ResolveGlobalDownloadRoot();
-            var driveRoot = Path.GetPathRoot(root);
-            if (!string.IsNullOrEmpty(driveRoot))
+            var storage = _storageInfo.GetStorageInfo(root);
+            if (storage.TotalBytes > 0)
             {
-                var drive = new DriveInfo(driveRoot);
-                var totalSpace = drive.TotalSize;
-                var freeSpace = drive.AvailableFreeSpace;
+                var totalSpace = storage.TotalBytes;
+                var freeSpace = storage.AvailableBytes;
                 var usedSpace = totalSpace - freeSpace;
 
                 var totalUsedPercent = (usedSpace / (double)totalSpace) * 100.0;
@@ -7093,16 +7095,15 @@ public partial class MainViewModel : ObservableObject
                 Directory.CreateDirectory(root);
             }
 
-            var driveRoot = Path.GetPathRoot(root);
-            if (string.IsNullOrWhiteSpace(driveRoot))
+            var storage = _storageInfo.GetStorageInfo(root);
+            if (storage.TotalBytes <= 0)
             {
                 return "-";
             }
 
-            var drive = new DriveInfo(driveRoot);
             return string.Format(CultureInfo.CurrentCulture,
                 _localizationService.GetString("Downloads.Disk.FreeSpaceFormat"),
-                FormatDownloadBytes(drive.AvailableFreeSpace));
+                FormatDownloadBytes(storage.AvailableBytes));
         }
         catch
         {

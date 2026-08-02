@@ -85,6 +85,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<LanguageDetectionService>();
         services.AddSingleton<ILocalizationService, LocalizationService>();
         services.AddSingleton<IPlatformActionService, DesktopPlatformActionService>();
+        services.AddSingleton<IStorageInfoService, DesktopStorageInfoService>();
         services.AddSingleton<EpgSourceResolver>();
         services.AddSingleton<ITmdbSyncService, TmdbSyncService>();
         services.AddSingleton<IProfileService, ProfileService>();
