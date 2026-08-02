@@ -740,29 +740,30 @@ internal sealed class MobileStretchOverscrollController : IDisposable
         // Width, height and Canvas coordinates are layout properties. They
         // are only assigned when the active viewer geometry actually changes
         // (orientation, navigation or a resize), never for pull distance.
-        if (!AreClose(glow.Width, width))
+        if (MobileOverscrollPhysics.NeedsGlowGeometryUpdate(glow.Width, width))
         {
             glow.Width = width;
         }
 
-        if (!AreClose(glow.Height, height))
+        if (MobileOverscrollPhysics.NeedsGlowGeometryUpdate(glow.Height, height))
         {
             glow.Height = height;
         }
 
-        if (!AreClose(Canvas.GetLeft(glow), left))
+        if (MobileOverscrollPhysics.NeedsGlowGeometryUpdate(
+                Canvas.GetLeft(glow),
+                left))
         {
             Canvas.SetLeft(glow, left);
         }
 
-        if (!AreClose(Canvas.GetTop(glow), top))
+        if (MobileOverscrollPhysics.NeedsGlowGeometryUpdate(
+                Canvas.GetTop(glow),
+                top))
         {
             Canvas.SetTop(glow, top);
         }
     }
-
-    private static bool AreClose(double current, double next)
-        => double.IsNaN(current) || Math.Abs(current - next) > 0.1;
 
     private void HideGlow()
     {

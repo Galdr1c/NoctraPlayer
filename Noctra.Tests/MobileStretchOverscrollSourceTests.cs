@@ -79,6 +79,14 @@ public sealed class MobileStretchOverscrollSourceTests
             StringComparison.Ordinal);
         Assert.Contains("glowScale.ScaleY", source, StringComparison.Ordinal);
         Assert.DoesNotContain("activeGlow.Height = depth", source, StringComparison.Ordinal);
+        Assert.Contains(
+            "if (MobileOverscrollPhysics.NeedsGlowGeometryUpdate",
+            source,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            "if (!MobileOverscrollPhysics.NeedsGlowGeometryUpdate",
+            source,
+            StringComparison.Ordinal);
     }
 
     private static string ReadProjectFile(params string[] parts)

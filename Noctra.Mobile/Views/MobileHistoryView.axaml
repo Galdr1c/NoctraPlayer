@@ -9,11 +9,10 @@
              x:Class="Noctra.Mobile.Views.MobileHistoryView"
              x:DataType="vm:MainViewModel"
              x:CompileBindings="False"
-             mc:Ignorable="d"
-             d:DesignWidth="390" d:DesignHeight="844">
+             mc:Ignorable="d">
 
   <Grid RowDefinitions="Auto,*">
-    <Grid Grid.Row="0" Margin="24,24,24,0" ColumnDefinitions="*,Auto">
+    <Grid Grid.Row="0" Margin="24,24,24,12" ColumnDefinitions="*,Auto">
       <TextBlock Text="{loc:Translate History.Title}"
                  FontSize="{DynamicResource FDisplaySmall}" FontWeight="Bold"
                  Foreground="{DynamicResource TextPrimaryBrush}"

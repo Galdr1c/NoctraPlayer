@@ -105,6 +105,23 @@ public sealed class MobileOverscrollPhysicsTests
     }
 
     [Fact]
+    public void GlowGeometryUpdate_DetectsUnsetAndChangedBounds()
+    {
+        Assert.True(
+            MobileOverscrollPhysics.NeedsGlowGeometryUpdate(
+                double.NaN,
+                100));
+        Assert.True(
+            MobileOverscrollPhysics.NeedsGlowGeometryUpdate(
+                100,
+                100.2));
+        Assert.False(
+            MobileOverscrollPhysics.NeedsGlowGeometryUpdate(
+                100,
+                100.05));
+    }
+
+    [Fact]
     public void GlowDepth_IsMonotonicClampedAndZeroAtRest()
     {
         var method = typeof(MobileOverscrollPhysics).GetMethod(
@@ -123,7 +140,18 @@ public sealed class MobileOverscrollPhysicsTests
 
         Assert.Equal(0, atRest, precision: 6);
         Assert.InRange(small, 0.001, medium);
-        Assert.InRange(medium, small, 24);
-        Assert.Equal(24, saturated, precision: 6);
+        Assert.InRange(medium, small, MobileOverscrollPhysics.MaxGlowDepth);
+        Assert.Equal(
+            MobileOverscrollPhysics.MaxGlowDepth,
+            saturated,
+            precision: 6);
+    }
+
+    [Fact]
+    public void VisualFeedbackBudget_IsNoticeableButBounded()
+    {
+        Assert.InRange(MobileOverscrollPhysics.MaxScaleDelta, 0.03, 0.05);
+        Assert.InRange(MobileOverscrollPhysics.MaxGlowDepth, 32, 48);
+        Assert.Equal(0.22, MobileOverscrollPhysics.MaxGlowOpacity, precision: 6);
     }
 }

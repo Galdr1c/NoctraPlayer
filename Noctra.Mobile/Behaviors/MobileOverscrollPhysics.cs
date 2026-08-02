@@ -7,9 +7,11 @@ internal static class MobileOverscrollPhysics
     public const double EdgeTolerance = 0.75;
     public const double FallbackActivationDistance = 5;
     public const double AxisLockRatio = 1.15;
-    public const double MaxScaleDelta = 0.026;
+    // Keep the stretch clearly perceptible on small mobile displays without
+    // making the content feel like it is being resized aggressively.
+    public const double MaxScaleDelta = 0.035;
     public const double MaxGlowOpacity = 0.22;
-    public const double MaxGlowDepth = 24;
+    public const double MaxGlowDepth = 36;
     public const double FlingBounceDistance = 8;
     public static readonly TimeSpan ReleaseDuration = TimeSpan.FromMilliseconds(280);
     public static readonly TimeSpan FlingReleaseDuration = TimeSpan.FromMilliseconds(210);
@@ -42,6 +44,9 @@ internal static class MobileOverscrollPhysics
 
     public static double GetGlowDepth(double translation, double viewportHeight)
         => MaxGlowDepth * GetVisualProgress(translation, viewportHeight);
+
+    public static bool NeedsGlowGeometryUpdate(double current, double next)
+        => double.IsNaN(current) || Math.Abs(current - next) > 0.1;
 
     public static double EstimatePullDistance(double translation, double viewportHeight)
     {
