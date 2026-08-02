@@ -173,6 +173,9 @@ public class AppDbContext : DbContext
             entity.HasIndex(e => e.ProfileId);
             entity.HasIndex(e => e.Status);
             entity.HasIndex(e => new { e.ProfileId, e.Status, e.CreatedAt });
+            entity.HasIndex(e => e.ContentKey)
+                  .IsUnique()
+                  .HasFilter("ContentKey IS NOT NULL AND Status NOT IN (4, 5)");
         });
 
         modelBuilder.Entity<ImportJob>(entity =>

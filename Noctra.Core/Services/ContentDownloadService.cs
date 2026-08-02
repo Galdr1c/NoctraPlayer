@@ -95,22 +95,12 @@ public class ContentDownloadService : IContentDownloadService
 
         using var db = await _contextFactory.CreateDbContextAsync(cancellationToken);
 
-        var duplicate = await db.DownloadItems
-            .AsNoTracking()
-            .FirstOrDefaultAsync(
-                d => d.ProfileId == request.ProfileId &&
-                     d.SourceUrl == normalizedSource &&
-                     d.Status != DownloadStatus.Failed &&
-                     d.Status != DownloadStatus.Canceled,
-                cancellationToken);
+        var contentKey = BuildContentKey(request);
+
+        var duplicate = await FindDuplicateAsync(db, request, contentKey, normalizedSource, cancellationToken);
         if (duplicate != null)
         {
-            if (duplicate.IsCompleted)
-            {
-                return new DownloadContentResult(true, true, _localizationService.GetString("Download.Status.AlreadyDownloaded"), duplicate.Id);
-            }
-
-            return new DownloadContentResult(true, true, _localizationService.GetString("Download.Status.AlreadyInQueue"), duplicate.Id);
+            return ToDuplicateResult(duplicate);
         }
 
         var item = new DownloadItem
@@ -124,6 +114,7 @@ public class ContentDownloadService : IContentDownloadService
             SeasonNumber = request.SeasonNumber,
             EpisodeNumber = request.EpisodeNumber,
             EpisodeTitle = string.IsNullOrWhiteSpace(request.EpisodeTitle) ? null : request.EpisodeTitle.Trim(),
+            ContentKey = contentKey,
             ChannelType = request.ItemType == DownloadItemType.SeriesEpisode ? ChannelType.Series : ChannelType.VOD,
             DisplayName = string.IsNullOrWhiteSpace(request.DisplayName) ? _localizationService.GetString("Download.DefaultName") : request.DisplayName.Trim(),
             PosterUrl = request.PosterUrl,
@@ -139,8 +130,33 @@ public class ContentDownloadService : IContentDownloadService
             UpdatedAt = DateTime.UtcNow
         };
 
-        db.DownloadItems.Add(item);
-        await db.SaveChangesAsync(cancellationToken);
+        try
+        {
+            db.DownloadItems.Add(item);
+            await db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException ex) when (IsUniqueConstraintViolation(ex))
+        {
+            // A concurrent request inserted the same content between our query
+            // and insert. The unique index on ContentKey closes that race.
+            var racedDuplicate = contentKey != null
+                ? await db.DownloadItems
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(
+                        d => d.Status != DownloadStatus.Failed &&
+                             d.Status != DownloadStatus.Canceled &&
+                             d.ContentKey == contentKey,
+                        cancellationToken)
+                : null;
+
+            // The conflicting row is an active/completed download in the
+            // overwhelming majority of cases. If it already failed between
+            // our insert and this lookup, reporting it as already-present
+            // lets the user simply retry — the pre-check then succeeds.
+            return racedDuplicate != null
+                ? ToDuplicateResult(racedDuplicate)
+                : new DownloadContentResult(true, true, _localizationService.GetString("Download.Status.AlreadyInQueue"));
+        }
 
         if (_queuedIds.TryAdd(item.Id, 1))
         {
@@ -151,6 +167,105 @@ public class ContentDownloadService : IContentDownloadService
         EnsureQueueWorkerStarted();
         DownloadsChanged?.Invoke(this, EventArgs.Empty);
         return new DownloadContentResult(true, false, _localizationService.GetString("Download.Status.AddedToQueue"), item.Id);
+    }
+
+    /// <summary>
+    /// Normalized dedup key used to detect the same content even when the
+    /// provider URL/token changed.
+    ///   series: playlistId:episodeId
+    ///   series: playlistId:normalizedSeriesTitle:season:episode  (fallback)
+    ///   movie:  playlistId:channelId
+    /// Returns null when the request carries no reliable identity, in which
+    /// case the legacy SourceUrl match applies.
+    /// </summary>
+    internal static string? BuildContentKey(DownloadContentRequest request)
+    {
+        if (request.PlaylistId <= 0)
+        {
+            return null;
+        }
+
+        if (request.ItemType == DownloadItemType.SeriesEpisode)
+        {
+            if (request.EpisodeId > 0)
+            {
+                return $"series:{request.PlaylistId}:{request.EpisodeId}";
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.SeriesTitle) &&
+                request.SeasonNumber > 0 &&
+                request.EpisodeNumber > 0)
+            {
+                var normalizedSeries = SeriesInfoParser.NormalizeKey(request.SeriesTitle);
+                if (!string.IsNullOrWhiteSpace(normalizedSeries))
+                {
+                    return $"series:{request.PlaylistId}:{normalizedSeries}:{request.SeasonNumber}:{request.EpisodeNumber}";
+                }
+            }
+
+            return null;
+        }
+
+        return request.ChannelId > 0
+            ? $"movie:{request.PlaylistId}:{request.ChannelId}"
+            : null;
+    }
+
+    private static Task<DownloadItem?> FindDuplicateAsync(
+        AppDbContext db,
+        DownloadContentRequest request,
+        string? contentKey,
+        string normalizedSource,
+        CancellationToken cancellationToken)
+    {
+        if (contentKey != null)
+        {
+            return db.DownloadItems
+                .AsNoTracking()
+                .FirstOrDefaultAsync(
+                    d => d.Status != DownloadStatus.Failed &&
+                         d.Status != DownloadStatus.Canceled &&
+                         d.ContentKey == contentKey,
+                    cancellationToken);
+        }
+
+        // Legacy path: items without a content key are still deduped by URL.
+        return db.DownloadItems
+            .AsNoTracking()
+            .FirstOrDefaultAsync(
+                d => d.ProfileId == request.ProfileId &&
+                     d.SourceUrl == normalizedSource &&
+                     d.Status != DownloadStatus.Failed &&
+                     d.Status != DownloadStatus.Canceled,
+                cancellationToken);
+    }
+
+    private DownloadContentResult ToDuplicateResult(DownloadItem? duplicate)
+    {
+        if (duplicate == null)
+        {
+            return new DownloadContentResult(false, false, _localizationService.GetString("Download.Status.AddedToQueue"));
+        }
+
+        if (duplicate.IsCompleted)
+        {
+            return new DownloadContentResult(true, true, _localizationService.GetString("Download.Status.AlreadyDownloaded"), duplicate.Id);
+        }
+
+        return new DownloadContentResult(true, true, _localizationService.GetString("Download.Status.AlreadyInQueue"), duplicate.Id);
+    }
+
+    internal static bool IsUniqueConstraintViolation(DbUpdateException ex)
+    {
+        for (Exception? current = ex; current != null; current = current.InnerException)
+        {
+            if (current is Microsoft.Data.Sqlite.SqliteException { SqliteErrorCode: 19 })
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public Task<string> ResolvePlayableUrlAsync(

@@ -26,6 +26,7 @@ public class DownloadItem
     public int SeasonNumber { get; set; }
     public int EpisodeNumber { get; set; }
     public string? EpisodeTitle { get; set; }
+    public string? ContentKey { get; set; }
     public ChannelType ChannelType { get; set; } = ChannelType.VOD;
     public string DisplayName { get; set; } = string.Empty;
     public string? PosterUrl { get; set; }

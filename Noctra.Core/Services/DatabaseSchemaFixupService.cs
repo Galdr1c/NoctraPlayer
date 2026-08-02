@@ -133,6 +133,7 @@ public sealed class DatabaseSchemaFixupService : IDatabaseSchemaFixupService
                 SeasonNumber INTEGER NOT NULL DEFAULT 0,
                 EpisodeNumber INTEGER NOT NULL DEFAULT 0,
                 EpisodeTitle TEXT NULL,
+                ContentKey TEXT NULL,
                 ChannelType INTEGER NOT NULL DEFAULT 1,
                 DisplayName TEXT NOT NULL,
                 PosterUrl TEXT NULL,
@@ -162,6 +163,8 @@ public sealed class DatabaseSchemaFixupService : IDatabaseSchemaFixupService
         await AddColumnIfMissingAsync(context, "DownloadItems", "SeasonNumber", "INTEGER NOT NULL DEFAULT 0", cancellationToken).ConfigureAwait(false);
         await AddColumnIfMissingAsync(context, "DownloadItems", "EpisodeNumber", "INTEGER NOT NULL DEFAULT 0", cancellationToken).ConfigureAwait(false);
         await AddColumnIfMissingAsync(context, "DownloadItems", "EpisodeTitle", "TEXT", cancellationToken).ConfigureAwait(false);
+        await AddColumnIfMissingAsync(context, "DownloadItems", "ContentKey", "TEXT", cancellationToken).ConfigureAwait(false);
+        await TryExecuteAsync(context, "CREATE UNIQUE INDEX IF NOT EXISTS IX_DownloadItems_ContentKey ON DownloadItems(ContentKey) WHERE ContentKey IS NOT NULL AND Status NOT IN (4, 5);", cancellationToken).ConfigureAwait(false);
         await TryExecuteAsync(
             context,
             "UPDATE DownloadItems SET Status = 4, ErrorMessage = 'Eski format. Lütfen tekrar indirin.' WHERE LocalFilePath LIKE '%.nctra' AND Status = 3;",
