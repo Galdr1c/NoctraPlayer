@@ -474,6 +474,11 @@
                             <TextBlock Text="{Binding ., Converter={StaticResource DownloadSpeedTextConverter}}"
                                        Foreground="{DynamicResource TextMutedBrush}"
                                        FontSize="{DynamicResource FCaption}" />
+                            <TextBlock Text="•"
+                                       Foreground="{DynamicResource TextMutedBrush}"
+                                       FontSize="{DynamicResource FCaption}"
+                                       Opacity="0.5"
+                                       IsVisible="{Binding SpeedBytesPerSecond, Converter={StaticResource CountToVisibility}}" />
                             <TextBlock Text="{Binding ., Converter={StaticResource DownloadEtaTextConverter}}"
                                        Foreground="{DynamicResource TextMutedBrush}"
                                        FontSize="{DynamicResource FCaption}" />

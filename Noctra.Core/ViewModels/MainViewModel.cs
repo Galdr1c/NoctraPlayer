@@ -435,6 +435,7 @@ public partial class MainViewModel : ObservableObject
             {
                 RebuildSortOptions();
                 RefreshDownloadLandingLocalizedTexts();
+                OnPropertyChanged(nameof(SelectedSeriesDownloadedSummaryText));
             });
         };
         _settingsService.SettingsChanged += OnSettingsService_Changed;
@@ -3063,6 +3064,61 @@ public partial class MainViewModel : ObservableObject
     }
 
     public bool IsDownloadedSeriesDetailMode => _seriesDetailDownloadedOnlyMode;
+
+    /// <summary>
+    /// Downloaded-mode header summary: "6 downloaded episodes • 14.2 GB".
+    /// Computed from the downloaded-only series shell (local files only).
+    /// </summary>
+    public string SelectedSeriesDownloadedSummaryText
+    {
+        get
+        {
+            if (!_seriesDetailDownloadedOnlyMode || SelectedSeries == null)
+            {
+                return string.Empty;
+            }
+
+            var episodeCount = SelectedSeries.Seasons.Sum(s => s.Episodes.Count);
+
+            long totalBytes = 0;
+            foreach (var season in SelectedSeries.Seasons)
+            {
+                foreach (var episode in season.Episodes)
+                {
+                    if (!string.IsNullOrEmpty(episode.StreamUrl) && File.Exists(episode.StreamUrl))
+                    {
+                        totalBytes += new FileInfo(episode.StreamUrl).Length;
+                    }
+                }
+            }
+
+            return FormatDownloadedSeriesSummary(episodeCount, totalBytes);
+        }
+    }
+
+    /// <summary>
+    /// Localized "{count} downloaded episodes • {size}" summary, shared by the
+    /// downloaded-library series cards and the downloaded detail header.
+    /// </summary>
+    private string FormatDownloadedSeriesSummary(int episodeCount, long totalBytes)
+    {
+        var format = _localizationService.GetString("Series.Detail.DownloadedEpisodes.Format");
+        if (string.IsNullOrWhiteSpace(format))
+        {
+            format = "{0} downloaded episodes \u2022 {1}";
+        }
+
+        return string.Format(
+            CultureInfo.CurrentCulture,
+            format,
+            episodeCount,
+            FormatDownloadBytes(totalBytes));
+    }
+
+    partial void OnSelectedSeriesChanged(Series? value)
+    {
+        OnPropertyChanged(nameof(SelectedSeriesDownloadedSummaryText));
+    }
 
     internal void UpdateSeriesLastWatchedEpisodeAt(int seriesId, DateTime lastWatchedUtc)
     {
@@ -6598,6 +6654,7 @@ public partial class MainViewModel : ObservableObject
         foreach (var series in seriesMap.Values)
         {
             long totalSeriesSize = 0;
+            var episodeCount = series.Seasons.Sum(sea => sea.Episodes.Count);
             foreach (var season in series.Seasons)
             {
                 foreach (var ep in season.Episodes)
@@ -6608,7 +6665,10 @@ public partial class MainViewModel : ObservableObject
                     }
                 }
             }
-            series.LocalSizeText = $"Toplam {FormatDownloadBytes(totalSeriesSize)}";
+
+            // Series cards show "{count} downloaded episodes • {size}"; movies
+            // keep just the size text (set by the VOD path above).
+            series.LocalSizeText = FormatDownloadedSeriesSummary(episodeCount, totalSeriesSize);
         }
 
         // ── 5. Filtering and Sorting ──

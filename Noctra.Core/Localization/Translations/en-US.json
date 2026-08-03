@@ -215,6 +215,7 @@
   "Player.Quality.Speed.Normal": "Normal",
   "Player.Muted": "Muted",
   "Series.Detail.DownloadedEpisodes": "Downloaded Episodes",
+  "Series.Detail.DownloadedEpisodes.Format": "{0} downloaded episodes • {1}",
   "Series.Detail.DownloadSeason": "Download Season",
   "Series.Detail.DownloadSeason.Tooltip": "Add all episodes in the active season to the download queue",
   "Series.Detail.Episodes": "Episodes",

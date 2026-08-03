@@ -215,6 +215,7 @@
   "Player.Quality.Speed.Normal": "Normal",
   "Player.Muted": "Sessiz",
   "Series.Detail.DownloadedEpisodes": "İndirilen Bölümler",
+  "Series.Detail.DownloadedEpisodes.Format": "{0} indirilen bölüm • {1}",
   "Series.Detail.DownloadSeason": "Sezonu İndir",
   "Series.Detail.DownloadSeason.Tooltip": "Aktif sezondaki tüm bölümleri indirme kuyruğuna ekle",
   "Series.Detail.Episodes": "Bölümler",

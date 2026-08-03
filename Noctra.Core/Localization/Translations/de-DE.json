@@ -215,6 +215,7 @@
   "Player.Quality.Speed.Normal": "Normal",
   "Player.Muted": "Stumm",
   "Series.Detail.DownloadedEpisodes": "Heruntergeladene Folgen",
+  "Series.Detail.DownloadedEpisodes.Format": "{0} heruntergeladene Folgen • {1}",
   "Series.Detail.DownloadSeason": "Staffel herunterladen",
   "Series.Detail.DownloadSeason.Tooltip": "Alle Folgen der aktiven Staffel zur Download-Warteschlange hinzufügen",
   "Series.Detail.Episodes": "Folgen",

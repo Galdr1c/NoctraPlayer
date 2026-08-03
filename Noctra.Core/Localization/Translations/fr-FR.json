@@ -215,6 +215,7 @@
   "Player.Quality.Speed.Normal": "Normal",
   "Player.Muted": "Muet",
   "Series.Detail.DownloadedEpisodes": "Épisodes téléchargés",
+  "Series.Detail.DownloadedEpisodes.Format": "{0} épisodes téléchargés • {1}",
   "Series.Detail.DownloadSeason": "Télécharger la saison",
   "Series.Detail.DownloadSeason.Tooltip": "Ajouter tous les épisodes de la saison active à la file d'attente de téléchargement",
   "Series.Detail.Episodes": "Épisodes",
