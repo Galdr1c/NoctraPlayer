@@ -59,7 +59,8 @@ public partial class MobilePlayerTimeline : UserControl
             or nameof(PlayerViewModel.Duration)
             or nameof(PlayerViewModel.BufferedPosition)
             or nameof(PlayerViewModel.LiveProgramProgress)
-            or nameof(PlayerViewModel.IsLiveContent))
+            or nameof(PlayerViewModel.IsLiveContent)
+            or nameof(PlayerViewModel.IsDownloadedPlayback))
         {
             UpdateProgress();
         }
@@ -186,6 +187,7 @@ public partial class MobilePlayerTimeline : UserControl
         BufferBar.Width = bufferedWidth;
         BufferBar.IsVisible =
             !_vm.IsLiveContent &&
+            !_vm.IsDownloadedPlayback &&
             bufferedWidth > playedWidth + 1;
 
         if (_vm.IsLiveContent)
