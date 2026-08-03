@@ -150,6 +150,8 @@ public partial class Episode : ObservableObject
     private string? _plot;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(DisplayTitle))]
+    [NotifyPropertyChangedFor(nameof(DisplaySubtitle))]
     private string? _tmdbEpisodeName;
 
     [ObservableProperty]
@@ -195,6 +197,49 @@ public partial class Episode : ObservableObject
             if (AirDate.HasValue) parts.Add(AirDate.Value.ToString("dd MMM yyyy"));
             if (Duration.HasValue && Duration.Value.TotalMinutes > 0) parts.Add($"{(int)Duration.Value.TotalMinutes} dk");
             return parts.Count > 0 ? string.Join("  •  ", parts) : null;
+        }
+    }
+
+    /// <summary>
+    /// Single effective display title: the provider title first (what the user
+    /// recognizes), otherwise the localized TMDB title, otherwise "Episode N".
+    /// </summary>
+    [NotMapped]
+    public string DisplayTitle
+    {
+        get
+        {
+            if (!string.IsNullOrWhiteSpace(Name))
+            {
+                return Name;
+            }
+
+            if (!string.IsNullOrWhiteSpace(TmdbEpisodeName))
+            {
+                return TmdbEpisodeName;
+            }
+
+            return $"Episode {EpisodeNumber}";
+        }
+    }
+
+    /// <summary>
+    /// The TMDB title as a subtitle — only when it differs from the effective
+    /// display title (no duplicate, no same-language echo).
+    /// </summary>
+    [NotMapped]
+    public string? DisplaySubtitle
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(TmdbEpisodeName))
+            {
+                return null;
+            }
+
+            return string.Equals(TmdbEpisodeName, DisplayTitle, StringComparison.OrdinalIgnoreCase)
+                ? null
+                : TmdbEpisodeName;
         }
     }
 

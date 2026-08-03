@@ -902,7 +902,7 @@
                                           <!-- Info -->
                                           <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="4" Margin="12,0">
                                               <StackPanel Orientation="Horizontal" Spacing="16">
-                                                  <TextBlock Text="{Binding Name}" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                                  <TextBlock Text="{Binding DisplayTitle}" FontSize="16" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"/>
                                                   <TextBlock Text="{Binding EpisodeMetaText}" FontSize="13" Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center"
                                                              IsVisible="{Binding EpisodeMetaText, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
 
@@ -910,9 +910,9 @@
                                                   <Border IsVisible="{Binding IsCompleted}" VerticalAlignment="Center" ToolTip.Tip="{loc:Translate Series.Episode.Watched}" Background="Transparent">
                                                       <materialIcons:MaterialIcon Kind="CheckCircle" Width="22" Height="22" Foreground="{DynamicResource AccentBrush}"/>
                                                   </Border>                                              </StackPanel>
-                                              <TextBlock Text="{Binding TmdbEpisodeName}" 
+                                              <TextBlock Text="{Binding DisplaySubtitle}" 
                                                          FontSize="14" Foreground="{DynamicResource AccentBrush}" FontStyle="Italic" Opacity="0.85"
-                                                         IsVisible="{Binding TmdbEpisodeName, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
+                                                         IsVisible="{Binding DisplaySubtitle, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
                                               <TextBlock Text="{Binding Plot}" 
                                                          FontSize="13" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" MaxHeight="40" Opacity="0.9" LineHeight="18"/>
                                           </StackPanel>
