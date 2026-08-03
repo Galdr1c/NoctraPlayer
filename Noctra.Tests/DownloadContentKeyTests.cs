@@ -222,6 +222,64 @@ public sealed class DownloadContentKeyTests : IDisposable
     }
 
     [Fact]
+    public async Task QueueDownload_SameEpisode_DifferentPlaylist_LegacyRow_DoesNotDedupe()
+    {
+        using (var db = _contextFactory.CreateDbContext())
+        {
+            db.DownloadItems.Add(new DownloadItem
+            {
+                ProfileId = 1,
+                PlaylistId = 7,
+                EpisodeId = 42,
+                ContentKey = null,
+                DisplayName = "Episode 5",
+                SourceUrl = "http://192.0.2.1/old.mp4",
+                Status = DownloadStatus.Completed
+            });
+            db.SaveChanges();
+        }
+
+        var service = CreateService();
+        var request = new DownloadContentRequest(
+            1, DownloadItemType.SeriesEpisode, "Episode 5", "http://192.0.2.1/new.mp4?token=abc",
+            null, 8, 0, 42, null, null, 7, "The 100", 2, 5, "Hakeldama");
+
+        var result = await service.QueueDownloadAsync(request);
+
+        Assert.True(result.Success);
+        Assert.False(result.AlreadyExists);
+    }
+
+    [Fact]
+    public async Task QueueDownload_SameUrl_DifferentPlaylist_LegacyRow_DoesNotDedupe()
+    {
+        using (var db = _contextFactory.CreateDbContext())
+        {
+            db.DownloadItems.Add(new DownloadItem
+            {
+                ProfileId = 1,
+                PlaylistId = 7,
+                ChannelId = 99,
+                ContentKey = null,
+                DisplayName = "Movie",
+                SourceUrl = "http://192.0.2.1/movie.mp4",
+                Status = DownloadStatus.Completed
+            });
+            db.SaveChanges();
+        }
+
+        var service = CreateService();
+        var request = new DownloadContentRequest(
+            1, DownloadItemType.Vod, "Movie", "http://192.0.2.1/movie.mp4",
+            null, 8, 99, 0);
+
+        var result = await service.QueueDownloadAsync(request);
+
+        Assert.True(result.Success);
+        Assert.False(result.AlreadyExists);
+    }
+
+    [Fact]
     public async Task QueueDownload_FailedEpisode_CanBeRedownloaded()
     {
         using (var db = _contextFactory.CreateDbContext())

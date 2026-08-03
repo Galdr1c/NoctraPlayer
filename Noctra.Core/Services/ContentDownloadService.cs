@@ -244,7 +244,9 @@ public class ContentDownloadService : IContentDownloadService
                          d.Status != DownloadStatus.Canceled &&
                          (d.ContentKey == contentKey ||
                           (d.ContentKey == null &&
-                           ((d.ProfileId == request.ProfileId && d.SourceUrl == normalizedSource) ||
+                           d.ProfileId == request.ProfileId &&
+                           d.PlaylistId == request.PlaylistId &&
+                           (d.SourceUrl == normalizedSource ||
                             (request.EpisodeId > 0 && d.EpisodeId == request.EpisodeId) ||
                             (request.ChannelId > 0 && d.ChannelId == request.ChannelId)))),
                     cancellationToken);
@@ -1879,25 +1881,24 @@ public class ContentDownloadService : IContentDownloadService
         }
 
         // For series: poster is shared by episodes of the same series in the same profile.
-        // Query only series episodes with the same SeriesId and ProfileId.
+        // Legacy rows may lack SeriesId; fall back to comparing poster paths against
+        // every surviving series download in the profile.
         var seriesId = item.SeriesId;
-        if (!seriesId.HasValue || seriesId.Value <= 0)
-        {
-            // No SeriesId means we can't determine sharing accurately.
-            // Conservative: assume not shared to avoid orphaning the poster file.
-            return false;
-        }
-
-        var hasOtherEpisode = await db.DownloadItems
+        var candidates = db.DownloadItems
             .AsNoTracking()
             .Where(d => d.Id != item.Id &&
-                        d.SeriesId == seriesId &&
-                        d.ProfileId == item.ProfileId &&
                         d.ChannelType == ChannelType.Series &&
+                        d.ProfileId == item.ProfileId &&
                         d.Status != DownloadStatus.Failed &&
                         d.Status != DownloadStatus.Canceled &&
-                        d.LocalFilePath != null)
-            .AnyAsync(cancellationToken);
+                        d.LocalFilePath != null);
+
+        if (seriesId.HasValue && seriesId.Value > 0)
+        {
+            candidates = candidates.Where(d => d.SeriesId == seriesId);
+        }
+
+        var hasOtherEpisode = await candidates.AnyAsync(cancellationToken);
 
         if (!hasOtherEpisode)
         {
@@ -1906,15 +1907,7 @@ public class ContentDownloadService : IContentDownloadService
 
         // There are other episodes of the same series. Verify they actually use the same poster path.
         // This handles edge cases where SeriesId matches but file structure differs.
-        var otherEpisodes = await db.DownloadItems
-            .AsNoTracking()
-            .Where(d => d.Id != item.Id &&
-                        d.SeriesId == seriesId &&
-                        d.ProfileId == item.ProfileId &&
-                        d.ChannelType == ChannelType.Series &&
-                        d.Status != DownloadStatus.Failed &&
-                        d.Status != DownloadStatus.Canceled &&
-                        d.LocalFilePath != null)
+        var otherEpisodes = await candidates
             .Select(d => new { d.Id, d.LocalFilePath })
             .ToListAsync(cancellationToken);
 

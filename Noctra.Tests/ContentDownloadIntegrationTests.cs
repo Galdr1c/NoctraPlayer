@@ -715,6 +715,40 @@ public sealed class ContentDownloadIntegrationTests
         Assert.True(await ctx.WaitUntilAsync(() => Task.FromResult(!File.Exists(sharedPoster))));
     }
 
+    [Fact]
+    public async Task Series_SharedPoster_SurvivesDeletingOneEpisode_WithoutSeriesId()
+    {
+        // Legacy rows predate SeriesId; the sharing check must fall back to
+        // poster-path comparison instead of assuming the poster is not shared.
+        using var ctx = new DownloadIntegrationContext(content: DownloadIntegrationContext.BuildContent(60_000));
+        var service = ctx.CreateService();
+
+        var (profileId, playlistId, e1Id, e2Id, _, _) = await SeedTwoEpisodesAsync(
+            ctx, "The 100", ServerRoot + "s1e1.mp4", ServerRoot + "s1e2.mp4");
+
+        // SeriesId = 0 → DownloadItem.SeriesId stays null, like legacy records.
+        var req1 = new DownloadContentRequest(
+            profileId, DownloadItemType.SeriesEpisode, "Episode 1", ServerRoot + "s1e1.mp4",
+            ServerRoot + "posters/ep1.jpg", playlistId, 0, e1Id, null, null, 0, "The 100", 1, 1, "Episode 1");
+        var req2 = new DownloadContentRequest(
+            profileId, DownloadItemType.SeriesEpisode, "Episode 2", ServerRoot + "s1e2.mp4",
+            ServerRoot + "posters/ep2.jpg", playlistId, 0, e2Id, null, null, 0, "The 100", 1, 2, "Episode 2");
+
+        var r1 = await service.QueueDownloadAsync(req1);
+        var r2 = await service.QueueDownloadAsync(req2);
+        Assert.NotNull(await ctx.WaitForItemAsync(r1.DownloadId!.Value, i => i.Status == DownloadStatus.Completed));
+        Assert.NotNull(await ctx.WaitForItemAsync(r2.DownloadId!.Value, i => i.Status == DownloadStatus.Completed));
+
+        var sharedPoster = Path.Combine(ctx.DownloadsRoot, "Series", "The 100", "poster.jpg");
+        Assert.True(await ctx.WaitUntilAsync(() => Task.FromResult(File.Exists(sharedPoster))));
+
+        await service.DeleteDownloadAsync(r1.DownloadId!.Value);
+        Assert.True(await ctx.WaitForRowGoneAsync(r1.DownloadId!.Value));
+
+        Assert.True(File.Exists(sharedPoster), "The shared series poster must survive deleting one episode even without SeriesId.");
+        Assert.True(await ctx.WaitUntilAsync(() => Task.FromResult(File.Exists(sharedPoster))));
+    }
+
     // ─── Restart / visibility / resilience ───────────────────────────────────────
 
     [Fact]
