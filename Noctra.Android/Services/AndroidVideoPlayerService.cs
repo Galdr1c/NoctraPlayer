@@ -357,7 +357,15 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
                 // DefaultMediaSourceFactory can throw a Java ClassNotFoundException on
                 // the UI thread. Convert that into a normal player error so it never
                 // bubbles out as a terminating Avalonia/Android crash report.
-                var mediaSourceFactory = new DefaultMediaSourceFactory(httpDataSourceFactory);
+                //
+                // DefaultDataSource.Factory wraps httpDataSourceFactory and automatically
+                // routes local file:// and content:// URIs to the appropriate platform
+                // data source, while network URIs still go through httpDataSourceFactory.
+                // This is required for downloaded media files (/data/.../file.mkv) to play.
+                var dataSourceFactory = new DefaultDataSource.Factory(
+                    _applicationContext,
+                    httpDataSourceFactory);
+                var mediaSourceFactory = new DefaultMediaSourceFactory(dataSourceFactory);
                 try
                 {
                     var mediaSource = mediaSourceFactory.CreateMediaSource(mediaItem);

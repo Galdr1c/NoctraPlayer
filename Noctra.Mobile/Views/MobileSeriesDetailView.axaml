@@ -554,20 +554,33 @@
                                      IsVisible="{Binding Plot, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
                         </StackPanel>
 
-                        <!-- Download Episode -->
-                        <Button Grid.Column="2"
-                                Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).DownloadEpisodeCommand}"
-                                CommandParameter="{Binding}"
-                                Classes="detailAction"
-                                Background="Transparent"
-                                VerticalAlignment="Center"
-                                IsVisible="{Binding StreamUrl, Converter={StaticResource StringNotEmptyToVisibilityConverter}}">
-                          <icons:MaterialIcon Kind="DownloadOutline"
-                                              Width="18"
-                                              Height="18"
-                                              Opacity="0.6"
-                                              Foreground="{DynamicResource TextMutedBrush}" />
-                        </Button>
+                        <!-- Episode action: Download (library) / Delete (downloaded) -->
+                        <Grid Grid.Column="2"
+                              VerticalAlignment="Center"
+                              IsVisible="{Binding StreamUrl, Converter={StaticResource StringNotEmptyToVisibilityConverter}}">
+                          <Button Classes="detailAction"
+                                  Background="Transparent"
+                                  Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).DownloadEpisodeCommand}"
+                                  CommandParameter="{Binding}"
+                                  IsVisible="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).IsDownloadedSeriesDetailMode, Converter={StaticResource InverseBoolConverter}}">
+                            <icons:MaterialIcon Kind="DownloadOutline"
+                                                Width="18"
+                                                Height="18"
+                                                Opacity="0.6"
+                                                Foreground="{DynamicResource TextMutedBrush}" />
+                          </Button>
+                          <Button Classes="detailAction"
+                                  Background="Transparent"
+                                  Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).DeleteDownloadedEpisodeCommand}"
+                                  CommandParameter="{Binding}"
+                                  IsVisible="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).IsDownloadedSeriesDetailMode}">
+                            <icons:MaterialIcon Kind="TrashCanOutline"
+                                                Width="18"
+                                                Height="18"
+                                                Opacity="0.8"
+                                                Foreground="{DynamicResource ErrorBrush}" />
+                          </Button>
+                        </Grid>
                       </Grid>
                     </Panel>
                   </Button>

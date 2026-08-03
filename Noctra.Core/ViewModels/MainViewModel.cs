@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Noctra.Models;
 using System.Net.Http;
@@ -2882,12 +2882,18 @@ public partial class MainViewModel : ObservableObject
             return File.Exists(normalized);
         }
 
-        if (!Regex.IsMatch(normalized, @"^[a-zA-Z]:[\\/]"))
+        if (Regex.IsMatch(normalized, @"^[a-zA-Z]:[\\/]"))
         {
-            return false;
+            return File.Exists(normalized);
         }
 
-        return File.Exists(normalized);
+        // Android absolute paths start with '/'
+        if (normalized.StartsWith("/", StringComparison.Ordinal))
+        {
+            return File.Exists(normalized);
+        }
+
+        return false;
     }
 
     private static bool SeriesHasDownloadedEpisode(Series series)
@@ -6861,7 +6867,8 @@ public partial class MainViewModel : ObservableObject
         }
 
         return normalized.StartsWith(@"\\", StringComparison.Ordinal)
-               || Regex.IsMatch(normalized, @"^[a-zA-Z]:[\\/]");
+               || Regex.IsMatch(normalized, @"^[a-zA-Z]:[\\/]")
+               || normalized.StartsWith("/", StringComparison.Ordinal); // Android absolute paths
     }
 
     private static string NormalizeLocalFilesystemPath(string path)
@@ -9129,6 +9136,88 @@ public partial class MainViewModel : ObservableObject
         SelectedSeriesCast = string.Empty;
     }
 
+    /// <summary>
+    /// Deletes a single downloaded episode when the user taps the trash icon
+    /// inside the Downloads-mode series detail view.
+    /// </summary>
+    [RelayCommand]
+    private async Task DeleteDownloadedEpisodeAsync(Episode? episode)
+    {
+        if (episode == null)
+        {
+            return;
+        }
+
+        var localPath = episode.StreamUrl;
+        if (!IsLocalFilesystemPath(localPath))
+        {
+            return;
+        }
+
+        localPath = NormalizeLocalFilesystemPath(localPath!);
+        if (!File.Exists(localPath))
+        {
+            return;
+        }
+
+        var confirmed = await _dialogService.ShowConfirmationAsync(
+            _localizationService.GetString("Downloads.Dialog.DeleteContent.Title"),
+            string.Format(
+                CultureInfo.CurrentCulture,
+                _localizationService.GetString("Downloads.Dialog.DeleteEpisode.MessageFormat"),
+                episode.Name));
+
+        if (!confirmed)
+        {
+            return;
+        }
+
+        using (var db = await _contextFactory.CreateDbContextAsync())
+        {
+            var record = await db.DownloadItems
+                .AsNoTracking()
+                .FirstOrDefaultAsync(d => d.LocalFilePath == localPath);
+
+            if (record != null)
+            {
+                await _contentDownloadService.DeleteDownloadAsync(record.Id);
+            }
+            else if (File.Exists(localPath) && IsPathInsideDownloadRoot(localPath))
+            {
+                try
+                {
+                    File.Delete(localPath);
+                }
+                catch (Exception ex)
+                {
+                    _logger?.LogDebug(ex, "DeleteDownloadedEpisodeAsync: Failed to delete file {Path}", localPath);
+                }
+
+                TryDeleteEmptyDownloadParents(Path.GetDirectoryName(localPath));
+            }
+        }
+
+        await RefreshDownloadedItemsFromDatabaseAsync();
+
+        if (SelectedSeries != null)
+        {
+            var refreshed = DownloadedSeriesItems
+                .FirstOrDefault(s => string.Equals(
+                    s.Name,
+                    SelectedSeries.Name,
+                    StringComparison.OrdinalIgnoreCase));
+
+            if (refreshed == null)
+            {
+                CloseSeriesDetail();
+            }
+            else
+            {
+                SelectedSeries = refreshed;
+                await LoadSelectedSeriesMetadataAsync(refreshed);
+            }
+        }
+    }
 
     [RelayCommand]
     private void EditChannel(Channel channel)

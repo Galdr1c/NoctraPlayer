@@ -646,6 +646,10 @@ public class ContentDownloadService : IContentDownloadService
     {
         try
         {
+            // Clean up any corrupted Completed downloads (e.g. 32-byte error text files
+            // that were saved as video) before resuming the queue.
+            await ReconcileInvalidCompletedDownloadsAsync();
+
             using var db = await _contextFactory.CreateDbContextAsync();
             var pendingItems = await db.DownloadItems
                 .Where(d => d.Status == DownloadStatus.Queued ||
@@ -765,9 +769,11 @@ public class ContentDownloadService : IContentDownloadService
         if (finalFileLength > 0)
         {
             // Never mark a previously saved HLS/DASH manifest as Completed.
-            if (IsManifestFile(finalPath))
+            // Also never mark a tiny/text error response as Completed.
+            if (IsManifestFile(finalPath) || IsClearlyInvalidFinalFile(finalPath, finalFileLength))
             {
                 TryDeleteFile(finalPath);
+                // Fall through: re-download from scratch.
             }
             else
             {
@@ -892,6 +898,24 @@ public class ContentDownloadService : IContentDownloadService
                     await MarkFailedAsync(
                         downloadId,
                         _localizationService.GetString("Download.Error.UnsupportedStreaming"));
+                    return;
+                }
+
+                // Detect servers that return HTTP 200 with an error/text body
+                // (e.g. JSON {"error":"stream unavailable"} or HTML error pages).
+                // Treat as a transient server-side problem → Paused so the user
+                // can resume once the source is fixed.
+                if (headRead > 0 &&
+                    IsClearlyInvalidMediaResponse(
+                        response.Content.Headers.ContentType?.MediaType,
+                        head.AsSpan(0, headRead),
+                        totalBytes))
+                {
+                    TryDeleteFile(plainTempPath);
+                    TryDeleteFile(finalPath);
+                    await MarkInterruptedAsPausedAsync(
+                        downloadId,
+                        _localizationService.GetString("Download.Error.InvalidServerResponse"));
                     return;
                 }
 
@@ -1997,10 +2021,213 @@ public class ContentDownloadService : IContentDownloadService
             return;
         }
 
-        // Phase 27: User requested cancelled/failed downloads to be completely removed from DB
-        db.DownloadItems.Remove(item);
+        // Keep the record in the DB as Failed so the user sees the error card
+        // in the Downloads center and can retry or dismiss it explicitly.
+        item.Status = DownloadStatus.Failed;
+        item.ErrorMessage = message;
+        item.SpeedBytesPerSecond = 0;
+        item.EstimatedSecondsRemaining = null;
+        item.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync();
         DownloadsChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>
+    /// Returns true when the response body is clearly not a valid media file:
+    /// JSON, HTML, plain-text error messages, or a suspiciously tiny payload.
+    /// Used to detect HTTP 200 responses that carry an error body instead of video.
+    /// </summary>
+    internal static bool IsClearlyInvalidMediaResponse(
+        string? contentType,
+        ReadOnlySpan<byte> head,
+        long? totalBytes)
+    {
+        var type = (contentType ?? string.Empty).Trim().ToLowerInvariant();
+
+        if (type.StartsWith("text/", StringComparison.Ordinal) ||
+            type.Contains("json", StringComparison.Ordinal) ||
+            type.Contains("xml", StringComparison.Ordinal) ||
+            type.Contains("problem+", StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        // Strip UTF-8 / UTF-16 BOM before inspecting content
+        var span = head;
+        if (span.Length >= 3 && span[0] == 0xEF && span[1] == 0xBB && span[2] == 0xBF)
+        {
+            span = span[3..];
+        }
+        else if (span.Length >= 2 &&
+                 ((span[0] == 0xFF && span[1] == 0xFE) ||
+                  (span[0] == 0xFE && span[1] == 0xFF)))
+        {
+            span = span[2..];
+        }
+
+        if (StartsWithAscii(span, "{")           ||
+            StartsWithAscii(span, "[")           ||
+            StartsWithAscii(span, "<html")       ||
+            StartsWithAscii(span, "<!doctype")   ||
+            StartsWithAscii(span, "<?xml")       ||
+            StartsWithAscii(span, "error")       ||
+            StartsWithAscii(span, "invalid")     ||
+            StartsWithAscii(span, "unauthorized") ||
+            StartsWithAscii(span, "user not found"))
+        {
+            return true;
+        }
+
+        // A payload smaller than 64 KB that consists mostly of printable ASCII
+        // is almost certainly a text/error response rather than media.
+        if (totalBytes is > 0 and < 64 * 1024 && LooksMostlyLikeText(span))
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Returns true when more than 80 % of the first 512 bytes are printable ASCII,
+    /// which strongly suggests a text/error payload rather than binary media.
+    /// </summary>
+    private static bool LooksMostlyLikeText(ReadOnlySpan<byte> span)
+    {
+        if (span.IsEmpty)
+        {
+            return false;
+        }
+
+        var sample = span.Length > 512 ? span[..512] : span;
+        var printable = 0;
+        foreach (var b in sample)
+        {
+            if (b >= 0x20 && b < 0x7F)
+            {
+                printable++;
+            }
+        }
+
+        return (double)printable / sample.Length > 0.80;
+    }
+
+    /// <summary>
+    /// Returns true when a final (non-.part) file on disk is clearly invalid media:
+    /// too small, looks like text, or is a manifest file.
+    /// </summary>
+    private static bool IsClearlyInvalidFinalFile(string filePath, long fileLength)
+    {
+        if (fileLength <= 0)
+        {
+            return true;
+        }
+
+        // Files below 64 KB are suspicious — real video files are always larger.
+        if (fileLength < 64 * 1024)
+        {
+            try
+            {
+                using var fs = new FileStream(
+                    filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                var head = new byte[Math.Min((int)fileLength, 4096)];
+                var read = fs.Read(head, 0, head.Length);
+                return IsClearlyInvalidMediaResponse(
+                    null,
+                    head.AsSpan(0, read),
+                    fileLength);
+            }
+            catch
+            {
+                return false; // Cannot read — assume valid to avoid data loss
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Scans all Completed downloads and resets any whose local file is missing,
+    /// empty, or clearly an error-text payload (e.g. 32-byte HTTP 200 error body).
+    /// Called once at startup before the queue is processed.
+    /// </summary>
+    private async Task ReconcileInvalidCompletedDownloadsAsync()
+    {
+        try
+        {
+            using var db = await _contextFactory.CreateDbContextAsync();
+
+            var completed = await db.DownloadItems
+                .Where(d =>
+                    d.Status == DownloadStatus.Completed &&
+                    d.LocalFilePath != null)
+                .ToListAsync();
+
+            if (completed.Count == 0)
+            {
+                return;
+            }
+
+            var changed = false;
+            var invalidMessage = _localizationService.GetString("Download.Error.InvalidDownloadedFile");
+
+            foreach (var item in completed)
+            {
+                var path = item.LocalFilePath!;
+
+                // File missing
+                if (!File.Exists(path))
+                {
+                    await RestoreMappedEntitiesToSourceUrlAsync(db, item);
+                    item.Status = DownloadStatus.Failed;
+                    item.LocalFilePath = null;
+                    item.TempFilePath = null;
+                    item.BytesDownloaded = 0;
+                    item.BytesTotal = null;
+                    item.SpeedBytesPerSecond = 0;
+                    item.EstimatedSecondsRemaining = null;
+                    item.CompletedAt = null;
+                    item.ErrorMessage = _localizationService.GetString("Download.Error.MissingFiles");
+                    item.UpdatedAt = DateTime.UtcNow;
+                    changed = true;
+                    continue;
+                }
+
+                var fileInfo = new FileInfo(path);
+                if (IsClearlyInvalidFinalFile(path, fileInfo.Length))
+                {
+                    _logger?.LogWarning(
+                        "ReconcileInvalidCompletedDownloads: removing invalid file {Path} ({Size} bytes)",
+                        path,
+                        fileInfo.Length);
+
+                    await RestoreMappedEntitiesToSourceUrlAsync(db, item);
+                    TryDeleteFile(path);
+
+                    item.Status = DownloadStatus.Failed;
+                    item.LocalFilePath = null;
+                    item.TempFilePath = null;
+                    item.BytesDownloaded = 0;
+                    item.BytesTotal = null;
+                    item.SpeedBytesPerSecond = 0;
+                    item.EstimatedSecondsRemaining = null;
+                    item.CompletedAt = null;
+                    item.ErrorMessage = invalidMessage;
+                    item.UpdatedAt = DateTime.UtcNow;
+                    changed = true;
+                }
+            }
+
+            if (changed)
+            {
+                await db.SaveChangesAsync();
+                DownloadsChanged?.Invoke(this, EventArgs.Empty);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(ex, "ReconcileInvalidCompletedDownloadsAsync failed.");
+        }
     }
 
     private static string? SerializeTrackList(IReadOnlyList<DownloadTrackOption>? items)
