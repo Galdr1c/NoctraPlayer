@@ -330,8 +330,145 @@ namespace Noctra.Tests
 
             await RefreshFromServiceAsync(ctx.MainVM, 1);
 
-            Assert.True(ctx.MainVM.HasAnyDownloadState, $"HasAnyDownload false. Active={ctx.MainVM.ActiveDownloadItems.Count}, Downloaded={ctx.MainVM.HasDownloadedItems}, View={ctx.MainVM.ActiveView}");
-            Assert.True(ctx.MainVM.IsDownloadCenterVisible, $"Center not visible. Active={ctx.MainVM.ActiveDownloadItems.Count}, Failed={ctx.MainVM.FailedDownloadItems.Count}, View={ctx.MainVM.ActiveView}, HasLib={ctx.MainVM.HasDownloadedItems}");
+            Assert.True(ctx.MainVM.HasAnyDownloadState);
+            Assert.True(ctx.MainVM.IsDownloadCenterVisible);
+        }
+
+        /// <summary>
+        /// Scenario 12: the TabControl binds SelectedIndex to DownloadTabIndex.
+        /// Programmatically switching to the Download Center must raise a
+        /// DownloadTabIndex change notification, otherwise the UI stays on Library.
+        /// </summary>
+        [Fact]
+        public void TogglingIsDownloadCenterVisible_RaisesDownloadTabIndexNotification()
+        {
+            var ctx = new DownloadTestContext();
+            var notifications = new List<string?>();
+            ctx.MainVM.PropertyChanged += (_, e) => notifications.Add(e.PropertyName);
+
+            ctx.MainVM.IsDownloadCenterVisible = true;
+
+            Assert.Equal(1, ctx.MainVM.DownloadTabIndex);
+            Assert.Contains(nameof(MainViewModel.DownloadTabIndex), notifications);
+
+            notifications.Clear();
+            ctx.MainVM.IsDownloadCenterVisible = false;
+
+            Assert.Equal(0, ctx.MainVM.DownloadTabIndex);
+            Assert.Contains(nameof(MainViewModel.DownloadTabIndex), notifications);
+        }
+
+        /// <summary>
+        /// Scenario 13: full entry flow — an ongoing download exists, the user
+        /// navigates to Downloads, lands on the Download Center tab, leaves, then
+        /// re-enters; the Center must still be selected on re-entry.
+        /// </summary>
+        [Fact]
+        public async Task ReenteringDownloads_WithOngoingDownload_KeepsCenterTab()
+        {
+            var ctx = new DownloadTestContext(CreateSqliteFactory(), CreateEmptyDownloadRoot());
+            ctx.MainVM.CurrentProfileId = 1;
+            ctx.DownloadService.MockItems.Add(new DownloadItem
+            {
+                Id = 1,
+                ProfileId = 1,
+                Status = DownloadStatus.Downloading,
+                DisplayName = "Movie film",
+                SourceUrl = "http://media/a.mp4"
+            });
+
+            await RefreshFromServiceAsync(ctx.MainVM, 1);
+
+            ctx.MainVM.NavigateCommand.Execute(AppView.Downloads);
+            Assert.Equal(1, ctx.MainVM.DownloadTabIndex);
+
+            ctx.MainVM.NavigateCommand.Execute(AppView.Home);
+            ctx.MainVM.NavigateCommand.Execute(AppView.Downloads);
+
+            Assert.Equal(1, ctx.MainVM.DownloadTabIndex);
+            Assert.True(ctx.MainVM.IsDownloadCenterVisible);
+        }
+
+        /// <summary>
+        /// Scenario 14 (device reproduction): the user has library items AND a
+        /// paused/active download, but the download state is still loading when
+        /// the Downloads page is opened. Once the state arrives, the Center tab
+        /// must be selected even though a library already exists.
+        /// </summary>
+        [Fact]
+        public async Task LibraryExists_ButStateLoadsLate_ActiveDownload_SelectsCenterTab()
+        {
+            var ctx = new DownloadTestContext(CreateSqliteFactory(), CreateEmptyDownloadRoot());
+            ctx.MainVM.CurrentProfileId = 1;
+            ctx.MainVM.TotalDownloadedCount = 1;
+
+            // A real library file: whichever refresh wins the race, the library
+            // discovery deterministically reports one downloaded item.
+            File.WriteAllBytes(Path.Combine(ctx.DownloadRoot, "already-downloaded.mp4"), new byte[16]);
+
+            ctx.MainVM.NavigateCommand.Execute(AppView.Downloads);
+            Assert.False(ctx.MainVM.IsDownloadCenterVisible, "State not loaded yet, Library default.");
+
+            ctx.DownloadService.MockItems.Add(new DownloadItem
+            {
+                Id = 1,
+                ProfileId = 1,
+                Status = DownloadStatus.Paused,
+                DisplayName = "Movie film",
+                SourceUrl = "http://media/a.mp4"
+            });
+
+            await RefreshFromServiceAsync(ctx.MainVM, 1);
+
+            Assert.True(ctx.MainVM.HasDownloadedItems);
+            Assert.True(ctx.MainVM.IsDownloadCenterVisible, $"Center must be selected once the active download is known. View={ctx.MainVM.ActiveView}, Active={ctx.MainVM.ActiveDownloadItems.Count}, Failed={ctx.MainVM.FailedDownloadItems.Count}");
+            Assert.Equal(1, ctx.MainVM.DownloadTabIndex);
+        }
+
+        /// <summary>
+        /// Scenario 15: the user explicitly picks the Library tab while downloads
+        /// are active; a later state refresh must NOT yank them back to Center.
+        /// </summary>
+        [Fact]
+        public async Task ManualLibrarySelection_IsNotOverriddenByRefresh()
+        {
+            var ctx = new DownloadTestContext(CreateSqliteFactory(), CreateEmptyDownloadRoot());
+            ctx.MainVM.CurrentProfileId = 1;
+            ctx.DownloadService.MockItems.Add(new DownloadItem
+            {
+                Id = 1,
+                ProfileId = 1,
+                Status = DownloadStatus.Downloading,
+                DisplayName = "Movie film",
+                SourceUrl = "http://media/a.mp4"
+            });
+
+            await RefreshFromServiceAsync(ctx.MainVM, 1);
+            ctx.MainVM.NavigateCommand.Execute(AppView.Downloads);
+            Assert.Equal(1, ctx.MainVM.DownloadTabIndex);
+
+            ctx.MainVM.DownloadTabIndex = 0;
+            Assert.False(ctx.MainVM.IsDownloadCenterVisible);
+
+            await RefreshFromServiceAsync(ctx.MainVM, 1);
+
+            Assert.False(ctx.MainVM.IsDownloadCenterVisible, "User chose Library; refresh must not override.");
+            Assert.Equal(0, ctx.MainVM.DownloadTabIndex);
+        }
+
+        /// <summary>
+        /// Scenario 16: the automatic default survives the TwoWay writeback —
+        /// setting the Center via the VM is not mistaken for a user tap.
+        /// </summary>
+        [Fact]
+        public void ProgrammaticCenterSelection_IsNotCountedAsUserTap()
+        {
+            var ctx = new DownloadTestContext();
+            ctx.MainVM.IsDownloadCenterVisible = true;
+
+            ctx.MainVM.DownloadTabIndex = 1;
+
+            Assert.True(ctx.MainVM.IsDownloadCenterVisible);
             Assert.Equal(1, ctx.MainVM.DownloadTabIndex);
         }
     }

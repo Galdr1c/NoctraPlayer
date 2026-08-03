@@ -1,4 +1,4 @@
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Noctra.Models;
 using System.Net.Http;
@@ -5981,11 +5981,23 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private bool _isDownloadCenterVisible;
 
+    /// <summary>True once the user has explicitly picked a tab, so automatic
+    /// defaults never yank the selection out from under them.</summary>
+    private bool _downloadTabUserSelection;
+
     public int DownloadTabIndex
     {
         get => IsDownloadCenterVisible ? 1 : 0;
         set
         {
+            // TwoWay writeback from a programmatic change lands here with the
+            // current value — that is not a user tap and must not count.
+            if (value == DownloadTabIndex)
+            {
+                return;
+            }
+
+            _downloadTabUserSelection = true;
             IsDownloadCenterVisible = value == 1;
             OnPropertyChanged(nameof(DownloadTabIndex));
         }
@@ -7119,12 +7131,13 @@ public partial class MainViewModel : ObservableObject
 
         OnPropertyChanged(nameof(HasAnyDownloadState));
 
-        // Cold-start safety net: if the user lands on the Downloads page before
-        // this refresh ran, default to the Download Center tab so they can track
-        // ongoing/failed downloads instead of staring at an empty Library tab.
+        // Cold-start safety net: if the user lands on the Downloads page while
+        // the download state is still loading (collections empty at navigation
+        // time), default to the Download Center tab once active/failed downloads
+        // become known — unless the user explicitly picked a tab.
         if (ActiveView == AppView.Downloads &&
             !IsDownloadCenterVisible &&
-            !HasDownloadedItems &&
+            !_downloadTabUserSelection &&
             (ActiveDownloadItems.Count > 0 || FailedDownloadItems.Count > 0))
         {
             IsDownloadCenterVisible = true;
@@ -7495,6 +7508,7 @@ public partial class MainViewModel : ObservableObject
     partial void OnIsDownloadCenterVisibleChanged(bool value)
     {
         OnPropertyChanged(nameof(ShowDownloadsLandingEmptyState));
+        OnPropertyChanged(nameof(DownloadTabIndex));
         if (!value && CurrentProfileId.HasValue && ActiveView == AppView.Downloads)
         {
             ScheduleDownloadsLandingRefresh(CurrentProfileId.Value);

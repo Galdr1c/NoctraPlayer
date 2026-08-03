@@ -122,6 +122,9 @@ namespace Noctra.Tests
         public PlayerViewModel PlayerVM { get; }
         public FakeVideoPlayerService VideoService { get; } = new();
 
+        /// <summary>Isolated download root (null when the default path is used).</summary>
+        public string? DownloadRoot { get; }
+
         public DownloadTestContext() : this(contextFactory: null)
         {
         }
@@ -132,6 +135,7 @@ namespace Noctra.Tests
             if (downloadRoot != null)
             {
                 settings.Settings.DownloadPath = downloadRoot;
+                DownloadRoot = downloadRoot;
             }
             var license = new FakeLicenseService();
             var network = new FakeNetworkService();
