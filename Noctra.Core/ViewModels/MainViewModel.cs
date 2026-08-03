@@ -7080,21 +7080,27 @@ public partial class MainViewModel : ObservableObject
                 .OrderByDescending(d => d.CreatedAt)
                 .ToList();
 
-            SetItems(ActiveDownloadItems, allActive
-                .Select((d, index) =>
-                {
-                    d.QueueOrder = index + 1;
-                    return d;
-                }));
+            SetItems(ActiveDownloadItems, allActive);
 
             SetItems(ActiveDownloadingItems, allActive
                 .Where(d => d.Status == DownloadStatus.Downloading || d.Status == DownloadStatus.Paused)
                 .OrderBy(d => d.Status == DownloadStatus.Paused ? 1 : 0)
                 .ThenBy(d => d.CreatedAt));
 
-            SetItems(QueuedDownloadItems, allActive
+            // QueueOrder reflects the REAL queue position: only queued items,
+            // numbered from the first item to download (oldest) to the last.
+            // Anything else would leave gaps or show reversed numbers.
+            var queuedItems = allActive
                 .Where(d => d.Status == DownloadStatus.Queued)
-                .OrderBy(d => d.CreatedAt));
+                .OrderBy(d => d.CreatedAt)
+                .ToList();
+
+            for (var i = 0; i < queuedItems.Count; i++)
+            {
+                queuedItems[i].QueueOrder = i + 1;
+            }
+
+            SetItems(QueuedDownloadItems, queuedItems);
 
             SetItems(CompletedDownloadItems, downloads
                 .Where(d => d.Status == DownloadStatus.Completed)
