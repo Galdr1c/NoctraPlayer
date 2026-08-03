@@ -19,6 +19,14 @@
     <converters:CountToVisibilityConverter x:Key="CountToVisibility" />
   </UserControl.Resources>
 
+  <UserControl.Styles>
+    <!-- Touch feedback for whole-card open buttons -->
+    <Style Selector="Button:pressed Border#EpBgLayer">
+      <Setter Property="Background" Value="{DynamicResource InteractivePressedBrush}" />
+      <Setter Property="Opacity" Value="1.0" />
+    </Style>
+  </UserControl.Styles>
+
   <Grid>
   <ScrollViewer>
     <StackPanel Margin="24" Spacing="20">
@@ -192,51 +200,71 @@
               <ItemsControl ItemsSource="{Binding DownloadedSeriesItems}">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="models:Series">
+                    <!-- Card: the WHOLE card opens the item; only the trash
+                         button is a separate hit target (no dead zones). -->
                     <Border Background="{DynamicResource Surface0Brush}"
                             CornerRadius="8"
                             Padding="14"
-                      Margin="0,0,0,16">
-                      <Grid ColumnDefinitions="Auto,*,Auto,Auto"
+                            Margin="0,0,0,16">
+                      <Grid ColumnDefinitions="*,Auto"
                             ColumnSpacing="10">
-                        <Border Width="48"
-                                Height="56"
-                                CornerRadius="8"
-                                ClipToBounds="True"
-                                Background="{DynamicResource Surface1Brush}">
-                          <Grid>
-                            <icons:MaterialIcon Kind="TelevisionClassic"
-                                                Foreground="{DynamicResource TextMutedBrush}"
-                                                Width="24"
-                                                Height="24"
-                                                Opacity="0.35" />
-                            <controls:RemoteImage Url="{Binding CoverUrl}"
-                                                  Stretch="UniformToFill"
-                                                  RenderOptions.BitmapInterpolationMode="MediumQuality" />
-                          </Grid>
-                        </Border>
                         <Button Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}"
                                 CommandParameter="{Binding}"
-                                Grid.Column="1"
                                 Background="Transparent"
                                 BorderThickness="0"
                                 Padding="0"
+                                HorizontalAlignment="Stretch"
                                 HorizontalContentAlignment="Stretch">
-                          <StackPanel Spacing="4">
-                            <TextBlock Text="{Binding Name}"
-                                       Foreground="{DynamicResource TextPrimaryBrush}"
-                                       FontWeight="SemiBold"
-                                       TextTrimming="CharacterEllipsis" />
-                            <TextBlock Text="{Binding LocalSizeText}"
-                                       Foreground="{DynamicResource TextMutedBrush}"
-                                       FontSize="{DynamicResource FCaption}"
-                                       TextTrimming="CharacterEllipsis" />
-                          </StackPanel>
+                          <Panel>
+                            <!-- No local Background here: an inline value would
+                                 out-prioritize the :pressed style setter. -->
+                            <Border x:Name="EpBgLayer" CornerRadius="2" />
+                            <Grid ColumnDefinitions="Auto,*,Auto"
+                                  ColumnSpacing="10">
+                              <Border Width="48"
+                                      Height="56"
+                                      CornerRadius="2"
+                                      ClipToBounds="True"
+                                      Background="{DynamicResource Surface1Brush}">
+                                <Grid>
+                                  <icons:MaterialIcon Kind="TelevisionClassic"
+                                                      Foreground="{DynamicResource TextMutedBrush}"
+                                                      Width="24"
+                                                      Height="24"
+                                                      Opacity="0.35" />
+                                  <controls:RemoteImage Url="{Binding CoverUrl}"
+                                                        Stretch="UniformToFill"
+                                                        RenderOptions.BitmapInterpolationMode="MediumQuality" />
+                                </Grid>
+                              </Border>
+                              <StackPanel Grid.Column="1"
+                                          Spacing="4"
+                                          VerticalAlignment="Center">
+                                <TextBlock Text="{Binding Name}"
+                                           Foreground="{DynamicResource TextPrimaryBrush}"
+                                           FontWeight="SemiBold"
+                                           TextTrimming="CharacterEllipsis" />
+                                <TextBlock Text="{Binding LocalSizeText}"
+                                           Foreground="{DynamicResource TextMutedBrush}"
+                                           FontSize="{DynamicResource FCaption}"
+                                           TextTrimming="CharacterEllipsis" />
+                              </StackPanel>
+                              <icons:MaterialIcon Grid.Column="2"
+                                                  Kind="ChevronRight"
+                                                  Foreground="{DynamicResource TextMutedBrush}"
+                                                  Width="18"
+                                                  Height="18"
+                                                  Opacity="0.55"
+                                                  HorizontalAlignment="Right"
+                                                  VerticalAlignment="Center" />
+                            </Grid>
+                          </Panel>
                         </Button>
-                        <Button Grid.Column="2"
+                        <Button Grid.Column="1"
                                 Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).DeleteDownloadedMediaCommand}"
                                 CommandParameter="{Binding}"
                                 Padding="8,0"
-                                MaxHeight="18"
+                                MinHeight="48"
                                 Theme="{StaticResource DangerButtonStyle}"
                                 FontSize="{DynamicResource FCaption}">
                           <StackPanel Orientation="Horizontal" Spacing="6">
@@ -244,14 +272,6 @@
                             <TextBlock Text="{loc:Translate Downloads.Action.Delete}" />
                           </StackPanel>
                         </Button>
-                        <icons:MaterialIcon Grid.Column="3"
-                                            Kind="ChevronRight"
-                                            Foreground="{DynamicResource TextMutedBrush}"
-                                            Width="18"
-                                            Height="18"
-                                            Opacity="0.55"
-                                            HorizontalAlignment="Right"
-                                            VerticalAlignment="Center" />
                       </Grid>
                     </Border>
                   </DataTemplate>
@@ -269,51 +289,71 @@
               <ItemsControl ItemsSource="{Binding DownloadedVodChannels}">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="models:Channel">
+                    <!-- Card: the WHOLE card opens the item; only the trash
+                         button is a separate hit target (no dead zones). -->
                     <Border Background="{DynamicResource Surface0Brush}"
                             CornerRadius="8"
                             Padding="14"
                             Margin="0,0,0,16">
-                      <Grid ColumnDefinitions="Auto,*,Auto,Auto"
+                      <Grid ColumnDefinitions="*,Auto"
                             ColumnSpacing="10">
-                        <Border Width="48"
-                                Height="64"
-                                CornerRadius="8"
-                                ClipToBounds="True"
-                                Background="{DynamicResource Surface1Brush}">
-                          <Grid>
-                            <icons:MaterialIcon Kind="Movie"
-                                                Foreground="{DynamicResource TextMutedBrush}"
-                                                Width="24"
-                                                Height="24"
-                                                Opacity="0.35" />
-                            <controls:RemoteImage Url="{Binding CoverUrl}"
-                                                  Stretch="UniformToFill"
-                                                  RenderOptions.BitmapInterpolationMode="MediumQuality" />
-                          </Grid>
-                        </Border>
                         <Button Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).SelectMediaCommand}"
                                 CommandParameter="{Binding}"
-                                Grid.Column="1"
                                 Background="Transparent"
                                 BorderThickness="0"
                                 Padding="0"
+                                HorizontalAlignment="Stretch"
                                 HorizontalContentAlignment="Stretch">
-                          <StackPanel Spacing="4">
-                            <TextBlock Text="{Binding Name}"
-                                       Foreground="{DynamicResource TextPrimaryBrush}"
-                                       FontWeight="SemiBold"
-                                       TextTrimming="CharacterEllipsis" />
-                            <TextBlock Text="{Binding LocalSizeText}"
-                                       Foreground="{DynamicResource TextMutedBrush}"
-                                       FontSize="{DynamicResource FCaption}"
-                                       TextTrimming="CharacterEllipsis" />
-                          </StackPanel>
+                          <Panel>
+                            <!-- No local Background here: an inline value would
+                                 out-prioritize the :pressed style setter. -->
+                            <Border x:Name="EpBgLayer" CornerRadius="8" />
+                            <Grid ColumnDefinitions="Auto,*,Auto"
+                                  ColumnSpacing="10">
+                              <Border Width="48"
+                                      Height="64"
+                                      CornerRadius="8"
+                                      ClipToBounds="True"
+                                      Background="{DynamicResource Surface1Brush}">
+                                <Grid>
+                                  <icons:MaterialIcon Kind="Movie"
+                                                      Foreground="{DynamicResource TextMutedBrush}"
+                                                      Width="24"
+                                                      Height="24"
+                                                      Opacity="0.35" />
+                                  <controls:RemoteImage Url="{Binding CoverUrl}"
+                                                        Stretch="UniformToFill"
+                                                        RenderOptions.BitmapInterpolationMode="MediumQuality" />
+                                </Grid>
+                              </Border>
+                              <StackPanel Grid.Column="1"
+                                          Spacing="4"
+                                          VerticalAlignment="Center">
+                                <TextBlock Text="{Binding Name}"
+                                           Foreground="{DynamicResource TextPrimaryBrush}"
+                                           FontWeight="SemiBold"
+                                           TextTrimming="CharacterEllipsis" />
+                                <TextBlock Text="{Binding LocalSizeText}"
+                                           Foreground="{DynamicResource TextMutedBrush}"
+                                           FontSize="{DynamicResource FCaption}"
+                                           TextTrimming="CharacterEllipsis" />
+                              </StackPanel>
+                              <icons:MaterialIcon Grid.Column="2"
+                                                  Kind="PlayCircleOutline"
+                                                  Foreground="{DynamicResource AccentBrush}"
+                                                  Width="20"
+                                                  Height="20"
+                                                  Opacity="0.8"
+                                                  HorizontalAlignment="Right"
+                                                  VerticalAlignment="Center" />
+                            </Grid>
+                          </Panel>
                         </Button>
-                        <Button Grid.Column="2"
+                        <Button Grid.Column="1"
                                 Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).DeleteDownloadedMediaCommand}"
                                 CommandParameter="{Binding}"
                                 Padding="8,0"
-                                MaxHeight="18"
+                                MinHeight="48"
                                 Theme="{StaticResource DangerButtonStyle}"
                                 FontSize="{DynamicResource FCaption}">
                           <StackPanel Orientation="Horizontal" Spacing="6">
@@ -321,17 +361,6 @@
                             <TextBlock Text="{loc:Translate Downloads.Action.Delete}" />
                           </StackPanel>
                         </Button>
-                        <StackPanel Grid.Column="3"
-                                    Spacing="8"
-                                    HorizontalAlignment="Right"
-                                    VerticalAlignment="Center">
-                          <icons:MaterialIcon Kind="PlayCircleOutline"
-                                              Foreground="{DynamicResource AccentBrush}"
-                                              Width="20"
-                                              Height="20"
-                                              Opacity="0.8"
-                                              HorizontalAlignment="Right" />
-                        </StackPanel>
                       </Grid>
                     </Border>
                   </DataTemplate>
@@ -456,6 +485,7 @@
                           <Button Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).TogglePauseDownloadCommand}"
                                   CommandParameter="{Binding}"
                                   Classes="SettingsActionButton"
+                                  MinHeight="48"
                                   Padding="4,0"
                                   FontSize="{DynamicResource FCaption}">
                             <StackPanel Orientation="Horizontal" Spacing="6">
@@ -468,6 +498,7 @@
                           <Button Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).CancelDownloadCommand}"
                                   CommandParameter="{Binding}"
                                   Theme="{StaticResource DangerButtonStyle}"
+                                  MinHeight="48"
                                   Padding="4,0"
                                   FontSize="{DynamicResource FCaption}">
                             <StackPanel Orientation="Horizontal" Spacing="6">
@@ -559,7 +590,7 @@
                         <Button
                               Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).CancelDownloadCommand}"
                               CommandParameter="{Binding}"
-                              MinHeight="32"
+                              MinHeight="48"
                               Padding="10,0"
                               Background="Transparent"
                               Foreground="{DynamicResource ErrorBrush}"

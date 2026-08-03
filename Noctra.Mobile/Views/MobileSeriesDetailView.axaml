@@ -417,18 +417,19 @@
               </ListBox.ItemTemplate>
             </ListBox>
 
-            <!-- Episode Row List (page scrolls as one unit, no nested scrolling) -->
+            <!-- Episode Row List.
+                 NON-SCROLLING presentation: the outer page ScrollViewer is the
+                 ONLY vertical scroller, so the page pans as one unit and there is
+                 no nested scroll to trap gestures or swallow scroll chaining. -->
             <ListBox x:Name="EpisodeListBox"
                      ItemsSource="{Binding SelectedSeason.Episodes}"
                      ItemContainerTheme="{StaticResource TransparentListBoxItemTheme}"
                      Background="Transparent"
                      BorderThickness="0"
-                     MaxHeight="760"
                      Padding="0"
                      SelectionChanged="ClearTransientSelection"
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                     ScrollViewer.IsScrollChainingEnabled="False"
-                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                     ScrollViewer.VerticalScrollBarVisibility="Disabled"
                      behaviors:MobileSlideTransitionBehavior.TriggerValue="{Binding SelectedSeason}">
               <ListBox.ItemsPanel>
                 <ItemsPanelTemplate>
@@ -455,135 +456,151 @@
               </ListBox.Styles>
               <ListBox.ItemTemplate>
                 <DataTemplate x:DataType="models:Episode">
-                  <Button Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).PlayEpisodeCommand}"
-                          CommandParameter="{Binding}"
-                          Background="{DynamicResource Surface0Brush}"
-                          HorizontalAlignment ="Stretch"
+                  <!-- Episode row: non-interactive card chrome; the play zone and
+                       the action button are SIBLING controls (never nested). -->
+                  <Border Background="{DynamicResource Surface0Brush}"
                           BorderThickness="0"
                           CornerRadius="8"
                           Padding="14"
                           Margin="0,0,0,12"
-                          HorizontalContentAlignment="Stretch">
-                    <Panel>
-                      <Border x:Name="EpBgLayer" Background="Transparent" CornerRadius="8" />
-                      <Grid ColumnDefinitions="88,*,Auto"
-                            ColumnSpacing="14">
+                          HorizontalAlignment="Stretch">
+                    <Grid ColumnDefinitions="*,Auto"
+                          ColumnSpacing="14">
 
-                        <!-- Thumbnail with Episode Number Overlay -->
-                        <Border Height="80"
-                                CornerRadius="4"
-                                ClipToBounds="True"
-                                Background="{DynamicResource PlaceHolderBrush}">
-                          <Grid>
-                            <controls:RemoteImage Url="{Binding CoverUrl}"
-                                                  Stretch="UniformToFill" />
+                      <!-- Play zone (tap anywhere on the card body to play) -->
+                      <Button Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).PlayEpisodeCommand}"
+                              CommandParameter="{Binding}"
+                              Background="Transparent"
+                              BorderThickness="0"
+                              CornerRadius="8"
+                              Padding="0"
+                              HorizontalAlignment="Stretch"
+                              HorizontalContentAlignment="Stretch">
+                        <Panel>
+                          <!-- No local Background here: an inline value would
+                               out-prioritize the :pressed style setter. -->
+                          <Border x:Name="EpBgLayer" CornerRadius="8" />
+                          <Grid ColumnDefinitions="88,*"
+                                ColumnSpacing="14">
 
-                            <!-- Episode Number Badge (bottom-left) -->
-                            <Border VerticalAlignment="Bottom"
-                                    HorizontalAlignment="Left"
-                                    Background="{DynamicResource OverlayDimBrush}"
-                                    CornerRadius="0,4,0,0"
-                                    Padding="6,3,8,3">
-                              <TextBlock Text="{Binding EpisodeNumber}"
-                                         Foreground="{DynamicResource PlayerOverlayTextBrush}"
-                                         FontSize="{DynamicResource FOverline}"
-                                         FontWeight="Bold"
-                                         LineHeight="13" />
+                            <!-- Thumbnail with Episode Number Overlay -->
+                            <Border Height="80"
+                                    CornerRadius="4"
+                                    ClipToBounds="True"
+                                    Background="{DynamicResource PlaceHolderBrush}">
+                              <Grid>
+                                <controls:RemoteImage Url="{Binding CoverUrl}"
+                                                      Stretch="UniformToFill" />
+
+                                <!-- Episode Number Badge (bottom-left) -->
+                                <Border VerticalAlignment="Bottom"
+                                        HorizontalAlignment="Left"
+                                        Background="{DynamicResource OverlayDimBrush}"
+                                        CornerRadius="0,4,0,0"
+                                        Padding="6,3,8,3">
+                                  <TextBlock Text="{Binding EpisodeNumber}"
+                                             Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                                             FontSize="{DynamicResource FOverline}"
+                                             FontWeight="Bold"
+                                             LineHeight="13" />
+                                </Border>
+
+                                <!-- Progress Bar at Bottom -->
+                                <ProgressBar VerticalAlignment="Bottom"
+                                             Height="5"
+                                             Minimum="0"
+                                             Maximum="100"
+                                             Value="{Binding WatchedPercentage}"
+                                             Foreground="{DynamicResource AccentBrush}"
+                                             Background="{DynamicResource ThemePreviewDarkText}"
+                                             BorderThickness="0"
+                                             CornerRadius="0"
+                                             IsVisible="{Binding WatchedPercentage, Converter={StaticResource CountToVisibilityConverter}}" />
+                              </Grid>
                             </Border>
 
-                            <!-- Progress Bar at Bottom -->
-                            <ProgressBar VerticalAlignment="Bottom"
-                                         Height="5"
-                                         Minimum="0"
-                                         Maximum="100"
-                                         Value="{Binding WatchedPercentage}"
-                                         Foreground="{DynamicResource AccentBrush}"
-                                         Background="{DynamicResource ThemePreviewDarkText}"
-                                         BorderThickness="0"
-                                         CornerRadius="0"
-                                         IsVisible="{Binding WatchedPercentage, Converter={StaticResource CountToVisibilityConverter}}" />
-                          </Grid>
-                        </Border>
-
-                        <!-- Info -->
-                        <StackPanel Grid.Column="1"
-                                    Spacing="4"
-                                    VerticalAlignment="Center">
-                          <StackPanel Orientation="Horizontal"
-                                      Spacing="8">
-                            <TextBlock Text="{Binding Name}"
-                                       Foreground="{DynamicResource TextPrimaryBrush}"
-                                       FontWeight="SemiBold"
-                                       TextWrapping="Wrap"
-                                       MaxLines="2" />
-                            <TextBlock Text="{Binding EpisodeMetaText}"
-                                       Foreground="{DynamicResource TextMutedBrush}"
-                                       FontSize="{DynamicResource FOverline}"
-                                       VerticalAlignment="Center"
-                                       IsVisible="{Binding EpisodeMetaText, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
-                            <Border Background="{DynamicResource AccentHoverBrush}"
-                                    CornerRadius="10"
-                                    Padding="6,2"
-                                    VerticalAlignment="Center"
-                                    IsVisible="{Binding IsCompleted}">
-                              <StackPanel Orientation="Horizontal" Spacing="3">
-                                <icons:MaterialIcon Kind="CheckCircle"
-                                                    Width="13"
-                                                    Height="13"
-                                                    Foreground="{DynamicResource AccentBrush}"
-                                                    VerticalAlignment="Center" />
-                                <TextBlock Text="{loc:Translate Player.Overlay.Watched}"
-                                           Foreground="{DynamicResource AccentBrush}"
+                            <!-- Info -->
+                            <StackPanel Grid.Column="1"
+                                        Spacing="4"
+                                        VerticalAlignment="Center">
+                              <StackPanel Orientation="Horizontal"
+                                          Spacing="8">
+                                <TextBlock Text="{Binding Name}"
+                                           Foreground="{DynamicResource TextPrimaryBrush}"
+                                           FontWeight="SemiBold"
+                                           TextWrapping="Wrap"
+                                           MaxLines="2" />
+                                <TextBlock Text="{Binding EpisodeMetaText}"
+                                           Foreground="{DynamicResource TextMutedBrush}"
                                            FontSize="{DynamicResource FOverline}"
-                                           FontWeight="Bold" />
+                                           VerticalAlignment="Center"
+                                           IsVisible="{Binding EpisodeMetaText, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
+                                <Border Background="{DynamicResource AccentHoverBrush}"
+                                        CornerRadius="10"
+                                        Padding="6,2"
+                                        VerticalAlignment="Center"
+                                        IsVisible="{Binding IsCompleted}">
+                                  <StackPanel Orientation="Horizontal" Spacing="3">
+                                    <icons:MaterialIcon Kind="CheckCircle"
+                                                        Width="13"
+                                                        Height="13"
+                                                        Foreground="{DynamicResource AccentBrush}"
+                                                        VerticalAlignment="Center" />
+                                    <TextBlock Text="{loc:Translate Player.Overlay.Watched}"
+                                               Foreground="{DynamicResource AccentBrush}"
+                                               FontSize="{DynamicResource FOverline}"
+                                               FontWeight="Bold" />
+                                  </StackPanel>
+                                </Border>
                               </StackPanel>
-                            </Border>
-                          </StackPanel>
-                          <TextBlock Text="{Binding TmdbEpisodeName}"
-                                     Foreground="{DynamicResource AccentBrush}"
-                                     FontSize="{DynamicResource FCaption}"
-                                     FontStyle="Italic"
-                                     Opacity="0.85"
-                                     TextWrapping="Wrap"
-                                     IsVisible="{Binding TmdbEpisodeName, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
-                          <TextBlock Text="{Binding Plot}"
-                                     Foreground="{DynamicResource TextMutedBrush}"
-                                     FontSize="{DynamicResource FCaption}"
-                                     TextWrapping="Wrap"
-                                     MaxLines="2"
-                                     IsVisible="{Binding Plot, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
-                        </StackPanel>
+                              <TextBlock Text="{Binding TmdbEpisodeName}"
+                                         Foreground="{DynamicResource AccentBrush}"
+                                         FontSize="{DynamicResource FCaption}"
+                                         FontStyle="Italic"
+                                         Opacity="0.85"
+                                         TextWrapping="Wrap"
+                                         IsVisible="{Binding TmdbEpisodeName, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
+                              <TextBlock Text="{Binding Plot}"
+                                         Foreground="{DynamicResource TextMutedBrush}"
+                                         FontSize="{DynamicResource FCaption}"
+                                         TextWrapping="Wrap"
+                                         MaxLines="2"
+                                         IsVisible="{Binding Plot, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
+                            </StackPanel>
+                          </Grid>
+                        </Panel>
+                      </Button>
 
-                        <!-- Episode action: Download (library) / Delete (downloaded) -->
-                        <Grid Grid.Column="2"
-                              VerticalAlignment="Center"
-                              IsVisible="{Binding StreamUrl, Converter={StaticResource StringNotEmptyToVisibilityConverter}}">
-                          <Button Classes="detailAction"
-                                  Background="Transparent"
-                                  Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).DownloadEpisodeCommand}"
-                                  CommandParameter="{Binding}"
-                                  IsVisible="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).IsDownloadedSeriesDetailMode, Converter={StaticResource InverseBoolConverter}}">
-                            <icons:MaterialIcon Kind="DownloadOutline"
-                                                Width="18"
-                                                Height="18"
-                                                Opacity="0.6"
-                                                Foreground="{DynamicResource TextMutedBrush}" />
-                          </Button>
-                          <Button Classes="detailAction"
-                                  Background="Transparent"
-                                  Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).DeleteDownloadedEpisodeCommand}"
-                                  CommandParameter="{Binding}"
-                                  IsVisible="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).IsDownloadedSeriesDetailMode}">
-                            <icons:MaterialIcon Kind="TrashCanOutline"
-                                                Width="18"
-                                                Height="18"
-                                                Opacity="0.8"
-                                                Foreground="{DynamicResource ErrorBrush}" />
-                          </Button>
-                        </Grid>
+                      <!-- Episode action: Download (library) / Delete (downloaded).
+                           Sibling of the play zone — no nested interactive controls. -->
+                      <Grid Grid.Column="1"
+                            VerticalAlignment="Center"
+                            IsVisible="{Binding StreamUrl, Converter={StaticResource StringNotEmptyToVisibilityConverter}}">
+                        <Button Classes="detailAction"
+                                Background="Transparent"
+                                Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).DownloadEpisodeCommand}"
+                                CommandParameter="{Binding}"
+                                IsVisible="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).IsDownloadedSeriesDetailMode, Converter={StaticResource InverseBoolConverter}}">
+                          <icons:MaterialIcon Kind="DownloadOutline"
+                                              Width="18"
+                                              Height="18"
+                                              Opacity="0.6"
+                                              Foreground="{DynamicResource TextMutedBrush}" />
+                        </Button>
+                        <Button Classes="detailAction"
+                                Background="Transparent"
+                                Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).DeleteDownloadedEpisodeCommand}"
+                                CommandParameter="{Binding}"
+                                IsVisible="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).IsDownloadedSeriesDetailMode}">
+                          <icons:MaterialIcon Kind="TrashCanOutline"
+                                              Width="18"
+                                              Height="18"
+                                              Opacity="0.8"
+                                              Foreground="{DynamicResource ErrorBrush}" />
+                        </Button>
                       </Grid>
-                    </Panel>
-                  </Button>
+                    </Grid>
+                  </Border>
                 </DataTemplate>
               </ListBox.ItemTemplate>
             </ListBox>
