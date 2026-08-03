@@ -6111,7 +6111,11 @@ public partial class MainViewModel : ObservableObject
                 SelectedChannelType = null;
                 SelectedGroup = null;
                 ShowOnlyFavorites = false;
-                IsDownloadCenterVisible = false;
+                // Smart default: land on the Download Center tab when there are
+                // active/queued or failed downloads to track; otherwise Library.
+                IsDownloadCenterVisible =
+                    ActiveDownloadItems.Count > 0 ||
+                    FailedDownloadItems.Count > 0;
                 UpdateDownloadedItems();
                 _ = RefreshDownloadedItemsFromDatabaseAsync();
             }
@@ -7114,6 +7118,17 @@ public partial class MainViewModel : ObservableObject
                                  FailedDownloadItems.Count == 0;
 
         OnPropertyChanged(nameof(HasAnyDownloadState));
+
+        // Cold-start safety net: if the user lands on the Downloads page before
+        // this refresh ran, default to the Download Center tab so they can track
+        // ongoing/failed downloads instead of staring at an empty Library tab.
+        if (ActiveView == AppView.Downloads &&
+            !IsDownloadCenterVisible &&
+            !HasDownloadedItems &&
+            (ActiveDownloadItems.Count > 0 || FailedDownloadItems.Count > 0))
+        {
+            IsDownloadCenterVisible = true;
+        }
     }
 
     partial void OnTotalDownloadedCountChanged(int value)

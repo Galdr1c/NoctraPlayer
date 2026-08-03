@@ -1,9 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 using Noctra.Core.Services;
+using Noctra.Data;
 using Noctra.Models;
 using Noctra.Services.Interfaces;
 using Noctra.ViewModels;
@@ -25,6 +28,28 @@ namespace Noctra.Tests
                 BindingFlags.NonPublic | BindingFlags.Instance)!;
             var task = (Task)method.Invoke(vm, new object[] { profileId })!;
             await task;
+        }
+
+        private static IDbContextFactory<AppDbContext> CreateSqliteFactory()
+        {
+            var options = new DbContextOptionsBuilder<AppDbContext>()
+                .UseSqlite($"Data Source={Path.Combine(Path.GetTempPath(), $"Noctra-TabTests-{Guid.NewGuid():N}.db")}")
+                .Options;
+            using (var db = new AppDbContext(options))
+            {
+                db.Database.EnsureCreated();
+            }
+
+            return new SimpleDbContextFactory(options);
+        }
+
+        /// <summary>Isolated, empty download root so the DB-driven library discovery
+        /// never picks up real files from the machine's download folder.</summary>
+        private static string CreateEmptyDownloadRoot()
+        {
+            var root = Path.Combine(Path.GetTempPath(), $"Noctra-TabTests-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(root);
+            return root;
         }
 
         /// <summary>
@@ -210,6 +235,104 @@ namespace Noctra.Tests
 
             Assert.False(ctx.MainVM.HasAnyDownloadState);
             Assert.True(ctx.MainVM.ShowDownloadsEmptyState);
+        }
+
+        /// <summary>
+        /// Scenario 8: user starts a download then opens the Downloads page.
+        /// Expectation: the Download Center tab (index 1) is selected, not Library.
+        /// </summary>
+        [Fact]
+        public async Task NavigateToDownloads_WithActiveDownload_OpensDownloadCenterTab()
+        {
+            var ctx = new DownloadTestContext(CreateSqliteFactory(), CreateEmptyDownloadRoot());
+            ctx.MainVM.CurrentProfileId = 1;
+            ctx.DownloadService.MockItems.Add(new DownloadItem
+            {
+                Id = 1,
+                ProfileId = 1,
+                Status = DownloadStatus.Downloading,
+                DisplayName = "Movie film",
+                SourceUrl = "http://media/a.mp4"
+            });
+
+            await RefreshFromServiceAsync(ctx.MainVM, 1);
+            ctx.MainVM.NavigateCommand.Execute(AppView.Downloads);
+
+            Assert.True(ctx.MainVM.IsDownloadCenterVisible);
+            Assert.Equal(1, ctx.MainVM.DownloadTabIndex);
+        }
+
+        /// <summary>
+        /// Scenario 9: user has a failed download and opens Downloads.
+        /// Expectation: the Download Center tab is selected so the error is visible.
+        /// </summary>
+        [Fact]
+        public async Task NavigateToDownloads_WithFailedDownload_OpensDownloadCenterTab()
+        {
+            var ctx = new DownloadTestContext(CreateSqliteFactory(), CreateEmptyDownloadRoot());
+            ctx.MainVM.CurrentProfileId = 1;
+            ctx.DownloadService.MockItems.Add(new DownloadItem
+            {
+                Id = 1,
+                ProfileId = 1,
+                Status = DownloadStatus.Failed,
+                ErrorMessage = "Server error",
+                DisplayName = "Movie film",
+                SourceUrl = "http://media/a.mp4"
+            });
+
+            await RefreshFromServiceAsync(ctx.MainVM, 1);
+            ctx.MainVM.NavigateCommand.Execute(AppView.Downloads);
+
+            Assert.True(ctx.MainVM.IsDownloadCenterVisible);
+            Assert.Equal(1, ctx.MainVM.DownloadTabIndex);
+        }
+
+        /// <summary>
+        /// Scenario 10: user opens Downloads with no active or failed downloads.
+        /// Expectation: the Library tab (index 0) is selected.
+        /// </summary>
+        [Fact]
+        public async Task NavigateToDownloads_WithoutActiveOrFailed_OpensLibraryTab()
+        {
+            var ctx = new DownloadTestContext(CreateSqliteFactory(), CreateEmptyDownloadRoot());
+            ctx.MainVM.CurrentProfileId = 1;
+
+            await RefreshFromServiceAsync(ctx.MainVM, 1);
+            ctx.MainVM.NavigateCommand.Execute(AppView.Downloads);
+
+            Assert.False(ctx.MainVM.IsDownloadCenterVisible);
+            Assert.Equal(0, ctx.MainVM.DownloadTabIndex);
+        }
+
+        /// <summary>
+        /// Scenario 11 (cold start): the Downloads page is opened before the download
+        /// state has been loaded; once the refresh completes, the Download Center tab
+        /// is selected automatically while the library is empty.
+        /// </summary>
+        [Fact]
+        public async Task ColdStart_OpenDownloadsBeforeLoaded_OngoingDownload_SelectsCenterTab()
+        {
+            var ctx = new DownloadTestContext(CreateSqliteFactory(), CreateEmptyDownloadRoot());
+            ctx.MainVM.CurrentProfileId = 1;
+
+            ctx.MainVM.NavigateCommand.Execute(AppView.Downloads);
+            Assert.False(ctx.MainVM.IsDownloadCenterVisible, "Nothing loaded yet, Library default.");
+
+            ctx.DownloadService.MockItems.Add(new DownloadItem
+            {
+                Id = 1,
+                ProfileId = 1,
+                Status = DownloadStatus.Downloading,
+                DisplayName = "Movie film",
+                SourceUrl = "http://media/a.mp4"
+            });
+
+            await RefreshFromServiceAsync(ctx.MainVM, 1);
+
+            Assert.True(ctx.MainVM.HasAnyDownloadState, $"HasAnyDownload false. Active={ctx.MainVM.ActiveDownloadItems.Count}, Downloaded={ctx.MainVM.HasDownloadedItems}, View={ctx.MainVM.ActiveView}");
+            Assert.True(ctx.MainVM.IsDownloadCenterVisible, $"Center not visible. Active={ctx.MainVM.ActiveDownloadItems.Count}, Failed={ctx.MainVM.FailedDownloadItems.Count}, View={ctx.MainVM.ActiveView}, HasLib={ctx.MainVM.HasDownloadedItems}");
+            Assert.Equal(1, ctx.MainVM.DownloadTabIndex);
         }
     }
 }

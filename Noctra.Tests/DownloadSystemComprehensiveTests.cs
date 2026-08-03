@@ -122,9 +122,17 @@ namespace Noctra.Tests
         public PlayerViewModel PlayerVM { get; }
         public FakeVideoPlayerService VideoService { get; } = new();
 
-        public DownloadTestContext()
+        public DownloadTestContext() : this(contextFactory: null)
+        {
+        }
+
+        public DownloadTestContext(IDbContextFactory<AppDbContext>? contextFactory = null, string? downloadRoot = null)
         {
             var settings = new FakeSettingsService();
+            if (downloadRoot != null)
+            {
+                settings.Settings.DownloadPath = downloadRoot;
+            }
             var license = new FakeLicenseService();
             var network = new FakeNetworkService();
             var dispatcher = new DownloadTestDispatcher();
@@ -153,7 +161,7 @@ namespace Noctra.Tests
                 null!, // stalker
                 null!, // lang
                 null!, // resolver
-                null!, // db context
+                contextFactory, // db context
                 null!, // security
                 null!, // tmdb sync
                 license,
