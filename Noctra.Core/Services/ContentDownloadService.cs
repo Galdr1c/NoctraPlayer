@@ -232,6 +232,9 @@ public class ContentDownloadService : IContentDownloadService
         string normalizedSource,
         CancellationToken cancellationToken)
     {
+        // Content-key match first. Rows that predate the content-key feature
+        // have a NULL key, so until the migration backfills them they are also
+        // deduped by URL, EpisodeId or ChannelId.
         if (contentKey != null)
         {
             return db.DownloadItems
@@ -239,11 +242,15 @@ public class ContentDownloadService : IContentDownloadService
                 .FirstOrDefaultAsync(
                     d => d.Status != DownloadStatus.Failed &&
                          d.Status != DownloadStatus.Canceled &&
-                         d.ContentKey == contentKey,
+                         (d.ContentKey == contentKey ||
+                          (d.ContentKey == null &&
+                           ((d.ProfileId == request.ProfileId && d.SourceUrl == normalizedSource) ||
+                            (request.EpisodeId > 0 && d.EpisodeId == request.EpisodeId) ||
+                            (request.ChannelId > 0 && d.ChannelId == request.ChannelId)))),
                     cancellationToken);
         }
 
-        // Legacy path: items without a content key are still deduped by URL.
+        // No reliable identity: dedupe legacy items by URL only.
         return db.DownloadItems
             .AsNoTracking()
             .FirstOrDefaultAsync(
@@ -273,9 +280,19 @@ public class ContentDownloadService : IContentDownloadService
     {
         for (Exception? current = ex; current != null; current = current.InnerException)
         {
-            if (current is Microsoft.Data.Sqlite.SqliteException { SqliteErrorCode: 19 })
+            if (current is Microsoft.Data.Sqlite.SqliteException sqliteEx)
             {
-                return true;
+                // Only treat as duplicate if it's specifically a UNIQUE or PRIMARY KEY violation
+                // SqliteErrorCode 19 = SQLITE_CONSTRAINT (generic)
+                // SqliteExtendedErrorCode distinguishes:
+                //   1555 = SQLITE_CONSTRAINT_PRIMARYKEY
+                //   2067 = SQLITE_CONSTRAINT_UNIQUE
+                // Other constraint types (NOT NULL=1299, FOREIGN KEY=787, CHECK=275) should NOT be treated as duplicates
+                var extendedCode = sqliteEx.SqliteExtendedErrorCode;
+                if (extendedCode == 1555 || extendedCode == 2067)
+                {
+                    return true;
+                }
             }
         }
 
@@ -827,6 +844,11 @@ public class ContentDownloadService : IContentDownloadService
                 
                 // Clear any auto resume attempts so it doesn't loop
                 _autoResumeAttempts.TryRemove(downloadId, out _);
+                
+                // Clean up any orphaned .part or final files before marking as failed
+                await TryDeleteFileWithRetryAsync(plainTempPath, CancellationToken.None);
+                await TryDeleteFileWithRetryAsync(finalPath, CancellationToken.None);
+                
                 await MarkFailedAsync(downloadId, errorMsg);
                 return;
             }
@@ -1390,6 +1412,9 @@ public class ContentDownloadService : IContentDownloadService
         _autoResumeAttempts.TryRemove(downloadId, out _);
 
         string? dirToCheck = null;
+        string? mediaPath = null;
+        string? posterPathToDelete = null;
+        string? tempPath = null;
 
         using var db = await _contextFactory.CreateDbContextAsync(cancellationToken);
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
@@ -1412,36 +1437,54 @@ public class ContentDownloadService : IContentDownloadService
             //    pointing at a file that no longer exists.
             await RestoreMappedEntitiesToSourceUrlAsync(db, item, posterShared);
 
-            // 2. Delete the media file, its poster and any leftover temp file.
+            // 2. Collect file paths to delete AFTER transaction commits
             if (!string.IsNullOrWhiteSpace(item.LocalFilePath))
             {
-                await TryDeleteFileWithRetryAsync(item.LocalFilePath, cancellationToken);
+                mediaPath = item.LocalFilePath;
                 dirToCheck = Path.GetDirectoryName(item.LocalFilePath);
             }
 
             if (posterPath != null && !posterShared)
             {
-                await TryDeleteFileWithRetryAsync(posterPath, cancellationToken);
+                posterPathToDelete = posterPath;
                 dirToCheck ??= Path.GetDirectoryName(posterPath);
             }
 
             if (!string.IsNullOrWhiteSpace(item.TempFilePath))
             {
-                await TryDeleteFileWithRetryAsync(item.TempFilePath, cancellationToken);
+                tempPath = item.TempFilePath;
                 dirToCheck ??= Path.GetDirectoryName(item.TempFilePath);
             }
 
-            // 3. Remove the DownloadItem record last.
+            // 3. Remove the DownloadItem record and commit transaction BEFORE deleting files.
+            //    This ensures that if file deletion fails, the DB record is already gone
+            //    and won't point to missing files. File deletion is best-effort cleanup.
             db.DownloadItems.Remove(item);
             await db.SaveChangesAsync(cancellationToken);
         }
 
         await transaction.CommitAsync(cancellationToken);
 
-        if (_activeTempFiles.TryRemove(downloadId, out var tempPath))
+        // 4. Now delete the files (best-effort). If any fail, the DB is already consistent.
+        if (mediaPath != null)
+        {
+            await TryDeleteFileWithRetryAsync(mediaPath, cancellationToken);
+        }
+
+        if (posterPathToDelete != null)
+        {
+            await TryDeleteFileWithRetryAsync(posterPathToDelete, cancellationToken);
+        }
+
+        if (tempPath != null)
         {
             await TryDeleteFileWithRetryAsync(tempPath, cancellationToken);
-            dirToCheck ??= Path.GetDirectoryName(tempPath);
+        }
+
+        if (_activeTempFiles.TryRemove(downloadId, out var activeTempPath))
+        {
+            await TryDeleteFileWithRetryAsync(activeTempPath, cancellationToken);
+            dirToCheck ??= Path.GetDirectoryName(activeTempPath);
         }
 
         TryDeleteEmptyParentDirectories(dirToCheck);
@@ -1800,29 +1843,98 @@ public class ContentDownloadService : IContentDownloadService
         ISet<int>? siblingDeletionIds,
         CancellationToken cancellationToken)
     {
-        var others = await db.DownloadItems
+        // Performance optimization: Instead of loading ALL DownloadItems into memory
+        // and comparing poster paths in C#, we narrow the search based on content type.
+        // Series episodes share posters at the series level; movies/VOD rarely share.
+        
+        if (item.ChannelType != ChannelType.Series)
+        {
+            // For non-series content (movies/VOD), poster sharing is rare.
+            // Each movie typically has its own poster file. Skip the expensive check.
+            return false;
+        }
+
+        // For series: poster is shared by episodes of the same series in the same profile.
+        // Query only series episodes with the same SeriesId and ProfileId.
+        var seriesId = item.SeriesId;
+        if (!seriesId.HasValue || seriesId.Value <= 0)
+        {
+            // No SeriesId means we can't determine sharing accurately.
+            // Conservative: assume not shared to avoid orphaning the poster file.
+            return false;
+        }
+
+        var hasOtherEpisode = await db.DownloadItems
             .AsNoTracking()
             .Where(d => d.Id != item.Id &&
+                        d.SeriesId == seriesId &&
+                        d.ProfileId == item.ProfileId &&
+                        d.ChannelType == ChannelType.Series &&
                         d.Status != DownloadStatus.Failed &&
                         d.Status != DownloadStatus.Canceled &&
                         d.LocalFilePath != null)
+            .AnyAsync(cancellationToken);
+
+        if (!hasOtherEpisode)
+        {
+            return false;
+        }
+
+        // There are other episodes of the same series. Verify they actually use the same poster path.
+        // This handles edge cases where SeriesId matches but file structure differs.
+        var otherEpisodes = await db.DownloadItems
+            .AsNoTracking()
+            .Where(d => d.Id != item.Id &&
+                        d.SeriesId == seriesId &&
+                        d.ProfileId == item.ProfileId &&
+                        d.ChannelType == ChannelType.Series &&
+                        d.Status != DownloadStatus.Failed &&
+                        d.Status != DownloadStatus.Canceled &&
+                        d.LocalFilePath != null)
+            .Select(d => new { d.Id, d.LocalFilePath })
             .ToListAsync(cancellationToken);
 
-        foreach (var other in others)
+        foreach (var other in otherEpisodes)
         {
             if (siblingDeletionIds?.Contains(other.Id) == true)
             {
                 continue;
             }
 
-            var otherPoster = ResolveLocalPosterPath(other);
-            if (otherPoster != null && PathsReferToSameFile(otherPoster, posterPath))
+            // Build the poster path for the other episode
+            var otherPosterPath = other.LocalFilePath != null
+                ? BuildPosterPathFromFilePath(other.LocalFilePath, ChannelType.Series)
+                : null;
+
+            if (otherPosterPath != null && PathsReferToSameFile(otherPosterPath, posterPath))
             {
                 return true;
             }
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// Builds poster path from LocalFilePath without requiring the full DownloadItem.
+    /// Used for performance optimization in IsPosterSharedByOtherItemAsync.
+    /// </summary>
+    private static string? BuildPosterPathFromFilePath(string filePath, ChannelType channelType)
+    {
+        var itemDirectory = Path.GetDirectoryName(filePath);
+        if (string.IsNullOrWhiteSpace(itemDirectory))
+        {
+            return filePath + ".poster.jpg";
+        }
+
+        if (channelType == ChannelType.Series)
+        {
+            var seriesDirectory = Directory.GetParent(itemDirectory)?.FullName;
+            return Path.Combine(seriesDirectory ?? itemDirectory, "poster.jpg");
+        }
+
+        var fileStem = Path.GetFileNameWithoutExtension(filePath);
+        return Path.Combine(itemDirectory, $"{fileStem}.poster.jpg");
     }
 
     /// <summary>

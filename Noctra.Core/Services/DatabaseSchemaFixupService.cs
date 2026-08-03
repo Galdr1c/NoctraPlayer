@@ -164,6 +164,22 @@ public sealed class DatabaseSchemaFixupService : IDatabaseSchemaFixupService
         await AddColumnIfMissingAsync(context, "DownloadItems", "EpisodeNumber", "INTEGER NOT NULL DEFAULT 0", cancellationToken).ConfigureAwait(false);
         await AddColumnIfMissingAsync(context, "DownloadItems", "EpisodeTitle", "TEXT", cancellationToken).ConfigureAwait(false);
         await AddColumnIfMissingAsync(context, "DownloadItems", "ContentKey", "TEXT", cancellationToken).ConfigureAwait(false);
+        await TryExecuteAsync(
+            context,
+            """
+            UPDATE DownloadItems
+            SET ContentKey = 'series:' || PlaylistId || ':' || EpisodeId
+            WHERE ContentKey IS NULL AND PlaylistId > 0 AND EpisodeId IS NOT NULL AND EpisodeId > 0;
+            """,
+            cancellationToken).ConfigureAwait(false);
+        await TryExecuteAsync(
+            context,
+            """
+            UPDATE DownloadItems
+            SET ContentKey = 'movie:' || PlaylistId || ':' || ChannelId
+            WHERE ContentKey IS NULL AND PlaylistId > 0 AND ChannelId IS NOT NULL AND ChannelId > 0;
+            """,
+            cancellationToken).ConfigureAwait(false);
         await AddColumnIfMissingAsync(context, "DownloadItems", "SourcePosterUrl", "TEXT", cancellationToken).ConfigureAwait(false);
         await TryExecuteAsync(context, "CREATE UNIQUE INDEX IF NOT EXISTS IX_DownloadItems_ContentKey ON DownloadItems(ContentKey) WHERE ContentKey IS NOT NULL AND Status NOT IN (4, 5);", cancellationToken).ConfigureAwait(false);
         await TryExecuteAsync(

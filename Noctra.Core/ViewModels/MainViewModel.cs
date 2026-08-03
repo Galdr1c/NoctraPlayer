@@ -6705,13 +6705,26 @@ public partial class MainViewModel : ObservableObject
 
     /// <summary>
     /// Adds a download item as an episode entry into the cross-provider series map.
+    /// Uses the structured download metadata (SeriesTitle/SeriesId/SeasonNumber/
+    /// EpisodeNumber/EpisodeTitle) when available and falls back to parsing the
+    /// display name only for legacy records without that metadata.
     /// </summary>
     private void AddSeriesEpisodeFromDownloadItem(
         Dictionary<string, Series> seriesMap,
         DownloadItem item)
     {
-        var seriesName = ExtractSeriesBaseName(item.DisplayName);
-        var seriesKey = NormalizeFuzzyText(seriesName);
+        var parsed = ParseEpisodeNumbers(item.DisplayName);
+
+        var seriesName = !string.IsNullOrWhiteSpace(item.SeriesTitle)
+            ? item.SeriesTitle
+            : ExtractSeriesBaseName(item.DisplayName);
+
+        // Stable identity key when available; otherwise fall back to the
+        // normalized series name per playlist so legacy records still group.
+        var seriesKey = item.SeriesId.HasValue
+            ? $"{item.PlaylistId}:{item.SeriesId.Value}"
+            : $"{item.PlaylistId}:{NormalizeFuzzyText(seriesName)}";
+
         if (!seriesMap.TryGetValue(seriesKey, out var series))
         {
             series = new Series
@@ -6723,14 +6736,14 @@ public partial class MainViewModel : ObservableObject
             seriesMap[seriesKey] = series;
         }
 
-        var parsed = ParseEpisodeNumbers(item.DisplayName);
-        var season = series.Seasons.FirstOrDefault(s => s.SeasonNumber == parsed.SeasonNumber);
+        var seasonNumber = item.SeasonNumber > 0 ? item.SeasonNumber : parsed.SeasonNumber;
+        var season = series.Seasons.FirstOrDefault(s => s.SeasonNumber == seasonNumber);
         if (season == null)
         {
             season = new Season
             {
-                SeasonNumber = parsed.SeasonNumber,
-                Name = $"Season {parsed.SeasonNumber}",
+                SeasonNumber = seasonNumber,
+                Name = $"Season {seasonNumber}",
                 CoverUrl = item.PosterUrl
             };
             series.Seasons.Add(season);
@@ -6739,11 +6752,24 @@ public partial class MainViewModel : ObservableObject
         if (season.Episodes.Any(e => string.Equals(e.StreamUrl, item.LocalFilePath, StringComparison.OrdinalIgnoreCase)))
             return;
 
-        var episodeNumber = parsed.EpisodeNumber > 0 ? parsed.EpisodeNumber : season.Episodes.Count + 1;
+        var episodeNumber = item.EpisodeNumber > 0 ? item.EpisodeNumber : parsed.EpisodeNumber;
+        if (episodeNumber <= 0)
+        {
+            episodeNumber = season.Episodes.Count + 1;
+        }
+
+        var episodeTitle = !string.IsNullOrWhiteSpace(item.EpisodeTitle)
+            ? item.EpisodeTitle
+            : item.DisplayName;
+        if (string.IsNullOrWhiteSpace(episodeTitle))
+        {
+            episodeTitle = Path.GetFileNameWithoutExtension(item.LocalFilePath ?? "");
+        }
+
         season.Episodes.Add(new Episode
         {
             EpisodeNumber = episodeNumber,
-            Name = item.DisplayName ?? Path.GetFileNameWithoutExtension(item.LocalFilePath ?? ""),
+            Name = episodeTitle,
             StreamUrl = item.LocalFilePath,
             CoverUrl = item.PosterUrl
         });

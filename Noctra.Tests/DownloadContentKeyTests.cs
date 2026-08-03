@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Noctra.Core.Services;
@@ -165,6 +166,62 @@ public sealed class DownloadContentKeyTests : IDisposable
     }
 
     [Fact]
+    public async Task QueueDownload_SameEpisode_LegacyNullKeyRow_DedupesByEpisodeId()
+    {
+        using (var db = _contextFactory.CreateDbContext())
+        {
+            db.DownloadItems.Add(new DownloadItem
+            {
+                ProfileId = 1,
+                PlaylistId = 7,
+                EpisodeId = 42,
+                ContentKey = null,
+                DisplayName = "Episode 5",
+                SourceUrl = "http://192.0.2.1/old.mp4",
+                Status = DownloadStatus.Completed
+            });
+            db.SaveChanges();
+        }
+
+        var service = CreateService();
+        var request = new DownloadContentRequest(
+            1, DownloadItemType.SeriesEpisode, "Episode 5", "http://192.0.2.1/new.mp4?token=abc",
+            null, 7, 0, 42, null, null, 7, "The 100", 2, 5, "Hakeldama");
+
+        var result = await service.QueueDownloadAsync(request);
+
+        Assert.True(result.AlreadyExists);
+    }
+
+    [Fact]
+    public async Task QueueDownload_SameMovie_LegacyNullKeyRow_DedupesByUrl()
+    {
+        using (var db = _contextFactory.CreateDbContext())
+        {
+            db.DownloadItems.Add(new DownloadItem
+            {
+                ProfileId = 1,
+                PlaylistId = 7,
+                ChannelId = 99,
+                ContentKey = null,
+                DisplayName = "Movie",
+                SourceUrl = "http://192.0.2.1/movie.mp4",
+                Status = DownloadStatus.Completed
+            });
+            db.SaveChanges();
+        }
+
+        var service = CreateService();
+        var request = new DownloadContentRequest(
+            1, DownloadItemType.Vod, "Movie", "http://192.0.2.1/movie.mp4",
+            null, 7, 99, 0);
+
+        var result = await service.QueueDownloadAsync(request);
+
+        Assert.True(result.AlreadyExists);
+    }
+
+    [Fact]
     public async Task QueueDownload_FailedEpisode_CanBeRedownloaded()
     {
         using (var db = _contextFactory.CreateDbContext())
@@ -273,13 +330,26 @@ public sealed class DownloadContentKeyTests : IDisposable
         var tempRoot = Path.Combine(Path.GetTempPath(), $"Noctra-DownloadKeyDownloads-{Guid.NewGuid():N}");
         var paths = new DesktopAppPathService(tempRoot, Path.GetTempPath());
 
+        // These tests assert queue-time dedupe only, so the HTTP request is
+        // left pending forever: the queue worker then keeps the first item in
+        // "Downloading" instead of racing it to "Failed" mid-test.
         return new ContentDownloadService(
             settings,
             _contextFactory,
-            new HttpClient(),
+            new HttpClient(new NeverRespondingHandler()),
             new LocalizationService(),
             null,
             paths,
             new FakeNetworkService());
+    }
+
+    private sealed class NeverRespondingHandler : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            var tcs = new TaskCompletionSource<HttpResponseMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
+            cancellationToken.Register(() => tcs.TrySetCanceled(cancellationToken));
+            return tcs.Task;
+        }
     }
 }
