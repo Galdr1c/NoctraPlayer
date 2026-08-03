@@ -875,6 +875,7 @@
   "Downloads.Dialog.DeleteAll.ErrorMessage": "No se pudieron eliminar las descargas.",
   "Downloads.Dialog.ClearQueue.Title": "Vaciar cola",
   "Downloads.Dialog.ClearQueue.Message": "Se cancelarán todas las descargas en cola. ¿Está seguro?",
+  "Downloads.Dialog.OpenFolder.ErrorMessage": "No se pudo abrir la carpeta de descargas en el administrador de archivos de este dispositivo.",
   "Download.Error.ResumeWrongProfile.Title": "No se puede reanudar",
   "Download.Error.ResumeWrongProfile.Message": "Esta descarga pertenece a otro perfil. Cambie a ese perfil para reanudar.",
   "Epg.Progress.Mapping": "Mapeando canales...",

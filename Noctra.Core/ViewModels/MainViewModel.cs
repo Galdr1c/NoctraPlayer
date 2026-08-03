@@ -7480,11 +7480,17 @@ public partial class MainViewModel : ObservableObject
             if (!opened)
             {
                 _logger?.LogWarning("Platform action service could not open downloads folder: {DownloadsRoot}", root);
+                await _dialogService.ShowErrorAsync(
+                    _localizationService.GetString("Common.Error"),
+                    _localizationService.GetString("Downloads.Dialog.OpenFolder.ErrorMessage"));
             }
         }
         catch (Exception ex)
         {
             _logger?.LogError(ex, "Failed to open downloads folder.");
+            await _dialogService.ShowErrorAsync(
+                _localizationService.GetString("Common.Error"),
+                _localizationService.GetString("Downloads.Dialog.OpenFolder.ErrorMessage"));
         }
     }
 

@@ -34,8 +34,8 @@
                 Classes="SortIconButton"
                 IsVisible="{Binding ShowContentFilters}"
                 Click="OpenSortSelectionSheet_Click"
-                AutomationProperties.Name="Sort movies"
-                AutomationProperties.HelpText="Opens sort options for movies">
+                AutomationProperties.Name="{loc:Translate Main.Sort.Title}"
+                AutomationProperties.HelpText="{loc:Translate Main.Sort.Title}">
           <icons:MaterialIcon x:Name="SortSelectionIcon"
                               Kind="Sort"
                               Width="24"

@@ -875,6 +875,7 @@
   "Downloads.Dialog.DeleteAll.ErrorMessage": "Could not delete downloads.",
   "Downloads.Dialog.ClearQueue.Title": "Clear queue",
   "Downloads.Dialog.ClearQueue.Message": "All queued downloads will be cancelled. Are you sure?",
+  "Downloads.Dialog.OpenFolder.ErrorMessage": "The downloads folder could not be opened in this device's file manager.",
   "Download.Error.ResumeWrongProfile.Title": "Cannot resume",
   "Download.Error.ResumeWrongProfile.Message": "This download belongs to another profile. Switch to that profile to resume.",
   "Epg.Progress.Mapping": "Mapping channels...",

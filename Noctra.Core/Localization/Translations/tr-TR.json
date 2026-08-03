@@ -875,6 +875,7 @@
   "Downloads.Dialog.DeleteAll.ErrorMessage": "İndirmeler silinirken bir hata oluştu.",
   "Downloads.Dialog.ClearQueue.Title": "Kuyruğu temizle",
   "Downloads.Dialog.ClearQueue.Message": "Kuyruktaki tüm indirmeler iptal edilecektir. Emin misiniz?",
+  "Downloads.Dialog.OpenFolder.ErrorMessage": "İndirme klasörü bu cihazın dosya yöneticisinde açılamadı.",
   "Download.Error.ResumeWrongProfile.Title": "Devam ettirilemedi",
   "Download.Error.ResumeWrongProfile.Message": "Bu indirme başka bir hesaba ait. Devam ettirmek için önce o profile geçiş yapmalısınız.",
   "Epg.Progress.Mapping": "Kanallar eşleştiriliyor...",

@@ -875,6 +875,7 @@
   "Downloads.Dialog.DeleteAll.ErrorMessage": "Impossible de supprimer les téléchargements.",
   "Downloads.Dialog.ClearQueue.Title": "Vider la file",
   "Downloads.Dialog.ClearQueue.Message": "Tous les téléchargements en file seront annulés. Continuer ?",
+  "Downloads.Dialog.OpenFolder.ErrorMessage": "Le dossier de téléchargements n'a pas pu être ouvert dans le gestionnaire de fichiers de cet appareil.",
   "Download.Error.ResumeWrongProfile.Title": "Impossible de reprendre",
   "Download.Error.ResumeWrongProfile.Message": "Ce téléchargement appartient à un autre profil. Basculez vers ce profil pour reprendre.",
   "Epg.Progress.Mapping": "Mise en correspondance des chaînes...",

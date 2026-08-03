@@ -875,6 +875,7 @@
   "Downloads.Dialog.DeleteAll.ErrorMessage": "Downloads konnten nicht gelöscht werden.",
   "Downloads.Dialog.ClearQueue.Title": "Warteschlange leeren",
   "Downloads.Dialog.ClearQueue.Message": "Alle wartenden Downloads werden abgebrochen. Sind Sie sicher?",
+  "Downloads.Dialog.OpenFolder.ErrorMessage": "Der Download-Ordner konnte im Dateimanager dieses Geräts nicht geöffnet werden.",
   "Download.Error.ResumeWrongProfile.Title": "Fortsetzen nicht möglich",
   "Download.Error.ResumeWrongProfile.Message": "Dieser Download gehört zu einem anderen Profil. Wechseln Sie zu diesem Profil, um fortzusetzen.",
   "Epg.Progress.Mapping": "Kanäle werden zugeordnet...",
