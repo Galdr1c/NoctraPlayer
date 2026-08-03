@@ -31,15 +31,15 @@
     <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="4" />
-    <Setter Property="Padding" Value="10,4" />
+    <Setter Property="Padding" Value="10,2" />
   </Style>
 
   <Style Selector="Border.AccentBadge">
     <Setter Property="Background" Value="{DynamicResource AccentSubtleBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="{DynamicResource RadiusPill}" />
-    <Setter Property="Padding" Value="10,4" />
+    <Setter Property="CornerRadius" Value="4" />
+    <Setter Property="Padding" Value="10,2" />
   </Style>
 
   <Style Selector="Border.BottomSheetPanel">

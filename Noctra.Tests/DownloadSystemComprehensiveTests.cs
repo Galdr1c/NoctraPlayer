@@ -158,9 +158,17 @@ namespace Noctra.Tests
                 null!, // tmdb sync
                 license,
                 null!, // update service
-                new Moq.Mock<ILocalizationService>().Object,
+                DownloadLocalization().Object,
                 null   // logger
             );
+        }
+
+        private static Moq.Mock<ILocalizationService> DownloadLocalization()
+        {
+            var localization = new Moq.Mock<ILocalizationService>();
+            localization.Setup(service => service.GetString(It.IsAny<string>()))
+                .Returns((string key) => key);
+            return localization;
         }
     }
 

@@ -1355,6 +1355,7 @@ public partial class MainViewModel : ObservableObject
         SetItems(ActiveDownloadingItems, Enumerable.Empty<DownloadItem>());
         SetItems(QueuedDownloadItems, Enumerable.Empty<DownloadItem>());
         SetItems(CompletedDownloadItems, Enumerable.Empty<DownloadItem>());
+        SetItems(FailedDownloadItems, Enumerable.Empty<DownloadItem>());
         SetItems(DownloadedSeriesItems, Enumerable.Empty<Series>());
         SetItems(DownloadedVodChannels, Enumerable.Empty<Channel>());
 
@@ -5894,6 +5895,9 @@ public partial class MainViewModel : ObservableObject
     private BatchObservableCollection<DownloadItem> _completedDownloadItems = new();
 
     [ObservableProperty]
+    private BatchObservableCollection<DownloadItem> _failedDownloadItems = new();
+
+    [ObservableProperty]
     private int _activeDownloadCount;
 
     [ObservableProperty]
@@ -5996,6 +6000,16 @@ public partial class MainViewModel : ObservableObject
     public bool HasDownloadedItems => TotalDownloadedCount > 0 ||
                                        DownloadedVodChannels.Count > 0 ||
                                        DownloadedSeriesItems.Count > 0;
+
+    /// <summary>
+    /// True while any download state exists: completed library items,
+    /// active/queued downloads, or failed downloads.
+    /// </summary>
+    public bool HasAnyDownloadState =>
+        HasDownloadedItems ||
+        ActiveDownloadItems.Count > 0 ||
+        QueuedDownloadItems.Count > 0 ||
+        FailedDownloadItems.Count > 0;
 
     [RelayCommand]
     private void Navigate(AppView view)
@@ -6705,8 +6719,12 @@ public partial class MainViewModel : ObservableObject
         // ── 7. Refresh active/queued downloads globally ──
         await RefreshDownloadsFromServiceAsync(0);
         ShowDownloadsEmptyState = DownloadedVodChannels.Count == 0 &&
-                                 DownloadedSeriesItems.Count == 0;
+                                 DownloadedSeriesItems.Count == 0 &&
+                                 ActiveDownloadItems.Count == 0 &&
+                                 QueuedDownloadItems.Count == 0 &&
+                                 FailedDownloadItems.Count == 0;
         OnPropertyChanged(nameof(HasDownloadedItems));
+        OnPropertyChanged(nameof(HasAnyDownloadState));
     }
 
     /// <summary>
@@ -7071,6 +7089,11 @@ public partial class MainViewModel : ObservableObject
                 })
                 .OrderByDescending(d => d.CompletedAt ?? d.UpdatedAt)
                 .Take(100));
+
+            SetItems(FailedDownloadItems, downloads
+                .Where(d => d.Status == DownloadStatus.Failed)
+                .OrderByDescending(d => d.CreatedAt));
+
             UpdateDownloadCenterSummary(profileId);
         }
         catch (Exception ex)
@@ -7080,16 +7103,23 @@ public partial class MainViewModel : ObservableObject
             SetItems(ActiveDownloadingItems, Enumerable.Empty<DownloadItem>());
             SetItems(QueuedDownloadItems, Enumerable.Empty<DownloadItem>());
             SetItems(CompletedDownloadItems, Enumerable.Empty<DownloadItem>());
+            SetItems(FailedDownloadItems, Enumerable.Empty<DownloadItem>());
             SetDownloadCenterSummaryEmpty();
         }
 
         ShowDownloadsEmptyState = DownloadedVodChannels.Count == 0 &&
-                                 DownloadedSeriesItems.Count == 0;
+                                 DownloadedSeriesItems.Count == 0 &&
+                                 ActiveDownloadItems.Count == 0 &&
+                                 QueuedDownloadItems.Count == 0 &&
+                                 FailedDownloadItems.Count == 0;
+
+        OnPropertyChanged(nameof(HasAnyDownloadState));
     }
 
     partial void OnTotalDownloadedCountChanged(int value)
     {
         OnPropertyChanged(nameof(HasDownloadedItems));
+        OnPropertyChanged(nameof(HasAnyDownloadState));
     }
 
     private void SetDownloadCenterSummaryEmpty()
@@ -7102,6 +7132,8 @@ public partial class MainViewModel : ObservableObject
         ActiveDownloadingItems.Clear();
         QueuedDownloadItems.Clear();
         CompletedDownloadItems.Clear();
+        FailedDownloadItems.Clear();
+        OnPropertyChanged(nameof(HasAnyDownloadState));
     }
 
     private void UpdateDownloadCenterSummary(int profileId)
@@ -7458,6 +7490,7 @@ public partial class MainViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(ShowDownloadsLandingEmptyState));
         OnPropertyChanged(nameof(HasDownloadedItems));
+        OnPropertyChanged(nameof(HasAnyDownloadState));
     }
 
     private readonly SemaphoreSlim _refreshSemaphore = new(1, 1);
@@ -7490,7 +7523,10 @@ public partial class MainViewModel : ObservableObject
                 ShowFavoritesEmptyState = true;
                 ShowHistoryEmptyState = true;
                 ShowDownloadsEmptyState = DownloadedVodChannels.Count == 0 &&
-                                         DownloadedSeriesItems.Count == 0;
+                                         DownloadedSeriesItems.Count == 0 &&
+                                         ActiveDownloadItems.Count == 0 &&
+                                         QueuedDownloadItems.Count == 0 &&
+                                         FailedDownloadItems.Count == 0;
                 return;
             }
 
@@ -7513,7 +7549,10 @@ public partial class MainViewModel : ObservableObject
                 ShowFavoritesEmptyState = true;
                 ShowHistoryEmptyState = true;
                 ShowDownloadsEmptyState = DownloadedVodChannels.Count == 0 &&
-                                         DownloadedSeriesItems.Count == 0;
+                                         DownloadedSeriesItems.Count == 0 &&
+                                         ActiveDownloadItems.Count == 0 &&
+                                         QueuedDownloadItems.Count == 0 &&
+                                         FailedDownloadItems.Count == 0;
                 return;
             }
 
