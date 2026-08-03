@@ -471,5 +471,73 @@ namespace Noctra.Tests
             Assert.True(ctx.MainVM.IsDownloadCenterVisible);
             Assert.Equal(1, ctx.MainVM.DownloadTabIndex);
         }
+
+        /// <summary>
+        /// Scenario 17: QueueOrder is numbered from the REAL queue — only queued
+        /// items, oldest first, 1..N. Downloading/paused items must NOT consume
+        /// numbers or reverse the sequence.
+        /// </summary>
+        [Fact]
+        public async Task QueueOrder_ReflectsOnlyQueuedItems_OldestFirst()
+        {
+            var ctx = new DownloadTestContext(CreateSqliteFactory(), CreateEmptyDownloadRoot());
+            ctx.MainVM.CurrentProfileId = 1;
+
+            var now = DateTime.UtcNow;
+            ctx.DownloadService.MockItems.Add(new DownloadItem
+            {
+                Id = 1,
+                ProfileId = 1,
+                Status = DownloadStatus.Downloading,
+                DisplayName = "Downloading",
+                SourceUrl = "http://media/downloading.mp4",
+                CreatedAt = now.AddMinutes(-60)
+            });
+            ctx.DownloadService.MockItems.Add(new DownloadItem
+            {
+                Id = 2,
+                ProfileId = 1,
+                Status = DownloadStatus.Paused,
+                DisplayName = "Paused",
+                SourceUrl = "http://media/paused.mp4",
+                CreatedAt = now.AddMinutes(-50)
+            });
+            ctx.DownloadService.MockItems.Add(new DownloadItem
+            {
+                Id = 3,
+                ProfileId = 1,
+                Status = DownloadStatus.Queued,
+                DisplayName = "QueueOldest",
+                SourceUrl = "http://media/q1.mp4",
+                CreatedAt = now.AddMinutes(-40)
+            });
+            ctx.DownloadService.MockItems.Add(new DownloadItem
+            {
+                Id = 4,
+                ProfileId = 1,
+                Status = DownloadStatus.Queued,
+                DisplayName = "QueueMiddle",
+                SourceUrl = "http://media/q2.mp4",
+                CreatedAt = now.AddMinutes(-30)
+            });
+            ctx.DownloadService.MockItems.Add(new DownloadItem
+            {
+                Id = 5,
+                ProfileId = 1,
+                Status = DownloadStatus.Queued,
+                DisplayName = "QueueNewest",
+                SourceUrl = "http://media/q3.mp4",
+                CreatedAt = now.AddMinutes(-20)
+            });
+
+            await RefreshFromServiceAsync(ctx.MainVM, 1);
+
+            var queued = ctx.MainVM.QueuedDownloadItems.ToList();
+            Assert.Equal(new[] { "QueueOldest", "QueueMiddle", "QueueNewest" }, queued.Select(q => q.DisplayName).ToArray());
+            Assert.Equal(new[] { 1, 2, 3 }, queued.Select(q => q.QueueOrder).ToArray());
+
+            Assert.Contains(ctx.MainVM.ActiveDownloadItems, i => i.Status == DownloadStatus.Downloading);
+            Assert.Contains(ctx.MainVM.ActiveDownloadItems, i => i.Status == DownloadStatus.Paused);
+        }
     }
 }
