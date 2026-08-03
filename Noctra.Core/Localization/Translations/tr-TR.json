@@ -449,6 +449,8 @@
   "Downloads.Stats.Speed.Format": "Toplam Hız: {0}",
   "Downloads.Stats.Active.Format": "Aktif İndirme: {0}",
   "Downloads.Ongoing.Title": "Devam Eden",
+  "Downloads.Ongoing.Empty.Title": "Aktif indirme yok",
+  "Downloads.Ongoing.Empty.Description": "İndirmeye başladığınızda içerikler burada görünür.",
   "Downloads.Ongoing.Count.Format": "{0} aktif",
   "Downloads.Queue.Title": "Sıradakiler",
   "Settings.Nav.Notifications": "Bildirimler",

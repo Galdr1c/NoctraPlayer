@@ -54,15 +54,10 @@
               IsVisible="{Binding StorageUsageDetailText, Converter={x:Static avaloniaConverters:StringConverters.IsNotNullOrEmpty}}">
         <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="Auto,*,Auto">
           <!-- Icon -->
-          <Border Width="44"
-                  Height="44"
-                  CornerRadius="8"
-                  Background="{DynamicResource SurfaceLightBrush}">
-            <icons:MaterialIcon Kind="Database"
+          <icons:MaterialIcon Kind="Database"
                                 Foreground="{DynamicResource AccentBrush}"
-                                Width="32"
-                                Height="32" />
-          </Border>
+                                Width="48"
+                                Height="48" />
           <StackPanel Grid.Column="1"
                       Margin="16,0,0,0"
                       VerticalAlignment="Center"
@@ -72,10 +67,6 @@
                          Foreground="{DynamicResource TextPrimaryBrush}"
                          FontWeight="SemiBold"
                          FontSize="{DynamicResource FTitleL}" />
-              <TextBlock Grid.Column="1"
-                         Text="{Binding StorageUsageDetailText}"
-                         Foreground="{DynamicResource TextMutedBrush}"
-                         FontSize="{DynamicResource FOverline}" />
             </Grid>
             <!-- Progress Bar -->
             <Border Height="8"
@@ -122,20 +113,11 @@
             <Button Command="{Binding DeleteAllDownloadsCommand}"
                     Theme="{StaticResource DangerButtonStyle}"
                     FontSize="{DynamicResource FCaption}"
-                    Padding="0"
+                    Padding="8,2"
                     IsVisible="{Binding HasDownloadedItems}">
               <StackPanel Orientation="Horizontal" Spacing="8">
                 <icons:MaterialIcon Kind="TrashCanOutline" Width="16" Height="16" />
                 <TextBlock Text="{loc:Translate Downloads.Action.DeleteAll}" />
-              </StackPanel>
-            </Button>
-            <Button Command="{Binding OpenDownloadsFolderCommand}"
-                    Classes="SettingsActionButton"
-                    FontSize="{DynamicResource FCaption}"
-                    IsVisible="{Binding HasDownloadedItems}">
-              <StackPanel Orientation="Horizontal" Spacing="6">
-                <icons:MaterialIcon Kind="FolderOpenOutline" Width="16" Height="16" />
-                <TextBlock Text="{loc:Translate Downloads.Action.OpenFolder}" />
               </StackPanel>
             </Button>
           </StackPanel>
@@ -408,13 +390,20 @@
               <Button Grid.Column="1"
                       Command="{Binding StopAllDownloadsCommand}"
                       Theme="{StaticResource DangerButtonStyle}"
-                      FontSize="{DynamicResource FCaption}">
+                      FontSize="{DynamicResource FCaption}"
+                      IsVisible="{Binding ActiveDownloadCount, Converter={StaticResource CountToVisibility}}">
                 <StackPanel Orientation="Horizontal" Spacing="6">
                   <icons:MaterialIcon Kind="Close" Width="16" Height="16" />
                   <TextBlock Text="{loc:Translate Downloads.Action.StopAll}" />
                 </StackPanel>
               </Button>
             </Grid>
+
+            <controls:MobileEmptyStateView
+                        IsVisible="{Binding ActiveDownloadCount, Converter={StaticResource CountToVisibility}, ConverterParameter=invert}"
+                        IconKind="ProgressDownload"
+                        Title="{loc:Translate Downloads.Ongoing.Empty.Title}"
+                        Description="{loc:Translate Downloads.Ongoing.Empty.Description}" />
 
             <ItemsControl ItemsSource="{Binding ActiveDownloadingItems}">
               <ItemsControl.ItemTemplate>

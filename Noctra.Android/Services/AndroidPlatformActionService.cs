@@ -14,8 +14,6 @@ namespace Noctra.Android.Services;
 /// </summary>
 public sealed class AndroidPlatformActionService : IPlatformActionService
 {
-    private const string ActionViewDownloads = "android.intent.action.VIEW_DOWNLOADS";
-
     private readonly Context _context;
     private readonly AndroidActivityProvider _activityProvider;
 
@@ -65,28 +63,14 @@ public sealed class AndroidPlatformActionService : IPlatformActionService
             }
             catch
             {
-                // The button should still try to open the system downloads UI.
+                return Task.FromResult(false);
             }
         }
 
-        // Most Android file managers understand this system action and will open
-        // the user's Downloads surface without exposing file:// paths.
-        if (TryStartActivity(new Intent(ActionViewDownloads)))
-        {
-            return Task.FromResult(true);
-        }
-
-        // Fallback: let the user pick/open a directory in the Android documents UI.
-        if (OperatingSystem.IsAndroidVersionAtLeast(21))
-        {
-            var treeIntent = new Intent(Intent.ActionOpenDocumentTree);
-            treeIntent.AddFlags(ActivityFlags.GrantReadUriPermission | ActivityFlags.GrantPersistableUriPermission);
-            if (TryStartActivity(treeIntent))
-            {
-                return Task.FromResult(true);
-            }
-        }
-
+        // Android 11+ (scoped storage): system file managers cannot browse the
+        // app-private directory (Android/data/<package>/files/Download), so there
+        // is no reliable way to open the real folder. Report failure instead of
+        // silently opening an unrelated surface like the system Downloads screen.
         return Task.FromResult(false);
     }
 

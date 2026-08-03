@@ -449,6 +449,8 @@
   "Downloads.Stats.Speed.Format": "Gesamtgeschwindigkeit: {0}",
   "Downloads.Stats.Active.Format": "Aktive Downloads: {0}",
   "Downloads.Ongoing.Title": "Laufend",
+  "Downloads.Ongoing.Empty.Title": "Keine aktiven Downloads",
+  "Downloads.Ongoing.Empty.Description": "Inhalte, die Sie herunterladen, erscheinen hier.",
   "Downloads.Ongoing.Count.Format": "{0} aktiv",
   "Downloads.Queue.Title": "Warteschlange",
   "Settings.Nav.Notifications": "Benachrichtigungen",
