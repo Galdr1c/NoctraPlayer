@@ -561,13 +561,6 @@ public partial class MainView : UserControl
             _playerViewModel.BackFromPlayerPanelCommand.Execute(null);
             return true;
         }
-        if (PlayerHost.IsVisible && _playerViewModel is { IsFullScreen: true })
-        {
-            _playerViewModel.IsFullScreen = false;
-            return true;
-        }
-
-
         // 3) Oynatıcı görünürse -> oynatıcıyı kapat
         if (PlayerHost.IsVisible)
         {
@@ -1224,6 +1217,10 @@ public partial class MainView : UserControl
 
         MobilePlayerContent.DataContext = _playerViewModel;
         PlayerHost.IsVisible = true;
+        
+        // Mobilde player açıldığında otomatik tam ekran (immersive mode)
+        _playerViewModel.IsFullScreen = true;
+        
         UpdatePlayerChromeState();
 
         // Wire watermark DataContext from Core MainViewModel

@@ -20,6 +20,9 @@ public sealed class AndroidPlayerWindowService : IPlayerWindowService
     // Parlaklık değeri cache'lenir; thread-güvenli senkron okuma için (swipe başlangıcı).
     private double _cachedBrightness = 0.5;
 
+    // Immersive mode durumu; focus/resume sonrası yeniden uygulamak için.
+    private bool _isImmersiveModeActive;
+
     public AndroidPlayerWindowService(AndroidActivityProvider activityProvider)
     {
         _activityProvider = activityProvider;
@@ -48,6 +51,8 @@ public sealed class AndroidPlayerWindowService : IPlayerWindowService
 
     public void SetFullScreenMode(bool fullScreen)
     {
+        _isImmersiveModeActive = fullScreen;
+
         RunOnUi(activity =>
         {
             // 1) Ekran yönü
@@ -92,6 +97,36 @@ public sealed class AndroidPlayerWindowService : IPlayerWindowService
 
     public double GetBrightness() => _cachedBrightness;
 
+    /// <summary>
+    /// Focus/resume sonrasında immersive mode durumunu yeniden uygular.
+    /// Huawei gibi cihazlarda ekran dönme veya izin pencereleri sonrası sistem çubuklarını tekrar gizlemek için.
+    /// </summary>
+    public void ReapplyImmersiveMode()
+    {
+        if (!_isImmersiveModeActive)
+        {
+            return;
+        }
+
+        RunOnUi(activity =>
+        {
+            var window = activity.Window;
+            if (window is null)
+            {
+                return;
+            }
+
+            if (Build.VERSION.SdkInt >= BuildVersionCodes.R)
+            {
+                ApplyImmersiveModern(window, fullScreen: true);
+            }
+            else
+            {
+                ApplyImmersiveLegacy(window, fullScreen: true);
+            }
+        });
+    }
+
     private void RunOnUi(Action<Activity> action)
     {
         var activity = _activityProvider.CurrentActivity;
@@ -106,9 +141,10 @@ public sealed class AndroidPlayerWindowService : IPlayerWindowService
             {
                 action(activity);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                // Pencere durumu geçiş anında geçersiz olabilir; sessizce yut.
+                // Pencere durumu geçiş anında geçersiz olabilir.
+                global::Android.Util.Log.Debug("Noctra.PlayerWindow", $"Window operation failed: {ex.Message}");
             }
         });
     }

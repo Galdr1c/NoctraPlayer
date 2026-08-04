@@ -279,6 +279,21 @@ public class MainActivity : AvaloniaMainActivity
         base.OnBackPressed();
     }
 
+    public override void OnWindowFocusChanged(bool hasFocus)
+    {
+        base.OnWindowFocusChanged(hasFocus);
+
+        // Focus kazanıldığında immersive mode durumunu yeniden uygula.
+        // Huawei gibi cihazlarda izin pencereleri, ses paneli veya ekran dönme sonrası
+        // sistem çubukları geri gelebilir.
+        if (hasFocus &&
+            Avalonia.Application.Current is Noctra.Mobile.App app &&
+            app.Services?.GetService<IPlayerWindowService>() is AndroidPlayerWindowService windowService)
+        {
+            Window?.DecorView?.Post(() => windowService.ReapplyImmersiveMode());
+        }
+    }
+
     protected override void OnResume()
     {
         base.OnResume();
@@ -291,6 +306,12 @@ public class MainActivity : AvaloniaMainActivity
             if (app.Services?.GetService<GooglePlayUpdateService>() is { } updateService)
             {
                 _ = ResumeUpdateFlowSafelyAsync(updateService);
+            }
+
+            // Resume sonrasında immersive mode durumunu yeniden uygula.
+            if (app.Services?.GetService<IPlayerWindowService>() is AndroidPlayerWindowService windowService)
+            {
+                Window?.DecorView?.Post(() => windowService.ReapplyImmersiveMode());
             }
         }
 
