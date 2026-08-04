@@ -620,10 +620,8 @@
                 <DataTemplate x:DataType="models:DownloadItem">
                   <Border Background="{DynamicResource Surface0Brush}"
                           CornerRadius="8"
-                          Padding="16"
-                          Margin="0,0,0,12"
-                          BorderBrush="{DynamicResource ErrorBrush}"
-                          BorderThickness="1">
+                          Padding="12"
+                          Margin="0,0,0,8">
                     <StackPanel Spacing="8">
                       <Grid ColumnDefinitions="Auto,*,Auto"
                             ColumnSpacing="10">
@@ -672,8 +670,7 @@
                           <Button Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).RetryDownloadCommand}"
                                   CommandParameter="{Binding}"
                                   Theme="{StaticResource PrimaryButtonStyle}"
-                                  MinHeight="48"
-                                  Padding="14,0"
+                                  VerticalContentAlignment="Center"
                                   FontSize="{DynamicResource FCaption}">
                             <StackPanel Orientation="Horizontal" Spacing="6">
                               <icons:MaterialIcon Kind="Refresh" Width="16" Height="16" />
@@ -683,8 +680,6 @@
                           <Button Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).CancelDownloadCommand}"
                                   CommandParameter="{Binding}"
                                   Theme="{StaticResource DangerButtonStyle}"
-                                  MinHeight="48"
-                                  Padding="14,0"
                                   FontSize="{DynamicResource FCaption}">
                             <StackPanel Orientation="Horizontal" Spacing="6">
                               <icons:MaterialIcon Kind="Close" Width="16" Height="16" />
