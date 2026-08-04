@@ -108,5 +108,6 @@
   <Style Selector="Button.UpgradeButton:pressed /template/ ContentPresenter">
     <Setter Property="Opacity" Value="0.80" />
     <Setter Property="Background" Value="{DynamicResource PremiumBadgeBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource PremiumBadgeTextBrush}" />
   </Style>
 </Styles>

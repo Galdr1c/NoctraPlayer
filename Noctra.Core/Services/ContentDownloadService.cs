@@ -569,6 +569,28 @@ public class ContentDownloadService : IContentDownloadService
             return;
         }
 
+        // A live duplicate (active, paused or completed) already occupies this
+        // ContentKey. The unique index excludes Failed/Canceled rows, so waking
+        // this stale Failed record would violate the constraint. Drop the stale
+        // record and keep the live one.
+        if (item.Status == DownloadStatus.Failed && !string.IsNullOrWhiteSpace(item.ContentKey))
+        {
+            var duplicateExists = await db.DownloadItems.AnyAsync(
+                d => d.Id != downloadId &&
+                     d.ContentKey == item.ContentKey &&
+                     d.Status != DownloadStatus.Failed &&
+                     d.Status != DownloadStatus.Canceled,
+                cancellationToken);
+
+            if (duplicateExists)
+            {
+                db.DownloadItems.Remove(item);
+                await db.SaveChangesAsync(cancellationToken);
+                DownloadsChanged?.Invoke(this, EventArgs.Empty);
+                return;
+            }
+        }
+
         // Manuel resume — otomatik yeniden deneme sayacını sıfırla
         _autoResumeAttempts.TryRemove(downloadId, out _);
 

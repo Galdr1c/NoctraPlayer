@@ -261,6 +261,12 @@ internal sealed class DownloadIntegrationContext : IDisposable
         return await db.DownloadItems.AsNoTracking().FirstOrDefaultAsync(d => d.Id == id);
     }
 
+    public async Task<List<DownloadItem>> GetItemsAsync()
+    {
+        await using var db = ContextFactory.CreateDbContext();
+        return await db.DownloadItems.AsNoTracking().OrderBy(d => d.Id).ToListAsync();
+    }
+
     public async Task<DownloadItem?> WaitForItemAsync(
         int id,
         Func<DownloadItem, bool>? predicate = null,
@@ -383,6 +389,55 @@ public sealed class ContentDownloadIntegrationTests
     }
 
     // ─── HTTP resume semantics ───────────────────────────────────────────────────
+
+    [Fact]
+    public async Task Resume_FailedRowWithLiveDuplicateContentKey_RemovesStaleRow()
+    {
+        // Device reproduction: the same episode was queued twice — one row
+        // Failed (excluded from the unique ContentKey index), the other live
+        // (Paused). Retrying the Failed row must NOT violate the unique index;
+        // the stale row is dropped and the live one is kept.
+        var content = DownloadIntegrationContext.BuildContent(50_000);
+        using var ctx = new DownloadIntegrationContext(content: content);
+        var service = ctx.CreateService();
+
+        await using (var db = ctx.ContextFactory.CreateDbContext())
+        {
+            var live = new DownloadItem
+            {
+                ProfileId = 1,
+                DisplayName = "episode",
+                SourceUrl = ServerRoot + "episode.mp4",
+                ContentKey = "series:1:64287",
+                Status = DownloadStatus.Paused,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+            var stale = new DownloadItem
+            {
+                ProfileId = 1,
+                DisplayName = "episode",
+                SourceUrl = ServerRoot + "episode.mp4",
+                ContentKey = "series:1:64287",
+                Status = DownloadStatus.Failed,
+                ErrorMessage = "stale failure",
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+            db.DownloadItems.AddRange(live, stale);
+            await db.SaveChangesAsync();
+        }
+
+        // Retrying the Failed row must NOT violate the unique index: the stale
+        // row is dropped, the live row is untouched, no exception.
+        await service.ResumeDownloadAsync(2);
+
+        var remaining = await ctx.GetItemsAsync();
+        var liveRow = Assert.Single(remaining);
+        Assert.Equal(DownloadStatus.Paused, liveRow.Status);
+        Assert.Equal("series:1:64287", liveRow.ContentKey);
+    }
+
 
     [Fact]
     public async Task Resume_PartialTempFile_Http206_AppendsAndCompletes()

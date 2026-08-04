@@ -468,7 +468,7 @@
                           Margin="0,0,0,12"
                           HorizontalAlignment="Stretch">
                     <Grid ColumnDefinitions="*,Auto"
-                          ColumnSpacing="14">
+                          ColumnSpacing="0">
 
                       <!-- Play zone (tap anywhere on the card body to play) -->
                       <Button Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).PlayEpisodeCommand}"
@@ -499,7 +499,7 @@
                                 <Border VerticalAlignment="Bottom"
                                         HorizontalAlignment="Left"
                                         Background="{DynamicResource OverlayDimBrush}"
-                                        CornerRadius="0,4,0,0"
+                                        CornerRadius="0,2,0,0"
                                         Padding="6,3,8,3">
                                   <TextBlock Text="{Binding EpisodeNumber}"
                                              Foreground="{DynamicResource PlayerOverlayTextBrush}"
@@ -590,16 +590,14 @@
                                               Opacity="0.6"
                                               Foreground="{DynamicResource TextMutedBrush}" />
                         </Button>
-                        <Button Classes="detailAction"
-                                Background="Transparent"
+                        <Button Theme="{StaticResource DangerButtonStyle}"
+                                BorderThickness="0"
+                                Padding="8,0"
+                                MinHeight="48"
                                 Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).DeleteDownloadedEpisodeCommand}"
                                 CommandParameter="{Binding}"
                                 IsVisible="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).IsDownloadedSeriesDetailMode}">
-                          <icons:MaterialIcon Kind="TrashCanOutline"
-                                              Width="18"
-                                              Height="18"
-                                              Opacity="0.8"
-                                              Foreground="{DynamicResource ErrorBrush}" />
+                          <icons:MaterialIcon Kind="TrashCanOutline" Width="18" Height="18"/>
                         </Button>
                       </Grid>
                     </Grid>

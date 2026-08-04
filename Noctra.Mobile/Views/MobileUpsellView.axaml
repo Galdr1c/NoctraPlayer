@@ -20,21 +20,6 @@
             <StackPanel Spacing="6"
                         HorizontalAlignment="Center"
                         Margin="28,0">
-              <Border Background="{DynamicResource NavActiveBackgroundBrush}"
-                      CornerRadius="8"
-                      Padding="12,6"
-                      HorizontalAlignment="Center">
-                <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,0,4">
-                  <icons:MaterialIcon Kind="Crown"
-                                      Width="17"
-                                      Height="17"
-                                      Foreground="{DynamicResource AccentBrush}" />
-                  <TextBlock Text="{loc:Translate Upsell.Badge}"
-                             Foreground="{DynamicResource AccentBrush}"
-                             FontSize="{DynamicResource FCaption}"
-                             FontWeight="Bold"/>
-                </StackPanel>
-              </Border>
 
               <TextBlock Text="{loc:Translate Upsell.Headline}"
                          Foreground="{DynamicResource TextPrimaryBrush}"
@@ -79,36 +64,36 @@
 
                 <UniformGrid Columns="1" RowSpacing="8">
                   <StackPanel Orientation="Horizontal" Spacing="8">
-                    <icons:MaterialIcon Kind="CheckCircle" Width="17" Height="17" Foreground="{DynamicResource AccentLightBrush}" />
-                    <TextBlock Text="{loc:Translate Upsell.Premium.Feature1}" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold" TextWrapping="Wrap" FontSize="{DynamicResource FCaption}" />
+                    <icons:MaterialIcon Kind="CheckCircle" Width="17" Height="17" Foreground="{DynamicResource AccentBrush}" />
+                    <TextBlock Text="{loc:Translate Upsell.Premium.Feature1}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" TextWrapping="Wrap" FontSize="{DynamicResource FCaption}" />
                   </StackPanel>
                   <StackPanel Orientation="Horizontal" Spacing="8">
-                    <icons:MaterialIcon Kind="CheckCircle" Width="17" Height="17" Foreground="{DynamicResource AccentLightBrush}" />
-                    <TextBlock Text="{loc:Translate Upsell.Premium.Feature2}" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold" TextWrapping="Wrap" FontSize="{DynamicResource FCaption}" />
+                    <icons:MaterialIcon Kind="CheckCircle" Width="17" Height="17" Foreground="{DynamicResource AccentBrush}" />
+                    <TextBlock Text="{loc:Translate Upsell.Premium.Feature2}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" TextWrapping="Wrap" FontSize="{DynamicResource FCaption}" />
                   </StackPanel>
                   <StackPanel Orientation="Horizontal" Spacing="8">
-                    <icons:MaterialIcon Kind="CheckCircle" Width="17" Height="17" Foreground="{DynamicResource AccentLightBrush}" />
-                    <TextBlock Text="{loc:Translate Upsell.Premium.Feature3}" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold" TextWrapping="Wrap" FontSize="{DynamicResource FCaption}" />
+                    <icons:MaterialIcon Kind="CheckCircle" Width="17" Height="17" Foreground="{DynamicResource AccentBrush}" />
+                    <TextBlock Text="{loc:Translate Upsell.Premium.Feature3}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" TextWrapping="Wrap" FontSize="{DynamicResource FCaption}" />
                   </StackPanel>
                   <StackPanel Orientation="Horizontal" Spacing="8">
-                    <icons:MaterialIcon Kind="CheckCircle" Width="17" Height="17" Foreground="{DynamicResource AccentLightBrush}" />
-                    <TextBlock Text="{loc:Translate Upsell.Premium.Feature4}" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold" TextWrapping="Wrap" FontSize="{DynamicResource FCaption}" />
+                    <icons:MaterialIcon Kind="CheckCircle" Width="17" Height="17" Foreground="{DynamicResource AccentBrush}" />
+                    <TextBlock Text="{loc:Translate Upsell.Premium.Feature4}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" TextWrapping="Wrap" FontSize="{DynamicResource FCaption}" />
                   </StackPanel>
                   <StackPanel Orientation="Horizontal" Spacing="8">
-                    <icons:MaterialIcon Kind="CheckCircle" Width="17" Height="17" Foreground="{DynamicResource AccentLightBrush}" />
-                    <TextBlock Text="{loc:Translate Upsell.Premium.Feature5}" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold" TextWrapping="Wrap" FontSize="{DynamicResource FCaption}" />
+                    <icons:MaterialIcon Kind="CheckCircle" Width="17" Height="17" Foreground="{DynamicResource AccentBrush}" />
+                    <TextBlock Text="{loc:Translate Upsell.Premium.Feature5}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" TextWrapping="Wrap" FontSize="{DynamicResource FCaption}" />
                   </StackPanel>
                   <StackPanel Orientation="Horizontal" Spacing="8">
-                    <icons:MaterialIcon Kind="CheckCircle" Width="17" Height="17" Foreground="{DynamicResource AccentLightBrush}" />
-                    <TextBlock Text="{loc:Translate Upsell.Premium.Feature6}" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold" TextWrapping="Wrap" FontSize="{DynamicResource FCaption}" />
+                    <icons:MaterialIcon Kind="CheckCircle" Width="17" Height="17" Foreground="{DynamicResource AccentBrush}" />
+                    <TextBlock Text="{loc:Translate Upsell.Premium.Feature6}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" TextWrapping="Wrap" FontSize="{DynamicResource FCaption}" />
                   </StackPanel>
                   <StackPanel Orientation="Horizontal" Spacing="8">
-                    <icons:MaterialIcon Kind="CheckCircle" Width="17" Height="17" Foreground="{DynamicResource AccentLightBrush}" />
-                    <TextBlock Text="{loc:Translate Upsell.Premium.Feature7}" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold" TextWrapping="Wrap" FontSize="{DynamicResource FCaption}" />
+                    <icons:MaterialIcon Kind="CheckCircle" Width="17" Height="17" Foreground="{DynamicResource AccentBrush}" />
+                    <TextBlock Text="{loc:Translate Upsell.Premium.Feature7}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" TextWrapping="Wrap" FontSize="{DynamicResource FCaption}" />
                   </StackPanel>
                   <StackPanel Orientation="Horizontal" Spacing="8">
-                    <icons:MaterialIcon Kind="CheckCircle" Width="17" Height="17" Foreground="{DynamicResource AccentLightBrush}" />
-                    <TextBlock Text="{loc:Translate Upsell.Premium.Feature8}" Foreground="{DynamicResource PremiumCardForegroundBrush}" FontWeight="SemiBold" TextWrapping="Wrap" FontSize="{DynamicResource FCaption}" />
+                    <icons:MaterialIcon Kind="CheckCircle" Width="17" Height="17" Foreground="{DynamicResource AccentBrush}" />
+                    <TextBlock Text="{loc:Translate Upsell.Premium.Feature8}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" TextWrapping="Wrap" FontSize="{DynamicResource FCaption}" />
                   </StackPanel>
                 </UniformGrid>
               </StackPanel>
