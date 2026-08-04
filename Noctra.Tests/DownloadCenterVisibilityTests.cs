@@ -263,11 +263,12 @@ namespace Noctra.Tests
         }
 
         /// <summary>
-        /// Scenario 9: user has a failed download and opens Downloads.
-        /// Expectation: the Download Center tab is selected so the error is visible.
+        /// Scenario 9: only a failed download exists when Downloads is opened.
+        /// Expectation: ActiveDownloadCount is 0 (failed is not an active item),
+        /// so the Library tab (index 0) is selected.
         /// </summary>
         [Fact]
-        public async Task NavigateToDownloads_WithFailedDownload_OpensDownloadCenterTab()
+        public async Task NavigateToDownloads_WithOnlyFailedDownload_KeepsLibraryTab()
         {
             var ctx = new DownloadTestContext(CreateSqliteFactory(), CreateEmptyDownloadRoot());
             ctx.MainVM.CurrentProfileId = 1;
@@ -284,8 +285,9 @@ namespace Noctra.Tests
             await RefreshFromServiceAsync(ctx.MainVM, 1);
             ctx.MainVM.NavigateCommand.Execute(AppView.Downloads);
 
-            Assert.True(ctx.MainVM.IsDownloadCenterVisible);
-            Assert.Equal(1, ctx.MainVM.DownloadTabIndex);
+            Assert.Equal(0, ctx.MainVM.ActiveDownloadCount);
+            Assert.False(ctx.MainVM.IsDownloadCenterVisible);
+            Assert.Equal(0, ctx.MainVM.DownloadTabIndex);
         }
 
         /// <summary>

@@ -6064,7 +6064,6 @@ public partial class MainViewModel : ObservableObject
 
     partial void OnSelectedDownloadSortOrderChanged(DownloadSortOrder value) => _ = RefreshDownloadedItemsFromDatabaseAsync();
 
-    public bool ShowDownloadsLandingEmptyState => !IsDownloadCenterVisible && ShowDownloadsEmptyState;
     public bool HasDownloadedItems => TotalDownloadedCount > 0 ||
                                        DownloadedVodChannels.Count > 0 ||
                                        DownloadedSeriesItems.Count > 0;
@@ -6179,11 +6178,11 @@ public partial class MainViewModel : ObservableObject
                 SelectedChannelType = null;
                 SelectedGroup = null;
                 ShowOnlyFavorites = false;
-                // Smart default: land on the Download Center tab when there are
-                // active/queued or failed downloads to track; otherwise Library.
-                IsDownloadCenterVisible =
-                    ActiveDownloadItems.Count > 0 ||
-                    FailedDownloadItems.Count > 0;
+                // Smart default on every entry: land on the Download Center
+                // tab only while an active download (Downloading/Paused) is
+                // running; otherwise open the Library tab.
+                _downloadTabUserSelection = false;
+                IsDownloadCenterVisible = ActiveDownloadCount > 0;
                 UpdateDownloadedItems();
                 _ = RefreshDownloadedItemsFromDatabaseAsync();
             }
@@ -7199,12 +7198,12 @@ public partial class MainViewModel : ObservableObject
 
         // Cold-start safety net: if the user lands on the Downloads page while
         // the download state is still loading (collections empty at navigation
-        // time), default to the Download Center tab once active/failed downloads
-        // become known — unless the user explicitly picked a tab.
+        // time), default to the Download Center tab once an active download
+        // becomes known — unless the user explicitly picked a tab.
         if (ActiveView == AppView.Downloads &&
             !IsDownloadCenterVisible &&
             !_downloadTabUserSelection &&
-            (ActiveDownloadItems.Count > 0 || FailedDownloadItems.Count > 0))
+            ActiveDownloadCount > 0)
         {
             IsDownloadCenterVisible = true;
         }
@@ -7330,12 +7329,6 @@ public partial class MainViewModel : ObservableObject
                 Interlocked.Exchange(ref _isDownloadsLandingRefreshing, 0);
             }
         });
-    }
-
-    [RelayCommand]
-    private void SetDownloadCenterVisible(bool visible)
-    {
-        IsDownloadCenterVisible = visible;
     }
 
     [RelayCommand]
@@ -7579,7 +7572,6 @@ public partial class MainViewModel : ObservableObject
 
     partial void OnIsDownloadCenterVisibleChanged(bool value)
     {
-        OnPropertyChanged(nameof(ShowDownloadsLandingEmptyState));
         OnPropertyChanged(nameof(DownloadTabIndex));
         if (!value && CurrentProfileId.HasValue && ActiveView == AppView.Downloads)
         {
@@ -7589,7 +7581,6 @@ public partial class MainViewModel : ObservableObject
 
     partial void OnShowDownloadsEmptyStateChanged(bool value)
     {
-        OnPropertyChanged(nameof(ShowDownloadsLandingEmptyState));
         OnPropertyChanged(nameof(HasDownloadedItems));
         OnPropertyChanged(nameof(HasAnyDownloadState));
     }
