@@ -372,7 +372,8 @@
                       Margin="0,14,0,0">
             <!-- Ongoing Section -->
             <Grid ColumnDefinitions="*,Auto"
-                  ColumnSpacing="10">
+                  ColumnSpacing="10"
+                  IsVisible="{Binding ActiveDownloadingItems.Count, Converter={StaticResource CountToVisibility}}">
               <StackPanel Orientation="Horizontal" Spacing="12">
                 <TextBlock Text="{loc:Translate Downloads.Ongoing.Title}"
                            VerticalAlignment="Center"
@@ -599,6 +600,100 @@
                         </Button>
                       </StackPanel>
                     </Grid>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <!-- Failed Section -->
+            <Grid ColumnDefinitions="*,Auto"
+                  ColumnSpacing="10"
+                  IsVisible="{Binding FailedDownloadItems.Count, Converter={StaticResource CountToVisibility}}">
+              <TextBlock Text="{loc:Translate Downloads.Failed.Title}"
+                         Foreground="{DynamicResource TextPrimaryBrush}"
+                         FontSize="{DynamicResource FTitleL}"
+                         FontWeight="SemiBold" />
+            </Grid>
+
+            <ItemsControl ItemsSource="{Binding FailedDownloadItems}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="models:DownloadItem">
+                  <Border Background="{DynamicResource Surface0Brush}"
+                          CornerRadius="8"
+                          Padding="16"
+                          Margin="0,0,0,12"
+                          BorderBrush="{DynamicResource ErrorBrush}"
+                          BorderThickness="1">
+                    <StackPanel Spacing="8">
+                      <Grid ColumnDefinitions="Auto,*,Auto"
+                            ColumnSpacing="10">
+                        <Border Width="48"
+                                Height="64"
+                                CornerRadius="6"
+                                ClipToBounds="True"
+                                Background="{DynamicResource Surface1Brush}">
+                          <Grid>
+                            <icons:MaterialIcon Kind="AlertCircleOutline"
+                                                Foreground="{DynamicResource ErrorBrush}"
+                                                Width="24"
+                                                Height="24"
+                                                Opacity="0.7" />
+                            <controls:RemoteImage Url="{Binding PosterUrl}"
+                                                  Stretch="UniformToFill"
+                                                  RenderOptions.BitmapInterpolationMode="MediumQuality" />
+                          </Grid>
+                        </Border>
+                        <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center">
+                          <TextBlock Text="{Binding BaseDisplayName}"
+                                     Foreground="{DynamicResource TextPrimaryBrush}"
+                                     FontWeight="SemiBold"
+                                     TextWrapping="Wrap" />
+                          <TextBlock Text="{Binding ErrorMessage}"
+                                     Foreground="{DynamicResource ErrorBrush}"
+                                     FontSize="{DynamicResource FCaption}"
+                                     TextWrapping="Wrap"
+                                     IsVisible="{Binding ErrorMessage, Converter={x:Static avaloniaConverters:StringConverters.IsNotNullOrEmpty}}" />
+                          <TextBlock Text="{Binding SizeText, Converter={StaticResource StringFormatConverter}, ConverterParameter='Downloads.Failed.SizeFormat'}"
+                                     Foreground="{DynamicResource TextMutedBrush}"
+                                     FontSize="{DynamicResource FCaption}" />
+                        </StackPanel>
+                      </Grid>
+
+                      <Grid ColumnDefinitions="*,Auto"
+                            ColumnSpacing="10">
+                        <TextBlock Text="{Binding ., Converter={StaticResource DownloadStatusToLocalizedTextConverter}}"
+                                   Foreground="{DynamicResource TextMutedBrush}"
+                                   FontSize="{DynamicResource FCaption}"
+                                   VerticalAlignment="Center"
+                                   TextWrapping="Wrap" />
+                        <StackPanel Grid.Column="1"
+                                    Orientation="Horizontal"
+                                    Spacing="8">
+                          <Button Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).RetryDownloadCommand}"
+                                  CommandParameter="{Binding}"
+                                  Theme="{StaticResource PrimaryButtonStyle}"
+                                  MinHeight="48"
+                                  Padding="14,0"
+                                  FontSize="{DynamicResource FCaption}">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                              <icons:MaterialIcon Kind="Refresh" Width="16" Height="16" />
+                              <TextBlock Text="{loc:Translate Downloads.Failed.Retry}" />
+                            </StackPanel>
+                          </Button>
+                          <Button Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).CancelDownloadCommand}"
+                                  CommandParameter="{Binding}"
+                                  Theme="{StaticResource DangerButtonStyle}"
+                                  MinHeight="48"
+                                  Padding="14,0"
+                                  FontSize="{DynamicResource FCaption}">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                              <icons:MaterialIcon Kind="Close" Width="16" Height="16" />
+                              <TextBlock Text="{loc:Translate Downloads.Action.Delete}" />
+                            </StackPanel>
+                          </Button>
+                        </StackPanel>
+                      </Grid>
+                    </StackPanel>
                   </Border>
                 </DataTemplate>
               </ItemsControl.ItemTemplate>

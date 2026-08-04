@@ -541,5 +541,54 @@ namespace Noctra.Tests
             Assert.Contains(ctx.MainVM.ActiveDownloadItems, i => i.Status == DownloadStatus.Downloading);
             Assert.Contains(ctx.MainVM.ActiveDownloadItems, i => i.Status == DownloadStatus.Paused);
         }
+
+        /// <summary>
+        /// Scenario 18: a failed download must be surfaced in the Download Center
+        /// (FailedDownloadItems is non-empty and rendered by the Failed section),
+        /// RetryDownloadCommand re-queues it via the service, and the Delete/Cancel
+        /// action removes the record entirely.
+        /// </summary>
+        [Fact]
+        public async Task FailedDownload_IsSurfaced_RetryAndDeleteWork()
+        {
+            var ctx = new DownloadTestContext(CreateSqliteFactory(), CreateEmptyDownloadRoot());
+            ctx.MainVM.CurrentProfileId = 1;
+            ctx.DownloadService.MockItems.Add(new DownloadItem
+            {
+                Id = 1,
+                ProfileId = 1,
+                Status = DownloadStatus.Failed,
+                ErrorMessage = "Server returned invalid response",
+                DisplayName = "Movie film",
+                SourceUrl = "http://media/a.mp4",
+                BytesDownloaded = 32
+            });
+
+            await RefreshFromServiceAsync(ctx.MainVM, 1);
+            ctx.MainVM.NavigateCommand.Execute(AppView.Downloads);
+
+            var failed = Assert.Single(ctx.MainVM.FailedDownloadItems);
+            Assert.Equal(DownloadStatus.Failed, failed.Status);
+            Assert.Equal("Server returned invalid response", failed.ErrorMessage);
+            Assert.Equal(32, failed.BytesDownloaded);
+
+            // Retry: the service re-queues the item (back to an active state).
+            ctx.MainVM.RetryDownloadCommand.Execute(ctx.MainVM.FailedDownloadItems.First());
+            var mock = Assert.Single(ctx.DownloadService.MockItems);
+            Assert.Equal(DownloadStatus.Downloading, mock.Status);
+
+            await RefreshFromServiceAsync(ctx.MainVM, 1);
+            Assert.Empty(ctx.MainVM.FailedDownloadItems);
+            Assert.Contains(ctx.MainVM.ActiveDownloadItems, i => i.Id == 1 && i.Status == DownloadStatus.Downloading);
+
+            // Delete/Cancel: removes the record entirely from the service.
+            ctx.DownloadService.MockItems.First().Status = DownloadStatus.Failed;
+            await RefreshFromServiceAsync(ctx.MainVM, 1);
+            ctx.MainVM.CancelDownloadCommand.Execute(ctx.MainVM.FailedDownloadItems.First());
+            await RefreshFromServiceAsync(ctx.MainVM, 1);
+
+            Assert.Empty(ctx.MainVM.FailedDownloadItems);
+            Assert.Empty(ctx.DownloadService.MockItems.Where(i => i.Id == 1));
+        }
     }
 }

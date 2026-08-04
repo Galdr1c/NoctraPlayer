@@ -7499,6 +7499,25 @@ public partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private async Task RetryDownloadAsync(DownloadItem? item)
+    {
+        if (item == null || item.Id <= 0 || item.Status != DownloadStatus.Failed)
+        {
+            return;
+        }
+
+        if (CurrentProfileId.HasValue && item.ProfileId != CurrentProfileId.Value)
+        {
+            await _dialogService.ShowErrorAsync(
+                _localizationService.GetString("Download.Error.ResumeWrongProfile.Title"),
+                _localizationService.GetString("Download.Error.ResumeWrongProfile.Message"));
+            return;
+        }
+
+        await _contentDownloadService.ResumeDownloadAsync(item.Id);
+    }
+
+    [RelayCommand]
     private async Task TogglePauseDownloadAsync(DownloadItem? item)
     {
         if (item == null || item.Id <= 0)
