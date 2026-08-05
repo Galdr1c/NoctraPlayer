@@ -122,9 +122,12 @@
       <StackPanel Orientation="Horizontal"
                   HorizontalAlignment="Center"
                   IsVisible="{Binding IsLocked}">
-        <TextBlock Text="{Binding LockoutCountdownText}"
+        <TextBlock Text="{Binding LockoutMessageText}"
                    Foreground="{DynamicResource WarningBrush}"
-                   FontSize="{DynamicResource FCaption}" />
+                   FontSize="{DynamicResource FCaption}"
+                   MaxWidth="340"
+                   TextAlignment="Center"
+                   TextWrapping="Wrap" />
       </StackPanel>
 
       <StackPanel Orientation="Horizontal"

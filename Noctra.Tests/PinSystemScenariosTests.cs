@@ -381,6 +381,45 @@ namespace Noctra.Tests
         }
 
         [Fact]
+        public void PinEntry_LockoutMessageText_CombinesReasonAndCountdown()
+        {
+            // Arrange — Türkçe format: kilitlenme nedeni (çok fazla yanlış PIN)
+            // ile kalan süre birlikte gösterilir; sayaç tek başına kalmaz.
+            var localization = new Mock<ILocalizationService>();
+            localization
+                .Setup(service => service.GetString("PinEntry.Error.ProfileLockedFormat"))
+                .Returns("Çok fazla yanlış PIN girdiniz. {0} saniye sonra tekrar deneyebilirsiniz.");
+
+            var vm = new PinEntryViewModel(
+                _securityService,
+                new Mock<IDispatcherService>().Object,
+                _securityService.HashPin("1234"),
+                "Test",
+                string.Empty,
+                "Login",
+                localization.Object,
+                failedAttempts: ProfileService.MaxPinAttempts,
+                lockedUntilUtc: DateTime.UtcNow.AddSeconds(30));
+
+            using (vm)
+            {
+                // Act
+                var text = vm.LockoutMessageText;
+
+                // Assert — neden ve saniye sayısı birlikte yer alır
+                Assert.True(vm.IsLocked);
+                Assert.Contains(vm.LockSecondsRemaining.ToString(), text);
+                Assert.Contains("Çok fazla yanlış PIN girdiniz", text);
+                Assert.Contains("saniye sonra tekrar deneyebilirsiniz", text);
+
+                // Hata metni ayrıca çizilmez (UI çakışması olmaz); birleşik
+                // mesaj kilit nedeni + geri sayımı birlikte sunar.
+                Assert.False(vm.ShowErrorMessage);
+                Assert.False(string.IsNullOrEmpty(text));
+            }
+        }
+
+        [Fact]
         public async Task PinEntry_Dispose_CancelsLockoutCountdown()
         {
             // Arrange

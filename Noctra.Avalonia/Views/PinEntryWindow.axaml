@@ -10,7 +10,7 @@
         x:Class="Noctra.Avalonia.Views.PinEntryWindow"
         x:CompileBindings="False"
         Title="{loc:Translate PinEntry.EnterPin}"
-        Width="280" Height="500"
+        Width="280" Height="524"
         WindowStartupLocation="CenterOwner"
         WindowDecorations="None"
         ShowInTaskbar="False"
@@ -163,11 +163,15 @@
                                Foreground="{DynamicResource TextMutedBrush}"/>
                 </StackPanel>
 
-                <!-- Lockout Countdown -->
-                <TextBlock Text="{Binding LockoutCountdownText}"
+                <!-- Lockout Message — neden kilitlenildiği ve kalan süre birlikte gösterilir -->
+                <TextBlock Text="{Binding LockoutMessageText}"
                            FontSize="11" HorizontalAlignment="Center"
                            Foreground="{DynamicResource WarningBrush}"
-                           Height="16" Margin="0,0,0,2"
+                           MaxWidth="200"
+                           MinHeight="16"
+                           Margin="0,0,0,4"
+                           TextAlignment="Center"
+                           TextWrapping="Wrap"
                            IsVisible="{Binding IsLocked}"/>
 
                 <!-- Keypad -->

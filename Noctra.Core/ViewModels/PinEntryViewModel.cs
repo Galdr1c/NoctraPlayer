@@ -29,6 +29,7 @@ public partial class PinEntryViewModel : ObservableObject, IDisposable
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(LockoutCountdownText))]
+    [NotifyPropertyChangedFor(nameof(LockoutMessageText))]
     private int _lockSecondsRemaining;
 
     /// <summary>
@@ -37,6 +38,15 @@ public partial class PinEntryViewModel : ObservableObject, IDisposable
     /// </summary>
     public string LockoutCountdownText => string.Format(
         _localizationService.GetString("PinEntry.LockoutCountdownFormat"),
+        LockSecondsRemaining);
+
+    /// <summary>
+    /// Lockout sırasında gösterilen birleşik mesaj — neden kilitlenildiği ve
+    /// kalan süre birlikte sunulur ("PinEntry.Error.ProfileLockedFormat").
+    /// Böylece sayaç tek başına, bağlamsız görünmez.
+    /// </summary>
+    public string LockoutMessageText => string.Format(
+        _localizationService.GetString("PinEntry.Error.ProfileLockedFormat"),
         LockSecondsRemaining);
 
     [ObservableProperty]
