@@ -4,12 +4,14 @@ using Noctra.Services.Interfaces;
 
 namespace Noctra.ViewModels;
 
-public partial class PinEntryViewModel : ObservableObject
+public partial class PinEntryViewModel : ObservableObject, IDisposable
 {
     private readonly ISecurityService _securityService;
     private readonly IDispatcherService _dispatcherService;
     private readonly string _pinHash;
     private readonly ILocalizationService _localizationService;
+    private readonly CancellationTokenSource _lockoutCts = new();
+    private bool _disposed;
     private const int MaxAttempts = Services.ProfileService.MaxPinAttempts;
     private int _attemptCount;
 
@@ -173,6 +175,8 @@ public partial class PinEntryViewModel : ObservableObject
     /// </summary>
     public void ApplyLockout(DateTime untilUtc)
     {
+        if (_disposed) return;
+
         IsLocked = true;
         var seconds = Math.Max(1, (int)(untilUtc - DateTime.UtcNow).TotalSeconds);
         LockSecondsRemaining = seconds;
@@ -182,22 +186,42 @@ public partial class PinEntryViewModel : ObservableObject
 
         _ = Task.Run(async () =>
         {
-            while (countdown > 0)
+            try
             {
-                await Task.Delay(1000);
-                countdown--;
-                // Yerel değişken kullan — race condition'u önle
-                var captured = countdown;
-                _dispatcherService.BeginInvoke(() => LockSecondsRemaining = captured);
-            }
+                while (countdown > 0)
+                {
+                    await Task.Delay(1000, _lockoutCts.Token);
+                    countdown--;
+                    // Yerel değişken kullan — race condition'u önle
+                    var captured = countdown;
+                    _dispatcherService.BeginInvoke(() => LockSecondsRemaining = captured);
+                }
 
-            _dispatcherService.BeginInvoke(() =>
+                _dispatcherService.BeginInvoke(() =>
+                {
+                    IsLocked = false;
+                    _attemptCount = 0;
+                    ErrorMessage = string.Empty;
+                });
+            }
+            catch (OperationCanceledException)
             {
-                IsLocked = false;
-                _attemptCount = 0;
-                ErrorMessage = string.Empty;
-            });
-        });
+                // VM elden çıkarıldı — geri sayım durur, UI güncellemesi gönderilmez.
+            }
+        }, _lockoutCts.Token);
+    }
+
+    /// <summary>
+    /// PIN ekranı kapatıldığında çağrılır — devam eden lockout sayacını iptal
+    /// eder. Aksi halde detached Task.Run 30 saniye daha yaşar ve ölü ViewModel'e
+    /// dispatcher güncellemeleri göndermeye devam ederdi.
+    /// </summary>
+    public void Dispose()
+    {
+        if (_disposed) return;
+        _disposed = true;
+        _lockoutCts.Cancel();
+        _lockoutCts.Dispose();
     }
 
     [RelayCommand]

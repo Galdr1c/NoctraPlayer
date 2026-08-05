@@ -230,6 +230,9 @@ public partial class ProfileListView : UserControl
         pinViewModel.AttemptFailed -= PinEntry_AttemptFailed;
         pinViewModel.PinResult -= PinEntry_PinResult;
         pinViewModel.PinNeedsRehash -= PinEntry_NeedsRehash;
+        // Akış bitti (doğru PIN, iptal veya "şifremi unuttum") — devam eden
+        // lockout sayacını iptal et; ölü ViewModel artık UI güncellemesi yapamaz.
+        pinViewModel.Dispose();
         ClosePinEntry();
 
         if (result == null)

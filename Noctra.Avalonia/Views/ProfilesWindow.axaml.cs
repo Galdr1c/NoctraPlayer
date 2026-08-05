@@ -118,6 +118,9 @@ public partial class ProfilesWindow : Window
             state.PinLockedUntilUtc);
 
         var pinWindow = new PinEntryWindow(pinVm);
+        // Pencere kapanır kapanmaz (doğru PIN, iptal, X) lockout sayacı iptal
+        // edilir — ölü ViewModel artık dispatcher güncellemesi gönderemez.
+        pinWindow.Closed += (_, _) => pinVm.Dispose();
         bool? result = null;
 
         // Kalıcılık — her başarısız deneme veritabanına yazılır; kilit

@@ -324,8 +324,9 @@ namespace Noctra.Tests
         [Fact]
         public void PinEntry_StartsLocked_WhenLockedUntilInFuture()
         {
-            // Arrange
-            var vm = new PinEntryViewModel(
+            // Arrange — using: lockout sayacı test sonunda iptal edilir, aksi
+            // halde 30 saniyelik detached Task.Run test paketinde yaşamaya devam eder.
+            using var vm = new PinEntryViewModel(
                 _securityService,
                 new Mock<IDispatcherService>().Object,
                 _securityService.HashPin("1234"),
@@ -345,6 +346,72 @@ namespace Noctra.Tests
 
             // Assert
             Assert.Equal(string.Empty, vm.EnteredPin);
+        }
+
+        [Fact]
+        public async Task PinEntry_Dispose_CancelsLockoutCountdown()
+        {
+            // Arrange
+            var dispatcher = new Mock<IDispatcherService>();
+            var vm = new PinEntryViewModel(
+                _securityService,
+                dispatcher.Object,
+                _securityService.HashPin("1234"),
+                "Test",
+                string.Empty,
+                "Login",
+                new Mock<ILocalizationService>().Object,
+                failedAttempts: ProfileService.MaxPinAttempts,
+                lockedUntilUtc: DateTime.UtcNow.AddSeconds(30));
+
+            // Act — countdown başladıktan hemen sonra VM elden çıkarılır
+            vm.Dispose();
+
+            // İptal çalışmasaydı ilk tick 1 saniyede gelirdi; 2.5 sn sonra hiç
+            // UI güncellemesi gelmediyse sayac iptal edilmiş demektir.
+            await Task.Delay(2500);
+
+            // Assert
+            dispatcher.Verify(
+                service => service.BeginInvoke(It.IsAny<Action>()),
+                Times.Never);
+        }
+
+        [Fact]
+        public async Task PinEntry_LockoutCountdown_UnlocksAfterDuration()
+        {
+            // Arrange — dispatcher tick'lerini senkron uygular
+            var dispatcher = new Mock<IDispatcherService>();
+            dispatcher
+                .Setup(service => service.BeginInvoke(It.IsAny<Action>()))
+                .Callback<Action>(action => action());
+
+            var vm = new PinEntryViewModel(
+                _securityService,
+                dispatcher.Object,
+                _securityService.HashPin("1234"),
+                "Test",
+                string.Empty,
+                "Login",
+                new Mock<ILocalizationService>().Object,
+                failedAttempts: ProfileService.MaxPinAttempts,
+                lockedUntilUtc: DateTime.UtcNow.AddSeconds(3));
+
+            using (vm)
+            {
+                Assert.True(vm.IsLocked);
+                Assert.True(vm.LockSecondsRemaining >= 1);
+
+                // Geri sayım bitene kadar bekle (yoğun makinelerde tick gecikebilir)
+                var deadline = DateTime.UtcNow.AddSeconds(8);
+                while (vm.IsLocked && DateTime.UtcNow < deadline)
+                {
+                    await Task.Delay(200);
+                }
+
+                Assert.False(vm.IsLocked);
+                Assert.Equal(0, vm.LockSecondsRemaining);
+            }
         }
 
         [Fact]
