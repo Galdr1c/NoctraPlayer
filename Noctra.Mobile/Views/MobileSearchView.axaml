@@ -32,8 +32,8 @@
                     Theme="{StaticResource Searchicon}"
                     Click="ClearSearch_Click"
                     IsVisible="{Binding SearchQuery, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"
-                    AutomationProperties.Name="Clear search"
-                    AutomationProperties.HelpText="Clears the entered search query">
+                    AutomationProperties.Name="{loc:Translate Mobile.Search.ClearA11yName}"
+                    AutomationProperties.HelpText="{loc:Translate Mobile.Search.ClearA11yHelp}">
               <icons:MaterialIcon Kind="CloseCircleOutline" Width="28" Height="28"
                                   Foreground="{DynamicResource TextMutedBrush}" />
             </Button>

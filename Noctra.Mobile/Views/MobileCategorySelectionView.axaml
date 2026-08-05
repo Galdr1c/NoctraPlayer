@@ -163,8 +163,8 @@
                       Theme="{StaticResource Searchicon}"
                       IsVisible="False"
                       Click="ClearCategorySearch_Click"
-                      AutomationProperties.Name="Clear category search"
-                      AutomationProperties.HelpText="Clears the entered category filter">
+                      AutomationProperties.Name="{loc:Translate Mobile.Categories.ClearSearchA11yName}"
+                      AutomationProperties.HelpText="{loc:Translate Mobile.Categories.ClearSearchA11yHelp}">
                 <icons:MaterialIcon Kind="CloseCircleOutline"
                                     Width="28"
                                     Height="28"
