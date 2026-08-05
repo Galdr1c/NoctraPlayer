@@ -8,6 +8,7 @@
              xmlns:views="using:Noctra.Avalonia.Views"
              xmlns:converters="using:Noctra.Avalonia.Converters"
              xmlns:behaviors="using:Noctra.Avalonia.Behaviors"
+             xmlns:avaloniaConverters="clr-namespace:Avalonia.Data.Converters;assembly=Avalonia.Base"
              xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              xmlns:loc="using:Noctra.Avalonia.Localization"
              mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="800"
@@ -62,51 +63,33 @@
       <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
     </Style>
 
-    <!-- Filter Chip Style -->
-    <Style Selector="RadioButton.filterChip">
-      <Setter Property="Background" Value="Transparent"/>
-      <Setter Property="BorderThickness" Value="1"/>
-      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
-      <Setter Property="CornerRadius" Value="8"/>
-      <Setter Property="Padding" Value="14,6"/>
-      <Setter Property="Margin" Value="0,0,8,0"/>
-      <Setter Property="FontSize" Value="12"/>
-      <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
-      <Setter Property="Template">
-        <ControlTemplate>
-          <Border Background="{TemplateBinding Background}"
-                  BorderBrush="{TemplateBinding BorderBrush}"
-                  BorderThickness="{TemplateBinding BorderThickness}"
-                  CornerRadius="{TemplateBinding CornerRadius}"
-                  Padding="{TemplateBinding Padding}">
-            <ContentPresenter Content="{TemplateBinding Content}"/>
-          </Border>
-        </ControlTemplate>
-      </Setter>
-    </Style>
-    <Style Selector="RadioButton.filterChip:checked">
-      <Setter Property="Background" Value="{DynamicResource NavActiveBackgroundBrush}"/>
-      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-      <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+    <Style Selector="Border.Badge">
+      <Setter Property="Background" Value="{DynamicResource Surface1Brush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="4" />
+      <Setter Property="Padding" Value="10,2" />
     </Style>
 
-    <!-- Download Row Button Style -->
-    <Style Selector="Button.downloadRow">
+    <Style Selector="Border.AccentBadge">
+      <Setter Property="Background" Value="{DynamicResource AccentSubtleBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="4" />
+      <Setter Property="Padding" Value="10,2" />
+    </Style>
+
+    <!-- Whole-card open button (no dead zones; trash stays a separate target) -->
+    <Style Selector="Button.downloadCard">
       <Setter Property="Background" Value="Transparent"/>
       <Setter Property="BorderThickness" Value="0"/>
-      <Setter Property="Padding" Value="12"/>
+      <Setter Property="Padding" Value="14"/>
+      <Setter Property="CornerRadius" Value="8"/>
       <Setter Property="HorizontalAlignment" Value="Stretch"/>
-      <Setter Property="Template">
-        <ControlTemplate>
-          <Border Background="{TemplateBinding Background}"
-                  CornerRadius="8"
-                  Padding="{TemplateBinding Padding}">
-            <ContentPresenter Content="{TemplateBinding Content}"/>
-          </Border>
-        </ControlTemplate>
-      </Setter>
+      <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+      <Setter Property="Cursor" Value="Hand"/>
     </Style>
-    <Style Selector="Button.downloadRow:pointerover">
+    <Style Selector="Button.downloadCard:pointerover">
       <Setter Property="Background" Value="{DynamicResource Surface1Brush}"/>
     </Style>
     <Style Selector="Button.dangerTextHover">
@@ -131,50 +114,25 @@
   <Grid IsVisible="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.Downloads}}">
     <ScrollViewer x:Name="DownloadsScrollViewer">
       <StackPanel Margin="32">
-      
-      <!-- Title Section -->
-      <StackPanel Spacing="4" Margin="0,0,0,24">
-        <TextBlock Text="{loc:Translate Downloads.Title}" FontSize="28" FontWeight="ExtraBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
-        <TextBlock Text="{Binding TotalDownloadsInfoText}" FontSize="13" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding HasDownloadedItems}"/>
-      </StackPanel>
 
-      <!-- Tabs & Content -->
-      <TabControl behaviors:TabSlideTransitionBehavior.IsEnabled="True" ClipToBounds="True" Background="Transparent" SelectedIndex="{Binding DownloadTabIndex, Mode=TwoWay}" Padding="0" Margin="0" BorderThickness="0">
-        <TabControl.Template>
-          <ControlTemplate>
-            <Grid RowDefinitions="Auto,*">
-              <Border Grid.Row="0" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="0,0,0,-2" Margin="0,0,0,24">
-                <ItemsPresenter Name="PART_ItemsPresenter" ItemsPanel="{TemplateBinding ItemsPanel}" Margin="0,0,0,-1"/>
-              </Border>
-              <ContentPresenter Name="PART_SelectedContentHost" Grid.Row="1" Content="{TemplateBinding SelectedContent}" />
-            </Grid>
-          </ControlTemplate>
-        </TabControl.Template>
+        <!-- Title Section -->
+        <StackPanel Spacing="4" Margin="0,0,0,24">
+          <TextBlock Text="{loc:Translate Downloads.Title}" FontSize="28" FontWeight="ExtraBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+          <TextBlock Text="{Binding TotalDownloadsInfoText}" FontSize="13" Foreground="{DynamicResource TextMutedBrush}" IsVisible="{Binding HasDownloadedItems}"/>
+        </StackPanel>
 
-        <TabControl.ItemsPanel>
-          <ItemsPanelTemplate>
-            <StackPanel Orientation="Horizontal"/>
-          </ItemsPanelTemplate>
-        </TabControl.ItemsPanel>
-
-        <!-- TABS CONTENT: LIBRARY -->
-        <TabItem Classes="downloadTab" Header="{loc:Translate Downloads.Tabs.Library}">
-          <StackPanel>
-        
-        <!-- Storage Quota Section -->
+        <!-- Storage Quota Card (above the tabs, like mobile) -->
         <Border Background="{DynamicResource Surface0Brush}" CornerRadius="8" Padding="20" Margin="0,0,0,24" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" ClipToBounds="True">
-          <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="Auto,*,Auto">
+          <Grid ColumnDefinitions="Auto,*,Auto">
             <!-- Icon -->
-            <Border Width="44" Height="44" CornerRadius="8" Background="{DynamicResource SurfaceLightBrush}">
-              <materialIcons:MaterialIcon Kind="Database" Width="32" Height="32" Foreground="{DynamicResource AccentBrush}"/>
-            </Border>
-            
+            <materialIcons:MaterialIcon Kind="Database" Width="48" Height="48" Foreground="{DynamicResource AccentBrush}"/>
+
             <StackPanel Grid.Column="1" Margin="16,0,0,0" VerticalAlignment="Center" Spacing="12">
               <Grid ColumnDefinitions="*,Auto">
                 <TextBlock Text="{loc:Translate Downloads.Storage.Title}" FontWeight="Bold" FontSize="14" Foreground="{DynamicResource TextPrimaryBrush}"/>
                 <TextBlock Grid.Column="1" Text="{Binding StorageUsageDetailText}" FontSize="12" Foreground="{DynamicResource TextMutedBrush}"/>
               </Grid>
-              
+
               <!-- Progress Bar -->
               <Border Height="8" Background="{DynamicResource Bg1Brush}" CornerRadius="2" ClipToBounds="True">
                 <Grid>
@@ -184,16 +142,16 @@
                     <ColumnDefinition Width="{Binding StoragePendingPercent, Converter={StaticResource DoubleToStarGridLengthConverter}}"/>
                     <ColumnDefinition Width="{Binding StorageFreePercent, Converter={StaticResource DoubleToStarGridLengthConverter}}"/>
                   </Grid.ColumnDefinitions>
-                  
+
                   <!-- Other Usage (Lighter Purple) -->
                   <Rectangle Grid.Column="0" Fill="{DynamicResource AccentLightBrush}"/>
-                  
+
                   <!-- Noctra Usage (Solid Accent Purple) -->
                   <Rectangle Grid.Column="1" Fill="{DynamicResource AccentBrush}"/>
-                  
+
                   <!-- Pending Space (Ghost Accent) -->
                   <Rectangle Grid.Column="2" Fill="{DynamicResource AccentBrush}" Opacity="0.5"/>
-                  
+
                   <!-- Free Space (Empty/Background) -->
                   <Rectangle Grid.Column="3" Fill="Transparent"/>
                 </Grid>
@@ -218,270 +176,377 @@
                   <TextBlock Text="{loc:Translate Downloads.Storage.Free}" Foreground="{DynamicResource TextMutedBrush}" FontSize="11"/>
                 </StackPanel>
               </WrapPanel>
-
-              <!-- Warning -->
-              <Border Background="#33FF4444" CornerRadius="6" Padding="10,6" IsVisible="{Binding ShowStorageWarning}">
-                <StackPanel Orientation="Horizontal" Spacing="8">
-                  <materialIcons:MaterialIcon Kind="AlertCircleOutline" Width="14" Height="14" Foreground="#FFFF4444"/>
-                  <TextBlock Text="{loc:Translate Downloads.Storage.Warning}" 
-                             Foreground="#FFFF4444" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                </StackPanel>
-              </Border>
             </StackPanel>
 
-            <!-- Actions -->
-            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="12" Margin="24,0,0,0">
+            <!-- Actions: Delete all (only when there is something) + Open folder -->
+            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="12" Margin="24,0,0,0" VerticalAlignment="Center">
               <Button Content="{loc:Translate Downloads.Action.DeleteAll}" Command="{Binding DeleteAllDownloadsCommand}"
-                      Theme="{StaticResource ErrorButton}"/>
+                      Theme="{StaticResource ErrorButton}"
+                      IsVisible="{Binding HasDownloadedItems}"/>
               <Button Content="{loc:Translate Downloads.Action.OpenFolder}" Command="{Binding OpenDownloadsFolderCommand}"
-                      Padding="14,21" Background="{DynamicResource SurfaceLightBrush}" BorderThickness="0" Foreground="{DynamicResource TextPrimaryBrush}" CornerRadius="6" FontSize="12"
+                      Theme="{StaticResource SettingsActionButton}" FontSize="12"
                       HorizontalAlignment="Stretch" VerticalContentAlignment="Center"/>
             </StackPanel>
           </Grid>
         </Border>
 
-        <!-- Filter Row -->
-        <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,20">
-          <Button Grid.Column="1" x:Name="SortSelectionButton" Classes="DesktopIconButton"
-                  Width="44" Height="44" HorizontalAlignment="Right"
-                  Click="OpenDownloadSortSheet_Click">
-            <materialIcons:MaterialIcon x:Name="SortSelectionIcon" Kind="Sort" Width="23" Height="23"/>
-          </Button>
-        </Grid>
+        <!-- Storage Warning -->
+        <Border Background="#33FF4444" CornerRadius="6" Padding="10,6" Margin="0,0,0,24" IsVisible="{Binding ShowStorageWarning}">
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <materialIcons:MaterialIcon Kind="AlertCircleOutline" Width="14" Height="14" Foreground="#FFFF4444"/>
+            <TextBlock Text="{loc:Translate Downloads.Storage.Warning}" 
+                       Foreground="#FFFF4444" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center"/>
+          </StackPanel>
+        </Border>
 
         <!-- Empty State -->
-        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,60"
+        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,40,0,40"
                     IsVisible="{Binding ShowDownloadsEmptyState}">
           <materialIcons:MaterialIcon Kind="DownloadOffOutline" Width="64" Height="64" Foreground="{DynamicResource TextMutedBrush}" Opacity="0.5"/>
           <TextBlock Text="{loc:Translate Downloads.Empty.Title}" FontSize="20" LetterSpacing="1" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,16,0,4" TextAlignment="Center"/>
           <TextBlock Text="{loc:Translate Downloads.Empty.Description}" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" TextAlignment="Center"/>
         </StackPanel>
 
-        <!-- Series Section -->
-        <StackPanel Spacing="8" Margin="0,0,0,32" IsVisible="{Binding DownloadedSeriesItems.Count, Converter={StaticResource CountToVisibilityConverter}}">
-          <TextBlock Text="{loc:Translate History.Series}" FontSize="20" LetterSpacing="1" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,8"/>
-          <ItemsControl ItemsSource="{Binding DownloadedSeriesItems}">
-            <ItemsControl.ItemTemplate>
-              <DataTemplate x:DataType="models:Series">
-                <Border Background="{DynamicResource Surface0Brush}" CornerRadius="8" Margin="0,0,0,12" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" ClipToBounds="True">
-                  <Button Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).SelectMediaCommand}" 
-                          CommandParameter="{Binding}"
-                          Background="Transparent" BorderThickness="0" Padding="16" HorizontalAlignment="Stretch" CornerRadius="8">
-                    <Grid ColumnDefinitions="Auto,*,Auto">
-                      <!-- Mini Poster -->
-                      <Border Width="48" Height="56" CornerRadius="6" ClipToBounds="True" Background="{DynamicResource Surface1Brush}">
-                        <controls:RemoteImage Stretch="UniformToFill" Url="{Binding CoverUrl}"/>
+        <!-- Tabs & Content (hidden when there is nothing downloaded) -->
+        <TabControl behaviors:TabSlideTransitionBehavior.IsEnabled="True" ClipToBounds="True" Background="Transparent" SelectedIndex="{Binding DownloadTabIndex, Mode=TwoWay}" Padding="0" Margin="0" BorderThickness="0"
+                    IsVisible="{Binding HasAnyDownloadState}">
+          <TabControl.Template>
+            <ControlTemplate>
+              <Grid RowDefinitions="Auto,*">
+                <Border Grid.Row="0" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="0,0,0,-2" Margin="0,0,0,24">
+                  <ItemsPresenter Name="PART_ItemsPresenter" ItemsPanel="{TemplateBinding ItemsPanel}" Margin="0,0,0,-1"/>
+                </Border>
+                <ContentPresenter Name="PART_SelectedContentHost" Grid.Row="1" Content="{TemplateBinding SelectedContent}" />
+              </Grid>
+            </ControlTemplate>
+          </TabControl.Template>
+
+          <TabControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <StackPanel Orientation="Horizontal"/>
+            </ItemsPanelTemplate>
+          </TabControl.ItemsPanel>
+
+          <!-- TABS CONTENT: LIBRARY -->
+          <TabItem Classes="downloadTab" Header="{loc:Translate Downloads.Tabs.Library}">
+            <StackPanel Spacing="16" Margin="0,24,0,0">
+
+              <!-- Sort -->
+              <Grid ColumnDefinitions="*,Auto">
+                <Button Grid.Column="1" x:Name="SortSelectionButton" Classes="DesktopIconButton" Width="44" Height="44"
+                        Click="OpenDownloadSortSheet_Click"
+                        AutomationProperties.Name="{loc:Translate Downloads.Sort.Title}"
+                        AutomationProperties.HelpText="{loc:Translate Downloads.Sort.Title}">
+                  <materialIcons:MaterialIcon x:Name="SortSelectionIcon" Kind="Sort" Width="23" Height="23"/>
+                </Button>
+              </Grid>
+
+              <!-- Series Section -->
+              <StackPanel Spacing="12" IsVisible="{Binding DownloadedSeriesItems.Count, Converter={StaticResource CountToVisibilityConverter}}">
+                <TextBlock Text="{loc:Translate History.Series}" FontSize="20" LetterSpacing="1" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,8"/>
+                <ItemsControl ItemsSource="{Binding DownloadedSeriesItems}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="models:Series">
+                      <!-- Card: the WHOLE card opens the item; only the trash
+                           button is a separate hit target (no dead zones). -->
+                      <Border Background="{DynamicResource Surface0Brush}" CornerRadius="8" Margin="0,0,0,12" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" ClipToBounds="True">
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="2">
+                          <Button Classes="downloadCard"
+                                  Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).SelectMediaCommand}"
+                                  CommandParameter="{Binding}">
+                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                              <!-- Mini Poster -->
+                              <Border Width="48" Height="56" CornerRadius="6" ClipToBounds="True" Background="{DynamicResource Surface1Brush}">
+                                <controls:RemoteImage Stretch="UniformToFill" Url="{Binding CoverUrl}"/>
+                              </Border>
+
+                              <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="4">
+                                <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                <TextBlock Text="{Binding LocalSizeText}" FontSize="12" Foreground="{DynamicResource TextMutedBrush}"/>
+                              </StackPanel>
+
+                              <materialIcons:MaterialIcon Grid.Column="2" Kind="ChevronRight" Foreground="{DynamicResource TextMutedBrush}"
+                                                          Width="24" Height="24" VerticalAlignment="Center"/>
+                            </Grid>
+                          </Button>
+                          <Button Grid.Column="1" Theme="{StaticResource ErrorButton}" VerticalAlignment="Center"
+                                  Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).DeleteDownloadedMediaCommand}"
+                                  CommandParameter="{Binding}"
+                                  MinWidth="48" Padding="8" Background="Transparent" BorderThickness="0">
+                            <materialIcons:MaterialIcon Kind="TrashCanOutline" Width="18" Height="18"/>
+                          </Button>
+                        </Grid>
                       </Border>
-                      
-                      <StackPanel Grid.Column="1" Margin="16,0" VerticalAlignment="Center" Spacing="4">
-                        <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                        <TextBlock Text="{Binding SeasonCountSafe, Converter={StaticResource StringFormatConverter}, ConverterParameter='Series.Seasons.Format'}" FontSize="12" Foreground="{DynamicResource TextMutedBrush}"/>
-                      </StackPanel>
-  
-                      <!-- Info -->
-                      <StackPanel Grid.Column="2" VerticalAlignment="Center" Orientation="Horizontal" Spacing="16">
-                         <TextBlock Text="{Binding LocalSizeText}" FontSize="12" Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center"/>
-                         <Button Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).DeleteDownloadedMediaCommand}" 
-                                 CommandParameter="{Binding}"
-                                 Classes="dangerTextHover"
-                                 Padding="8" Background="Transparent" BorderThickness="0">
-                           <materialIcons:MaterialIcon Kind="TrashCanOutline" Width="18" Height="18"/>
-                         </Button>
-                         <materialIcons:MaterialIcon Kind="ChevronRight" Foreground="{DynamicResource TextMutedBrush}" Opacity="0.5"/>
-                      </StackPanel>
-                    </Grid>
-                  </Button>
-                </Border>
-              </DataTemplate>
-            </ItemsControl.ItemTemplate>
-          </ItemsControl>
-        </StackPanel>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
 
-        <!-- Movies Section -->
-        <StackPanel Spacing="8" IsVisible="{Binding DownloadedVodChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
-          <TextBlock Text="{loc:Translate History.Movies}" FontSize="20" LetterSpacing="1" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,8"/>
-          <ItemsControl ItemsSource="{Binding DownloadedVodChannels}">
-            <ItemsControl.ItemTemplate>
-              <DataTemplate x:DataType="models:Channel">
-                <Border Background="{DynamicResource Surface0Brush}" CornerRadius="12" Margin="0,0,0,12" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" ClipToBounds="True">
-                  <Button Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).SelectMediaCommand}" 
-                          CommandParameter="{Binding}"
-                          Background="Transparent" BorderThickness="0" Padding="16" HorizontalAlignment="Stretch" CornerRadius="12">
-                    <Grid ColumnDefinitions="Auto,*,Auto">
-                      <!-- Mini Poster -->
-                      <Border Width="48" Height="56" CornerRadius="6" ClipToBounds="True" Background="{DynamicResource Surface1Brush}">
-                        <controls:RemoteImage Stretch="UniformToFill" Url="{Binding CoverUrl}"/>
+              <!-- Movies Section -->
+              <StackPanel Spacing="12" IsVisible="{Binding DownloadedVodChannels.Count, Converter={StaticResource CountToVisibilityConverter}}">
+                <TextBlock Text="{loc:Translate History.Movies}" FontSize="20" LetterSpacing="1" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,8"/>
+                <ItemsControl ItemsSource="{Binding DownloadedVodChannels}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="models:Channel">
+                      <!-- Card: the WHOLE card opens the item; only the trash
+                           button is a separate hit target (no dead zones). -->
+                      <Border Background="{DynamicResource Surface0Brush}" CornerRadius="8" Margin="0,0,0,12" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" ClipToBounds="True">
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="2">
+                          <Button Classes="downloadCard"
+                                  Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).SelectMediaCommand}"
+                                  CommandParameter="{Binding}">
+                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                              <!-- Mini Poster -->
+                              <Border Width="48" Height="64" CornerRadius="6" ClipToBounds="True" Background="{DynamicResource Surface1Brush}">
+                                <controls:RemoteImage Stretch="UniformToFill" Url="{Binding CoverUrl}"/>
+                              </Border>
+
+                              <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="4">
+                                <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                <TextBlock Text="{Binding LocalSizeText}" FontSize="12" Foreground="{DynamicResource TextMutedBrush}"/>
+                              </StackPanel>
+
+                              <materialIcons:MaterialIcon Grid.Column="2" Kind="PlayOutline" Foreground="{DynamicResource TextMutedBrush}"
+                                                          Width="24" Height="24" VerticalAlignment="Center"/>
+                            </Grid>
+                          </Button>
+                          <Button Grid.Column="1" Theme="{StaticResource ErrorButton}" VerticalAlignment="Center"
+                                  Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).DeleteDownloadedMediaCommand}"
+                                  CommandParameter="{Binding}"
+                                  MinWidth="48" Padding="8" Background="Transparent" BorderThickness="0">
+                            <materialIcons:MaterialIcon Kind="TrashCanOutline" Width="18" Height="18"/>
+                          </Button>
+                        </Grid>
                       </Border>
-                      
-                      <StackPanel Grid.Column="1" Margin="16,0" VerticalAlignment="Center" Spacing="4">
-                        <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                      </StackPanel>
-  
-                      <!-- Info -->
-                      <StackPanel Grid.Column="2" VerticalAlignment="Center" Orientation="Horizontal" Spacing="16">
-                         <TextBlock Text="{Binding LocalSizeText}" FontSize="12" Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center"/>
-                         
-
-
-                         <Button Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).DeleteDownloadedMediaCommand}" 
-                                 CommandParameter="{Binding}"
-                                 Classes="dangerTextHover"
-                                 Padding="8" Background="Transparent" BorderThickness="0">
-                           <materialIcons:MaterialIcon Kind="TrashCanOutline" Width="18" Height="18"/>
-                         </Button>
-                         <materialIcons:MaterialIcon Kind="PlayCircleOutline" Width="20" Height="20" Foreground="{DynamicResource AccentBrush}" Opacity="0.8"/>
-                      </StackPanel>
-                    </Grid>
-                  </Button>
-                </Border>
-              </DataTemplate>
-            </ItemsControl.ItemTemplate>
-          </ItemsControl>
-        </StackPanel>
-      </StackPanel>
-    </TabItem>
-
-      <!-- TABS CONTENT: DOWNLOAD CENTER -->
-      <TabItem Classes="downloadTab">
-        <TabItem.Header>
-          <StackPanel Orientation="Horizontal" Spacing="8">
-            <TextBlock Text="{loc:Translate Downloads.Tabs.Center}" VerticalAlignment="Center"/>
-            <Border IsVisible="{Binding ActiveDownloadCount, Converter={StaticResource CountToVisibilityConverter}}"
-                    Background="{DynamicResource AccentBrush}" CornerRadius="8" Padding="6,1" VerticalAlignment="Center">
-              <TextBlock Text="{Binding ActiveDownloadCount}" Foreground="White" FontSize="10" FontWeight="Bold"/>
-            </Border>
-          </StackPanel>
-        </TabItem.Header>
-        <StackPanel>
-        
-        <!-- Summary Header (Optional, kept for speed/status info) -->
-        <Border Background="{DynamicResource Surface0Brush}" CornerRadius="8" Padding="16" Margin="0,0,0,24" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" ClipToBounds="True">
-          <Grid ColumnDefinitions="Auto,Auto,*">
-            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,24,0">
-              <materialIcons:MaterialIcon Kind="Speedometer" Foreground="{DynamicResource AccentBrush}"/>
-              <TextBlock Text="{Binding ActiveDownloadsTotalSpeedText, Converter={StaticResource StringFormatConverter}, ConverterParameter='Downloads.Stats.Speed.Format'}" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
             </StackPanel>
-            <TextBlock Grid.Column="1" Text="{Binding ActiveDownloadCount, Converter={StaticResource StringFormatConverter}, ConverterParameter='Downloads.Stats.Active.Format'}" Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center"/>
-          </Grid>
-        </Border>
+          </TabItem>
 
-        <!-- Ongoing SECTION -->
-        <StackPanel Spacing="16" Margin="0,0,0,40" IsVisible="{Binding ActiveDownloadingItems.Count, Converter={StaticResource CountToVisibilityConverter}}">
-          <Grid ColumnDefinitions="*,Auto">
-            <StackPanel Orientation="Horizontal" Spacing="12">
-              <TextBlock Text="{loc:Translate Downloads.Ongoing.Title}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"/>
-              <Border Background="{DynamicResource SurfaceLightBrush}" CornerRadius="8" Padding="8,1" VerticalAlignment="Center">
-                <TextBlock Text="{Binding ActiveDownloadingItems.Count, Converter={StaticResource StringFormatConverter}, ConverterParameter='Downloads.Ongoing.Count.Format'}" Foreground="{DynamicResource TextMutedBrush}" FontSize="12"/>
-              </Border>
-            </StackPanel>
-            <Button Grid.Column="1" Content="{loc:Translate Downloads.Action.StopAll}" Command="{Binding StopAllDownloadsCommand}"
-                    Padding="12,6" Background="{DynamicResource SurfaceLightBrush}" BorderThickness="0" Foreground="{DynamicResource TextPrimaryBrush}" CornerRadius="6" FontSize="12"/>
-          </Grid>
+          <!-- TABS CONTENT: DOWNLOAD CENTER -->
+          <TabItem Classes="downloadTab">
+            <TabItem.Header>
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock Text="{loc:Translate Downloads.Tabs.Center}" VerticalAlignment="Center"/>
+                <Border IsVisible="{Binding ActiveDownloadCount, Converter={StaticResource CountToVisibilityConverter}}"
+                        Classes="AccentBadge">
+                  <TextBlock Text="{Binding ActiveDownloadCount}" Foreground="White" FontSize="10" FontWeight="Bold"/>
+                </Border>
+              </StackPanel>
+            </TabItem.Header>
+            <StackPanel Spacing="16" Margin="0,24,0,0">
 
-          <!-- Active Cards -->
-          <ItemsControl ItemsSource="{Binding ActiveDownloadingItems}">
-            <ItemsControl.ItemTemplate>
-              <DataTemplate x:DataType="models:DownloadItem">
-                <Border Background="{DynamicResource Surface0Brush}" CornerRadius="8" Padding="16" Margin="0,0,0,12" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" ClipToBounds="True">
-                  <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto">
-                    <!-- Poster -->
-                    <Border Grid.RowSpan="2" Width="48" Height="64" CornerRadius="6" ClipToBounds="True" Background="{DynamicResource Surface1Brush}" Margin="0,0,16,0">
-                      <controls:RemoteImage Stretch="UniformToFill" Url="{Binding PosterUrl}"/>
-                    </Border>
-                    
-                    <!-- Info Center -->
-                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="4">
-                      <TextBlock Text="{Binding BaseDisplayName}" FontWeight="Bold" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                      <TextBlock Text="{Binding ., Converter={StaticResource DownloadStatusToLocalizedTextConverter}}" FontSize="12" Foreground="{DynamicResource TextMutedBrush}"/>
-                    </StackPanel>
+              <!-- Ongoing Header -->
+              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12"
+                    IsVisible="{Binding ActiveDownloadingItems.Count, Converter={StaticResource CountToVisibilityConverter}}">
+                <StackPanel Orientation="Horizontal" Spacing="12">
+                  <TextBlock Text="{loc:Translate Downloads.Ongoing.Title}" VerticalAlignment="Center" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                  <Border Classes="Badge" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding ActiveDownloadingItems.Count, Converter={StaticResource StringFormatConverter}, ConverterParameter='Downloads.Ongoing.Count.Format'}" Foreground="{DynamicResource TextMutedBrush}" FontSize="12"/>
+                  </Border>
+                </StackPanel>
+                <Button Grid.Column="1" Theme="{StaticResource ErrorButton}" Command="{Binding StopAllDownloadsCommand}"
+                        Padding="12,6" FontSize="12" VerticalAlignment="Center">
+                  <StackPanel Orientation="Horizontal" Spacing="6">
+                    <materialIcons:MaterialIcon Kind="Close" Width="16" Height="16"/>
+                    <TextBlock Text="{loc:Translate Downloads.Action.StopAll}"/>
+                  </StackPanel>
+                </Button>
+              </Grid>
 
-                    <!-- Speed/Percent Info (Overlaying progress area) -->
-                    <Grid Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,12,0,0" VerticalAlignment="Center">
-                      <StackPanel Spacing="6">
-                         <Grid ColumnDefinitions="*,Auto">
-                           <TextBlock Text="{Binding SizeText}" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
-                           <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
-                             <TextBlock Text="{Binding ., Converter={StaticResource DownloadSpeedTextConverter}}" FontSize="11" Foreground="{DynamicResource TextMutedBrush}" FontWeight="SemiBold"/>
-                             <TextBlock Text="{Binding ., Converter={StaticResource DownloadEtaTextConverter}}" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
-                           </StackPanel>
-                         </Grid>
-                         <ProgressBar Height="5" Minimum="0" Maximum="100" Value="{Binding ProgressPercent}" 
-                                      Foreground="{Binding Status, Converter={StaticResource DownloadStatusToBrushConverter}}" 
-                                      CornerRadius="2"/>
+              <!-- Active Empty State -->
+              <StackPanel HorizontalAlignment="Center" Spacing="6" Margin="0,16,0,16"
+                          IsVisible="{Binding ActiveDownloadCount, Converter={StaticResource CountToVisibilityConverter}, ConverterParameter=invert}">
+                <TextBlock Text="{loc:Translate Downloads.Ongoing.Empty.Title}" FontSize="15" FontWeight="SemiBold"
+                           Foreground="{DynamicResource TextMutedBrush}" TextAlignment="Center"/>
+                <TextBlock Text="{loc:Translate Downloads.Ongoing.Empty.Description}" FontSize="12" Opacity="0.65"
+                           Foreground="{DynamicResource TextMutedBrush}" TextAlignment="Center"/>
+              </StackPanel>
+
+              <!-- Active Cards -->
+              <ItemsControl ItemsSource="{Binding ActiveDownloadingItems}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="models:DownloadItem">
+                    <Border Background="{DynamicResource Surface0Brush}" CornerRadius="8" Padding="16" Margin="0,0,0,12" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" ClipToBounds="True">
+                      <StackPanel Spacing="8">
+                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                          <!-- Poster -->
+                          <Border Width="48" Height="64" CornerRadius="6" ClipToBounds="True" Background="{DynamicResource Surface1Brush}">
+                            <Grid>
+                              <materialIcons:MaterialIcon Kind="Download" Foreground="{DynamicResource TextMutedBrush}" Width="24" Height="24" Opacity="0.35"/>
+                              <controls:RemoteImage Stretch="UniformToFill" Url="{Binding PosterUrl}"/>
+                            </Grid>
+                          </Border>
+
+                          <!-- Info -->
+                          <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding BaseDisplayName}" FontWeight="Bold" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis"/>
+                            <TextBlock Text="{Binding ., Converter={StaticResource DownloadStatusToLocalizedTextConverter}}" FontSize="12" Foreground="{DynamicResource TextMutedBrush}" TextWrapping="Wrap"/>
+                          </StackPanel>
+
+                          <!-- Percent -->
+                          <TextBlock Grid.Column="2" Text="{Binding ProgressText}" FontWeight="SemiBold" FontSize="14"
+                                     Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <ProgressBar Height="6" Minimum="0" Maximum="100" Value="{Binding ProgressPercent}"
+                                     Foreground="{Binding Status, Converter={StaticResource DownloadStatusToBrushConverter}}"
+                                     CornerRadius="2"/>
+
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                          <StackPanel Spacing="2" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding SizeText}" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                              <TextBlock Text="{Binding ., Converter={StaticResource DownloadSpeedTextConverter}}" FontSize="11" Foreground="{DynamicResource TextMutedBrush}" FontWeight="SemiBold"/>
+                              <TextBlock Text="•" FontSize="11" Foreground="{DynamicResource TextMutedBrush}" Opacity="0.5"
+                                         IsVisible="{Binding SpeedBytesPerSecond, Converter={StaticResource CountToVisibilityConverter}}"/>
+                              <TextBlock Text="{Binding ., Converter={StaticResource DownloadEtaTextConverter}}" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
+                            </StackPanel>
+                          </StackPanel>
+
+                          <!-- Actions -->
+                          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                            <Button Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).TogglePauseDownloadCommand}"
+                                    CommandParameter="{Binding}"
+                                    Theme="{StaticResource SettingsActionButton}" FontSize="12">
+                              <StackPanel Orientation="Horizontal" Spacing="6">
+                                <materialIcons:MaterialIcon Kind="{Binding IsPaused, Converter={StaticResource BoolToMaterialIconKindConverter}, ConverterParameter='Play|Pause'}" Width="16" Height="16"/>
+                                <TextBlock Text="{loc:Translate Downloads.Action.Resume}" IsVisible="{Binding IsPaused}"/>
+                                <TextBlock Text="{loc:Translate Downloads.Action.Pause}" IsVisible="{Binding !IsPaused}"/>
+                              </StackPanel>
+                            </Button>
+                            <Button Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).CancelDownloadCommand}"
+                                    CommandParameter="{Binding}"
+                                    Theme="{StaticResource ErrorButton}" Padding="10,6" FontSize="12">
+                              <StackPanel Orientation="Horizontal" Spacing="6">
+                                <materialIcons:MaterialIcon Kind="Close" Width="16" Height="16"/>
+                                <TextBlock Text="{loc:Translate Downloads.Action.Cancel}"/>
+                              </StackPanel>
+                            </Button>
+                          </StackPanel>
+                        </Grid>
                       </StackPanel>
-                    </Grid>
-
-                    <!-- Actions Right -->
-                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Top">
-                      <Button Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).TogglePauseDownloadCommand}" CommandParameter="{Binding}" Background="{DynamicResource SurfaceLightBrush}" Padding="8" CornerRadius="6">
-                        <materialIcons:MaterialIcon Kind="{Binding IsPaused, Converter={StaticResource BoolToMaterialIconKindConverter}, ConverterParameter='Play|Pause'}" Width="16" Height="16"/>
-                      </Button>
-                      <Button Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).CancelDownloadCommand}" CommandParameter="{Binding}" Background="{DynamicResource SurfaceLightBrush}" Padding="8" CornerRadius="6">
-                        <materialIcons:MaterialIcon Kind="Close" Foreground="{DynamicResource ErrorBrush}" Width="16" Height="16"/>
-                      </Button>
-                    </StackPanel>
-
-                    <!-- Status Label End -->
-                    <TextBlock Grid.Column="2" Grid.Row="1" 
-                               Text="{Binding ., Converter={StaticResource DownloadStatusToLocalizedTextConverter}}" 
-                               IsVisible="{Binding !IsPaused}"
-                               FontSize="11" Foreground="{DynamicResource AccentBrush}" 
-                               FontWeight="Bold" VerticalAlignment="Bottom" HorizontalAlignment="Right" Margin="0,0,0,-18"/>
-                  </Grid>
-                </Border>
-              </DataTemplate>
-            </ItemsControl.ItemTemplate>
-          </ItemsControl>
-        </StackPanel>
-
-        <!-- Queue SECTION -->
-        <StackPanel Spacing="16" IsVisible="{Binding QueuedDownloadItems.Count, Converter={StaticResource CountToVisibilityConverter}}">
-          <Grid ColumnDefinitions="*,Auto">
-            <TextBlock Text="{loc:Translate Downloads.Queue.Title}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"/>
-            <Button Grid.Column="1" Content="{loc:Translate Downloads.Action.ClearQueue}" Command="{Binding ClearQueueCommand}"
-                    Padding="12,6" Background="{DynamicResource SurfaceLightBrush}" BorderThickness="0" Foreground="{DynamicResource TextPrimaryBrush}" CornerRadius="6" FontSize="12"/>
-          </Grid>
-
-          <!-- Queued Kompakt Liste -->
-          <ItemsControl ItemsSource="{Binding QueuedDownloadItems}">
-            <ItemsControl.ItemTemplate>
-              <DataTemplate x:DataType="models:DownloadItem">
-                <Border Background="{DynamicResource Surface0Brush}" Opacity="0.7" CornerRadius="8" Padding="12,8" Margin="0,0,0,8">
-                  <Grid ColumnDefinitions="32,40,*,Auto">
-                    <!-- Number -->
-                    <TextBlock Text="{Binding QueueOrder}" VerticalAlignment="Center" HorizontalAlignment="Center" 
-                               FontSize="14" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}"/>
-                    
-                    <!-- Mini Icon -->
-                    <Border Grid.Column="1" Width="28" Height="28" CornerRadius="4" ClipToBounds="True" Background="{DynamicResource Surface1Brush}" Margin="8,0">
-                      <controls:RemoteImage Stretch="UniformToFill" Url="{Binding PosterUrl}"/>
                     </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
 
-                    <!-- Title -->
-                    <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="2">
-                      <TextBlock Text="{Binding BaseDisplayName}" FontSize="13" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                      <TextBlock Text="{Binding ., Converter={StaticResource DownloadStatusToLocalizedTextConverter}}" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
-                    </StackPanel>
+              <!-- Queue Header -->
+              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,16,0,0"
+                    IsVisible="{Binding QueuedDownloadItems.Count, Converter={StaticResource CountToVisibilityConverter}}">
+                <TextBlock Text="{loc:Translate Downloads.Queue.Title}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                <Button Grid.Column="1" Command="{Binding ClearQueueCommand}"
+                        Theme="{StaticResource ErrorButton}" VerticalAlignment="Center">
+                  <StackPanel Orientation="Horizontal" Spacing="6">
+                    <materialIcons:MaterialIcon Kind="Close" Width="16" Height="16"/>
+                    <TextBlock Text="{loc:Translate Downloads.Action.ClearQueue}"/>
+                  </StackPanel>
+                </Button>
+              </Grid>
 
-                    <!-- Actions/Size -->
-                    <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
-                      <TextBlock Text="{Binding BytesTotal, Converter={StaticResource BytesToHumanConverter}}" 
-                                 FontSize="12" Foreground="{DynamicResource TextMutedBrush}"/>
-                      <Button Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).CancelDownloadCommand}" 
-                              CommandParameter="{Binding}" Background="Transparent" Padding="4">
-                        <materialIcons:MaterialIcon Kind="Close" Width="14" Height="14" Foreground="{DynamicResource TextMutedBrush}"/>
-                      </Button>
-                    </StackPanel>
-                  </Grid>
-                </Border>
-              </DataTemplate>
-            </ItemsControl.ItemTemplate>
-          </ItemsControl>
-        </StackPanel>
-        </StackPanel>
-      </TabItem>
-    </TabControl>
+              <!-- Queue Cards -->
+              <ItemsControl ItemsSource="{Binding QueuedDownloadItems}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="models:DownloadItem">
+                    <Border Background="{DynamicResource Surface0Brush}" Opacity="0.8" CornerRadius="8" Padding="12" Margin="0,0,0,8">
+                      <Grid ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="10">
+                        <!-- Number -->
+                        <TextBlock Text="{Binding QueueOrder}" VerticalAlignment="Center" HorizontalAlignment="Center"
+                                   FontSize="14" FontWeight="Bold" Foreground="{DynamicResource TextMutedBrush}"/>
 
+                        <!-- Mini Icon -->
+                        <Border Grid.Column="1" Width="32" Height="32" CornerRadius="6" ClipToBounds="True" Background="{DynamicResource Surface1Brush}" VerticalAlignment="Center">
+                          <Grid>
+                            <materialIcons:MaterialIcon Kind="Download" Foreground="{DynamicResource TextMutedBrush}" Width="16" Height="16" Opacity="0.35"/>
+                            <controls:RemoteImage Stretch="UniformToFill" Url="{Binding PosterUrl}"/>
+                          </Grid>
+                        </Border>
+
+                        <!-- Title -->
+                        <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="2">
+                          <TextBlock Text="{Binding BaseDisplayName}" FontSize="13" Foreground="{DynamicResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis"/>
+                          <TextBlock Text="{Binding ., Converter={StaticResource DownloadStatusToLocalizedTextConverter}}" FontSize="11" Foreground="{DynamicResource TextMutedBrush}" TextTrimming="CharacterEllipsis"/>
+                        </StackPanel>
+
+                        <!-- Actions/Size -->
+                        <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                          <TextBlock Text="{Binding BytesTotal, Converter={StaticResource BytesToHumanConverter}}"
+                                     FontSize="12" Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center"/>
+                          <Button Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).CancelDownloadCommand}"
+                                  CommandParameter="{Binding}"
+                                  Theme="{StaticResource ErrorButton}" FontSize="12">
+                            <StackPanel Orientation="Horizontal" Spacing="5">
+                              <materialIcons:MaterialIcon Kind="Close" Width="14" Height="14"/>
+                              <TextBlock Text="{loc:Translate Downloads.Action.Cancel}"/>
+                            </StackPanel>
+                          </Button>
+                        </StackPanel>
+                      </Grid>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+
+              <!-- Failed Header -->
+              <Grid ColumnDefinitions="*,Auto" Margin="0,16,0,0"
+                    IsVisible="{Binding FailedDownloadItems.Count, Converter={StaticResource CountToVisibilityConverter}}">
+                <TextBlock Text="{loc:Translate Downloads.Failed.Title}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+              </Grid>
+
+              <!-- Failed Cards -->
+              <ItemsControl ItemsSource="{Binding FailedDownloadItems}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="models:DownloadItem">
+                    <Border Background="{DynamicResource Surface0Brush}" CornerRadius="8" Padding="12" Margin="0,0,0,8">
+                      <StackPanel Spacing="8">
+                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+                          <Border Width="48" Height="64" CornerRadius="6" ClipToBounds="True" Background="{DynamicResource Surface1Brush}">
+                            <Grid>
+                              <materialIcons:MaterialIcon Kind="AlertCircleOutline" Foreground="{DynamicResource ErrorBrush}" Width="24" Height="24" Opacity="0.7"/>
+                              <controls:RemoteImage Stretch="UniformToFill" Url="{Binding PosterUrl}"/>
+                            </Grid>
+                          </Border>
+                          <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding BaseDisplayName}" FontWeight="Bold" FontSize="14" Foreground="{DynamicResource TextPrimaryBrush}" TextWrapping="Wrap"/>
+                            <TextBlock Text="{Binding ErrorMessage}" Foreground="{DynamicResource ErrorBrush}" FontSize="12" TextWrapping="Wrap"
+                                       IsVisible="{Binding ErrorMessage, Converter={x:Static avaloniaConverters:StringConverters.IsNotNullOrEmpty}}"/>
+                            <TextBlock Text="{Binding SizeText, Converter={StaticResource StringFormatConverter}, ConverterParameter='Downloads.Failed.SizeFormat'}"
+                                       FontSize="12" Foreground="{DynamicResource TextMutedBrush}"/>
+                          </StackPanel>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                          <TextBlock Text="{Binding ., Converter={StaticResource DownloadStatusToLocalizedTextConverter}}"
+                                     FontSize="12" Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                            <Button Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).RetryDownloadCommand}"
+                                    CommandParameter="{Binding}"
+                                    Theme="{StaticResource PrimaryButtonStyle}" Padding="12,6" FontSize="12">
+                              <StackPanel Orientation="Horizontal" Spacing="6">
+                                <materialIcons:MaterialIcon Kind="Refresh" Width="16" Height="16"/>
+                                <TextBlock Text="{loc:Translate Downloads.Failed.Retry}"/>
+                              </StackPanel>
+                            </Button>
+                            <Button Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).CancelDownloadCommand}"
+                                    CommandParameter="{Binding}"
+                                    Theme="{StaticResource ErrorButton}" FontSize="12">
+                              <StackPanel Orientation="Horizontal" Spacing="6">
+                                <materialIcons:MaterialIcon Kind="Close" Width="16" Height="16"/>
+                                <TextBlock Text="{loc:Translate Downloads.Action.Delete}"/>
+                              </StackPanel>
+                            </Button>
+                          </StackPanel>
+                        </Grid>
+                      </StackPanel>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+          </TabItem>
+        </TabControl>
       </StackPanel>
     </ScrollViewer>
     <views:DesktopSelectionSheet x:Name="SelectionSheetHost" ZIndex="40000" />
