@@ -1681,12 +1681,6 @@ public partial class AddProfileViewModel : ObservableObject
         HasError = false;
         StatusMessage = string.Empty;
 
-        // Non-premium users cannot save with PIN
-        if (HasPin && !_licenseService.IsPremium)
-        {
-            HasPin = false;
-        }
-
         // If user did not type a name, generate one from URL host.
         if (string.IsNullOrWhiteSpace(ProfileName))
         {
@@ -1789,6 +1783,15 @@ public partial class AddProfileViewModel : ObservableObject
                 }
             }
 
+            var existingPinHash = EditingProfile?.PinHash;
+            var effectivePinHash = !_licenseService.IsPremium && existingPinHash != null
+                ? existingPinHash  // Premium expired: keep the existing PIN untouched
+                : HasPin && PinCode.Length == 4
+                    ? _securityService.HashPin(PinCode)
+                    : HasPin && existingPinHash != null
+                        ? existingPinHash  // Keep existing PIN if toggle is on but no new code entered
+                        : null;            // PIN disabled or removed
+
             var request = new ProfileSaveRequest
             {
                 ProfileName = ProfileName,
@@ -1799,11 +1802,7 @@ public partial class AddProfileViewModel : ObservableObject
                 EncryptedPassword = encryptedPassword,
                 AccountType = newAccountType,
                 CredentialsChanged = credentialsChanged,
-                PinHash = HasPin && PinCode.Length == 4
-                    ? _securityService.HashPin(PinCode)
-                    : HasPin && EditingProfile?.PinHash != null
-                        ? EditingProfile.PinHash  // Keep existing PIN if toggle is on but no new code entered
-                        : null,                    // PIN disabled or removed
+                PinHash = effectivePinHash,
                 ExistingIds = EditingProfile != null
                     ? new ExistingProfileIds(EditingProfile.Id, EditingProfile.ProviderAccountId)
                     : null

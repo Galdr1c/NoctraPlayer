@@ -55,7 +55,7 @@ namespace Noctra.Tests
 
         private async Task<Profile> SeedProfileAsync(string name = "Test Profile", string? pinHash = null)
         {
-            var account = new ProviderAccount { Name = name + " Account", Url = "http://test.com" };
+            var account = new ProviderAccount { Name = name + " Account", Url = "http://test.com", Type = ProfileType.M3U };
             _context.ProviderAccounts.Add(account);
             await _context.SaveChangesAsync();
 
@@ -126,6 +126,50 @@ namespace Noctra.Tests
 
             // Assert
             Assert.False(vm.IsPinAvailable, "PIN should not be available for non-premium users.");
+        }
+
+        [Fact]
+        public async Task PremiumExpired_EditProfileSave_PreservesExistingPinHash()
+        {
+            // Arrange
+            _mockLicenseService.Setup(l => l.IsPremium).Returns(false);
+            _mockLicenseService.Setup(l => l.IsWithinLimit(It.IsAny<string>(), It.IsAny<int>())).Returns(true);
+
+            var oldPin = "1234";
+            var oldHash = _securityService.HashPin(oldPin);
+            var profile = await SeedProfileAsync("Premium Expired", oldHash);
+
+            var service = new ProfileService(_contextFactory, _mockDownloadService.Object, _mockLicenseService.Object);
+
+            var mockAvatarService = new Mock<IAvatarService>();
+            mockAvatarService.Setup(s => s.GetAvatarsByCategory())
+                .Returns(new Dictionary<string, List<string>> { { "All", new List<string> { "avatar_1" } } });
+
+            var vm = new AddProfileViewModel(
+                service,
+                new Mock<IDispatcherService>().Object,
+                mockAvatarService.Object,
+                new Mock<IDialogService>().Object,
+                _mockLicenseService.Object,
+                new Mock<IM3UParser>().Object,
+                new Mock<IXtreamCodesService>().Object,
+                new Mock<IStalkerPortalService>().Object,
+                _securityService,
+                new Mock<ILocalizationService>().Object);
+
+            vm.InitializeForEdit(profile);
+            Assert.True(vm.HasPin, "Existing PIN must surface as HasPin when editing.");
+
+            // Act — non-premium user edits profile details only
+            vm.ProfileName = "Renamed Profile";
+            await vm.SaveCommand.ExecuteAsync(null);
+
+            // Assert — the existing PIN must be preserved, not silently removed
+            using var dbVerify = _contextFactory.CreateDbContext();
+            var updatedProfile = await dbVerify.Profiles.FindAsync(profile.Id);
+            Assert.NotNull(updatedProfile);
+            Assert.Equal(oldHash, updatedProfile!.PinHash);
+            Assert.True(_securityService.VerifyPin(oldPin, updatedProfile.PinHash));
         }
 
         [Fact]
