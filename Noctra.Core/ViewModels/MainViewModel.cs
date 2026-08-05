@@ -767,9 +767,22 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private Profile? _currentProfile;
 
-    public async Task LoadProfileAsync(Profile profile)
+    private ProfileAccessGrant? _activeProfileGrant;
+
+    public async Task LoadProfileAsync(Profile profile, ProfileAccessGrant? grant = null)
     {
         if (profile == null) return;
+
+        // PIN korumalı bir profil ancak geçerli bir merkezî erişim yetkisiyle
+        // yüklenebilir — deep link, kısayol, otomatik seçim veya yanlış bağlanmış
+        // bir komut bu kapıyı atlayamaz. PIN'siz profiller için koruma gerekmez.
+        if (!string.IsNullOrEmpty(profile.PinHash)
+            && (grant == null || !grant.Authorizes(profile.Id, ProfileAccessPurpose.Load)))
+        {
+            throw new ProfileAccessDeniedException(
+                $"PIN korumalı profil {profile.Id} için yükleme yetkisi yok.");
+        }
+
         PerformanceTrace.Mark("profile.tap", profile.Id, $"profile-{profile.Id}");
         var profileScope = BeginProfileLoadScope(profile.Id);
 
@@ -783,6 +796,7 @@ public partial class MainViewModel : ObservableObject
         StatusMessage = _localizationService.GetString("Main.Status.PreparingContent");
         CurrentProfileId = profile.Id;
         CurrentProfile = profile;
+        _activeProfileGrant = grant;
         await RefreshActiveImportJobStatusAsync(profileScope.Token);
 
         // Load profile-specific settings
@@ -5068,7 +5082,8 @@ public partial class MainViewModel : ObservableObject
             if (CurrentProfile != null && !isBackground)
             {
                 // If profile has no playlist record, try to load/create it once.
-                await LoadProfileAsync(CurrentProfile);
+                // Oturum içi yeniden yükleme: profilin girişte aldığı yetkiyle.
+                await LoadProfileAsync(CurrentProfile, _activeProfileGrant);
             }
 
             if (SelectedPlaylist == null)

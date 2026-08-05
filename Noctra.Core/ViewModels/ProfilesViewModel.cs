@@ -15,6 +15,7 @@ public partial class ProfilesViewModel : ObservableObject
 {
     private const string ProfilesLimitKey = "profiles";
     private readonly IProfileService _profileService;
+    private readonly IProfileAccessService _profileAccessService;
     private readonly IDialogService _dialogService;
     private readonly IDispatcherService _dispatcherService;
     private readonly ILicenseService _licenseService; private readonly ILocalizationService _localizationService;
@@ -38,18 +39,27 @@ public partial class ProfilesViewModel : ObservableObject
     [ObservableProperty]
     private ObservableCollection<object> _displayItems = new();
 
-    public event Action<Profile>? OnProfileSelected;
+    public event Action<Profile, ProfileAccessGrant?>? OnProfileSelected;
     public event Action<Profile>? OnProfileAddRequested;
-    public event Action<Profile>? OnProfileEditRequested;
+    public event Action<Profile, ProfileAccessGrant?>? OnProfileEditRequested;
     public event Action? RequestClose;
+
+    /// <summary>
+    /// PIN doğrulama UI'ı — View tarafından kurulur. Grant üretimi merkezî
+    /// (IProfileAccessService) olduğu için PIN kapısı UI katmanına bağımlı
+    /// değildir; PIN'li profil + prompt yoksa erişim reddedilir.
+    /// </summary>
+    public Func<Profile, ProfileAccessPurpose, Task<bool>>? PinPrompt { get; set; }
 
     public ProfilesViewModel(
         IProfileService profileService,
+        IProfileAccessService profileAccessService,
         IDialogService dialogService,
         IDispatcherService dispatcherService,
         ILicenseService licenseService, ILocalizationService localizationService)
     {
         _profileService = profileService;
+        _profileAccessService = profileAccessService;
         _dialogService = dialogService;
         _dispatcherService = dispatcherService;
         _licenseService = licenseService; _localizationService = localizationService;
@@ -198,22 +208,31 @@ public partial class ProfilesViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private Task SelectProfile(Profile profile)
+    private async Task SelectProfile(Profile profile)
     {
-        if (profile == null) return Task.CompletedTask;
+        if (profile == null) return;
         
         if (IsManageMode)
         {
              // In manage mode, clicking profile edits it
-             return EditProfile(profile);
+             await EditProfile(profile);
+             return;
         }
 
+        // Merkezî PIN kapısı: kod yolu ne olursa olsun (deep link, kısayol,
+        // otomatik seçim) korumalı işlemler grant ister.
+        var grant = await _profileAccessService.TryAcquireAsync(
+            profile, ProfileAccessPurpose.Load, PinPrompt ?? RejectPrompt);
+        if (grant == null) return;
+
         profile.LastUsed = DateTime.UtcNow;
-        OnProfileSelected?.Invoke(profile);
+        OnProfileSelected?.Invoke(profile, grant);
         RequestClose?.Invoke();
         _ = PersistLastUsedAsync(profile.Id);
-        return Task.CompletedTask;
     }
+
+    private static Task<bool> RejectPrompt(Profile _, ProfileAccessPurpose __)
+        => Task.FromResult(false);
 
     private async Task PersistLastUsedAsync(int profileId)
     {
@@ -239,11 +258,15 @@ public partial class ProfilesViewModel : ObservableObject
             
         if (!confirmed) return;
 
+        var grant = await _profileAccessService.TryAcquireAsync(
+            profile, ProfileAccessPurpose.Delete, PinPrompt ?? RejectPrompt);
+        if (grant == null) return;
+
         try
         {
             if (profile != null)
             {
-                await _profileService.DeleteProfileAsync(profile.Id, profile.ProviderAccountId);
+                await _profileService.DeleteProfileAsync(profile.Id, profile.ProviderAccountId, grant);
             }
             else
             {
@@ -265,10 +288,17 @@ public partial class ProfilesViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private Task EditProfile(Profile profile)
+    private async Task EditProfile(Profile profile)
     {
-        OnProfileEditRequested?.Invoke(profile);
-        return Task.CompletedTask;
+        if (profile == null) return;
+
+        // Düzenleme de merkezî PIN kapısından geçer; üretilen grant
+        // düzenleme ekranına taşınır (Save ve Delete için zorunlu).
+        var grant = await _profileAccessService.TryAcquireAsync(
+            profile, ProfileAccessPurpose.Edit, PinPrompt ?? RejectPrompt);
+        if (grant == null) return;
+
+        OnProfileEditRequested?.Invoke(profile, grant);
     }
 }
 

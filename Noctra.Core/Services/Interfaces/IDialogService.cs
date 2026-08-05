@@ -44,8 +44,9 @@ public interface IDialogService
     /// Shows the window for editing an existing profile
     /// </summary>
     /// <param name="profile">Profile to edit</param>
+    /// <param name="grant">Merkezî erişim yetkisi (Edit) — Save/Delete için zorunlu</param>
     /// <returns>True if the profile was updated</returns>
-    Task<bool> ShowEditProfileAsync(Profile profile);
+    Task<bool> ShowEditProfileAsync(Profile profile, ProfileAccessGrant? grant = null);
 
     /// <summary>
     /// Shows the global settings window

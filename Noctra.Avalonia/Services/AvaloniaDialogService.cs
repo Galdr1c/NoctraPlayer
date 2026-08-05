@@ -84,7 +84,7 @@ public sealed class AvaloniaDialogService : IDialogService
         return result == true;
     }
 
-    public async Task<bool> ShowEditProfileAsync(Profile profile)
+    public async Task<bool> ShowEditProfileAsync(Profile profile, ProfileAccessGrant? grant = null)
     {
         var owner = GetMainWindow();
         using var scope = _services.CreateScope();
@@ -92,6 +92,7 @@ public sealed class AvaloniaDialogService : IDialogService
         if (window.DataContext is Noctra.ViewModels.AddProfileViewModel vm)
         {
             vm.InitializeForEdit(profile);
+            vm.AccessGrant = grant;
         }
 
         var result = await window.ShowDialog<bool?>(owner);

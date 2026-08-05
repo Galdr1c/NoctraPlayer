@@ -74,14 +74,24 @@ public partial class ProfilesWindow : Window
         _viewModel.OnProfileAddRequested += ViewModel_OnProfileAddRequested;
         _viewModel.OnProfileEditRequested += ViewModel_OnProfileEditRequested;
         _viewModel.OnProfileSelected += ViewModel_OnProfileSelected;
+        _viewModel.PinPrompt = VerifyProfilePinAsync;
         Opened += ProfilesWindow_Opened;
     }
 
     // ── PIN Doğrulama — Merkezi Geçit ─────────────────────────────────
-    private async Task<bool> VerifyPinIfRequired(Profile profile, string purposeKey = "Profiles.Pin.Purpose.Login")
+    // Doğrulama ve grant üretimi merkezîdir (ProfilesViewModel +
+    // IProfileAccessService); bu yalnızca PIN UI'ını gösterir.
+    private async Task<bool> VerifyProfilePinAsync(Profile profile, ProfileAccessPurpose purpose)
     {
         if (string.IsNullOrEmpty(profile.PinHash))
             return true;
+
+        var purposeKey = purpose switch
+        {
+            ProfileAccessPurpose.Edit or ProfileAccessPurpose.Delete or ProfileAccessPurpose.PinChange
+                => "Profiles.Pin.Purpose.Edit",
+            _ => "Profiles.Pin.Purpose.Login"
+        };
 
         // Kalıcı kilit kontrolü — profil hâlâ kilitliyse PIN penceresini açma.
         // Kilit ve deneme sayacı veritabanında saklanır; uygulama yeniden
@@ -220,22 +230,10 @@ public partial class ProfilesWindow : Window
             return;
         }
 
-        // Manage modundaysa düzenleme/silme — PIN kontrolü orada yapılır
+        // Manage modundaysa düzenleme/silme — PIN kontrolü merkezî (ViewModel)
         if (vm.IsManageMode)
         {
-            // PIN kontrolü — düzenleme için
-            if (!await VerifyPinIfRequired(profile, "Profiles.Pin.Purpose.Edit"))
-            {
-                return;
-            }
-
             vm.EditProfileCommand.Execute(profile);
-            return;
-        }
-
-        // Normal mod — giriş: PIN kontrolü
-        if (!await VerifyPinIfRequired(profile, "Profiles.Pin.Purpose.Enter"))
-        {
             return;
         }
 
@@ -288,7 +286,7 @@ public partial class ProfilesWindow : Window
         }
     }
 
-    private async void ViewModel_OnProfileSelected(Profile profile)
+    private async void ViewModel_OnProfileSelected(Profile profile, ProfileAccessGrant? grant)
     {
         ProfileLoadingWindow? loadingWindow = null;
         try
@@ -336,7 +334,7 @@ public partial class ProfilesWindow : Window
             _mainWindow.DataContext = _mainViewModel;
             
             var minDelayTask = Task.Delay(1500); // 1.5 seconds minimum for premium feel
-            var loadTask = _mainViewModel.LoadProfileAsync(reloadedProfile);
+            var loadTask = _mainViewModel.LoadProfileAsync(reloadedProfile, grant);
             
             {
                 await Task.WhenAll(minDelayTask, loadTask);
@@ -377,14 +375,14 @@ public partial class ProfilesWindow : Window
         OpenAddProfileWindow(null);
     }
 
-    private void ViewModel_OnProfileEditRequested(Profile profile)
+    private void ViewModel_OnProfileEditRequested(Profile profile, ProfileAccessGrant? grant)
     {
-        // PIN kontrolü düzenleme için — SelectProfile_Click'te zaten yapıldı
-        // ama direkt event üzerinden gelen çağrılar için de kontrol
-        OpenAddProfileWindow(profile);
+        // PIN kontrolü merkezîdir (ViewModel) — bu event yalnızca
+        // geçerli bir grant ile tetiklenir; grant düzenleme ekranına taşınır.
+        OpenAddProfileWindow(profile, grant);
     }
 
-    private async void OpenAddProfileWindow(Profile? profileToEdit)
+    private async void OpenAddProfileWindow(Profile? profileToEdit, ProfileAccessGrant? grant = null)
     {
         if (System.Threading.Interlocked.CompareExchange(ref _isAddProfileWindowOpen, 1, 0) != 0)
         {
@@ -396,7 +394,7 @@ public partial class ProfilesWindow : Window
             bool success;
             if (profileToEdit != null)
             {
-                success = await _dialogService.ShowEditProfileAsync(profileToEdit);
+                success = await _dialogService.ShowEditProfileAsync(profileToEdit, grant);
             }
             else
             {
@@ -420,6 +418,7 @@ public partial class ProfilesWindow : Window
         _viewModel.OnProfileAddRequested -= ViewModel_OnProfileAddRequested;
         _viewModel.OnProfileEditRequested -= ViewModel_OnProfileEditRequested;
         _viewModel.OnProfileSelected -= ViewModel_OnProfileSelected;
+        _viewModel.PinPrompt = null;
         Opened -= ProfilesWindow_Opened;
 
         base.OnClosed(e);

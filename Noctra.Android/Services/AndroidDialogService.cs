@@ -68,7 +68,7 @@ public sealed class AndroidDialogService : IDialogService
 
     public Task<bool> ShowAddProfileAsync() => Task.FromResult(false);
 
-    public Task<bool> ShowEditProfileAsync(Profile profile) => Task.FromResult(false);
+    public Task<bool> ShowEditProfileAsync(Profile profile, ProfileAccessGrant? grant = null) => Task.FromResult(false);
 
     public Task ShowGlobalSettingsAsync() => Task.CompletedTask;
 

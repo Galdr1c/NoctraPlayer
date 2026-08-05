@@ -11,6 +11,7 @@ public class ProfileService : IProfileService
     private readonly IContentDownloadService _contentDownloadService;
     private readonly ILicenseService _licenseService;
     private readonly ISettingsService? _settingsService;
+    private readonly IProfileAccessService _profileAccessService;
     private const string ProfilesLimitKey = "profiles";
 
     public const int MaxPinAttempts = 5;
@@ -20,12 +21,14 @@ public class ProfileService : IProfileService
         IDbContextFactory<AppDbContext> contextFactory,
         IContentDownloadService contentDownloadService,
         ILicenseService licenseService,
-        ISettingsService? settingsService = null)
+        ISettingsService? settingsService = null,
+        IProfileAccessService? profileAccessService = null)
     {
         _contextFactory = contextFactory;
         _contentDownloadService = contentDownloadService;
         _licenseService = licenseService;
         _settingsService = settingsService;
+        _profileAccessService = profileAccessService ?? new ProfileAccessService();
     }
 
     public async Task<Profile?> SaveProfileAsync(ProfileSaveRequest request)
@@ -85,6 +88,20 @@ public class ProfileService : IProfileService
             if (existingProfile == null)
             {
                 throw new InvalidOperationException("Profil bulunamadı.");
+            }
+
+            // PIN korumalı bir profilin düzenlenmesi merkezî bir erişim yetkisi
+            // ister — PIN kapısı yalnızca View code-behind'de değil, servis
+            // katmanında da zorunludur. Deep link, kısayol veya yanlış bağlanmış
+            // bir komut bu kapıyı atlayamaz.
+            if (!string.IsNullOrEmpty(existingProfile.PinHash))
+            {
+                var pinChanged = !string.Equals(
+                    existingProfile.PinHash, request.PinHash, StringComparison.Ordinal);
+                _profileAccessService.ValidateOrThrow(
+                    request.AccessGrant,
+                    existingProfile.Id,
+                    pinChanged ? ProfileAccessPurpose.PinChange : ProfileAccessPurpose.Edit);
             }
 
             existingProfile.Name = request.ProfileName;
@@ -180,8 +197,10 @@ public class ProfileService : IProfileService
             .ExecuteDeleteAsync();
     }
 
-    public async Task DeleteProfileAsync(int profileId, int providerAccountId)
+    public async Task DeleteProfileAsync(int profileId, int providerAccountId, ProfileAccessGrant grant)
     {
+        _profileAccessService.ValidateOrThrow(grant, profileId, ProfileAccessPurpose.Delete);
+
         await using var db = await _contextFactory.CreateDbContextAsync();
 
         var hasOtherProfiles = await db.Profiles

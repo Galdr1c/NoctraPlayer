@@ -60,6 +60,7 @@ public partial class ProfileListView : UserControl
             _viewModel.OnProfileAddRequested -= ViewModel_OnProfileAddRequested;
             _viewModel.OnProfileEditRequested -= ViewModel_OnProfileEditRequested;
             _viewModel.OnProfileSelected -= ViewModel_OnProfileSelected;
+            _viewModel.PinPrompt = null;
         }
 
         _viewModel = viewModel;
@@ -69,6 +70,11 @@ public partial class ProfileListView : UserControl
             _viewModel.OnProfileAddRequested += ViewModel_OnProfileAddRequested;
             _viewModel.OnProfileEditRequested += ViewModel_OnProfileEditRequested;
             _viewModel.OnProfileSelected += ViewModel_OnProfileSelected;
+
+            // PIN doğrulama UI'ı — doğrulama ve grant üretimi merkezîdir
+            // (ProfilesViewModel + IProfileAccessService); bu view yalnızca
+            // PIN ekranını gösterir.
+            _viewModel.PinPrompt = VerifyProfilePinAsync;
 
             // Refresh profiles when DataContext is set — this replaces the broken
             // AttachedToVisualTree handler which fired before DataContext was assigned.
@@ -86,17 +92,7 @@ public partial class ProfileListView : UserControl
 
         if (_viewModel.IsManageMode)
         {
-            if (!await VerifyPinIfRequired(profile, "Profiles.Pin.Purpose.Edit"))
-            {
-                return;
-            }
-
             _viewModel.EditProfileCommand.Execute(profile);
-            return;
-        }
-
-        if (!await VerifyPinIfRequired(profile, "Profiles.Pin.Purpose.Enter"))
-        {
             return;
         }
 
@@ -142,15 +138,15 @@ public partial class ProfileListView : UserControl
 
     private void ViewModel_OnProfileAddRequested(Profile profile)
     {
-        OpenProfileSetup(null);
+        OpenProfileSetup(null, null);
     }
 
-    private void ViewModel_OnProfileEditRequested(Profile profile)
+    private void ViewModel_OnProfileEditRequested(Profile profile, ProfileAccessGrant? grant)
     {
-        OpenProfileSetup(profile);
+        OpenProfileSetup(profile, grant);
     }
 
-    private void OpenProfileSetup(Profile? profile)
+    private void OpenProfileSetup(Profile? profile, ProfileAccessGrant? grant)
     {
         if (Application.Current is not App app || app.Services is null)
         {
@@ -161,6 +157,7 @@ public partial class ProfileListView : UserControl
         if (profile is not null)
         {
             viewModel.InitializeForEdit(profile);
+            viewModel.AccessGrant = grant;
         }
 
         _activeProfileSetupViewModel = viewModel;
@@ -190,7 +187,7 @@ public partial class ProfileListView : UserControl
         }
     }
 
-    private async Task<bool> VerifyPinIfRequired(Profile profile, string purposeKey)
+    private async Task<bool> VerifyProfilePinAsync(Profile profile, ProfileAccessPurpose purpose)
     {
         if (string.IsNullOrEmpty(profile.PinHash))
         {
@@ -205,6 +202,13 @@ public partial class ProfileListView : UserControl
         var dialogService = app.Services.GetRequiredService<IDialogService>();
         var localizationService = app.Services.GetRequiredService<ILocalizationService>();
         var profileService = app.Services.GetRequiredService<IProfileService>();
+
+        var purposeKey = purpose switch
+        {
+            ProfileAccessPurpose.Edit or ProfileAccessPurpose.Delete or ProfileAccessPurpose.PinChange
+                => "Profiles.Pin.Purpose.Edit",
+            _ => "Profiles.Pin.Purpose.Enter"
+        };
 
         // Kalıcı kilit kontrolü — profil hâlâ kilitliyse PIN penceresini açma
         var state = await profileService.GetPinVerificationStateAsync(profile.Id);
@@ -320,7 +324,7 @@ public partial class ProfileListView : UserControl
             string.Format(localizationService.GetString("Profiles.Pin.Forgot.ScheduledMessageFormat"), profile.Name));
     }
 
-    private async void ViewModel_OnProfileSelected(Profile profile)
+    private async void ViewModel_OnProfileSelected(Profile profile, ProfileAccessGrant? grant)
     {
         if (Application.Current is not App app || app.Services is null)
         {
@@ -361,7 +365,7 @@ public partial class ProfileListView : UserControl
             mainViewModel.PropertyChanged += OnStatusChanged;
             try
             {
-                await Task.WhenAll(Task.Delay(800), mainViewModel.LoadProfileAsync(profile));
+                await Task.WhenAll(Task.Delay(800), mainViewModel.LoadProfileAsync(profile, grant));
                 loadedSuccessfully = true;
             }
             finally

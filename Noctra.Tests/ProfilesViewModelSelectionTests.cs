@@ -26,7 +26,7 @@ public sealed class ProfilesViewModelSelectionTests
         var profile = new Profile { Id = 42, Name = "Large M3U" };
         Profile? selectedProfile = null;
         var closeRequested = false;
-        viewModel.OnProfileSelected += selected => selectedProfile = selected;
+        viewModel.OnProfileSelected += (selected, _) => selectedProfile = selected;
         viewModel.RequestClose += () => closeRequested = true;
 
         var selectionTask = viewModel.SelectProfileCommand.ExecuteAsync(profile);
@@ -58,7 +58,7 @@ public sealed class ProfilesViewModelSelectionTests
         var viewModel = CreateViewModel(profileService.Object);
         var profile = new Profile { Id = 7, Name = "M3U" };
         Profile? selectedProfile = null;
-        viewModel.OnProfileSelected += selected => selectedProfile = selected;
+        viewModel.OnProfileSelected += (selected, _) => selectedProfile = selected;
 
         await viewModel.SelectProfileCommand.ExecuteAsync(profile);
 
@@ -69,6 +69,7 @@ public sealed class ProfilesViewModelSelectionTests
     {
         return new ProfilesViewModel(
             profileService,
+            new ProfileAccessService(),
             Mock.Of<IDialogService>(),
             Mock.Of<IDispatcherService>(),
             Mock.Of<ILicenseService>(),

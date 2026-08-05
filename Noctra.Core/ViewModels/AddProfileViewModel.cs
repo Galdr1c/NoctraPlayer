@@ -1002,6 +1002,13 @@ public partial class AddProfileViewModel : ObservableObject
     [ObservableProperty]
     private Profile? _editingProfile;
 
+    /// <summary>
+    /// Düzenleme ekranına girerken alınan merkezî erişim yetkisi (Edit).
+    /// Save ve Delete işlemleri bu grant'i servis katmanına taşır; PIN kapısı
+    /// View code-behind'e bağımlı olmadan zorunlu kalır.
+    /// </summary>
+    public ProfileAccessGrant? AccessGrant { get; set; }
+
     [ObservableProperty]
     private ConnectionHealth _connectionHealth = ConnectionHealth.Unknown;
 
@@ -1124,7 +1131,8 @@ public partial class AddProfileViewModel : ObservableObject
 
             await _profileService.DeleteProfileAsync(
                 EditingProfile.Id,
-                EditingProfile.ProviderAccountId);
+                EditingProfile.ProviderAccountId,
+                AccessGrant ?? throw new ProfileAccessDeniedException());
 
             RequestClose?.Invoke(this, EventArgs.Empty);
         }
@@ -1805,7 +1813,8 @@ public partial class AddProfileViewModel : ObservableObject
                 PinHash = effectivePinHash,
                 ExistingIds = EditingProfile != null
                     ? new ExistingProfileIds(EditingProfile.Id, EditingProfile.ProviderAccountId)
-                    : null
+                    : null,
+                AccessGrant = AccessGrant
             };
 
             var result = await _profileService.SaveProfileAsync(request);

@@ -89,6 +89,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<EpgSourceResolver>();
         services.AddSingleton<ITmdbSyncService, TmdbSyncService>();
         services.AddSingleton<IProfileService, ProfileService>();
+        services.AddSingleton<IProfileAccessService, ProfileAccessService>();
         services.AddSingleton<IDatabaseSchemaFixupService, DatabaseSchemaFixupService>();
         services.AddSingleton<ReviewPromptFallbackHandler>();
 

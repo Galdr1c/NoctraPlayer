@@ -160,6 +160,9 @@ namespace Noctra.Tests
             vm.InitializeForEdit(profile);
             Assert.True(vm.HasPin, "Existing PIN must surface as HasPin when editing.");
 
+            // Düzenleme ekranı her zaman merkezî bir grant ile açılır
+            vm.AccessGrant = ProfileAccessGrant.Create(profile.Id, ProfileAccessPurpose.Edit);
+
             // Act — non-premium user edits profile details only
             vm.ProfileName = "Renamed Profile";
             await vm.SaveCommand.ExecuteAsync(null);
@@ -195,7 +198,8 @@ namespace Noctra.Tests
                 Username = "test",
                 EncryptedPassword = "test",
                 AccountType = ProfileType.M3U,
-                PinHash = newHash
+                PinHash = newHash,
+                AccessGrant = ProfileAccessGrant.Create(profile.Id, ProfileAccessPurpose.PinChange)
             };
 
             // Act
@@ -226,7 +230,8 @@ namespace Noctra.Tests
                 Username = "test",
                 EncryptedPassword = "test",
                 AccountType = ProfileType.M3U,
-                PinHash = null // Explicitly remove
+                PinHash = null, // Explicitly remove
+                AccessGrant = ProfileAccessGrant.Create(profile.Id, ProfileAccessPurpose.PinChange)
             };
 
             // Act

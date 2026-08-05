@@ -13,8 +13,10 @@ public interface IProfileService
     /// <summary>
     /// Deletes a profile and all related data (watch history, playlists, downloads).
     /// Cleans up orphaned ProviderAccount if no other profiles reference it.
+    /// Requires a valid ProfileAccessGrant (Delete) — PIN gate is enforced here,
+    /// not only in the View layer.
     /// </summary>
-    Task DeleteProfileAsync(int profileId, int providerAccountId);
+    Task DeleteProfileAsync(int profileId, int providerAccountId, ProfileAccessGrant grant);
 
     /// <summary>
     /// Gets all profiles ordered by last used (descending), including their provider accounts.
@@ -93,6 +95,14 @@ public record ProfileSaveRequest
     /// Null when creating a new profile.
     /// </summary>
     public ExistingProfileIds? ExistingIds { get; init; }
+
+    /// <summary>
+    /// Merkezî erişim yetkisi. PIN korumalı bir profilin düzenlenmesi
+    /// (ad/avatar/PIN değişikliği) geçerli bir grant ister — Edit yeterli;
+    /// PIN değişikliği PinChange (Edit grant'i PinChange'i de kapsar).
+    /// Yeni profil oluşturma grant gerektirmez.
+    /// </summary>
+    public ProfileAccessGrant? AccessGrant { get; init; }
 }
 
 public record ExistingProfileIds(int ProfileId, int ProviderAccountId);
