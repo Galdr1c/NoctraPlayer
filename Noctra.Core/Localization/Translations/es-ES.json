@@ -344,6 +344,7 @@
   "Profiles.Add.PinLockDescription": "Requiere un PIN de 4 dígitos para entrar al perfil",
   "Profiles.Add.PinActive": "PIN activo",
   "Profiles.Add.PinChangeInfo": "Para eliminar el PIN, apaga el interruptor y guarda. Para establecer uno nuevo, ingrésalo abajo.",
+  "Profiles.Add.PinExpiredInfo": "El PIN no se puede cambiar ni eliminar mientras la suscripción Premium esté vencida. Puede actualizar el PIN cuando se renueve Premium.",
   "Profiles.Add.NewPin": "Nuevo PIN",
   "Profiles.Add.Pin": "PIN",
   "Profiles.Add.ConfirmNewPin": "Confirmar Nuevo PIN",

@@ -283,6 +283,10 @@
                                             <TextBlock Text="{loc:Translate Profiles.Add.PinChangeInfo}"
                                                        FontSize="11" Foreground="{DynamicResource TextMutedBrush}"
                                                        TextWrapping="Wrap" MaxWidth="350"/>
+                                            <TextBlock Text="{loc:Translate Profiles.Add.PinExpiredInfo}"
+                                                       FontSize="11" Foreground="{DynamicResource ErrorBrush}"
+                                                       TextWrapping="Wrap" MaxWidth="350"
+                                                       IsVisible="{Binding !IsPinAvailable}"/>
                                             
                                             <!-- Optional: Change PIN fields -->
                                             <TextBlock Text="{loc:Translate Profiles.Add.NewPin}" FontSize="12" FontWeight="Medium"

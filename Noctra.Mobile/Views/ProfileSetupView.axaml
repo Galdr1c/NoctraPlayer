@@ -711,6 +711,11 @@
                                Foreground="{DynamicResource TextMutedBrush}"
                                FontSize="{DynamicResource FCaption}"
                                TextWrapping="Wrap" />
+                    <TextBlock Text="{loc:Translate Profiles.Add.PinExpiredInfo}"
+                               Foreground="{DynamicResource ErrorBrush}"
+                               FontSize="{DynamicResource FCaption}"
+                               TextWrapping="Wrap"
+                               IsVisible="{Binding !IsPinAvailable}" />
                   </StackPanel>
 
                   <!-- Yeni PIN -->

@@ -344,6 +344,7 @@
   "Profiles.Add.PinLockDescription": "Profile giriş için 4 haneli PIN gerektirir",
   "Profiles.Add.PinActive": "PIN aktif",
   "Profiles.Add.PinChangeInfo": "PIN'i kaldırmak için toggle'ı kapatıp kaydedin. Yeni bir PIN belirlemek için aşağıya girin.",
+  "Profiles.Add.PinExpiredInfo": "Premium süreniz dolduğu için PIN değiştirilemez ve kaldırılamaz. Premium yenilendiğinde PIN ayarlarınızı güncelleyebilirsiniz.",
   "Profiles.Add.NewPin": "Yeni PIN",
   "Profiles.Add.Pin": "PIN",
   "Profiles.Add.ConfirmNewPin": "Yeni PIN Tekrar",
