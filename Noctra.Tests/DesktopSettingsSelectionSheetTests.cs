@@ -45,6 +45,26 @@ public sealed class DesktopSettingsSelectionSheetTests
     }
 
     [Fact]
+    public void DownloadsView_UsesRootLevelSelectionSheet()
+    {
+        var document = LoadProjectXaml("Noctra.Avalonia", "Views", "DownloadsView.axaml");
+        var sheet = FindNamedElement(document, "SelectionSheetHost");
+
+        Assert.Equal("40000", (string?)sheet.Attribute("ZIndex"));
+        Assert.Equal("DesktopSelectionSheet", sheet.Name.LocalName);
+        Assert.Empty(document.Descendants().Where(element => element.Name.LocalName == "ComboBox"));
+
+        var sortButton = FindNamedElement(document, "SortSelectionButton");
+        Assert.Equal(
+            "OpenDownloadSortSheet_Click",
+            (string?)sortButton.Attribute("Click"));
+        Assert.Contains(
+            sortButton.Descendants(),
+            element =>
+                (string?)element.Attribute(Xaml + "Name") == "SortSelectionIcon");
+    }
+
+    [Fact]
     public void SelectionSheet_IsBottomAlignedBoundedAndVirtualized()
     {
         var document = LoadProjectXaml(

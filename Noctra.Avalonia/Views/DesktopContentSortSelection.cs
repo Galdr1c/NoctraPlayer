@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Material.Icons;
+using Noctra.Avalonia.Localization;
 using Noctra.Models;
 using Noctra.ViewModels;
 
@@ -15,6 +16,40 @@ internal static class DesktopContentSortSelection
                 option.Value,
                 option.Key == viewModel.SelectedSortOrder))
             .ToArray();
+
+    public static IReadOnlyList<DesktopSelectionOption> BuildDownloadOptions(MainViewModel viewModel)
+        => new[]
+        {
+            CreateDownloadOption(viewModel, DownloadSortOrder.Latest, "Downloads.Sort.Recent"),
+            CreateDownloadOption(viewModel, DownloadSortOrder.NameAZ, "Downloads.Sort.Name"),
+            CreateDownloadOption(viewModel, DownloadSortOrder.SizeLarge, "Downloads.Sort.Size")
+        };
+
+    private static DesktopSelectionOption CreateDownloadOption(
+        MainViewModel viewModel,
+        DownloadSortOrder sortOrder,
+        string localizationKey)
+        => new(
+            sortOrder,
+            LocalizationSource.Instance[localizationKey],
+            viewModel.SelectedDownloadSortOrder == sortOrder);
+
+    public static string GetDownloadLabel(MainViewModel viewModel)
+        => LocalizationSource.Instance[viewModel.SelectedDownloadSortOrder switch
+        {
+            DownloadSortOrder.NameAZ => "Downloads.Sort.Name",
+            DownloadSortOrder.SizeLarge => "Downloads.Sort.Size",
+            _ => "Downloads.Sort.Recent"
+        }];
+
+    public static MaterialIconKind GetDownloadIcon(DownloadSortOrder sortOrder)
+        => sortOrder switch
+        {
+            DownloadSortOrder.Latest => MaterialIconKind.SortCalendarDescending,
+            DownloadSortOrder.NameAZ => MaterialIconKind.SortAlphabeticalAscending,
+            DownloadSortOrder.SizeLarge => MaterialIconKind.SortNumericDescending,
+            _ => MaterialIconKind.Sort
+        };
 
     public static string GetSelectedLabel(MainViewModel viewModel)
         => viewModel.SortOptions
