@@ -428,6 +428,32 @@ public class KeyboardVisibilityAndScrollPreventionTests
     }
 
     [Fact]
+    public void PinEntryView_ScrollsWhenContentExceedsViewport()
+    {
+        var mobile = ReadProjectFile("Noctra.Mobile", "Views", "PinEntryView.axaml");
+
+        // Kart sabit yükseklikte kalmamalı; küçük ekran / yatay modda
+        // içerik sığmayınca kaydırılabilmeli (dikeyde ortalanma korunur).
+        Assert.Contains("<ScrollViewer", mobile);
+        Assert.Contains("VerticalScrollBarVisibility=\"Auto\"", mobile);
+        Assert.Contains("HorizontalScrollBarVisibility=\"Disabled\"", mobile);
+        Assert.Contains(
+            "MinHeight=\"{Binding ViewportHeight, RelativeSource={RelativeSource AncestorType=ScrollViewer}}\"",
+            mobile);
+    }
+
+    [Fact]
+    public void PinEntryView_KeypadFitsNarrowScreens()
+    {
+        var mobile = ReadProjectFile("Noctra.Mobile", "Views", "PinEntryView.axaml");
+
+        // 72px sabit tuşlar 320dp ekranda taşıyordu; 64px + küçük margin sığar
+        Assert.DoesNotContain("Value=\"72\"", mobile);
+        Assert.Contains("<Setter Property=\"Width\" Value=\"64\" />", mobile);
+        Assert.Contains("<Setter Property=\"Height\" Value=\"64\" />", mobile);
+    }
+
+    [Fact]
     public void ProfileSetup_TextBoxes_HaveReturnKeyHints()
     {
         var profile = ReadProjectFile("Noctra.Mobile", "Views", "ProfileSetupView.axaml");

@@ -1,4 +1,4 @@
-﻿<UserControl xmlns="https://github.com/avaloniaui"
+<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -13,14 +13,14 @@
              Focusable="True">
   <UserControl.Styles>
     <Style Selector="Button.pin-key">
-      <Setter Property="Width" Value="72" />
-      <Setter Property="Height" Value="72" />
+      <Setter Property="Width" Value="64" />
+      <Setter Property="Height" Value="64" />
       <Setter Property="CornerRadius" Value="6" />
       <Setter Property="Background" Value="{DynamicResource Surface1Brush}" />
       <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
       <Setter Property="FontSize" Value="24" />
       <Setter Property="FontWeight" Value="Medium" />
-      <Setter Property="Margin" Value="5" />
+      <Setter Property="Margin" Value="3" />
       <Setter Property="HorizontalContentAlignment" Value="Center" />
       <Setter Property="VerticalContentAlignment" Value="Center" />
       <Setter Property="Template">
@@ -46,135 +46,144 @@
       <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
     </Style>
     <Style Selector="Button.pin-forgot">
-      <Setter Property="Width" Value="72" />
-      <Setter Property="Height" Value="72" />
+      <Setter Property="Width" Value="64" />
+      <Setter Property="Height" Value="64" />
       <Setter Property="CornerRadius" Value="6" />
       <Setter Property="Background" Value="Transparent" />
       <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
       <Setter Property="FontWeight" Value="Medium" />
-      <Setter Property="Margin" Value="5" />
+      <Setter Property="Margin" Value="3" />
       <Setter Property="HorizontalContentAlignment" Value="Center" />
       <Setter Property="VerticalContentAlignment" Value="Center" />
     </Style>
   </UserControl.Styles>
 
-  <Border Background="{DynamicResource BackgroundGradientBrush}"
-          BorderBrush="{DynamicResource BorderBrush}"
-          BorderThickness="1"
-          CornerRadius="8"
-          Padding="32"
-          MaxWidth="420"
-          HorizontalAlignment="Center"
-          VerticalAlignment="Center">
-    <Border.BoxShadow>
-      <BoxShadows>0 20 60 0 #90000000</BoxShadows>
-    </Border.BoxShadow>
-    <StackPanel Spacing="18"
-                HorizontalAlignment="Center">
-      <Border Width="96"
-              Height="96"
+  <!-- Sabit yükseklik yerine kaydırılabilir düzen: içerik küçük ekran veya
+       yatay modda sığmadığında kaydırılır. İçerik sığınca kart dikeyde
+       ortada kalır (MinHeight = viewport yüksekliği). -->
+  <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                VerticalScrollBarVisibility="Auto">
+    <Grid MinHeight="{Binding ViewportHeight, RelativeSource={RelativeSource AncestorType=ScrollViewer}}">
+      <Border Background="{DynamicResource BackgroundGradientBrush}"
+              BorderBrush="{DynamicResource BorderBrush}"
+              BorderThickness="1"
               CornerRadius="8"
-              ClipToBounds="True"
-              Background="{DynamicResource IconGradientBrush}">
-        <Image Source="{Binding ProfileAvatar, Converter={StaticResource AvatarPathConverter}}"
-               Stretch="UniformToFill" />
-      </Border>
-
-      <TextBlock Text="{Binding ProfileName}"
-                 FontSize="{DynamicResource FTitleL}"
-                 FontWeight="Bold"
-                 Foreground="{DynamicResource TextPrimaryBrush}"
-                 HorizontalAlignment="Center" />
-      <TextBlock Text="{Binding Purpose}"
-                 FontSize="{DynamicResource FCaption}"
-                 Foreground="{DynamicResource TextMutedBrush}"
-                 TextAlignment="Center"
-                 TextWrapping="Wrap" />
-
-      <Border x:Name="PinDotsHost"
+              Padding="32"
+              MaxWidth="420"
               HorizontalAlignment="Center"
-              AutomationProperties.HelpText="{Binding PinProgressA11yText}">
-        <StackPanel Orientation="Horizontal"
-                    HorizontalAlignment="Center"
-                    Spacing="12">
-          <Ellipse x:Name="Dot1" Width="12"
-                   Height="12"
-                   Fill="{Binding PinLength, Converter={StaticResource PinDotConverter}, ConverterParameter=1}" />
-          <Ellipse x:Name="Dot2" Width="12"
-                   Height="12"
-                   Fill="{Binding PinLength, Converter={StaticResource PinDotConverter}, ConverterParameter=2}" />
-          <Ellipse x:Name="Dot3" Width="12"
-                   Height="12"
-                   Fill="{Binding PinLength, Converter={StaticResource PinDotConverter}, ConverterParameter=3}" />
-          <Ellipse x:Name="Dot4" Width="12"
-                   Height="12"
-                   Fill="{Binding PinLength, Converter={StaticResource PinDotConverter}, ConverterParameter=4}" />
+              VerticalAlignment="Center">
+        <Border.BoxShadow>
+          <BoxShadows>0 20 60 0 #90000000</BoxShadows>
+        </Border.BoxShadow>
+        <StackPanel Spacing="14"
+                    HorizontalAlignment="Center">
+
+          <Border Width="80"
+                  Height="80"
+                  CornerRadius="8"
+                  ClipToBounds="True"
+                  Background="{DynamicResource IconGradientBrush}">
+            <Image Source="{Binding ProfileAvatar, Converter={StaticResource AvatarPathConverter}}"
+                   Stretch="UniformToFill" />
+          </Border>
+
+          <TextBlock Text="{Binding ProfileName}"
+                     FontSize="{DynamicResource FTitleL}"
+                     FontWeight="Bold"
+                     Foreground="{DynamicResource TextPrimaryBrush}"
+                     HorizontalAlignment="Center" />
+          <TextBlock Text="{Binding Purpose}"
+                     FontSize="{DynamicResource FCaption}"
+                     Foreground="{DynamicResource TextMutedBrush}"
+                     TextAlignment="Center"
+                     TextWrapping="Wrap" />
+
+          <Border x:Name="PinDotsHost"
+                  HorizontalAlignment="Center"
+                  AutomationProperties.HelpText="{Binding PinProgressA11yText}">
+            <StackPanel Orientation="Horizontal"
+                        HorizontalAlignment="Center"
+                        Spacing="12">
+              <Ellipse x:Name="Dot1" Width="12"
+                       Height="12"
+                       Fill="{Binding PinLength, Converter={StaticResource PinDotConverter}, ConverterParameter=1}" />
+              <Ellipse x:Name="Dot2" Width="12"
+                       Height="12"
+                       Fill="{Binding PinLength, Converter={StaticResource PinDotConverter}, ConverterParameter=2}" />
+              <Ellipse x:Name="Dot3" Width="12"
+                       Height="12"
+                       Fill="{Binding PinLength, Converter={StaticResource PinDotConverter}, ConverterParameter=3}" />
+              <Ellipse x:Name="Dot4" Width="12"
+                       Height="12"
+                       Fill="{Binding PinLength, Converter={StaticResource PinDotConverter}, ConverterParameter=4}" />
+            </StackPanel>
+          </Border>
+
+          <TextBlock Text="{Binding ErrorMessage}"
+                     Foreground="{DynamicResource ErrorBrush}"
+                     FontSize="{DynamicResource FCaption}"
+                     MinHeight="18"
+                     TextAlignment="Center"
+                     TextWrapping="Wrap"
+                     Margin="4"
+                     IsVisible="{Binding ShowErrorMessage}" />
+
+          <StackPanel Orientation="Horizontal"
+                      HorizontalAlignment="Center"
+                      IsVisible="{Binding IsLocked}">
+            <TextBlock Text="{Binding LockoutMessageText}"
+                       Foreground="{DynamicResource WarningBrush}"
+                       FontSize="{DynamicResource FCaption}"
+                       MaxWidth="340"
+                       TextAlignment="Center"
+                       TextWrapping="Wrap" />
+          </StackPanel>
+
+          <StackPanel Orientation="Horizontal"
+                      HorizontalAlignment="Center"
+                      Spacing="8"
+                      IsVisible="{Binding IsVerifying}">
+            <controls:PremiumSpinner Width="24" Height="24" />
+            <TextBlock Text="{loc:Translate PinEntry.Verifying}"
+                       Foreground="{DynamicResource TextMutedBrush}"
+                       FontSize="{DynamicResource FCaption}"
+                       VerticalAlignment="Center" />
+          </StackPanel>
+
+          <UniformGrid Rows="4"
+                       Columns="3"
+                       IsEnabled="{Binding IsKeypadEnabled}">
+            <Button Classes="pin-key" Content="1" Command="{Binding PressDigitCommand}" CommandParameter="1" />
+            <Button Classes="pin-key" Content="2" Command="{Binding PressDigitCommand}" CommandParameter="2" />
+            <Button Classes="pin-key" Content="3" Command="{Binding PressDigitCommand}" CommandParameter="3" />
+            <Button Classes="pin-key" Content="4" Command="{Binding PressDigitCommand}" CommandParameter="4" />
+            <Button Classes="pin-key" Content="5" Command="{Binding PressDigitCommand}" CommandParameter="5" />
+            <Button Classes="pin-key" Content="6" Command="{Binding PressDigitCommand}" CommandParameter="6" />
+            <Button Classes="pin-key" Content="7" Command="{Binding PressDigitCommand}" CommandParameter="7" />
+            <Button Classes="pin-key" Content="8" Command="{Binding PressDigitCommand}" CommandParameter="8" />
+            <Button Classes="pin-key" Content="9" Command="{Binding PressDigitCommand}" CommandParameter="9" />
+            <Button Classes="pin-forgot"
+                    Content="{loc:Translate PinEntry.ForgotPin}"
+                    Command="{Binding ForgotPinCommand}" />
+            <Button Classes="pin-key" Content="0" Command="{Binding PressDigitCommand}" CommandParameter="0" />
+            <Button Classes="pin-key"
+                    Command="{Binding BackspaceCommand}"
+                    AutomationProperties.Name="{loc:Translate PinEntry.Backspace}">
+              <icons:MaterialIcon Kind="BackspaceOutline"
+                                  Width="24"
+                                  Height="24"
+                                  Foreground="{DynamicResource TextPrimaryBrush}" />
+            </Button>
+          </UniformGrid>
+
+          <Button Content="{loc:Translate Dialog.Cancel}"
+                  Command="{Binding CancelCommand}"
+                  Background="Transparent"
+                  Foreground="{DynamicResource TextMutedBrush}"
+                  BorderThickness="0"
+                  HorizontalAlignment="Center"/>
         </StackPanel>
       </Border>
-
-      <TextBlock Text="{Binding ErrorMessage}"
-                 Foreground="{DynamicResource ErrorBrush}"
-                 FontSize="{DynamicResource FCaption}"
-                 MinHeight="18"
-                 TextAlignment="Center"
-                 TextWrapping="Wrap"
-                 Margin="4"
-                 IsVisible="{Binding ShowErrorMessage}" />
-
-      <StackPanel Orientation="Horizontal"
-                  HorizontalAlignment="Center"
-                  IsVisible="{Binding IsLocked}">
-        <TextBlock Text="{Binding LockoutMessageText}"
-                   Foreground="{DynamicResource WarningBrush}"
-                   FontSize="{DynamicResource FCaption}"
-                   MaxWidth="340"
-                   TextAlignment="Center"
-                   TextWrapping="Wrap" />
-      </StackPanel>
-
-      <StackPanel Orientation="Horizontal"
-                  HorizontalAlignment="Center"
-                  Spacing="8"
-                  IsVisible="{Binding IsVerifying}">
-        <controls:PremiumSpinner Width="24" Height="24" />
-        <TextBlock Text="{loc:Translate PinEntry.Verifying}"
-                   Foreground="{DynamicResource TextMutedBrush}"
-                   FontSize="{DynamicResource FCaption}"
-                   VerticalAlignment="Center" />
-      </StackPanel>
-
-      <UniformGrid Rows="4"
-                   Columns="3"
-                   IsEnabled="{Binding IsKeypadEnabled}">
-        <Button Classes="pin-key" Content="1" Command="{Binding PressDigitCommand}" CommandParameter="1" />
-        <Button Classes="pin-key" Content="2" Command="{Binding PressDigitCommand}" CommandParameter="2" />
-        <Button Classes="pin-key" Content="3" Command="{Binding PressDigitCommand}" CommandParameter="3" />
-        <Button Classes="pin-key" Content="4" Command="{Binding PressDigitCommand}" CommandParameter="4" />
-        <Button Classes="pin-key" Content="5" Command="{Binding PressDigitCommand}" CommandParameter="5" />
-        <Button Classes="pin-key" Content="6" Command="{Binding PressDigitCommand}" CommandParameter="6" />
-        <Button Classes="pin-key" Content="7" Command="{Binding PressDigitCommand}" CommandParameter="7" />
-        <Button Classes="pin-key" Content="8" Command="{Binding PressDigitCommand}" CommandParameter="8" />
-        <Button Classes="pin-key" Content="9" Command="{Binding PressDigitCommand}" CommandParameter="9" />
-        <Button Classes="pin-forgot"
-                Content="{loc:Translate PinEntry.ForgotPin}"
-                Command="{Binding ForgotPinCommand}" />
-        <Button Classes="pin-key" Content="0" Command="{Binding PressDigitCommand}" CommandParameter="0" />
-        <Button Classes="pin-key"
-                Command="{Binding BackspaceCommand}"
-                AutomationProperties.Name="{loc:Translate PinEntry.Backspace}">
-          <icons:MaterialIcon Kind="BackspaceOutline"
-                              Width="24"
-                              Height="24"
-                              Foreground="{DynamicResource TextPrimaryBrush}" />
-        </Button>
-      </UniformGrid>
-
-      <Button Content="{loc:Translate Dialog.Cancel}"
-              Command="{Binding CancelCommand}"
-              Background="Transparent"
-              Foreground="{DynamicResource TextMutedBrush}"
-              BorderThickness="0" 
-              HorizontalAlignment="Center"/>
-    </StackPanel>
-  </Border>
+    </Grid>
+  </ScrollViewer>
 </UserControl>
