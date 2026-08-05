@@ -982,12 +982,14 @@ public partial class MainView : UserControl
             _coreMainViewModel ??= resolver.GetCoreMainViewModel();
             HeaderProfileButton.DataContext = _coreMainViewModel;
             MoreProfileCard.DataContext = _coreMainViewModel;
+            MoreDownloadsRow.DataContext = _coreMainViewModel;
         }
 
         if (destination is "Home" or "Live" or "Movies" or "Series" or "Search" or "Favorites" or "MyList" or "History" or "Downloads")
         {
             _coreMainViewModel ??= resolver.GetCoreMainViewModel();
             HeaderProfileButton.DataContext = _coreMainViewModel;
+            DownloadsNavButton.DataContext = _coreMainViewModel;
             _coreMainViewModel.OnMediaSelected -= CoreMainViewModel_OnMediaSelected;
             _coreMainViewModel.OnMediaSelected += CoreMainViewModel_OnMediaSelected;
             CoreContentHost.DataContext = _coreMainViewModel;
