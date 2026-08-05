@@ -724,7 +724,6 @@
   "PinEntry.ForgotPin": "PIN\nVergessen",
   "PinEntry.EnterPin": "PIN eingeben",
   "PinEntry.Verifying": "Wird überprüft...",
-  "PinEntry.LockoutCountdownFormat": "Gesperrt. Versuchen Sie es in {0} Sekunden erneut.",
   "PinEntry.Error.LockedTitle": "Profil Gesperrt",
   "PinEntry.Error.ProfileLockedFormat": "Zu viele falsche PINs eingegeben. Versuchen Sie es in {0} Sekunden erneut.",
   "Settings.Epg.UrlPlaceholder": "https://.../epg.xml oder .xml.gz",

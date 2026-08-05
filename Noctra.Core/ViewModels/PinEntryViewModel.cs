@@ -28,17 +28,8 @@ public partial class PinEntryViewModel : ObservableObject, IDisposable
     private bool _isLocked;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(LockoutCountdownText))]
     [NotifyPropertyChangedFor(nameof(LockoutMessageText))]
     private int _lockSecondsRemaining;
-
-    /// <summary>
-    /// Yerelleştirilmiş geri sayım metni — saniye birimi ve ifade tamamen
-    /// çeviri formatındadır ("PinEntry.LockoutCountdownFormat").
-    /// </summary>
-    public string LockoutCountdownText => string.Format(
-        _localizationService.GetString("PinEntry.LockoutCountdownFormat"),
-        LockSecondsRemaining);
 
     /// <summary>
     /// Lockout sırasında gösterilen birleşik mesaj — neden kilitlenildiği ve
@@ -199,7 +190,9 @@ public partial class PinEntryViewModel : ObservableObject, IDisposable
         IsLocked = true;
         var seconds = Math.Max(1, (int)(untilUtc - DateTime.UtcNow).TotalSeconds);
         LockSecondsRemaining = seconds;
-        ErrorMessage = _localizationService.GetString("PinEntry.Error.TooManyAttempts");
+        // Neden, birleşik LockoutMessageText içinde yer alır; ShowErrorMessage
+        // kilit sırasında zaten gizlenir, ayrıca hata metni tutmaya gerek yok.
+        ErrorMessage = string.Empty;
 
         int countdown = seconds;
 
