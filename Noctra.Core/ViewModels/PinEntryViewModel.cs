@@ -10,7 +10,7 @@ public partial class PinEntryViewModel : ObservableObject
     private readonly IDispatcherService _dispatcherService;
     private readonly string _pinHash;
     private readonly ILocalizationService _localizationService;
-    private const int MaxAttempts = 5;
+    private const int MaxAttempts = Services.ProfileService.MaxPinAttempts;
     private int _attemptCount;
 
     [ObservableProperty]
@@ -56,10 +56,10 @@ public partial class PinEntryViewModel : ObservableObject
     public event EventHandler<bool?>? PinResult;
 
     /// <summary>
-    /// Lockout başladığında tetiklenir — ProfilesWindow lockout'u kalıcı hale getirir.
-    /// Parametre: lockout'un biteceği UTC zaman.
+    /// Her başarısız denemede tetiklenir. Parametre: güncel toplam başarısız
+    /// deneme sayısı. UI bu sayıyı kalıcı state'e (ProfileService) yazar.
     /// </summary>
-    public event EventHandler<DateTime>? LockoutTriggered;
+    public event EventHandler<int>? AttemptFailed;
 
     public PinEntryViewModel(
         ISecurityService securityService,
@@ -67,7 +67,10 @@ public partial class PinEntryViewModel : ObservableObject
         string pinHash,
         string profileName,
         string profileAvatar,
-        string purpose, ILocalizationService localizationService)
+        string purpose,
+        ILocalizationService localizationService,
+        int failedAttempts = 0,
+        DateTime? lockedUntilUtc = null)
     {
         _securityService = securityService;
         _dispatcherService = dispatcherService;
@@ -76,6 +79,12 @@ public partial class PinEntryViewModel : ObservableObject
         ProfileAvatar = profileAvatar;
         Purpose = purpose;
         _localizationService = localizationService;
+        _attemptCount = Math.Max(0, failedAttempts);
+
+        if (lockedUntilUtc is { } until && until > DateTime.UtcNow)
+        {
+            ApplyLockout(until);
+        }
     }
 
     [RelayCommand]
@@ -114,31 +123,29 @@ public partial class PinEntryViewModel : ObservableObject
             OnPropertyChanged(nameof(PinLength));
 
             ShakeTrigger++;
+            AttemptFailed?.Invoke(this, _attemptCount);
 
-            if (_attemptCount >= MaxAttempts)
-            {
-                TriggerLockout();
-            }
-            else
-            {
-                int remaining = MaxAttempts - _attemptCount;
-                ErrorMessage = remaining == 1
+            int remaining = MaxAttempts - _attemptCount;
+            ErrorMessage = remaining <= 0
+                ? _localizationService.GetString("PinEntry.Error.TooManyAttempts")
+                : remaining == 1
                     ? _localizationService.GetString("PinEntry.Error.WrongPinLast")
                     : string.Format(_localizationService.GetString("PinEntry.Error.WrongPinRemainingFormat"), remaining);
-            }
         }
     }
 
-    private void TriggerLockout()
+    /// <summary>
+    /// Kalıcı lockout başladığında UI tarafından çağrılır — kilit ekranını
+    /// açar ve verilen zamana kadar geri sayım başlatır.
+    /// </summary>
+    public void ApplyLockout(DateTime untilUtc)
     {
         IsLocked = true;
-        LockSecondsRemaining = 30;
+        var seconds = Math.Max(1, (int)(untilUtc - DateTime.UtcNow).TotalSeconds);
+        LockSecondsRemaining = seconds;
         ErrorMessage = _localizationService.GetString("PinEntry.Error.TooManyAttempts");
 
-        // ProfilesWindow'a lockout başladığını bildir (kalıcılık için)
-        LockoutTriggered?.Invoke(this, DateTime.UtcNow.AddSeconds(30));
-
-        int countdown = 30;
+        int countdown = seconds;
 
         _ = Task.Run(async () =>
         {

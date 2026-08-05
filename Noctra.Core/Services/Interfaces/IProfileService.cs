@@ -40,7 +40,33 @@ public interface IProfileService
     /// Süresi dolmuş profilleri kalıcı olarak siler (uygulama açılışında çağrılır).
     /// </summary>
     Task PurgeExpiredProfilesAsync();
+
+    /// <summary>
+    /// PIN doğrulama durumunu döndürür (kalıcı deneme sayacı ve kilit).
+    /// Süresi dolmuş kilit temizlenir ve sayaç sıfırlanır.
+    /// </summary>
+    Task<PinVerificationState> GetPinVerificationStateAsync(int profileId);
+
+    /// <summary>
+    /// Art arda başarısız PIN denemesini kaydeder; eşiğe ulaşıldığında
+    /// profili kalıcı olarak kilitler. Yeni durumu döndürür.
+    /// </summary>
+    Task<PinVerificationState> RegisterPinFailureAsync(int profileId);
+
+    /// <summary>
+    /// Başarılı PIN doğrulamasında deneme sayacını ve kilidi sıfırlar.
+    /// </summary>
+    Task ResetPinAttemptsAsync(int profileId);
 }
+
+/// <summary>
+/// Bir profilin PIN doğrulama durumu (kalıcı, veritabanında saklanır).
+/// </summary>
+public sealed record PinVerificationState(
+    int FailedPinAttempts,
+    DateTime? PinLockedUntilUtc,
+    bool IsLocked,
+    TimeSpan? RemainingLockDuration);
 
 /// <summary>
 /// Immutable request object for profile save operations.

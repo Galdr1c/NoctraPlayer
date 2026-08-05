@@ -22,7 +22,6 @@ public partial class ProfileListView : UserControl
     private ProfilesViewModel? _viewModel;
     private AddProfileViewModel? _activeProfileSetupViewModel;
     private PinEntryViewModel? _activePinEntryViewModel;
-    private readonly Dictionary<int, DateTime> _profileLockouts = new();
 
     public event EventHandler? ProfileLoaded;
 
@@ -203,18 +202,15 @@ public partial class ProfileListView : UserControl
             return false;
         }
 
-        var now = DateTime.UtcNow;
-        foreach (var expiredKey in _profileLockouts.Where(kvp => kvp.Value <= now).Select(kvp => kvp.Key).ToList())
-        {
-            _profileLockouts.Remove(expiredKey);
-        }
-
         var dialogService = app.Services.GetRequiredService<IDialogService>();
         var localizationService = app.Services.GetRequiredService<ILocalizationService>();
+        var profileService = app.Services.GetRequiredService<IProfileService>();
 
-        if (_profileLockouts.TryGetValue(profile.Id, out var lockoutEnd) && lockoutEnd > now)
+        // Kalıcı kilit kontrolü — profil hâlâ kilitliyse PIN penceresini açma
+        var state = await profileService.GetPinVerificationStateAsync(profile.Id);
+        if (state.IsLocked)
         {
-            var remaining = (int)(lockoutEnd - now).TotalSeconds;
+            var remaining = (int)state.RemainingLockDuration!.Value.TotalSeconds;
             await dialogService.ShowMessageAsync(
                 localizationService.GetString("PinEntry.Error.LockedTitle"),
                 string.Format(localizationService.GetString("PinEntry.Error.ProfileLockedFormat"), remaining));
@@ -229,17 +225,19 @@ public partial class ProfileListView : UserControl
             profile.Name,
             profile.Avatar,
             localizationService.GetString(purposeKey),
-            localizationService);
+            localizationService,
+            state.FailedPinAttempts,
+            state.PinLockedUntilUtc);
 
         _activePinEntryViewModel = pinViewModel;
-        pinViewModel.LockoutTriggered += PinEntry_LockoutTriggered;
+        pinViewModel.AttemptFailed += PinEntry_AttemptFailed;
         pinViewModel.PinResult += PinEntry_PinResult;
         PinEntryContent.DataContext = pinViewModel;
         PinEntryHost.IsVisible = true;
         PinEntryContent.Focus();
 
         var result = await completion.Task;
-        pinViewModel.LockoutTriggered -= PinEntry_LockoutTriggered;
+        pinViewModel.AttemptFailed -= PinEntry_AttemptFailed;
         pinViewModel.PinResult -= PinEntry_PinResult;
         ClosePinEntry();
 
@@ -251,13 +249,34 @@ public partial class ProfileListView : UserControl
 
         return result == true;
 
-        void PinEntry_LockoutTriggered(object? sender, DateTime lockoutUntil)
+        void PinEntry_AttemptFailed(object? sender, int attemptCount)
         {
-            _profileLockouts[profile.Id] = lockoutUntil;
+            _ = PersistFailureAsync();
+
+            async Task PersistFailureAsync()
+            {
+                try
+                {
+                    var newState = await profileService.RegisterPinFailureAsync(profile.Id);
+                    if (newState.IsLocked)
+                    {
+                        pinViewModel.ApplyLockout(newState.PinLockedUntilUtc!.Value);
+                    }
+                }
+                catch
+                {
+                    // DB hatası kilit akışını bozmasın
+                }
+            }
         }
 
         void PinEntry_PinResult(object? sender, bool? value)
         {
+            if (value == true)
+            {
+                _ = profileService.ResetPinAttemptsAsync(profile.Id);
+            }
+
             completion.TrySetResult(value);
         }
     }

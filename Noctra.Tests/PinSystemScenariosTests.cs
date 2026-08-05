@@ -239,6 +239,141 @@ namespace Noctra.Tests
         }
 
         [Fact]
+        public async Task PinLockout_FiveFailures_LocksProfilePersistently()
+        {
+            // Arrange
+            var profile = await SeedProfileAsync("Locked", _securityService.HashPin("1234"));
+            var service = new ProfileService(_contextFactory, _mockDownloadService.Object, _mockLicenseService.Object);
+
+            // Act — four failures stay unlocked, fifth locks
+            for (var i = 1; i <= 4; i++)
+            {
+                var state = await service.RegisterPinFailureAsync(profile.Id);
+                Assert.False(state.IsLocked, $"Attempt {i} must not lock yet.");
+                Assert.Equal(i, state.FailedPinAttempts);
+            }
+
+            var locked = await service.RegisterPinFailureAsync(profile.Id);
+
+            // Assert — locked with ~30s remaining
+            Assert.True(locked.IsLocked);
+            Assert.NotNull(locked.PinLockedUntilUtc);
+            Assert.True(locked.RemainingLockDuration!.Value.TotalSeconds is > 25 and <= 30);
+
+            // Persistence — a brand-new context (simulating app restart) still sees the lock
+            using var dbVerify = _contextFactory.CreateDbContext();
+            var persisted = await dbVerify.Profiles.FindAsync(profile.Id);
+            Assert.NotNull(persisted!.PinLockedUntilUtc);
+            Assert.Equal(5, persisted.FailedPinAttempts);
+
+            var afterRestart = await service.GetPinVerificationStateAsync(profile.Id);
+            Assert.True(afterRestart.IsLocked, "Lock must survive an app restart.");
+        }
+
+        [Fact]
+        public async Task PinLockout_SuccessfulVerification_ResetsAttempts()
+        {
+            // Arrange
+            var profile = await SeedProfileAsync("Reset", _securityService.HashPin("1234"));
+            var service = new ProfileService(_contextFactory, _mockDownloadService.Object, _mockLicenseService.Object);
+
+            var state = await service.RegisterPinFailureAsync(profile.Id);
+            state = await service.RegisterPinFailureAsync(profile.Id);
+            Assert.Equal(2, state.FailedPinAttempts);
+
+            // Act — successful verification clears the counter
+            await service.ResetPinAttemptsAsync(profile.Id);
+
+            // Assert
+            using var dbVerify = _contextFactory.CreateDbContext();
+            var updated = await dbVerify.Profiles.FindAsync(profile.Id);
+            Assert.Equal(0, updated!.FailedPinAttempts);
+            Assert.Null(updated.PinLockedUntilUtc);
+        }
+
+        [Fact]
+        public async Task PinLockout_ExpiredLock_IsClearedOnRead()
+        {
+            // Arrange
+            var profile = await SeedProfileAsync("Expired Lock", _securityService.HashPin("1234"));
+            profile.FailedPinAttempts = 5;
+            profile.PinLockedUntilUtc = DateTime.UtcNow.AddSeconds(-1);
+            _context.Entry(profile).State = EntityState.Modified;
+            await _context.SaveChangesAsync();
+
+            var service = new ProfileService(_contextFactory, _mockDownloadService.Object, _mockLicenseService.Object);
+
+            // Act
+            var state = await service.GetPinVerificationStateAsync(profile.Id);
+
+            // Assert — expired lock is cleared and the counter reset
+            Assert.False(state.IsLocked);
+            Assert.Equal(0, state.FailedPinAttempts);
+
+            using var dbVerify = _contextFactory.CreateDbContext();
+            var updated = await dbVerify.Profiles.FindAsync(profile.Id);
+            Assert.Null(updated!.PinLockedUntilUtc);
+            Assert.Equal(0, updated.FailedPinAttempts);
+        }
+
+        [Fact]
+        public void PinEntry_StartsLocked_WhenLockedUntilInFuture()
+        {
+            // Arrange
+            var vm = new PinEntryViewModel(
+                _securityService,
+                new Mock<IDispatcherService>().Object,
+                _securityService.HashPin("1234"),
+                "Test",
+                string.Empty,
+                "Login",
+                new Mock<ILocalizationService>().Object,
+                failedAttempts: ProfileService.MaxPinAttempts,
+                lockedUntilUtc: DateTime.UtcNow.AddSeconds(30));
+
+            // Assert
+            Assert.True(vm.IsLocked);
+            Assert.True(vm.LockSecondsRemaining > 0);
+
+            // Act — input must be blocked while locked
+            vm.PressDigitCommand.Execute("1");
+
+            // Assert
+            Assert.Equal(string.Empty, vm.EnteredPin);
+        }
+
+        [Fact]
+        public void PinEntry_ResumesAttemptCount_FromPersistedState()
+        {
+            // Arrange
+            var localization = new Mock<ILocalizationService>();
+            localization.Setup(s => s.GetString(It.IsAny<string>())).Returns((string key) => key);
+
+            var vm = new PinEntryViewModel(
+                _securityService,
+                new Mock<IDispatcherService>().Object,
+                _securityService.HashPin("1234"),
+                "Test",
+                string.Empty,
+                "Login",
+                localization.Object,
+                failedAttempts: 4);
+
+            var failed = 0;
+            vm.AttemptFailed += (_, count) => failed = count;
+
+            // Act — one wrong entry after 4 persisted failures reaches the threshold
+            foreach (var digit in "1111")
+            {
+                vm.PressDigitCommand.Execute(digit.ToString());
+            }
+
+            // Assert — the 5th failure is reported so the caller can persist the lock
+            Assert.Equal(5, failed);
+            Assert.Equal("PinEntry.Error.TooManyAttempts", vm.ErrorMessage);
+        }
+
+        [Fact]
         public async Task DeletionLifecycle_Schedule_SetsPendingAt()
         {
             // Arrange

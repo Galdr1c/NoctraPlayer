@@ -319,7 +319,7 @@
                         <!-- PIN kilit simgesi (sağ üst köşe) -->
                         <icons:MaterialIcon Kind="Lock"
                                             Width="24" Height="24"
-                                            Foreground="{DynamicResource TextPrimaryBrush}"
+                                            Foreground="{DynamicResource PremiumBadgeTextBrush}"
                                             HorizontalAlignment="Right"
                                             VerticalAlignment="Bottom"
                                             Margin="8"

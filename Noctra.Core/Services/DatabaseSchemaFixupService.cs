@@ -19,6 +19,8 @@ public sealed class DatabaseSchemaFixupService : IDatabaseSchemaFixupService
         await AddColumnIfMissingAsync(context, "Profiles", "CreatedAt", "TEXT NOT NULL DEFAULT '0001-01-01 00:00:00'", cancellationToken).ConfigureAwait(false);
         await AddColumnIfMissingAsync(context, "Profiles", "PinHash", "TEXT", cancellationToken).ConfigureAwait(false);
         await AddColumnIfMissingAsync(context, "Profiles", "PendingDeletionAt", "TEXT", cancellationToken).ConfigureAwait(false);
+        await AddColumnIfMissingAsync(context, "Profiles", "FailedPinAttempts", "INTEGER NOT NULL DEFAULT 0", cancellationToken).ConfigureAwait(false);
+        await AddColumnIfMissingAsync(context, "Profiles", "PinLockedUntilUtc", "TEXT", cancellationToken).ConfigureAwait(false);
 
         await AddColumnIfMissingAsync(context, "Playlists", "EpgUrl", "TEXT", cancellationToken).ConfigureAwait(false);
         await AddColumnIfMissingAsync(context, "Playlists", "DetectedCountry", "TEXT", cancellationToken).ConfigureAwait(false);

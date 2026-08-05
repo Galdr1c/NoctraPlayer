@@ -13,6 +13,9 @@ public class ProfileService : IProfileService
     private readonly ISettingsService? _settingsService;
     private const string ProfilesLimitKey = "profiles";
 
+    public const int MaxPinAttempts = 5;
+    public const int PinLockoutDurationSeconds = 30;
+
     public ProfileService(
         IDbContextFactory<AppDbContext> contextFactory,
         IContentDownloadService contentDownloadService,
@@ -321,5 +324,83 @@ public class ProfileService : IProfileService
         }
 
         await _settingsService.CleanOrphanedSettingsAsync(activeProfileIds);
+    }
+
+    public async Task<PinVerificationState> GetPinVerificationStateAsync(int profileId)
+    {
+        await using var db = await _contextFactory.CreateDbContextAsync();
+        var profile = await db.Profiles.FindAsync(profileId);
+        if (profile == null)
+        {
+            return new PinVerificationState(0, null, false, null);
+        }
+
+        var now = DateTime.UtcNow;
+        if (profile.PinLockedUntilUtc is { } until && until <= now)
+        {
+            profile.FailedPinAttempts = 0;
+            profile.PinLockedUntilUtc = null;
+            await db.SaveChangesAsync();
+            return new PinVerificationState(0, null, false, null);
+        }
+
+        return ToPinVerificationState(profile, now);
+    }
+
+    public async Task<PinVerificationState> RegisterPinFailureAsync(int profileId)
+    {
+        await using var db = await _contextFactory.CreateDbContextAsync();
+        var profile = await db.Profiles.FindAsync(profileId);
+        if (profile == null)
+        {
+            return new PinVerificationState(0, null, false, null);
+        }
+
+        var now = DateTime.UtcNow;
+        if (profile.PinLockedUntilUtc is { } until && until > now)
+        {
+            return ToPinVerificationState(profile, now);
+        }
+
+        profile.FailedPinAttempts++;
+        if (profile.FailedPinAttempts >= MaxPinAttempts)
+        {
+            profile.PinLockedUntilUtc = now.AddSeconds(PinLockoutDurationSeconds);
+        }
+
+        await db.SaveChangesAsync();
+        return ToPinVerificationState(profile, now);
+    }
+
+    public async Task ResetPinAttemptsAsync(int profileId)
+    {
+        await using var db = await _contextFactory.CreateDbContextAsync();
+        var profile = await db.Profiles.FindAsync(profileId);
+        if (profile == null)
+        {
+            return;
+        }
+
+        profile.FailedPinAttempts = 0;
+        profile.PinLockedUntilUtc = null;
+        await db.SaveChangesAsync();
+    }
+
+    private static PinVerificationState ToPinVerificationState(Profile profile, DateTime now)
+    {
+        if (profile.PinLockedUntilUtc is { } until && until > now)
+        {
+            return new PinVerificationState(
+                profile.FailedPinAttempts,
+                until,
+                true,
+                until - now);
+        }
+
+        return new PinVerificationState(
+            profile.FailedPinAttempts,
+            null,
+            false,
+            null);
     }
 }

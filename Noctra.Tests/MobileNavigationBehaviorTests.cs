@@ -317,9 +317,9 @@ public sealed class MobileNavigationBehaviorTests
     {
         var mainView = ReadProjectFile("Noctra.Mobile", "Views", "MainView.axaml");
 
-        // Compact mode must set Width=56
+        // Compact mode must set Width=68 (icon + download-count badge)
         Assert.Contains("Border#NavigationRail.compact", mainView);
-        Assert.Contains("<Setter Property=\"Width\" Value=\"56\"", mainView);
+        Assert.Contains("<Setter Property=\"Width\" Value=\"68\"", mainView);
     }
 
     [Fact]

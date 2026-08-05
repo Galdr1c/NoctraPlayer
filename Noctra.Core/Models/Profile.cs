@@ -39,6 +39,18 @@ public class Profile
     public string? PinHash { get; set; }
 
     /// <summary>
+    /// Art arda yapılan başarısız PIN denemelerinin sayısı.
+    /// Başarılı doğrulamada veya kilit süresi dolunca sıfırlanır.
+    /// </summary>
+    public int FailedPinAttempts { get; set; }
+
+    /// <summary>
+    /// PIN girişinin kilitli olduğu sürenin bittiği UTC zaman. Null = kilit yok.
+    /// Uygulama yeniden başlatılsa bile korunur.
+    /// </summary>
+    public DateTime? PinLockedUntilUtc { get; set; }
+
+    /// <summary>
     /// PIN unuttum akışı başlatıldığında set edilir.
     /// Null ise hesap normal durumda.
     /// </summary>

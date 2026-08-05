@@ -28,10 +28,6 @@ public partial class ProfilesWindow : Window
     private bool _autoSelectTriggered;
     private int _isAddProfileWindowOpen; // 0 = closed, 1 = open
 
-    // ── Lockout Kalıcılığı ────────────────────────────────────────────
-    // Pencere kapansa bile lockout süresi boyunca PIN girişini engeller.
-    private readonly Dictionary<int, DateTime> _profileLockouts = new();
-
     public bool DisableAutoSelect { get; set; }
 
     public ProfilesWindow()
@@ -87,16 +83,13 @@ public partial class ProfilesWindow : Window
         if (string.IsNullOrEmpty(profile.PinHash))
             return true;
 
-        // Lockout kalıcılık kontrolü — profil hala kilitliyse PIN penceresini açma
-        // Eski lockout kayıtlarını temizle
-        var now = DateTime.UtcNow;
-        var expiredKeys = _profileLockouts.Where(kvp => kvp.Value <= now).Select(kvp => kvp.Key).ToList();
-        foreach (var key in expiredKeys)
-            _profileLockouts.Remove(key);
-
-        if (_profileLockouts.TryGetValue(profile.Id, out var lockoutEnd) && lockoutEnd > now)
+        // Kalıcı kilit kontrolü — profil hâlâ kilitliyse PIN penceresini açma.
+        // Kilit ve deneme sayacı veritabanında saklanır; uygulama yeniden
+        // başlatılsa bile korunur.
+        var state = await _profileService.GetPinVerificationStateAsync(profile.Id);
+        if (state.IsLocked)
         {
-            var remaining = (int)(lockoutEnd - now).TotalSeconds;
+            var remaining = (int)state.RemainingLockDuration!.Value.TotalSeconds;
             await _dialogService.ShowMessageAsync(
                 _localizationService.GetString("PinEntry.Error.LockedTitle"),
                 string.Format(_localizationService.GetString("PinEntry.Error.ProfileLockedFormat"), remaining));
@@ -110,19 +103,43 @@ public partial class ProfilesWindow : Window
             profile.Name,
             profile.Avatar,
             _localizationService.GetString(purposeKey),
-            _localizationService);
-
-        // Lockout kalıcılık — lockout başladığında süreyi kaydet
-        pinVm.LockoutTriggered += (_, lockoutUntil) =>
-        {
-            _profileLockouts[profile.Id] = lockoutUntil;
-        };
+            _localizationService,
+            state.FailedPinAttempts,
+            state.PinLockedUntilUtc);
 
         var pinWindow = new PinEntryWindow(pinVm);
         bool? result = null;
 
+        // Kalıcılık — her başarısız deneme veritabanına yazılır; kilit
+        // tetiklendiğinde PIN penceresi kilit durumuna geçer.
+        pinVm.AttemptFailed += (_, _) =>
+        {
+            _ = PersistFailureAsync();
+
+            async Task PersistFailureAsync()
+            {
+                try
+                {
+                    var newState = await _profileService.RegisterPinFailureAsync(profile.Id);
+                    if (newState.IsLocked)
+                    {
+                        pinVm.ApplyLockout(newState.PinLockedUntilUtc!.Value);
+                    }
+                }
+                catch
+                {
+                    // DB hatası kilit akışını bozmasın
+                }
+            }
+        };
+
         pinVm.PinResult += (_, r) =>
         {
+            if (r == true)
+            {
+                _ = _profileService.ResetPinAttemptsAsync(profile.Id);
+            }
+
             result = r;
             pinWindow.Close();
         };
