@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.EntityFrameworkCore;
@@ -50,6 +51,14 @@ public partial class ProfilesViewModel : ObservableObject
     /// değildir; PIN'li profil + prompt yoksa erişim reddedilir.
     /// </summary>
     public Func<Profile, ProfileAccessPurpose, Task<bool>>? PinPrompt { get; set; }
+
+    // Profil kartı aksiyonlarında hızlı çoklu tıklama koruması: akış sürerken
+    // (PIN ekranı, konfirmasyon veya yükleme) yeni başlatılan akış yutulur.
+    // Aksi halde ikinci çağrı yeni PIN akışı, tamamlanmayan TaskCompletionSource
+    // ve çift profil yüklemesi üretebilir.
+    private int _selectProfileActive;
+    private int _editProfileActive;
+    private int _deleteProfileActive;
 
     public ProfilesViewModel(
         IProfileService profileService,
@@ -210,6 +219,23 @@ public partial class ProfilesViewModel : ObservableObject
     [RelayCommand]
     private async Task SelectProfile(Profile profile)
     {
+        if (Interlocked.Exchange(ref _selectProfileActive, 1) == 1)
+        {
+            return;
+        }
+
+        try
+        {
+            await SelectProfileCoreAsync(profile);
+        }
+        finally
+        {
+            Interlocked.Exchange(ref _selectProfileActive, 0);
+        }
+    }
+
+    private async Task SelectProfileCoreAsync(Profile profile)
+    {
         if (profile == null) return;
         
         if (IsManageMode)
@@ -268,6 +294,23 @@ public partial class ProfilesViewModel : ObservableObject
     [RelayCommand]
     private async Task DeleteProfile(Profile profile)
     {
+        if (Interlocked.Exchange(ref _deleteProfileActive, 1) == 1)
+        {
+            return;
+        }
+
+        try
+        {
+            await DeleteProfileCoreAsync(profile);
+        }
+        finally
+        {
+            Interlocked.Exchange(ref _deleteProfileActive, 0);
+        }
+    }
+
+    private async Task DeleteProfileCoreAsync(Profile profile)
+    {
         if (profile == null) return;
         
         // 1. Confirmation
@@ -307,6 +350,23 @@ public partial class ProfilesViewModel : ObservableObject
 
     [RelayCommand]
     private async Task EditProfile(Profile profile)
+    {
+        if (Interlocked.Exchange(ref _editProfileActive, 1) == 1)
+        {
+            return;
+        }
+
+        try
+        {
+            await EditProfileCoreAsync(profile);
+        }
+        finally
+        {
+            Interlocked.Exchange(ref _editProfileActive, 0);
+        }
+    }
+
+    private async Task EditProfileCoreAsync(Profile profile)
     {
         if (profile == null) return;
 
