@@ -6,6 +6,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
         xmlns:loc="using:Noctra.Avalonia.Localization"
+        xmlns:controls="using:Noctra.Avalonia.Controls"
         x:Class="Noctra.Avalonia.Views.PinEntryWindow"
         x:CompileBindings="False"
         Title="{loc:Translate PinEntry.EnterPin}"
@@ -152,6 +153,16 @@
                            Height="18" Margin="4"
                            IsVisible="{Binding ShowErrorMessage}"/>
 
+                <!-- Verifying (PBKDF2 arka planda doğrularken) -->
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8"
+                            Margin="0,6"
+                            IsVisible="{Binding IsVerifying}">
+                    <controls:PremiumSpinner Width="24" Height="24"/>
+                    <TextBlock Text="{loc:Translate PinEntry.Verifying}"
+                               FontSize="10" VerticalAlignment="Center"
+                               Foreground="{DynamicResource TextMutedBrush}"/>
+                </StackPanel>
+
                 <!-- Lockout Countdown -->
                 <TextBlock FontSize="11" HorizontalAlignment="Center"
                            Foreground="{DynamicResource WarningBrush}"
@@ -165,7 +176,7 @@
                 <!-- Keypad -->
                 <UniformGrid Rows="4" Columns="3" Width="180"
                              HorizontalAlignment="Center"
-                             IsEnabled="{Binding !IsLocked}">
+                             IsEnabled="{Binding IsKeypadEnabled}">
                     <Button Content="1" Command="{Binding PressDigitCommand}" CommandParameter="1" Classes="PinKey"/>
                     <Button Content="2" Command="{Binding PressDigitCommand}" CommandParameter="2" Classes="PinKey"/>
                     <Button Content="3" Command="{Binding PressDigitCommand}" CommandParameter="3" Classes="PinKey"/>

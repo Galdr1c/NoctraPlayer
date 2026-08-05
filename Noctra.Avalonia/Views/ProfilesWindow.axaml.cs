@@ -154,6 +154,24 @@ public partial class ProfilesWindow : Window
             pinWindow.Close();
         };
 
+        // Legacy formattan dogrulanan PIN — ayni PIN guncel formatta saklanir.
+        pinVm.PinNeedsRehash += (_, pin) =>
+        {
+            _ = UpgradePinHashAsync(pin);
+
+            async Task UpgradePinHashAsync(string verifiedPin)
+            {
+                try
+                {
+                    await _profileService.UpgradePinHashAsync(profile.Id, _securityService.HashPin(verifiedPin));
+                }
+                catch
+                {
+                    // Hash yukseltme hatasi giris akisini bozmasin
+                }
+            }
+        };
+
         await pinWindow.ShowDialog(this);
 
         if (result == null)

@@ -1,4 +1,4 @@
-{
+﻿{
   "GlobalSettings.Title": "Einstellungen",
   "GlobalSettings.Appearance.Title": "Erscheinungsbild",
   "GlobalSettings.Theme.Title": "Thema",
@@ -722,6 +722,7 @@
   "Settings.Epg.Timezone.Format.Negative": "{0} Stunde",
   "PinEntry.ForgotPin": "PIN\nVergessen",
   "PinEntry.EnterPin": "PIN eingeben",
+  "PinEntry.Verifying": "Wird überprüft...",
   "PinEntry.LockoutCountdown": "Gesperrt. Versuchen Sie es in ",
   "PinEntry.Error.LockedTitle": "Profil Gesperrt",
   "PinEntry.Error.ProfileLockedFormat": "Dieses Profil wurde aufgrund zu vieler falscher PIN-Versuche gesperrt. Bitte versuchen Sie es in {0} Sekunden erneut.",

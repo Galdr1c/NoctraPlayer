@@ -2,6 +2,7 @@ using System;
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading.Tasks;
 using Android.Security.Keystore;
 using Java.Security;
 using Javax.Crypto;
@@ -21,6 +22,11 @@ public sealed class AndroidSecurityService : ISecurityService
     private const int PinHashIterations = 210_000;
     private const int PinSaltSizeBytes = 16;
     private const int PinHashSizeBytes = 32;
+
+    // Bkz. DesktopSecurityService — bozuk kayitlardaki uctan uca iteration
+    // degerleriyle dogrulama yapilmaz.
+    private const int MinSupportedIterations = 100_000;
+    private const int MaxSupportedIterations = 1_000_000;
 
     public string? Encrypt(string? plainText)
     {
@@ -115,11 +121,11 @@ public sealed class AndroidSecurityService : ISecurityService
             Convert.ToBase64String(hash));
     }
 
-    public bool VerifyPin(string pin, string hash)
+    public PinVerificationResult VerifyPin(string pin, string hash)
     {
         if (string.IsNullOrWhiteSpace(hash))
         {
-            return false;
+            return PinVerificationResult.Invalid;
         }
 
         var parts = hash.Split('$');
@@ -131,7 +137,8 @@ public sealed class AndroidSecurityService : ISecurityService
                 NumberStyles.None,
                 CultureInfo.InvariantCulture,
                 out var iterations) &&
-            iterations > 0)
+            iterations >= MinSupportedIterations &&
+            iterations <= MaxSupportedIterations)
         {
             try
             {
@@ -139,7 +146,7 @@ public sealed class AndroidSecurityService : ISecurityService
                 var expectedHash = Convert.FromBase64String(parts[4]);
                 if (salt.Length < PinSaltSizeBytes || expectedHash.Length != PinHashSizeBytes)
                 {
-                    return false;
+                    return PinVerificationResult.Invalid;
                 }
 
                 var actualHash = Rfc2898DeriveBytes.Pbkdf2(
@@ -148,20 +155,34 @@ public sealed class AndroidSecurityService : ISecurityService
                     iterations,
                     HashAlgorithmName.SHA256,
                     expectedHash.Length);
-                return CryptographicOperations.FixedTimeEquals(actualHash, expectedHash);
+                if (CryptographicOperations.FixedTimeEquals(actualHash, expectedHash))
+                {
+                    return PinVerificationResult.Valid;
+                }
             }
             catch (FormatException)
             {
-                return false;
+                return PinVerificationResult.Invalid;
             }
         }
 
         var legacyHash = Convert.ToHexString(
             SHA256.HashData(Encoding.UTF8.GetBytes($"NOCTRA_PIN_{pin}")));
-        return hash.Length == legacyHash.Length &&
+        if (hash.Length == legacyHash.Length &&
             CryptographicOperations.FixedTimeEquals(
                 Encoding.ASCII.GetBytes(legacyHash),
-                Encoding.ASCII.GetBytes(hash.ToUpperInvariant()));
+                Encoding.ASCII.GetBytes(hash.ToUpperInvariant())))
+        {
+            // Eski SHA-256 hash'i dogru — PBKDF2'ye yukseltme icin bildir.
+            return PinVerificationResult.ValidNeedsRehash;
+        }
+
+        return PinVerificationResult.Invalid;
+    }
+
+    public Task<PinVerificationResult> VerifyPinAsync(string pin, string hash)
+    {
+        return Task.Run(() => VerifyPin(pin, hash));
     }
 
     private static IKey GetOrCreateKey()

@@ -1,4 +1,4 @@
-{
+﻿{
   "GlobalSettings.Title": "Ayarlar",
   "GlobalSettings.Appearance.Title": "Görünüm",
   "GlobalSettings.Theme.Title": "Tema",
@@ -722,6 +722,7 @@
   "Settings.Epg.Timezone.Format.Negative": "{0} saat",
   "PinEntry.ForgotPin": "PIN'imi\nUnuttum",
   "PinEntry.EnterPin": "PIN girin",
+  "PinEntry.Verifying": "Doğrulanıyor...",
   "PinEntry.LockoutCountdown": "Kilitli. Kalan süre: ",
   "PinEntry.Error.LockedTitle": "Profil Kilitli",
   "PinEntry.Error.ProfileLockedFormat": "Bu profil çok fazla hatalı PIN denemesi nedeniyle kilitlendi. Lütfen {0} saniye sonra tekrar deneyin.",

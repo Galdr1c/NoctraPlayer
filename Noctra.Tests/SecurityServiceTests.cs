@@ -1,6 +1,8 @@
 using Xunit;
 using Noctra.Services;
+using Noctra.Services.Interfaces;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 
 namespace Noctra.Tests
 {
@@ -91,31 +93,54 @@ namespace Noctra.Tests
         }
 
         [Fact]
-        public void VerifyPin_CorrectPin_ShouldReturnTrue()
+        public void VerifyPin_CorrectPin_ShouldReturnValid()
         {
             var hash = _securityService.HashPin("9090");
-            Assert.True(_securityService.VerifyPin("9090", hash));
+            Assert.Equal(PinVerificationResult.Valid, _securityService.VerifyPin("9090", hash));
         }
 
         [Fact]
-        public void VerifyPin_WrongPin_ShouldReturnFalse()
+        public void VerifyPin_WrongPin_ShouldReturnInvalid()
         {
             var hash = _securityService.HashPin("1111");
-            Assert.False(_securityService.VerifyPin("2222", hash));
+            Assert.Equal(PinVerificationResult.Invalid, _securityService.VerifyPin("2222", hash));
         }
 
         [Fact]
-        public void VerifyPin_LegacySha256Hash_ShouldReturnTrue()
+        public void VerifyPin_LegacySha256Hash_ShouldReturnValidNeedsRehash()
         {
             const string legacyHashFor1234 = "83D837DD7E939316F5A94A1216FF2E6F2DC9E9859441F333CC12FA2414468B88";
 
-            Assert.True(_securityService.VerifyPin("1234", legacyHashFor1234));
+            Assert.Equal(PinVerificationResult.ValidNeedsRehash, _securityService.VerifyPin("1234", legacyHashFor1234));
         }
 
         [Fact]
-        public void VerifyPin_InvalidHashFormat_ShouldReturnFalse()
+        public void VerifyPin_InvalidHashFormat_ShouldReturnInvalid()
         {
-            Assert.False(_securityService.VerifyPin("1234", "not-a-valid-hash"));
+            Assert.Equal(PinVerificationResult.Invalid, _securityService.VerifyPin("1234", "not-a-valid-hash"));
+        }
+
+        [Fact]
+        public void VerifyPin_OutOfRangeIterations_ShouldReturnInvalid_WithoutVerifying()
+        {
+            var salt = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(16));
+            var expected = Convert.ToBase64String(new byte[32]);
+
+            // 2 milyar iterasyon — UI'yi kilitleyebilecek bozuk kayit. Sinirlar
+            // sayesinde dogrulama denenmeden Invalid donmelidir.
+            var highIterationHash = $"PBKDF2$SHA256$2000000000${salt}${expected}";
+            Assert.Equal(PinVerificationResult.Invalid, _securityService.VerifyPin("1234", highIterationHash));
+
+            // Min alti iterasyon degeri de kabul edilmez.
+            var lowIterationHash = $"PBKDF2$SHA256$1${salt}${expected}";
+            Assert.Equal(PinVerificationResult.Invalid, _securityService.VerifyPin("1234", lowIterationHash));
+        }
+
+        [Fact]
+        public async Task VerifyPinAsync_CorrectPin_ShouldReturnValid()
+        {
+            var hash = _securityService.HashPin("9090");
+            Assert.Equal(PinVerificationResult.Valid, await _securityService.VerifyPinAsync("9090", hash));
         }
     }
 }

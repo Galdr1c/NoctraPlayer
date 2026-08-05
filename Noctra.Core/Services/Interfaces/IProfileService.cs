@@ -59,6 +59,12 @@ public interface IProfileService
     /// Başarılı PIN doğrulamasında deneme sayacını ve kilidi sıfırlar.
     /// </summary>
     Task ResetPinAttemptsAsync(int profileId);
+
+    /// <summary>
+    /// Legacy formattan (eski SHA-256 veya eski parametreli PBKDF2) dogrulanan
+    /// PIN'in hash'ini guncel formatta yeniden uretilen hash ile degistirir.
+    /// </summary>
+    Task UpgradePinHashAsync(int profileId, string newPinHash);
 }
 
 /// <summary>

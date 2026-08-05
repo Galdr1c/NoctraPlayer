@@ -1,4 +1,4 @@
-{
+﻿{
   "GlobalSettings.Title": "Configuración",
   "GlobalSettings.Appearance.Title": "Apariencia",
   "GlobalSettings.Theme.Title": "Tema",
@@ -722,6 +722,7 @@
   "Settings.Epg.Timezone.Format.Negative": "{0} hora",
   "PinEntry.ForgotPin": "Olvidé\nPIN",
   "PinEntry.EnterPin": "Ingrese PIN",
+  "PinEntry.Verifying": "Verificando...",
   "PinEntry.LockoutCountdown": "Bloqueado. Intente de nuevo en ",
   "PinEntry.Error.LockedTitle": "Perfil Bloqueado",
   "PinEntry.Error.ProfileLockedFormat": "Este perfil está bloqueado por demasiados intentos de PIN incorrectos. Intente de nuevo en {0} segundos.",

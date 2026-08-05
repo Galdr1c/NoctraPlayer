@@ -221,6 +221,7 @@ public partial class ProfileListView : UserControl
         _activePinEntryViewModel = pinViewModel;
         pinViewModel.AttemptFailed += PinEntry_AttemptFailed;
         pinViewModel.PinResult += PinEntry_PinResult;
+        pinViewModel.PinNeedsRehash += PinEntry_NeedsRehash;
         PinEntryContent.DataContext = pinViewModel;
         PinEntryHost.IsVisible = true;
         PinEntryContent.Focus();
@@ -228,6 +229,7 @@ public partial class ProfileListView : UserControl
         var result = await completion.Task;
         pinViewModel.AttemptFailed -= PinEntry_AttemptFailed;
         pinViewModel.PinResult -= PinEntry_PinResult;
+        pinViewModel.PinNeedsRehash -= PinEntry_NeedsRehash;
         ClosePinEntry();
 
         if (result == null)
@@ -267,6 +269,24 @@ public partial class ProfileListView : UserControl
             }
 
             completion.TrySetResult(value);
+        }
+
+        void PinEntry_NeedsRehash(object? sender, string pin)
+        {
+            _ = RehashPinAsync(pin);
+
+            async Task RehashPinAsync(string verifiedPin)
+            {
+                try
+                {
+                    var securityService = app.Services.GetRequiredService<ISecurityService>();
+                    await profileService.UpgradePinHashAsync(profile.Id, securityService.HashPin(verifiedPin));
+                }
+                catch
+                {
+                    // Hash yukseltme hatasi giris akisini bozmasin
+                }
+            }
         }
     }
 

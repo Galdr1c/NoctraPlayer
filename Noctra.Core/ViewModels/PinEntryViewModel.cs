@@ -22,6 +22,7 @@ public partial class PinEntryViewModel : ObservableObject
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowErrorMessage))]
+    [NotifyPropertyChangedFor(nameof(IsKeypadEnabled))]
     private bool _isLocked;
 
     [ObservableProperty]
@@ -43,6 +44,16 @@ public partial class PinEntryViewModel : ObservableObject
     [ObservableProperty]
     private int _shakeTrigger;
 
+    /// <summary>
+    /// PBKDF2 dogrulamasi arka planda surerken true olur — keypad devre disi
+    /// kalir ve UI islem gostergesi gosterir.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsKeypadEnabled))]
+    private bool _isVerifying;
+
+    public bool IsKeypadEnabled => !IsLocked && !IsVerifying;
+
     public int PinLength => EnteredPin.Length;
 
     /// <summary>
@@ -60,6 +71,12 @@ public partial class PinEntryViewModel : ObservableObject
     /// deneme sayısı. UI bu sayıyı kalıcı state'e (ProfileService) yazar.
     /// </summary>
     public event EventHandler<int>? AttemptFailed;
+
+    /// <summary>
+    /// PIN dogru ancak hash legacy formatta oldugunda tetiklenir. Parametre:
+    /// dogrulanan PIN — cagiran bu PIN'i yeniden hash'leyip saklar.
+    /// </summary>
+    public event EventHandler<string>? PinNeedsRehash;
 
     public PinEntryViewModel(
         ISecurityService securityService,
@@ -88,16 +105,16 @@ public partial class PinEntryViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void PressDigit(string digit)
+    private async Task PressDigit(string digit)
     {
-        if (IsLocked || EnteredPin.Length >= 4) return;
+        if (IsLocked || IsVerifying || EnteredPin.Length >= 4) return;
 
         EnteredPin += digit;
         OnPropertyChanged(nameof(PinLength));
 
         // 4 hane dolunca otomatik doğrula
         if (EnteredPin.Length == 4)
-            VerifyPin();
+            await VerifyPinAsync();
     }
 
     [RelayCommand]
@@ -110,27 +127,43 @@ public partial class PinEntryViewModel : ObservableObject
         ErrorMessage = string.Empty;
     }
 
-    private void VerifyPin()
+    private async Task VerifyPinAsync()
     {
-        if (_securityService.VerifyPin(EnteredPin, _pinHash))
+        IsVerifying = true;
+        try
         {
-            PinResult?.Invoke(this, true);
+            var result = await _securityService.VerifyPinAsync(EnteredPin, _pinHash);
+            if (result == PinVerificationResult.Valid)
+            {
+                PinResult?.Invoke(this, true);
+            }
+            else if (result == PinVerificationResult.ValidNeedsRehash)
+            {
+                // Eski formattaki hash — ayni PIN aninda yeni formatta
+                // saklanmak uzere cagirana bildirilir.
+                PinNeedsRehash?.Invoke(this, EnteredPin);
+                PinResult?.Invoke(this, true);
+            }
+            else
+            {
+                _attemptCount++;
+                EnteredPin = string.Empty;
+                OnPropertyChanged(nameof(PinLength));
+
+                ShakeTrigger++;
+                AttemptFailed?.Invoke(this, _attemptCount);
+
+                int remaining = MaxAttempts - _attemptCount;
+                ErrorMessage = remaining <= 0
+                    ? _localizationService.GetString("PinEntry.Error.TooManyAttempts")
+                    : remaining == 1
+                        ? _localizationService.GetString("PinEntry.Error.WrongPinLast")
+                        : string.Format(_localizationService.GetString("PinEntry.Error.WrongPinRemainingFormat"), remaining);
+            }
         }
-        else
+        finally
         {
-            _attemptCount++;
-            EnteredPin = string.Empty;
-            OnPropertyChanged(nameof(PinLength));
-
-            ShakeTrigger++;
-            AttemptFailed?.Invoke(this, _attemptCount);
-
-            int remaining = MaxAttempts - _attemptCount;
-            ErrorMessage = remaining <= 0
-                ? _localizationService.GetString("PinEntry.Error.TooManyAttempts")
-                : remaining == 1
-                    ? _localizationService.GetString("PinEntry.Error.WrongPinLast")
-                    : string.Format(_localizationService.GetString("PinEntry.Error.WrongPinRemainingFormat"), remaining);
+            IsVerifying = false;
         }
     }
 

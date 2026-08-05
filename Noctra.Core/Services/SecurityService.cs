@@ -14,6 +14,12 @@ public class DesktopSecurityService : ISecurityService
     private const int PinSaltSizeBytes = 16;
     private const int PinHashSizeBytes = 32;
 
+    // Bozuk/elle kurcalanmis kayitlardaki uctan uca iteration degerleri UI
+    // thread'ini dakikalarca kilitleyebilir; dogrulama yalnizca bu araliktaki
+    // parametrelerle yapilir.
+    private const int MinSupportedIterations = 100_000;
+    private const int MaxSupportedIterations = 1_000_000;
+
     public string? Encrypt(string? plainText)
     {
         if (string.IsNullOrEmpty(plainText))
@@ -71,19 +77,31 @@ public class DesktopSecurityService : ISecurityService
             Convert.ToBase64String(hash));
     }
 
-    public bool VerifyPin(string pin, string hash)
+    public PinVerificationResult VerifyPin(string pin, string hash)
     {
         if (string.IsNullOrWhiteSpace(hash))
         {
-            return false;
+            return PinVerificationResult.Invalid;
         }
 
         if (TryVerifyPbkdf2Pin(pin, hash))
         {
-            return true;
+            return PinVerificationResult.Valid;
         }
 
-        return VerifyLegacySha256Pin(pin, hash);
+        if (VerifyLegacySha256Pin(pin, hash))
+        {
+            // Eski SHA-256 hash'i dogru — ayni PIN'in PBKDF2 formatina
+            // yukseltilmesi icin cagriyana bildir.
+            return PinVerificationResult.ValidNeedsRehash;
+        }
+
+        return PinVerificationResult.Invalid;
+    }
+
+    public Task<PinVerificationResult> VerifyPinAsync(string pin, string hash)
+    {
+        return Task.Run(() => VerifyPin(pin, hash));
     }
 
     private static bool TryVerifyPbkdf2Pin(string pin, string storedHash)
@@ -97,8 +115,12 @@ public class DesktopSecurityService : ISecurityService
         }
 
         if (!int.TryParse(parts[2], System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var iterations) ||
-            iterations <= 0)
+            iterations < MinSupportedIterations ||
+            iterations > MaxSupportedIterations)
         {
+            // Desteklenen aralik disindaki iteration degerleriyle dogrulama
+            // yapilmaz — cok dusuk degerler kaba kuvveti kolaylastirir, cok
+            // yuksek degerler ise UI'yi bloklar.
             return false;
         }
 

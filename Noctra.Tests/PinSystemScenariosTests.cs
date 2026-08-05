@@ -99,7 +99,7 @@ namespace Noctra.Tests
             Assert.Equal(expectedHash, profile.PinHash);
             
             // Verify verification works
-            Assert.True(_securityService.VerifyPin(pin, profile.PinHash));
+            Assert.Equal(PinVerificationResult.Valid, _securityService.VerifyPin(pin, profile.PinHash));
         }
 
         [Fact]
@@ -172,7 +172,7 @@ namespace Noctra.Tests
             var updatedProfile = await dbVerify.Profiles.FindAsync(profile.Id);
             Assert.NotNull(updatedProfile);
             Assert.Equal(oldHash, updatedProfile!.PinHash);
-            Assert.True(_securityService.VerifyPin(oldPin, updatedProfile.PinHash));
+            Assert.Equal(PinVerificationResult.Valid, _securityService.VerifyPin(oldPin, updatedProfile.PinHash));
         }
 
         [Fact]
@@ -209,8 +209,8 @@ namespace Noctra.Tests
             using var dbVerify = _contextFactory.CreateDbContext();
             var updatedProfile = await dbVerify.Profiles.FindAsync(profile.Id);
             Assert.Equal(newHash, updatedProfile!.PinHash);
-            Assert.True(_securityService.VerifyPin(newPin, updatedProfile.PinHash));
-            Assert.False(_securityService.VerifyPin(oldPin, updatedProfile.PinHash));
+            Assert.Equal(PinVerificationResult.Valid, _securityService.VerifyPin(newPin, updatedProfile.PinHash));
+            Assert.Equal(PinVerificationResult.Invalid, _securityService.VerifyPin(oldPin, updatedProfile.PinHash));
         }
 
         [Fact]
@@ -348,7 +348,7 @@ namespace Noctra.Tests
         }
 
         [Fact]
-        public void PinEntry_ResumesAttemptCount_FromPersistedState()
+        public async Task PinEntry_ResumesAttemptCount_FromPersistedState()
         {
             // Arrange
             var localization = new Mock<ILocalizationService>();
@@ -370,12 +370,98 @@ namespace Noctra.Tests
             // Act — one wrong entry after 4 persisted failures reaches the threshold
             foreach (var digit in "1111")
             {
-                vm.PressDigitCommand.Execute(digit.ToString());
+                await vm.PressDigitCommand.ExecuteAsync(digit.ToString());
             }
 
             // Assert — the 5th failure is reported so the caller can persist the lock
             Assert.Equal(5, failed);
             Assert.Equal("PinEntry.Error.TooManyAttempts", vm.ErrorMessage);
+        }
+
+        [Fact]
+        public async Task PinEntry_VerificationBlocked_WhileIsVerifying()
+        {
+            // Arrange
+            var vm = new PinEntryViewModel(
+                _securityService,
+                new Mock<IDispatcherService>().Object,
+                _securityService.HashPin("1234"),
+                "Test",
+                string.Empty,
+                "Login",
+                new Mock<ILocalizationService>().Object);
+
+            // Act — 4 digits start async verification
+            var verificationTask = vm.PressDigitCommand.ExecuteAsync("1234");
+
+            // Assert — verification runs in the background, keypad is disabled meanwhile
+            Assert.True(vm.IsVerifying);
+            Assert.False(vm.IsKeypadEnabled);
+
+            // Input is ignored while verifying (correct PIN keeps the digits visible)
+            vm.PressDigitCommand.Execute("9");
+            Assert.Equal("1234", vm.EnteredPin);
+
+            await verificationTask;
+
+            Assert.False(vm.IsVerifying);
+            Assert.True(vm.IsKeypadEnabled);
+        }
+
+        [Fact]
+        public async Task PinEntry_LegacyHash_VerifiesAndRaisesNeedsRehash()
+        {
+            // Arrange
+            const string legacyHashFor1234 = "83D837DD7E939316F5A94A1216FF2E6F2DC9E9859441F333CC12FA2414468B88";
+            var vm = new PinEntryViewModel(
+                _securityService,
+                new Mock<IDispatcherService>().Object,
+                legacyHashFor1234,
+                "Test",
+                string.Empty,
+                "Login",
+                new Mock<ILocalizationService>().Object);
+
+            bool? result = null;
+            string? rehashedPin = null;
+            vm.PinResult += (_, value) => result = value;
+            vm.PinNeedsRehash += (_, pin) => rehashedPin = pin;
+
+            // Act
+            foreach (var digit in "1234")
+            {
+                await vm.PressDigitCommand.ExecuteAsync(digit.ToString());
+            }
+
+            // Assert — legacy hash still unlocks but requests a rehash of the same PIN
+            Assert.True(result);
+            Assert.Equal("1234", rehashedPin);
+        }
+
+        [Fact]
+        public async Task UpgradePinHashAsync_LegacyHash_IsReplacedWithPbkdf2()
+        {
+            // Arrange
+            const string legacyHashFor1234 = "83D837DD7E939316F5A94A1216FF2E6F2DC9E9859441F333CC12FA2414468B88";
+            var profile = await SeedProfileAsync("Legacy PIN", legacyHashFor1234);
+            var service = new ProfileService(_contextFactory, _mockDownloadService.Object, _mockLicenseService.Object);
+
+            // Act — full upgrade path: verify legacy → rehash → persist
+            Assert.Equal(
+                PinVerificationResult.ValidNeedsRehash,
+                _securityService.VerifyPin("1234", profile.PinHash));
+
+            var newHash = _securityService.HashPin("1234");
+            await service.UpgradePinHashAsync(profile.Id, newHash);
+
+            // Assert — same PIN now verifies as current-format hash
+            using var dbVerify = _contextFactory.CreateDbContext();
+            var updatedProfile = await dbVerify.Profiles.FindAsync(profile.Id);
+            Assert.NotNull(updatedProfile);
+            Assert.Equal(newHash, updatedProfile!.PinHash);
+            Assert.Equal(
+                PinVerificationResult.Valid,
+                _securityService.VerifyPin("1234", updatedProfile.PinHash));
         }
 
         [Fact]
