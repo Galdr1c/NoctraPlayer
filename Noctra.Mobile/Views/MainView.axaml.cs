@@ -216,6 +216,7 @@ public partial class MainView : UserControl
         try
         {
             await ShowLegalConsentIfNeededAsync();
+            await ShowPinSystemResetNoticeIfNeededAsync();
 
             await Dispatcher.UIThread.InvokeAsync(ShowProfileSelection);
         }
@@ -228,6 +229,45 @@ public partial class MainView : UserControl
     private async Task ShowLegalConsentIfNeededAsync()
     {
         await LegalConsentOverlay.ShowConsentFlowAsync();
+    }
+
+    /// <summary>
+    /// PIN sistemi PIN2'ye geçerken eski formatlardaki (PBKDF2/legacy SHA-256)
+    /// PIN'ler sıfırlandıysa bir defalık bilgi gösterilir (Seçenek A).
+    /// </summary>
+    private async Task ShowPinSystemResetNoticeIfNeededAsync()
+    {
+        // Bayrak, arka plandaki DB init (schema fixup) tarafından yazılır —
+        // kontrol etmeden önce init'in bittiğinden emin ol (race önlemi).
+        // Aksi halde upgrade sonrası ilk açılışta bildirim kaçırılırdı.
+        await WaitForDatabaseInitializationAsync();
+
+        if (Application.Current is not App app || app.Services is null)
+        {
+            return;
+        }
+
+        var settingsService = app.Services.GetService<ISettingsService>();
+        if (settingsService is null || !settingsService.Settings.PinSystemResetNoticePending)
+        {
+            return;
+        }
+
+        var dialogService = app.Services.GetService<IDialogService>();
+        var localizationService = app.Services.GetService<ILocalizationService>();
+        if (dialogService is null || localizationService is null)
+        {
+            return;
+        }
+
+        // Önce göster, sonra bayrağı temizle — diyalog gösterilemezse bildirim
+        // kalıcı olarak kaybolmasın.
+        await dialogService.ShowMessageAsync(
+            localizationService.GetString("Profiles.Pin.ResetNotice.Title"),
+            localizationService.GetString("Profiles.Pin.ResetNotice.Message"));
+
+        settingsService.Settings.PinSystemResetNoticePending = false;
+        await settingsService.SaveAsync();
     }
 
     private static async Task WaitForDatabaseInitializationAsync()

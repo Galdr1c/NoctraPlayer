@@ -405,19 +405,6 @@ public class ProfileService : IProfileService
         await db.SaveChangesAsync();
     }
 
-    public async Task UpgradePinHashAsync(int profileId, string newPinHash)
-    {
-        await using var db = await _contextFactory.CreateDbContextAsync();
-        var profile = await db.Profiles.FindAsync(profileId);
-        if (profile == null)
-        {
-            return;
-        }
-
-        profile.PinHash = newPinHash;
-        await db.SaveChangesAsync();
-    }
-
     private static PinVerificationState ToPinVerificationState(Profile profile, DateTime now)
     {
         if (profile.PinLockedUntilUtc is { } until && until > now)

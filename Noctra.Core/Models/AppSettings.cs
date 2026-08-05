@@ -304,6 +304,14 @@ public class AppSettings
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool DiagnosticDataConsent { get; set; } = false;
 
+    /// <summary>
+    /// PIN sistemi PIN2'ye geçerken eski formatlardaki (PBKDF2/legacy SHA-256)
+    /// PIN'ler sıfırlandıysa kullanıcıya bir defalık bilgi gösterilir (global).
+    /// Bilgi gösterildiğinde false yapılır.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool PinSystemResetNoticePending { get; set; } = false;
+
 
     // ============ Promosyon Kodu / Süreli Premium ============
 

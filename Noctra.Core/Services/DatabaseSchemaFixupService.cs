@@ -7,7 +7,7 @@ namespace Noctra.Core.Services;
 
 public sealed class DatabaseSchemaFixupService : IDatabaseSchemaFixupService
 {
-    public async Task ApplyAsync(
+    public async Task<int> ApplyAsync(
         AppDbContext context,
         DatabaseSchemaFixupProfile profile,
         CancellationToken cancellationToken = default)
@@ -21,6 +21,21 @@ public sealed class DatabaseSchemaFixupService : IDatabaseSchemaFixupService
         await AddColumnIfMissingAsync(context, "Profiles", "PendingDeletionAt", "TEXT", cancellationToken).ConfigureAwait(false);
         await AddColumnIfMissingAsync(context, "Profiles", "FailedPinAttempts", "INTEGER NOT NULL DEFAULT 0", cancellationToken).ConfigureAwait(false);
         await AddColumnIfMissingAsync(context, "Profiles", "PinLockedUntilUtc", "TEXT", cancellationToken).ConfigureAwait(false);
+
+        // PIN sistemi PIN2'ye geçti (hızlı salt'lı SHA-256, PBKDF2 yok). Eski
+        // PBKDF2 / legacy SHA-256 kayıtları artık doğrulanamaz — Seçenek A:
+        // bir defalık sıfırlanır. Idempotent: ikinci çalıştırmada legacy kayıt
+        // kalmaz, dönen sayaç 0 olur. Kilit/deneme sayacı da sıfırlanır.
+        // 'PIN2$%' öneki ProfilePinVerifier.IsCurrentFormat ile aynı kuraldır —
+        // format öneki değişirse iki yer birlikte güncellenmelidir.
+        var clearedLegacyPins = await TryExecuteUpdateAsync(
+            context,
+            """
+            UPDATE Profiles
+            SET PinHash = NULL, FailedPinAttempts = 0, PinLockedUntilUtc = NULL
+            WHERE PinHash IS NOT NULL AND PinHash NOT LIKE 'PIN2$%';
+            """,
+            cancellationToken).ConfigureAwait(false);
 
         await AddColumnIfMissingAsync(context, "Playlists", "EpgUrl", "TEXT", cancellationToken).ConfigureAwait(false);
         await AddColumnIfMissingAsync(context, "Playlists", "DetectedCountry", "TEXT", cancellationToken).ConfigureAwait(false);
@@ -246,6 +261,8 @@ public sealed class DatabaseSchemaFixupService : IDatabaseSchemaFixupService
         await TryExecuteAsync(context, profile == DatabaseSchemaFixupProfile.Mobile ? "PRAGMA cache_size=-32000;" : "PRAGMA cache_size=-64000;", cancellationToken).ConfigureAwait(false);
         await TryExecuteAsync(context, "PRAGMA temp_store=MEMORY;", cancellationToken).ConfigureAwait(false);
         await TryExecuteAsync(context, profile == DatabaseSchemaFixupProfile.Mobile ? "PRAGMA mmap_size=134217728;" : "PRAGMA mmap_size=268435456;", cancellationToken).ConfigureAwait(false);
+
+        return clearedLegacyPins;
     }
 
     private static async Task TryExecuteAsync(AppDbContext context, string sql, CancellationToken cancellationToken)
@@ -260,6 +277,22 @@ public sealed class DatabaseSchemaFixupService : IDatabaseSchemaFixupService
         }
         catch
         {
+        }
+    }
+
+    private static async Task<int> TryExecuteUpdateAsync(AppDbContext context, string sql, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await context.Database.ExecuteSqlRawAsync(sql, cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch
+        {
+            return 0;
         }
     }
 

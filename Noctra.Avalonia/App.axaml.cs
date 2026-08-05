@@ -129,7 +129,15 @@ public partial class App : Application
                             
                             StartupLogger.Log("Step 2a: Applying schema fixups...");
                             var schemaFixups = Services.GetRequiredService<IDatabaseSchemaFixupService>();
-                            await schemaFixups.ApplyAsync(db, DatabaseSchemaFixupProfile.Desktop);
+                            var resetPinCount = await schemaFixups.ApplyAsync(db, DatabaseSchemaFixupProfile.Desktop);
+                            if (resetPinCount > 0)
+                            {
+                                // Eski (PBKDF2/legacy) PIN'ler sıfırlandı — profil
+                                // ekranı açılırken bir defalık bilgi gösterilir.
+                                settingsService.Settings.PinSystemResetNoticePending = true;
+                                await settingsService.SaveAsync();
+                                StartupLogger.Log($"Step 2a: {resetPinCount} legacy profile PIN(s) reset");
+                            }
                             StartupLogger.Log("Step 2b: Checking profiles table...");
                             await db.Profiles.AnyAsync();
                             StartupLogger.Log("Step 2: ✅ EF Core ready");

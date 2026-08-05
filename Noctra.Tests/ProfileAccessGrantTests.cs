@@ -161,7 +161,7 @@ public sealed class ProfileAccessGrantTests : IDisposable
     [Fact]
     public async Task DeleteProfile_WithoutGrant_Throws()
     {
-        var profile = await SeedProfileAsync("To Delete", _securityService().HashPin("1234"));
+        var profile = await SeedProfileAsync("To Delete", PinHash("1234"));
 
         var service = CreateService();
 
@@ -175,7 +175,7 @@ public sealed class ProfileAccessGrantTests : IDisposable
     [Fact]
     public async Task DeleteProfile_WithWrongPurposeGrant_Throws()
     {
-        var profile = await SeedProfileAsync("To Delete 2", _securityService().HashPin("1234"));
+        var profile = await SeedProfileAsync("To Delete 2", PinHash("1234"));
         var service = CreateService();
         var loadGrant = ProfileAccessGrant.Create(profile.Id, ProfileAccessPurpose.Load);
 
@@ -186,7 +186,7 @@ public sealed class ProfileAccessGrantTests : IDisposable
     [Fact]
     public async Task DeleteProfile_WithGrant_Succeeds()
     {
-        var profile = await SeedProfileAsync("To Delete 3", _securityService().HashPin("1234"));
+        var profile = await SeedProfileAsync("To Delete 3", PinHash("1234"));
         var service = CreateService();
         var grant = ProfileAccessGrant.Create(profile.Id, ProfileAccessPurpose.Delete);
 
@@ -199,7 +199,7 @@ public sealed class ProfileAccessGrantTests : IDisposable
     [Fact]
     public async Task SaveProfile_PinProtectedEdit_WithoutGrant_Throws()
     {
-        var profile = await SeedProfileAsync("Edit No Grant", _securityService().HashPin("1234"));
+        var profile = await SeedProfileAsync("Edit No Grant", PinHash("1234"));
         var service = CreateService();
 
         var request = new ProfileSaveRequest
@@ -212,7 +212,7 @@ public sealed class ProfileAccessGrantTests : IDisposable
             Username = "test",
             EncryptedPassword = "test",
             AccountType = ProfileType.M3U,
-            PinHash = _securityService().HashPin("1234") // same hash — only rename
+            PinHash = PinHash("1234") // same hash — only rename
         };
 
         await Assert.ThrowsAsync<ProfileAccessDeniedException>(() =>
@@ -225,9 +225,9 @@ public sealed class ProfileAccessGrantTests : IDisposable
     [Fact]
     public async Task SaveProfile_PinChange_WithEditGrant_Succeeds()
     {
-        var profile = await SeedProfileAsync("Edit With Edit Grant", _securityService().HashPin("1234"));
+        var profile = await SeedProfileAsync("Edit With Edit Grant", PinHash("1234"));
         var service = CreateService();
-        var newHash = _securityService().HashPin("9999");
+        var newHash = PinHash("9999");
 
         var request = new ProfileSaveRequest
         {
@@ -288,7 +288,7 @@ public sealed class ProfileAccessGrantTests : IDisposable
 
     // ── Helpers ───────────────────────────────────────────────────────
 
-    private SecurityService _securityService() => new();
+    private static string PinHash(string pin) => ProfilePinVerifier.Create(pin);
 
     private async Task<Profile> SeedProfileAsync(string name, string? pinHash)
     {

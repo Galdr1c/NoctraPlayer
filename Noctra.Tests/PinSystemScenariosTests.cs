@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Moq;
+using Noctra.Core.Services;
 using Noctra.Data;
 using Noctra.Models;
 using Noctra.Services;
@@ -23,6 +24,7 @@ namespace Noctra.Tests
         private readonly Mock<IContentDownloadService> _mockDownloadService;
         private readonly Mock<ILicenseService> _mockLicenseService;
         private readonly SecurityService _securityService;
+        private readonly ProfilePinService _pinService;
 
         public PinSystemScenariosTests()
         {
@@ -40,6 +42,7 @@ namespace Noctra.Tests
             _mockDownloadService = new Mock<IContentDownloadService>();
             _mockLicenseService = new Mock<ILicenseService>();
             _securityService = new SecurityService();
+            _pinService = new ProfilePinService();
 
             // Default to Premium for most tests
             _mockLicenseService.Setup(l => l.IsPremium).Returns(true);
@@ -77,7 +80,7 @@ namespace Noctra.Tests
             // Arrange
             var service = new ProfileService(_contextFactory, _mockDownloadService.Object, _mockLicenseService.Object);
             var pin = "1234";
-            var expectedHash = _securityService.HashPin(pin);
+            var expectedHash = _pinService.CreateVerifier(pin);
 
             var request = new ProfileSaveRequest
             {
@@ -99,7 +102,7 @@ namespace Noctra.Tests
             Assert.Equal(expectedHash, profile.PinHash);
             
             // Verify verification works
-            Assert.Equal(PinVerificationResult.Valid, _securityService.VerifyPin(pin, profile.PinHash));
+            Assert.True(_pinService.Verify(pin, profile.PinHash));
         }
 
         [Fact]
@@ -122,6 +125,7 @@ namespace Noctra.Tests
                 new Mock<IXtreamCodesService>().Object,
                 new Mock<IStalkerPortalService>().Object,
                 _securityService,
+                _pinService,
                 new Mock<ILocalizationService>().Object);
 
             // Assert
@@ -136,7 +140,7 @@ namespace Noctra.Tests
             _mockLicenseService.Setup(l => l.IsWithinLimit(It.IsAny<string>(), It.IsAny<int>())).Returns(true);
 
             var oldPin = "1234";
-            var oldHash = _securityService.HashPin(oldPin);
+            var oldHash = _pinService.CreateVerifier(oldPin);
             var profile = await SeedProfileAsync("Premium Expired", oldHash);
 
             var service = new ProfileService(_contextFactory, _mockDownloadService.Object, _mockLicenseService.Object);
@@ -155,6 +159,7 @@ namespace Noctra.Tests
                 new Mock<IXtreamCodesService>().Object,
                 new Mock<IStalkerPortalService>().Object,
                 _securityService,
+                _pinService,
                 new Mock<ILocalizationService>().Object);
 
             vm.InitializeForEdit(profile);
@@ -172,7 +177,7 @@ namespace Noctra.Tests
             var updatedProfile = await dbVerify.Profiles.FindAsync(profile.Id);
             Assert.NotNull(updatedProfile);
             Assert.Equal(oldHash, updatedProfile!.PinHash);
-            Assert.Equal(PinVerificationResult.Valid, _securityService.VerifyPin(oldPin, updatedProfile.PinHash));
+            Assert.True(_pinService.Verify(oldPin, updatedProfile.PinHash));
         }
 
         [Fact]
@@ -180,13 +185,13 @@ namespace Noctra.Tests
         {
             // Arrange
             var oldPin = "1111";
-            var oldHash = _securityService.HashPin(oldPin);
+            var oldHash = _pinService.CreateVerifier(oldPin);
             var profile = await SeedProfileAsync("Old PIN", oldHash);
             
             var service = new ProfileService(_contextFactory, _mockDownloadService.Object, _mockLicenseService.Object);
             
             var newPin = "9999";
-            var newHash = _securityService.HashPin(newPin);
+            var newHash = _pinService.CreateVerifier(newPin);
 
             var request = new ProfileSaveRequest
             {
@@ -209,15 +214,15 @@ namespace Noctra.Tests
             using var dbVerify = _contextFactory.CreateDbContext();
             var updatedProfile = await dbVerify.Profiles.FindAsync(profile.Id);
             Assert.Equal(newHash, updatedProfile!.PinHash);
-            Assert.Equal(PinVerificationResult.Valid, _securityService.VerifyPin(newPin, updatedProfile.PinHash));
-            Assert.Equal(PinVerificationResult.Invalid, _securityService.VerifyPin(oldPin, updatedProfile.PinHash));
+            Assert.True(_pinService.Verify(newPin, updatedProfile.PinHash));
+            Assert.False(_pinService.Verify(oldPin, updatedProfile.PinHash));
         }
 
         [Fact]
         public async Task PinManagement_RemovePin_SetsHashToNull()
         {
             // Arrange
-            var profile = await SeedProfileAsync("PIN to Remove", _securityService.HashPin("1234"));
+            var profile = await SeedProfileAsync("PIN to Remove", _pinService.CreateVerifier("1234"));
             var service = new ProfileService(_contextFactory, _mockDownloadService.Object, _mockLicenseService.Object);
 
             var request = new ProfileSaveRequest
@@ -247,7 +252,7 @@ namespace Noctra.Tests
         public async Task PinLockout_FiveFailures_LocksProfilePersistently()
         {
             // Arrange
-            var profile = await SeedProfileAsync("Locked", _securityService.HashPin("1234"));
+            var profile = await SeedProfileAsync("Locked", _pinService.CreateVerifier("1234"));
             var service = new ProfileService(_contextFactory, _mockDownloadService.Object, _mockLicenseService.Object);
 
             // Act — four failures stay unlocked, fifth locks
@@ -279,7 +284,7 @@ namespace Noctra.Tests
         public async Task PinLockout_SuccessfulVerification_ResetsAttempts()
         {
             // Arrange
-            var profile = await SeedProfileAsync("Reset", _securityService.HashPin("1234"));
+            var profile = await SeedProfileAsync("Reset", _pinService.CreateVerifier("1234"));
             var service = new ProfileService(_contextFactory, _mockDownloadService.Object, _mockLicenseService.Object);
 
             var state = await service.RegisterPinFailureAsync(profile.Id);
@@ -300,7 +305,7 @@ namespace Noctra.Tests
         public async Task PinLockout_ExpiredLock_IsClearedOnRead()
         {
             // Arrange
-            var profile = await SeedProfileAsync("Expired Lock", _securityService.HashPin("1234"));
+            var profile = await SeedProfileAsync("Expired Lock", _pinService.CreateVerifier("1234"));
             profile.FailedPinAttempts = 5;
             profile.PinLockedUntilUtc = DateTime.UtcNow.AddSeconds(-1);
             _context.Entry(profile).State = EntityState.Modified;
@@ -327,9 +332,9 @@ namespace Noctra.Tests
             // Arrange — using: lockout sayacı test sonunda iptal edilir, aksi
             // halde 30 saniyelik detached Task.Run test paketinde yaşamaya devam eder.
             using var vm = new PinEntryViewModel(
-                _securityService,
+                _pinService,
                 new Mock<IDispatcherService>().Object,
-                _securityService.HashPin("1234"),
+                _pinService.CreateVerifier("1234"),
                 "Test",
                 string.Empty,
                 "Login",
@@ -359,9 +364,9 @@ namespace Noctra.Tests
                 .Returns("Çok fazla yanlış PIN girdiniz. {0} saniye sonra tekrar deneyebilirsiniz.");
 
             var vm = new PinEntryViewModel(
-                _securityService,
+                _pinService,
                 new Mock<IDispatcherService>().Object,
-                _securityService.HashPin("1234"),
+                _pinService.CreateVerifier("1234"),
                 "Test",
                 string.Empty,
                 "Login",
@@ -397,9 +402,9 @@ namespace Noctra.Tests
                 .Returns("{1} of {0} digits entered");
 
             var vm = new PinEntryViewModel(
-                _securityService,
+                _pinService,
                 new Mock<IDispatcherService>().Object,
-                _securityService.HashPin("1234"),
+                _pinService.CreateVerifier("1234"),
                 "Test",
                 string.Empty,
                 "Login",
@@ -429,9 +434,9 @@ namespace Noctra.Tests
             // Arrange
             var dispatcher = new Mock<IDispatcherService>();
             var vm = new PinEntryViewModel(
-                _securityService,
+                _pinService,
                 dispatcher.Object,
-                _securityService.HashPin("1234"),
+                _pinService.CreateVerifier("1234"),
                 "Test",
                 string.Empty,
                 "Login",
@@ -462,9 +467,9 @@ namespace Noctra.Tests
                 .Callback<Action>(action => action());
 
             var vm = new PinEntryViewModel(
-                _securityService,
+                _pinService,
                 dispatcher.Object,
-                _securityService.HashPin("1234"),
+                _pinService.CreateVerifier("1234"),
                 "Test",
                 string.Empty,
                 "Login",
@@ -490,16 +495,16 @@ namespace Noctra.Tests
         }
 
         [Fact]
-        public async Task PinEntry_ResumesAttemptCount_FromPersistedState()
+        public void PinEntry_ResumesAttemptCount_FromPersistedState()
         {
             // Arrange
             var localization = new Mock<ILocalizationService>();
             localization.Setup(s => s.GetString(It.IsAny<string>())).Returns((string key) => key);
 
             var vm = new PinEntryViewModel(
-                _securityService,
+                _pinService,
                 new Mock<IDispatcherService>().Object,
-                _securityService.HashPin("1234"),
+                _pinService.CreateVerifier("1234"),
                 "Test",
                 string.Empty,
                 "Login",
@@ -512,7 +517,7 @@ namespace Noctra.Tests
             // Act — one wrong entry after 4 persisted failures reaches the threshold
             foreach (var digit in "1111")
             {
-                await vm.PressDigitCommand.ExecuteAsync(digit.ToString());
+                vm.PressDigitCommand.Execute(digit.ToString());
             }
 
             // Assert — the 5th failure is reported so the caller can persist the lock
@@ -521,89 +526,96 @@ namespace Noctra.Tests
         }
 
         [Fact]
-        public async Task PinEntry_VerificationBlocked_WhileIsVerifying()
+        public void PinEntry_CorrectPin_VerifiesSynchronously()
         {
             // Arrange
             var vm = new PinEntryViewModel(
-                _securityService,
+                _pinService,
                 new Mock<IDispatcherService>().Object,
-                _securityService.HashPin("1234"),
-                "Test",
-                string.Empty,
-                "Login",
-                new Mock<ILocalizationService>().Object);
-
-            // Act — 4 digits start async verification
-            var verificationTask = vm.PressDigitCommand.ExecuteAsync("1234");
-
-            // Assert — verification runs in the background, keypad is disabled meanwhile
-            Assert.True(vm.IsVerifying);
-            Assert.False(vm.IsKeypadEnabled);
-
-            // Input is ignored while verifying (correct PIN keeps the digits visible)
-            vm.PressDigitCommand.Execute("9");
-            Assert.Equal("1234", vm.EnteredPin);
-
-            await verificationTask;
-
-            Assert.False(vm.IsVerifying);
-            Assert.True(vm.IsKeypadEnabled);
-        }
-
-        [Fact]
-        public async Task PinEntry_LegacyHash_VerifiesAndRaisesNeedsRehash()
-        {
-            // Arrange
-            const string legacyHashFor1234 = "83D837DD7E939316F5A94A1216FF2E6F2DC9E9859441F333CC12FA2414468B88";
-            var vm = new PinEntryViewModel(
-                _securityService,
-                new Mock<IDispatcherService>().Object,
-                legacyHashFor1234,
+                _pinService.CreateVerifier("1234"),
                 "Test",
                 string.Empty,
                 "Login",
                 new Mock<ILocalizationService>().Object);
 
             bool? result = null;
-            string? rehashedPin = null;
             vm.PinResult += (_, value) => result = value;
-            vm.PinNeedsRehash += (_, pin) => rehashedPin = pin;
 
-            // Act
-            foreach (var digit in "1234")
+            using (vm)
             {
-                await vm.PressDigitCommand.ExecuteAsync(digit.ToString());
-            }
+                // Act — 4. rakam girildiği anda doğrulama senkron tamamlanır
+                foreach (var digit in "1234")
+                {
+                    vm.PressDigitCommand.Execute(digit.ToString());
+                }
 
-            // Assert — legacy hash still unlocks but requests a rehash of the same PIN
-            Assert.True(result);
-            Assert.Equal("1234", rehashedPin);
+                // Assert — spinner/IsVerifying yok; sonuç anında gelir, keypad açık kalır
+                Assert.True(result);
+                Assert.Equal("1234", vm.EnteredPin);
+                Assert.True(vm.IsKeypadEnabled);
+            }
         }
 
         [Fact]
-        public async Task UpgradePinHashAsync_LegacyHash_IsReplacedWithPbkdf2()
+        public void PinEntry_LegacyFormatHash_IsRejected()
         {
-            // Arrange
+            // Arrange — eski (PBKDF2/legacy SHA-256) hash'ler PIN2'ye geçişte
+            // sıfırlanır; doğrulama artık bu formatları kabul etmez.
             const string legacyHashFor1234 = "83D837DD7E939316F5A94A1216FF2E6F2DC9E9859441F333CC12FA2414468B88";
-            var profile = await SeedProfileAsync("Legacy PIN", legacyHashFor1234);
-            var service = new ProfileService(_contextFactory, _mockDownloadService.Object, _mockLicenseService.Object);
+            var localization = new Mock<ILocalizationService>();
+            localization.Setup(s => s.GetString(It.IsAny<string>())).Returns((string key) => key);
 
-            // Act — full upgrade path: verify legacy → rehash → persist
-            Assert.Equal(
-                PinVerificationResult.ValidNeedsRehash,
-                _securityService.VerifyPin("1234", profile.PinHash));
+            var vm = new PinEntryViewModel(
+                _pinService,
+                new Mock<IDispatcherService>().Object,
+                legacyHashFor1234,
+                "Test",
+                string.Empty,
+                "Login",
+                localization.Object);
 
-            var newHash = _securityService.HashPin("1234");
-            await service.UpgradePinHashAsync(profile.Id, newHash);
+            int? failedAttempts = null;
+            vm.AttemptFailed += (_, count) => failedAttempts = count;
 
-            // Assert — same PIN now verifies as current-format hash
+            using (vm)
+            {
+                // Act
+                foreach (var digit in "1234")
+                {
+                    vm.PressDigitCommand.Execute(digit.ToString());
+                }
+
+                // Assert — legacy format başarısız deneme olarak sayılır, giriş temizlenir
+                Assert.Equal(1, failedAttempts);
+                Assert.Equal(string.Empty, vm.EnteredPin);
+                Assert.Equal("PinEntry.Error.WrongPinRemainingFormat", vm.ErrorMessage);
+            }
+        }
+
+        [Fact]
+        public async Task SchemaFixup_ResetsLegacyPinHashes()
+        {
+            // Arrange — eski PBKDF2 ve legacy SHA-256 kayıtları + güncel PIN2 kaydı
+            var legacyPbkdf2 = await SeedProfileAsync("Legacy PBKDF2", "PBKDF2$SHA256$210000$c2FsdA==$aGFzaA==");
+            var legacySha256 = await SeedProfileAsync("Legacy SHA-256", "83D837DD7E939316F5A94A1216FF2E6F2DC9E9859441F333CC12FA2414468B88");
+            var currentPin = await SeedProfileAsync("Current PIN", _pinService.CreateVerifier("1234"));
+            var pinless = await SeedProfileAsync("Pinless", null);
+
+            var fixup = new DatabaseSchemaFixupService();
+
+            // Act — Seçenek A: legacy hash'ler bir defalık sıfırlanır
+            var resetCount = await fixup.ApplyAsync(_context, DatabaseSchemaFixupProfile.Desktop);
+
+            // Assert — yalnızca legacy kayıtlar sıfırlandı; PIN2 ve PIN'siz korundu
+            Assert.Equal(2, resetCount);
+
             using var dbVerify = _contextFactory.CreateDbContext();
-            var updatedProfile = await dbVerify.Profiles.FindAsync(profile.Id);
-            Assert.NotNull(updatedProfile);
-            Assert.Equal(newHash, updatedProfile!.PinHash);
-            Assert.Equal(
-                PinVerificationResult.Valid,
-                _securityService.VerifyPin("1234", updatedProfile.PinHash));
+            Assert.Null((await dbVerify.Profiles.FindAsync(legacyPbkdf2.Id))!.PinHash);
+            Assert.Null((await dbVerify.Profiles.FindAsync(legacySha256.Id))!.PinHash);
+            var preserved = await dbVerify.Profiles.FindAsync(currentPin.Id);
+            Assert.True(ProfilePinVerifier.IsCurrentFormat(preserved!.PinHash));
+            Assert.True(_pinService.Verify("1234", preserved.PinHash));
+            Assert.Null((await dbVerify.Profiles.FindAsync(pinless.Id))!.PinHash);
         }
 
         [Fact]
@@ -703,7 +715,7 @@ namespace Noctra.Tests
         public async Task PendingDeletion_EditProfileSave_CancelsDeletion()
         {
             // Arrange — PIN korumalı, silinme geri sayımındaki profil
-            var profile = await SeedProfileAsync("Doomed Profile", _securityService.HashPin("1234"));
+            var profile = await SeedProfileAsync("Doomed Profile", _pinService.CreateVerifier("1234"));
             var service = new ProfileService(_contextFactory, _mockDownloadService.Object, _mockLicenseService.Object);
             await service.ScheduleProfileDeletionAsync(profile.Id);
 
@@ -727,6 +739,7 @@ namespace Noctra.Tests
                 new Mock<IXtreamCodesService>().Object,
                 new Mock<IStalkerPortalService>().Object,
                 _securityService,
+                _pinService,
                 new Mock<ILocalizationService>().Object);
 
             vm.InitializeForEdit(doomed);
@@ -820,7 +833,7 @@ namespace Noctra.Tests
         public async Task Save_EditWithoutNewPin_KeepsExistingHash_NoWarning()
         {
             // Arrange — PIN korumalı profil; düzenlemede yeni PIN girilmiyor
-            var profile = await SeedProfileAsync("Existing PIN", _securityService.HashPin("1234"));
+            var profile = await SeedProfileAsync("Existing PIN", _pinService.CreateVerifier("1234"));
             using var dbLoad = _contextFactory.CreateDbContext();
             var existing = await dbLoad.Profiles
                 .Include(p => p.ProviderAccount)
@@ -911,6 +924,7 @@ namespace Noctra.Tests
                 new Mock<IXtreamCodesService>().Object,
                 new Mock<IStalkerPortalService>().Object,
                 _securityService,
+                _pinService,
                 localization.Object);
 
             vm.ProfileName = "PIN Profile";

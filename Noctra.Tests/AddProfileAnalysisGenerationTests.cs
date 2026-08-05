@@ -590,6 +590,7 @@ public sealed class AddProfileAnalysisGenerationTests
             xtreamCodesService ?? new Mock<IXtreamCodesService>().Object,
             new Mock<IStalkerPortalService>().Object,
             new DesktopSecurityService(),
+            new ProfilePinService(),
             CreateLocalizationService());
     }
 

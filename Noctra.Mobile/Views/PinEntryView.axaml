@@ -5,7 +5,6 @@
              xmlns:vm="clr-namespace:Noctra.ViewModels;assembly=Noctra.Core"
              xmlns:loc="using:Noctra.Mobile.Localization"
              xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
-             xmlns:controls="using:Noctra.Mobile.Controls"
              x:Class="Noctra.Mobile.Views.PinEntryView"
              x:DataType="vm:PinEntryViewModel"
              x:CompileBindings="False"
@@ -137,17 +136,6 @@
                        MaxWidth="340"
                        TextAlignment="Center"
                        TextWrapping="Wrap" />
-          </StackPanel>
-
-          <StackPanel Orientation="Horizontal"
-                      HorizontalAlignment="Center"
-                      Spacing="8"
-                      IsVisible="{Binding IsVerifying}">
-            <controls:PremiumSpinner Width="24" Height="24" />
-            <TextBlock Text="{loc:Translate PinEntry.Verifying}"
-                       Foreground="{DynamicResource TextMutedBrush}"
-                       FontSize="{DynamicResource FCaption}"
-                       VerticalAlignment="Center" />
           </StackPanel>
 
           <UniformGrid Rows="4"

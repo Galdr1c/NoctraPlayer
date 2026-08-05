@@ -1,8 +1,6 @@
 using System;
-using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
-using System.Threading.Tasks;
 using Android.Security.Keystore;
 using Java.Security;
 using Javax.Crypto;
@@ -17,16 +15,6 @@ public sealed class AndroidSecurityService : ISecurityService
     private const string KeyAlias = "studio.kynora.noctra.credentials.v1";
     private const string CipherTransformation = "AES/GCM/NoPadding";
     private const byte PayloadVersion = 1;
-    private const string PinHashAlgorithm = "PBKDF2";
-    private const string PinHashPrf = "SHA256";
-    private const int PinHashIterations = 210_000;
-    private const int PinSaltSizeBytes = 16;
-    private const int PinHashSizeBytes = 32;
-
-    // Bkz. DesktopSecurityService — bozuk kayitlardaki uctan uca iteration
-    // degerleriyle dogrulama yapilmaz.
-    private const int MinSupportedIterations = 100_000;
-    private const int MaxSupportedIterations = 1_000_000;
 
     public string? Encrypt(string? plainText)
     {
@@ -100,89 +88,6 @@ public sealed class AndroidSecurityService : ISecurityService
         {
             return null;
         }
-    }
-
-    public string HashPin(string pin)
-    {
-        var salt = RandomNumberGenerator.GetBytes(PinSaltSizeBytes);
-        var hash = Rfc2898DeriveBytes.Pbkdf2(
-            pin,
-            salt,
-            PinHashIterations,
-            HashAlgorithmName.SHA256,
-            PinHashSizeBytes);
-
-        return string.Join(
-            '$',
-            PinHashAlgorithm,
-            PinHashPrf,
-            PinHashIterations.ToString(CultureInfo.InvariantCulture),
-            Convert.ToBase64String(salt),
-            Convert.ToBase64String(hash));
-    }
-
-    public PinVerificationResult VerifyPin(string pin, string hash)
-    {
-        if (string.IsNullOrWhiteSpace(hash))
-        {
-            return PinVerificationResult.Invalid;
-        }
-
-        var parts = hash.Split('$');
-        if (parts.Length == 5 &&
-            string.Equals(parts[0], PinHashAlgorithm, StringComparison.Ordinal) &&
-            string.Equals(parts[1], PinHashPrf, StringComparison.Ordinal) &&
-            int.TryParse(
-                parts[2],
-                NumberStyles.None,
-                CultureInfo.InvariantCulture,
-                out var iterations) &&
-            iterations >= MinSupportedIterations &&
-            iterations <= MaxSupportedIterations)
-        {
-            try
-            {
-                var salt = Convert.FromBase64String(parts[3]);
-                var expectedHash = Convert.FromBase64String(parts[4]);
-                if (salt.Length < PinSaltSizeBytes || expectedHash.Length != PinHashSizeBytes)
-                {
-                    return PinVerificationResult.Invalid;
-                }
-
-                var actualHash = Rfc2898DeriveBytes.Pbkdf2(
-                    pin,
-                    salt,
-                    iterations,
-                    HashAlgorithmName.SHA256,
-                    expectedHash.Length);
-                if (CryptographicOperations.FixedTimeEquals(actualHash, expectedHash))
-                {
-                    return PinVerificationResult.Valid;
-                }
-            }
-            catch (FormatException)
-            {
-                return PinVerificationResult.Invalid;
-            }
-        }
-
-        var legacyHash = Convert.ToHexString(
-            SHA256.HashData(Encoding.UTF8.GetBytes($"NOCTRA_PIN_{pin}")));
-        if (hash.Length == legacyHash.Length &&
-            CryptographicOperations.FixedTimeEquals(
-                Encoding.ASCII.GetBytes(legacyHash),
-                Encoding.ASCII.GetBytes(hash.ToUpperInvariant())))
-        {
-            // Eski SHA-256 hash'i dogru — PBKDF2'ye yukseltme icin bildir.
-            return PinVerificationResult.ValidNeedsRehash;
-        }
-
-        return PinVerificationResult.Invalid;
-    }
-
-    public Task<PinVerificationResult> VerifyPinAsync(string pin, string hash)
-    {
-        return Task.Run(() => VerifyPin(pin, hash));
     }
 
     private static IKey GetOrCreateKey()

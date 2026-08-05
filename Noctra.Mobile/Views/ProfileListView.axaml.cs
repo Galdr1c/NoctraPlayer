@@ -208,7 +208,7 @@ public partial class ProfileListView : UserControl
 
         var completion = new TaskCompletionSource<bool?>();
         var pinViewModel = new PinEntryViewModel(
-            app.Services.GetRequiredService<ISecurityService>(),
+            app.Services.GetRequiredService<IProfilePinService>(),
             app.Services.GetRequiredService<IDispatcherService>(),
             profile.PinHash,
             profile.Name,
@@ -221,7 +221,6 @@ public partial class ProfileListView : UserControl
         _activePinEntryViewModel = pinViewModel;
         pinViewModel.AttemptFailed += PinEntry_AttemptFailed;
         pinViewModel.PinResult += PinEntry_PinResult;
-        pinViewModel.PinNeedsRehash += PinEntry_NeedsRehash;
         PinEntryContent.DataContext = pinViewModel;
         PinEntryHost.IsVisible = true;
         PinEntryContent.Focus();
@@ -229,7 +228,6 @@ public partial class ProfileListView : UserControl
         var result = await completion.Task;
         pinViewModel.AttemptFailed -= PinEntry_AttemptFailed;
         pinViewModel.PinResult -= PinEntry_PinResult;
-        pinViewModel.PinNeedsRehash -= PinEntry_NeedsRehash;
         // Akış bitti (doğru PIN, iptal veya "şifremi unuttum") — devam eden
         // lockout sayacını iptal et; ölü ViewModel artık UI güncellemesi yapamaz.
         pinViewModel.Dispose();
@@ -274,23 +272,6 @@ public partial class ProfileListView : UserControl
             completion.TrySetResult(value);
         }
 
-        void PinEntry_NeedsRehash(object? sender, string pin)
-        {
-            _ = RehashPinAsync(pin);
-
-            async Task RehashPinAsync(string verifiedPin)
-            {
-                try
-                {
-                    var securityService = app.Services.GetRequiredService<ISecurityService>();
-                    await profileService.UpgradePinHashAsync(profile.Id, securityService.HashPin(verifiedPin));
-                }
-                catch
-                {
-                    // Hash yukseltme hatasi giris akisini bozmasin
-                }
-            }
-        }
     }
 
     private void ClosePinEntry()

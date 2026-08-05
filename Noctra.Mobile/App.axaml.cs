@@ -97,7 +97,10 @@ public partial class App : Application
         if (Services.GetService(typeof(IDbContextFactory<AppDbContext>)) is IDbContextFactory<AppDbContext> dbContextFactory)
         {
             var schemaFixups = Services.GetService(typeof(IDatabaseSchemaFixupService)) as IDatabaseSchemaFixupService;
-            _databaseInitializationTask = InitializeDatabaseAsync(dbContextFactory, schemaFixups);
+            _databaseInitializationTask = InitializeDatabaseAsync(
+                dbContextFactory,
+                schemaFixups,
+                Services.GetService(typeof(ISettingsService)) as ISettingsService);
         }
 
         // ── Localization ─────────────────────────────────────────────────────
@@ -161,7 +164,8 @@ public partial class App : Application
 
     private static Task InitializeDatabaseAsync(
         IDbContextFactory<AppDbContext> dbContextFactory,
-        IDatabaseSchemaFixupService? schemaFixups)
+        IDatabaseSchemaFixupService? schemaFixups,
+        ISettingsService? settingsService)
     {
         return Task.Run(async () =>
         {
@@ -175,9 +179,17 @@ public partial class App : Application
 
                 if (schemaFixups is not null)
                 {
-                    await schemaFixups
+                    var resetPinCount = await schemaFixups
                         .ApplyAsync(db, DatabaseSchemaFixupProfile.Mobile)
                         .ConfigureAwait(false);
+
+                    // Eski (PBKDF2/legacy) PIN'ler sıfırlandı — profil listesi
+                    // açılırken bir defalık bilgi gösterilir (Seçenek A).
+                    if (resetPinCount > 0 && settingsService is not null)
+                    {
+                        settingsService.Settings.PinSystemResetNoticePending = true;
+                        await settingsService.SaveAsync().ConfigureAwait(false);
+                    }
                 }
 
                 PerformanceTrace.Mark("app.db.init.end");

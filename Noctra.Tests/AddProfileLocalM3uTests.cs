@@ -47,6 +47,7 @@ public sealed class AddProfileLocalM3uTests
             new Mock<IXtreamCodesService>().Object,
             new Mock<IStalkerPortalService>().Object,
             new DesktopSecurityService(),
+            new ProfilePinService(),
             CreateLocalizationService());
         viewModel.ProfileName = "Local playlist";
 
@@ -97,6 +98,7 @@ public sealed class AddProfileLocalM3uTests
             new Mock<IXtreamCodesService>().Object,
             new Mock<IStalkerPortalService>().Object,
             new DesktopSecurityService(),
+            new ProfilePinService(),
             CreateLocalizationService());
 
         try
@@ -188,6 +190,7 @@ public sealed class AddProfileLocalM3uTests
             new Mock<IXtreamCodesService>().Object,
             new Mock<IStalkerPortalService>().Object,
             new DesktopSecurityService(),
+            new ProfilePinService(),
             CreateLocalizationService(),
             filePicker.Object);
 
@@ -224,6 +227,7 @@ public sealed class AddProfileLocalM3uTests
             new Mock<IXtreamCodesService>().Object,
             new Mock<IStalkerPortalService>().Object,
             new DesktopSecurityService(),
+            new ProfilePinService(),
             CreateLocalizationService());
         var profile = new Profile
         {
@@ -638,6 +642,7 @@ public sealed class AddProfileLocalM3uTests
             xtreamCodesService ?? new Mock<IXtreamCodesService>().Object,
             new Mock<IStalkerPortalService>().Object,
             new DesktopSecurityService(),
+            new ProfilePinService(),
             CreateLocalizationService());
     }
 

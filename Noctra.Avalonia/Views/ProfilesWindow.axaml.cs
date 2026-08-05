@@ -19,7 +19,7 @@ public partial class ProfilesWindow : Window
     private readonly IDbContextFactory<AppDbContext> _contextFactory;
     private readonly IDialogService _dialogService;
     private readonly ISettingsService _settingsService;
-    private readonly ISecurityService _securityService;
+    private readonly IProfilePinService _pinService;
     private readonly IProfileService _profileService;
     private readonly IDispatcherService _dispatcherService;
     private readonly MainWindow _mainWindow;
@@ -36,7 +36,7 @@ public partial class ProfilesWindow : Window
             ((App)Application.Current!).Services.GetRequiredService<IDbContextFactory<AppDbContext>>(),
             ((App)Application.Current!).Services.GetRequiredService<IDialogService>(),
             ((App)Application.Current!).Services.GetRequiredService<ISettingsService>(),
-            ((App)Application.Current!).Services.GetRequiredService<ISecurityService>(),
+            ((App)Application.Current!).Services.GetRequiredService<IProfilePinService>(),
             ((App)Application.Current!).Services.GetRequiredService<IProfileService>(),
             ((App)Application.Current!).Services.GetRequiredService<IDispatcherService>(),
             ((App)Application.Current!).Services.GetRequiredService<MainWindow>(),
@@ -50,7 +50,7 @@ public partial class ProfilesWindow : Window
         IDbContextFactory<AppDbContext> contextFactory,
         IDialogService dialogService,
         ISettingsService settingsService,
-        ISecurityService securityService,
+        IProfilePinService pinService,
         IProfileService profileService,
         IDispatcherService dispatcherService,
         MainWindow mainWindow,
@@ -62,7 +62,7 @@ public partial class ProfilesWindow : Window
         _contextFactory = contextFactory;
         _dialogService = dialogService;
         _settingsService = settingsService;
-        _securityService = securityService;
+        _pinService = pinService;
         _profileService = profileService;
         _dispatcherService = dispatcherService;
         _mainWindow = mainWindow;
@@ -107,7 +107,7 @@ public partial class ProfilesWindow : Window
         }
 
         var pinVm = new PinEntryViewModel(
-            _securityService,
+            _pinService,
             _dispatcherService,
             profile.PinHash,
             profile.Name,
@@ -155,24 +155,6 @@ public partial class ProfilesWindow : Window
 
             result = r;
             pinWindow.Close();
-        };
-
-        // Legacy formattan dogrulanan PIN — ayni PIN guncel formatta saklanir.
-        pinVm.PinNeedsRehash += (_, pin) =>
-        {
-            _ = UpgradePinHashAsync(pin);
-
-            async Task UpgradePinHashAsync(string verifiedPin)
-            {
-                try
-                {
-                    await _profileService.UpgradePinHashAsync(profile.Id, _securityService.HashPin(verifiedPin));
-                }
-                catch
-                {
-                    // Hash yukseltme hatasi giris akisini bozmasin
-                }
-            }
         };
 
         await pinWindow.ShowDialog(this);
@@ -267,6 +249,19 @@ public partial class ProfilesWindow : Window
         {
             {
                 await _viewModel.RefreshProfilesAsync();
+            }
+
+            // PIN sistemi PIN2'ye geçti — eski formatlardaki PIN'ler sıfırlandı
+            // ve kullanıcıya bir defalık bilgi gösterilir (Seçenek A).
+            if (_settingsService.Settings.PinSystemResetNoticePending)
+            {
+                // Önce göster, sonra bayrağı temizle — diyalog hatası bildirimi
+                // kalıcı olarak kaybetmesin.
+                await _dialogService.ShowMessageAsync(
+                    _localizationService.GetString("Profiles.Pin.ResetNotice.Title"),
+                    _localizationService.GetString("Profiles.Pin.ResetNotice.Message"));
+                _settingsService.Settings.PinSystemResetNoticePending = false;
+                await _settingsService.SaveAsync();
             }
 
             if (DisableAutoSelect || !_settingsService.Settings.AutoSelectLastProfile || _autoSelectTriggered)

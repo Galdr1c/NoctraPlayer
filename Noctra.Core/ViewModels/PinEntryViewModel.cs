@@ -6,9 +6,9 @@ namespace Noctra.ViewModels;
 
 public partial class PinEntryViewModel : ObservableObject, IDisposable
 {
-    private readonly ISecurityService _securityService;
+    private readonly IProfilePinService _pinService;
     private readonly IDispatcherService _dispatcherService;
-    private readonly string _pinHash;
+    private readonly string _pinVerifier;
     private readonly ILocalizationService _localizationService;
     private readonly CancellationTokenSource _lockoutCts = new();
     private bool _disposed;
@@ -57,14 +57,10 @@ public partial class PinEntryViewModel : ObservableObject, IDisposable
     private int _shakeTrigger;
 
     /// <summary>
-    /// PBKDF2 dogrulamasi arka planda surerken true olur — keypad devre disi
-    /// kalir ve UI islem gostergesi gosterir.
+    /// PIN2 doğrulaması senkrondur ve mikrosaniye mertebesinde tamamlanır —
+    /// spinner veya background thread gerekmez, keypad yalnızca lockout'ta devre dışı kalır.
     /// </summary>
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsKeypadEnabled))]
-    private bool _isVerifying;
-
-    public bool IsKeypadEnabled => !IsLocked && !IsVerifying;
+    public bool IsKeypadEnabled => !IsLocked;
 
     public int PinLength => EnteredPin.Length;
 
@@ -94,16 +90,10 @@ public partial class PinEntryViewModel : ObservableObject, IDisposable
     /// </summary>
     public event EventHandler<int>? AttemptFailed;
 
-    /// <summary>
-    /// PIN dogru ancak hash legacy formatta oldugunda tetiklenir. Parametre:
-    /// dogrulanan PIN — cagiran bu PIN'i yeniden hash'leyip saklar.
-    /// </summary>
-    public event EventHandler<string>? PinNeedsRehash;
-
     public PinEntryViewModel(
-        ISecurityService securityService,
+        IProfilePinService pinService,
         IDispatcherService dispatcherService,
-        string pinHash,
+        string pinVerifier,
         string profileName,
         string profileAvatar,
         string purpose,
@@ -111,9 +101,9 @@ public partial class PinEntryViewModel : ObservableObject, IDisposable
         int failedAttempts = 0,
         DateTime? lockedUntilUtc = null)
     {
-        _securityService = securityService;
+        _pinService = pinService;
         _dispatcherService = dispatcherService;
-        _pinHash = pinHash;
+        _pinVerifier = pinVerifier;
         ProfileName = profileName;
         ProfileAvatar = profileAvatar;
         Purpose = purpose;
@@ -127,17 +117,17 @@ public partial class PinEntryViewModel : ObservableObject, IDisposable
     }
 
     [RelayCommand]
-    private async Task PressDigit(string digit)
+    private void PressDigit(string digit)
     {
-        if (IsLocked || IsVerifying || EnteredPin.Length >= 4) return;
+        if (IsLocked || EnteredPin.Length >= 4) return;
 
         EnteredPin += digit;
         OnPropertyChanged(nameof(PinLength));
         OnPropertyChanged(nameof(PinProgressA11yText));
 
-        // 4 hane dolunca otomatik doğrula
+        // 4 hane dolunca otomatik doğrula — senkron, anında
         if (EnteredPin.Length == 4)
-            await VerifyPinAsync();
+            VerifyPin();
     }
 
     [RelayCommand]
@@ -151,45 +141,28 @@ public partial class PinEntryViewModel : ObservableObject, IDisposable
         ErrorMessage = string.Empty;
     }
 
-    private async Task VerifyPinAsync()
+    private void VerifyPin()
     {
-        IsVerifying = true;
-        try
+        if (_pinService.Verify(EnteredPin, _pinVerifier))
         {
-            var result = await _securityService.VerifyPinAsync(EnteredPin, _pinHash);
-            if (result == PinVerificationResult.Valid)
-            {
-                PinResult?.Invoke(this, true);
-            }
-            else if (result == PinVerificationResult.ValidNeedsRehash)
-            {
-                // Eski formattaki hash — ayni PIN aninda yeni formatta
-                // saklanmak uzere cagirana bildirilir.
-                PinNeedsRehash?.Invoke(this, EnteredPin);
-                PinResult?.Invoke(this, true);
-            }
-            else
-            {
-                _attemptCount++;
-                EnteredPin = string.Empty;
-                OnPropertyChanged(nameof(PinLength));
-                OnPropertyChanged(nameof(PinProgressA11yText));
-
-                ShakeTrigger++;
-                AttemptFailed?.Invoke(this, _attemptCount);
-
-                int remaining = MaxAttempts - _attemptCount;
-                ErrorMessage = remaining <= 0
-                    ? _localizationService.GetString("PinEntry.Error.TooManyAttempts")
-                    : remaining == 1
-                        ? _localizationService.GetString("PinEntry.Error.WrongPinLast")
-                        : string.Format(_localizationService.GetString("PinEntry.Error.WrongPinRemainingFormat"), remaining);
-            }
+            PinResult?.Invoke(this, true);
+            return;
         }
-        finally
-        {
-            IsVerifying = false;
-        }
+
+        _attemptCount++;
+        EnteredPin = string.Empty;
+        OnPropertyChanged(nameof(PinLength));
+        OnPropertyChanged(nameof(PinProgressA11yText));
+
+        ShakeTrigger++;
+        AttemptFailed?.Invoke(this, _attemptCount);
+
+        int remaining = MaxAttempts - _attemptCount;
+        ErrorMessage = remaining <= 0
+            ? _localizationService.GetString("PinEntry.Error.TooManyAttempts")
+            : remaining == 1
+                ? _localizationService.GetString("PinEntry.Error.WrongPinLast")
+                : string.Format(_localizationService.GetString("PinEntry.Error.WrongPinRemainingFormat"), remaining);
     }
 
     /// <summary>

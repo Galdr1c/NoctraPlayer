@@ -22,6 +22,7 @@ public partial class AddProfileViewModel : ObservableObject
     private readonly IXtreamCodesService _xtreamCodesService;
     private readonly IStalkerPortalService _stalkerPortalService;
     private readonly ISecurityService _securityService;
+    private readonly IProfilePinService _pinService;
     private readonly ILocalizationService _localizationService;
     private readonly IPlaylistFilePickerService? _playlistFilePickerService;
 
@@ -819,7 +820,7 @@ public partial class AddProfileViewModel : ObservableObject
                     PinError = null;
                 }
             }
-            else if (PinCode.Length != 4 || !PinCode.All(char.IsDigit))
+            else if (PinCode.Length != 4 || !PinCode.All(c => c is >= '0' and <= '9'))
             {
                 PinError = _localizationService.GetString("AddProfile.Error.PinLength");
             }
@@ -1079,6 +1080,7 @@ public partial class AddProfileViewModel : ObservableObject
         IXtreamCodesService xtreamCodesService,
         IStalkerPortalService stalkerPortalService,
         ISecurityService securityService,
+        IProfilePinService pinService,
         ILocalizationService localizationService,
         IPlaylistFilePickerService? playlistFilePickerService = null)
     {
@@ -1091,6 +1093,7 @@ public partial class AddProfileViewModel : ObservableObject
         _xtreamCodesService = xtreamCodesService;
         _stalkerPortalService = stalkerPortalService;
         _securityService = securityService;
+        _pinService = pinService;
         _localizationService = localizationService;
         _playlistFilePickerService = playlistFilePickerService;
 
@@ -1858,7 +1861,7 @@ public partial class AddProfileViewModel : ObservableObject
             var effectivePinHash = !_licenseService.IsPremium && existingPinHash != null
                 ? existingPinHash  // Premium expired: keep the existing PIN untouched
                 : HasPin && PinCode.Length == 4
-                    ? _securityService.HashPin(PinCode)
+                    ? _pinService.CreateVerifier(PinCode)
                     : HasPin && existingPinHash != null
                         ? existingPinHash  // Keep existing PIN if toggle is on but no new code entered
                         : null;            // PIN disabled or removed

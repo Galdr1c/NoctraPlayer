@@ -143,6 +143,7 @@ public class SettingsService : ISettingsService
         target.LegalConsentAcceptedAtUtc = source.LegalConsentAcceptedAtUtc;
         target.PrivacyNoticeVersion = source.PrivacyNoticeVersion;
         target.DiagnosticDataConsent = source.DiagnosticDataConsent;
+        target.PinSystemResetNoticePending = source.PinSystemResetNoticePending;
         target.AllowBackgroundPlayback = source.AllowBackgroundPlayback;
         target.ReviewPromptLaunchCount = source.ReviewPromptLaunchCount;
         target.ReviewPromptLastShownAtUtc = source.ReviewPromptLastShownAtUtc;
@@ -437,6 +438,7 @@ public class SettingsService : ISettingsService
             copy.LegalConsentAcceptedAtUtc = null;
             copy.PrivacyNoticeVersion = null;
             copy.DiagnosticDataConsent = false;
+            copy.PinSystemResetNoticePending = false;
             copy.ReviewPromptLaunchCount = 0;
             copy.ReviewPromptLastShownAtUtc = null;
             copy.ReviewPromptSnoozedUntilUtc = null;
@@ -498,6 +500,7 @@ public class SettingsService : ISettingsService
                 "legalConsentAcceptedAtUtc",
                 "privacyNoticeVersion",
                 "diagnosticDataConsent",
+                "pinSystemResetNoticePending",
                 "reviewPromptLaunchCount",
                 "reviewPromptLastShownAtUtc",
                 "reviewPromptSnoozedUntilUtc",
