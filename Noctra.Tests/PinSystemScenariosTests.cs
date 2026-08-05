@@ -388,6 +388,42 @@ namespace Noctra.Tests
         }
 
         [Fact]
+        public void PinEntry_PinProgressA11yText_UsesLocalizedFormat()
+        {
+            // Arrange — format: {0}=toplam hane, {1}=girilen hane
+            var localization = new Mock<ILocalizationService>();
+            localization
+                .Setup(service => service.GetString("PinEntry.ProgressA11yFormat"))
+                .Returns("{1} of {0} digits entered");
+
+            var vm = new PinEntryViewModel(
+                _securityService,
+                new Mock<IDispatcherService>().Object,
+                _securityService.HashPin("1234"),
+                "Test",
+                string.Empty,
+                "Login",
+                localization.Object);
+
+            using (vm)
+            {
+                // Boşken
+                Assert.Equal("0 of 4 digits entered", vm.PinProgressA11yText);
+
+                // Rakam girdikçe ilerleme güncellenir
+                foreach (var digit in "12")
+                {
+                    vm.PressDigitCommand.Execute(digit.ToString());
+                }
+                Assert.Equal("2 of 4 digits entered", vm.PinProgressA11yText);
+
+                // Geri silme ilerlemeyi azaltır
+                vm.BackspaceCommand.Execute(null);
+                Assert.Equal("1 of 4 digits entered", vm.PinProgressA11yText);
+            }
+        }
+
+        [Fact]
         public async Task PinEntry_Dispose_CancelsLockoutCountdown()
         {
             // Arrange

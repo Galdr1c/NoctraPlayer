@@ -91,7 +91,9 @@
                  TextAlignment="Center"
                  TextWrapping="Wrap" />
 
-      <Border x:Name="PinDotsHost" HorizontalAlignment="Center">
+      <Border x:Name="PinDotsHost"
+              HorizontalAlignment="Center"
+              AutomationProperties.HelpText="{Binding PinProgressA11yText}">
         <StackPanel Orientation="Horizontal"
                     HorizontalAlignment="Center"
                     Spacing="12">
@@ -157,7 +159,9 @@
                 Content="{loc:Translate PinEntry.ForgotPin}"
                 Command="{Binding ForgotPinCommand}" />
         <Button Classes="pin-key" Content="0" Command="{Binding PressDigitCommand}" CommandParameter="0" />
-        <Button Classes="pin-key" Command="{Binding BackspaceCommand}">
+        <Button Classes="pin-key"
+                Command="{Binding BackspaceCommand}"
+                AutomationProperties.Name="{loc:Translate PinEntry.Backspace}">
           <icons:MaterialIcon Kind="BackspaceOutline"
                               Width="24"
                               Height="24"

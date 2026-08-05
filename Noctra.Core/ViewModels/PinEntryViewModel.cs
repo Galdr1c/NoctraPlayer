@@ -69,6 +69,16 @@ public partial class PinEntryViewModel : ObservableObject, IDisposable
     public int PinLength => EnteredPin.Length;
 
     /// <summary>
+    /// Ekran okuyucuya PIN ilerlemesini bildiren metin — nokta göstergesinin
+    /// "4 haneden 2'si girildi" gibi bağlamsız görünmesini engeller
+    /// ("PinEntry.ProgressA11yFormat": {0}=toplam hane, {1}=girilen hane).
+    /// </summary>
+    public string PinProgressA11yText => string.Format(
+        _localizationService.GetString("PinEntry.ProgressA11yFormat"),
+        4,
+        PinLength);
+
+    /// <summary>
     /// Lockout aktifken ErrorMessage'i gizle (UI overlap'ı önler)
     /// </summary>
     public bool ShowErrorMessage => !IsLocked && !string.IsNullOrEmpty(ErrorMessage);
@@ -123,6 +133,7 @@ public partial class PinEntryViewModel : ObservableObject, IDisposable
 
         EnteredPin += digit;
         OnPropertyChanged(nameof(PinLength));
+        OnPropertyChanged(nameof(PinProgressA11yText));
 
         // 4 hane dolunca otomatik doğrula
         if (EnteredPin.Length == 4)
@@ -136,6 +147,7 @@ public partial class PinEntryViewModel : ObservableObject, IDisposable
             EnteredPin = EnteredPin[..^1];
 
         OnPropertyChanged(nameof(PinLength));
+        OnPropertyChanged(nameof(PinProgressA11yText));
         ErrorMessage = string.Empty;
     }
 
@@ -161,6 +173,7 @@ public partial class PinEntryViewModel : ObservableObject, IDisposable
                 _attemptCount++;
                 EnteredPin = string.Empty;
                 OnPropertyChanged(nameof(PinLength));
+                OnPropertyChanged(nameof(PinProgressA11yText));
 
                 ShakeTrigger++;
                 AttemptFailed?.Invoke(this, _attemptCount);

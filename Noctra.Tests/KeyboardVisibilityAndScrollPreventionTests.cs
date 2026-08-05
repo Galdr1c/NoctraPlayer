@@ -401,6 +401,33 @@ public class KeyboardVisibilityAndScrollPreventionTests
     }
 
     [Fact]
+    public void PinEntryViews_DeclareBackspaceNameAndDotProgressHint()
+    {
+        var mobile = ReadProjectFile("Noctra.Mobile", "Views", "PinEntryView.axaml");
+        var desktop = ReadProjectFile("Noctra.Avalonia", "Views", "PinEntryWindow.axaml");
+
+        // Backspace butonu ikon yalnız; ekran okuyucuya yerelleştirilmiş ad verilmeli
+        Assert.Contains("AutomationProperties.Name=\"{loc:Translate PinEntry.Backspace}\"", mobile);
+        Assert.Contains("AutomationProperties.Name=\"{loc:Translate PinEntry.Backspace}\"", desktop);
+
+        // PIN nokta göstergesi ekran okuyucuya ilerlemeyi bildirmeli
+        Assert.Contains("AutomationProperties.HelpText=\"{Binding PinProgressA11yText}\"", mobile);
+        Assert.Contains("AutomationProperties.HelpText=\"{Binding PinProgressA11yText}\"", desktop);
+    }
+
+    [Fact]
+    public void ProfileSetup_PremiumPinRow_UsesLocalizedAccessibilityName()
+    {
+        var profile = ReadProjectFile("Noctra.Mobile", "Views", "ProfileSetupView.axaml");
+
+        // Yarı yerelleştirilmiş "Premium feature" sabit İngilizce kalmamalı
+        Assert.DoesNotContain("Premium feature", profile);
+        Assert.Contains(
+            "AutomationProperties.Name=\"{loc:Translate Profiles.Add.PinLockPremiumA11y}\"",
+            profile);
+    }
+
+    [Fact]
     public void ProfileSetup_TextBoxes_HaveReturnKeyHints()
     {
         var profile = ReadProjectFile("Noctra.Mobile", "Views", "ProfileSetupView.axaml");

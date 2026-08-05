@@ -132,7 +132,8 @@
                            TextWrapping="Wrap"/>
 
                 <!-- 4 Dot Indicator -->
-                <Border x:Name="PinDotsHost" HorizontalAlignment="Center">
+                <Border x:Name="PinDotsHost" HorizontalAlignment="Center"
+                        AutomationProperties.HelpText="{Binding PinProgressA11yText}">
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center"
                                 Spacing="12" Margin="0,0,0,16">
                         <Ellipse x:Name="Dot1" Width="12" Height="12"
@@ -190,7 +191,8 @@
                     <!-- Bottom row -->
                     <Button Command="{Binding ForgotPinCommand}" Classes="PinForgotKey"/>
                     <Button Content="0" Command="{Binding PressDigitCommand}" CommandParameter="0" Classes="PinKey"/>
-                    <Button Command="{Binding BackspaceCommand}" Classes="PinKey">
+                    <Button Command="{Binding BackspaceCommand}" Classes="PinKey"
+                            AutomationProperties.Name="{loc:Translate PinEntry.Backspace}">
                         <materialIcons:MaterialIcon Kind="BackspaceOutline" Width="20" Height="20"
                                                      Foreground="{DynamicResource TextPrimaryBrush}"/>
                     </Button>

@@ -626,7 +626,7 @@
               <Button Classes="SectionRow"
                       Command="{Binding RequestPremiumUpgradeCommand}"
                       IsVisible="{Binding !IsPinAvailable}"
-                      AutomationProperties.Name="{loc:Translate Profiles.Add.PinLock}, Premium feature"
+                      AutomationProperties.Name="{loc:Translate Profiles.Add.PinLockPremiumA11y}"
                       Padding="16,14">
                 <Grid ColumnDefinitions="*,Auto">
                   <StackPanel Grid.Column="0" Spacing="3" Margin="0,0,16,0">
