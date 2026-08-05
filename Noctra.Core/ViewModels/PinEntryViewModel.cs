@@ -28,7 +28,16 @@ public partial class PinEntryViewModel : ObservableObject, IDisposable
     private bool _isLocked;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(LockoutCountdownText))]
     private int _lockSecondsRemaining;
+
+    /// <summary>
+    /// Yerelleştirilmiş geri sayım metni — saniye birimi ve ifade tamamen
+    /// çeviri formatındadır ("PinEntry.LockoutCountdownFormat").
+    /// </summary>
+    public string LockoutCountdownText => string.Format(
+        _localizationService.GetString("PinEntry.LockoutCountdownFormat"),
+        LockSecondsRemaining);
 
     [ObservableProperty]
     private string _profileName = string.Empty;

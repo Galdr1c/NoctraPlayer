@@ -164,14 +164,11 @@
                 </StackPanel>
 
                 <!-- Lockout Countdown -->
-                <TextBlock FontSize="11" HorizontalAlignment="Center"
+                <TextBlock Text="{Binding LockoutCountdownText}"
+                           FontSize="11" HorizontalAlignment="Center"
                            Foreground="{DynamicResource WarningBrush}"
                            Height="16" Margin="0,0,0,2"
-                           IsVisible="{Binding IsLocked}">
-                    <Run Text="{loc:Translate PinEntry.LockoutCountdown}" />
-                    <Run Text="{Binding LockSecondsRemaining}" />
-                    <Run Text="s" />
-                </TextBlock>
+                           IsVisible="{Binding IsLocked}"/>
 
                 <!-- Keypad -->
                 <UniformGrid Rows="4" Columns="3" Width="180"

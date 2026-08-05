@@ -349,6 +349,38 @@ namespace Noctra.Tests
         }
 
         [Fact]
+        public void PinEntry_LockoutCountdownText_UsesLocalizedFormat()
+        {
+            // Arrange — Türkçe format; saniye birimi metnin parçası
+            var localization = new Mock<ILocalizationService>();
+            localization
+                .Setup(service => service.GetString("PinEntry.LockoutCountdownFormat"))
+                .Returns("Kilitli. {0} saniye sonra tekrar deneyin.");
+
+            var vm = new PinEntryViewModel(
+                _securityService,
+                new Mock<IDispatcherService>().Object,
+                _securityService.HashPin("1234"),
+                "Test",
+                string.Empty,
+                "Login",
+                localization.Object,
+                failedAttempts: ProfileService.MaxPinAttempts,
+                lockedUntilUtc: DateTime.UtcNow.AddSeconds(30));
+
+            using (vm)
+            {
+                // Act
+                var text = vm.LockoutCountdownText;
+
+                // Assert — sayı formata gömülü; ham "s" eki ya da eski anahtar yok
+                Assert.Contains(vm.LockSecondsRemaining.ToString(), text);
+                Assert.Contains("saniye sonra tekrar deneyin", text);
+                Assert.DoesNotContain("Kilitli. Kalan süre", text);
+            }
+        }
+
+        [Fact]
         public async Task PinEntry_Dispose_CancelsLockoutCountdown()
         {
             // Arrange

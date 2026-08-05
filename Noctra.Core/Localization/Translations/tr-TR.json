@@ -724,7 +724,7 @@
   "PinEntry.ForgotPin": "PIN'imi\nUnuttum",
   "PinEntry.EnterPin": "PIN girin",
   "PinEntry.Verifying": "Doğrulanıyor...",
-  "PinEntry.LockoutCountdown": "Kilitli. Kalan süre: ",
+  "PinEntry.LockoutCountdownFormat": "Kilitli. {0} saniye sonra tekrar deneyin.",
   "PinEntry.Error.LockedTitle": "Profil Kilitli",
   "PinEntry.Error.ProfileLockedFormat": "Bu profil çok fazla hatalı PIN denemesi nedeniyle kilitlendi. Lütfen {0} saniye sonra tekrar deneyin.",
   "Settings.Epg.UrlPlaceholder": "https://.../epg.xml veya .xml.gz",
