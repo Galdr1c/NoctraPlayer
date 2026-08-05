@@ -123,13 +123,13 @@
                            Foreground="{DynamicResource TextPrimaryBrush}"
                            Margin="0,0,0,4"/>
 
-                <!-- Purpose text -->
-                <TextBlock FontSize="12" HorizontalAlignment="Center"
+                <!-- Purpose text — PIN'in neden istendiği (giriş/düzenleme/silme) -->
+                <TextBlock Text="{Binding Purpose}"
+                           FontSize="12" HorizontalAlignment="Center"
                            Foreground="{DynamicResource TextMutedBrush}"
                            Margin="0,0,0,16"
-                           TextAlignment="Center">
-                    <Run Text="{loc:Translate PinEntry.EnterPin}"/>
-                </TextBlock>
+                           TextAlignment="Center"
+                           TextWrapping="Wrap"/>
 
                 <!-- 4 Dot Indicator -->
                 <Border x:Name="PinDotsHost" HorizontalAlignment="Center">

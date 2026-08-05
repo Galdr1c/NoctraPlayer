@@ -79,7 +79,7 @@
   "Profiles.SelectProfile": "Seleccionar Perfil",
   "Profiles.Pin.Purpose.Login": "iniciar sesión",
   "Profiles.Pin.Purpose.Edit": "editar este perfil",
-  "Profiles.Pin.Purpose.Enter": "entrar en este perfil",
+  "Profiles.Pin.Purpose.Enter": "iniciar sesión en este perfil",
   "Profiles.Pin.Purpose.Delete": "eliminar este perfil",
   "Profiles.Pin.Forgot.Title": "¿Olvidaste tu PIN?",
   "Profiles.Pin.Forgot.MessageFormat": "El perfil '{0}' requiere un PIN para acceder.\n\nNo hay opción de recuperación de PIN.\n\nSeleccionar \"Sí\" eliminará permanentemente el perfil en 3 días. Si recuerdas tu PIN y entras al perfil dentro de este tiempo, la eliminación se cancelará.\n\n¿Iniciar eliminación?",
