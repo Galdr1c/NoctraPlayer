@@ -885,6 +885,56 @@ public partial class AddProfileViewModel : ObservableObject
     [ObservableProperty]
     private string _pinConfirm = string.Empty;
 
+    /// <summary>
+    /// Yapıştırılan metni PIN'e uygun hale getirir: rakam olmayan karakterler
+    /// (boşluk, ayraç, harf vb.) atılır, Unicode rakamlar (tam genişlik,
+    /// Arap-Hint vb.) ASCII rakama çevrilir. Böylece kaydedilen PIN, sayısal
+    /// tuş takımının ürettiği ASCII rakamlarla her zaman yeniden girilebilir.
+    /// </summary>
+    private static string NormalizePinInput(string value)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            return string.Empty;
+        }
+
+        // Sık görülen ASCII rakam girişinde ayırma/yeniden kurma yapma —
+        // her tuş vuruşunda gereksiz ayırma olmasın, değer aynen dönsün.
+        if (value.All(c => c is >= '0' and <= '9'))
+        {
+            return value;
+        }
+
+        var builder = new System.Text.StringBuilder(value.Length);
+        foreach (var ch in value)
+        {
+            if (char.IsDigit(ch))
+            {
+                builder.Append((char)('0' + (int)char.GetNumericValue(ch)));
+            }
+        }
+
+        return builder.ToString();
+    }
+
+    partial void OnPinCodeChanged(string value)
+    {
+        var normalized = NormalizePinInput(value);
+        if (!string.Equals(normalized, value, StringComparison.Ordinal))
+        {
+            PinCode = normalized;
+        }
+    }
+
+    partial void OnPinConfirmChanged(string value)
+    {
+        var normalized = NormalizePinInput(value);
+        if (!string.Equals(normalized, value, StringComparison.Ordinal))
+        {
+            PinConfirm = normalized;
+        }
+    }
+
     [ObservableProperty]
     private string? _pinError;
 

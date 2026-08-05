@@ -388,6 +388,19 @@ public class KeyboardVisibilityAndScrollPreventionTests
     }
 
     [Fact]
+    public void ProfileSetup_PinTextBoxes_DeclareMaskingAndInputLimitsInline()
+    {
+        var profile = ReadProjectFile("Noctra.Mobile", "Views", "ProfileSetupView.axaml");
+
+        // PIN fields must explicitly declare masking, the 4-digit limit, and the
+        // numeric keyboard — the view alone must guarantee correct PIN input,
+        // not only the global TextBox.pin style.
+        Assert.Equal(2, CountOccurrences(profile, "PasswordChar=\"&#x2022;\""));
+        Assert.Equal(2, CountOccurrences(profile, "MaxLength=\"4\""));
+        Assert.Equal(2, CountOccurrences(profile, "TextInputOptions.ContentType=\"Digits\""));
+    }
+
+    [Fact]
     public void ProfileSetup_TextBoxes_HaveReturnKeyHints()
     {
         var profile = ReadProjectFile("Noctra.Mobile", "Views", "ProfileSetupView.axaml");

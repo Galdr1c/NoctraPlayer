@@ -818,6 +818,42 @@ namespace Noctra.Tests
             Assert.Equal("Renamed", updatedProfile.Name);
         }
 
+        [Fact]
+        public void PinInput_NormalizesPastedSpacesAndUnicodeDigits()
+        {
+            // Arrange
+            var dialog = new Mock<IDialogService>();
+            var profileService = new Mock<IProfileService>();
+            var vm = CreatePinSetupViewModel(profileService.Object, dialog.Object);
+            vm.HasPin = true;
+
+            // Boşluk ve ayraçlar atılır
+            vm.PinCode = "12 34";
+            Assert.Equal("1234", vm.PinCode);
+
+            // Tam genişlik (Unicode) rakamlar ASCII'ye çevrilir
+            vm.PinCode = "１２３４";
+            Assert.Equal("1234", vm.PinCode);
+
+            // Arap-Hint rakamları ASCII'ye çevrilir
+            vm.PinCode = "١٢٣٤";
+            Assert.Equal("1234", vm.PinCode);
+
+            // Karışık içerikte rakam olmayan karakterler atılır
+            vm.PinCode = "1-2.3(4)";
+            Assert.Equal("1234", vm.PinCode);
+
+            // Onay alanı da aynı kurala uyar
+            vm.PinConfirm = "12 ３４";
+            Assert.Equal("1234", vm.PinConfirm);
+
+            // Normalleştirme sonrası doğrulama ASCII tabanında çalışır
+            vm.TouchField("PinCode");
+            vm.TouchField("PinConfirm");
+            Assert.Null(vm.PinError);
+            Assert.Null(vm.PinConfirmationError);
+        }
+
         private AddProfileViewModel CreatePinSetupViewModel(
             IProfileService profileService,
             IDialogService dialogService)
