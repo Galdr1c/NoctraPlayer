@@ -765,6 +765,12 @@
 
 
 
+                  <!-- PIN yalnızca yerel profil kilididir (yüksek güvenlikli kimlik doğrulaması değildir) -->
+                  <TextBlock Text="{loc:Translate Profiles.Add.PinLocalOnly}"
+                             Foreground="{DynamicResource TextMutedBrush}"
+                             FontSize="{DynamicResource FOverline}"
+                             TextWrapping="Wrap" />
+
                   <!-- PIN uyarısı -->
                   <TextBlock Text="{loc:Translate Profiles.Add.PinWarning}"
                              Foreground="{DynamicResource TextMutedBrush}"

@@ -347,6 +347,11 @@
                                                    Foreground="{DynamicResource ErrorBrush}"
                                                    IsVisible="{Binding PinError, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"/>
 
+                                        <!-- Local-only notice -->
+                                        <TextBlock FontSize="11" Foreground="{DynamicResource TextMutedBrush}"
+                                                   TextWrapping="Wrap" MaxWidth="350" HorizontalAlignment="Left"
+                                                   Text="{loc:Translate Profiles.Add.PinLocalOnly}"/>
+
                                         <!-- Warning -->
                                         <TextBlock FontSize="11" Foreground="{DynamicResource TextMutedBrush}"
                                                    TextWrapping="Wrap" MaxWidth="350" HorizontalAlignment="Left"

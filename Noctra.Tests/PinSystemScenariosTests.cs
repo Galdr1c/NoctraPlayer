@@ -603,6 +603,144 @@ namespace Noctra.Tests
             Assert.False(updatedProfile.IsPendingDeletion);
             Assert.Equal("Rescued By Edit", updatedProfile.Name);
         }
+
+        [Fact]
+        public async Task Save_WeakPin_DeclinedByUser_DoesNotSave()
+        {
+            // Arrange
+            var dialog = new Mock<IDialogService>();
+            dialog.Setup(s => s.ShowConfirmationAsync(It.IsAny<string>(), It.IsAny<string>()))
+                .ReturnsAsync(false);
+            var profileService = new Mock<IProfileService>();
+            var vm = CreatePinSetupViewModel(profileService.Object, dialog.Object);
+
+            vm.HasPin = true;
+            vm.PinCode = "1234";
+            vm.PinConfirm = "1234";
+
+            // Act — user declines the weak-PIN warning
+            await vm.SaveCommand.ExecuteAsync(null);
+
+            // Assert — nothing was persisted
+            profileService.Verify(
+                s => s.SaveProfileAsync(It.IsAny<ProfileSaveRequest>()),
+                Times.Never);
+        }
+
+        [Fact]
+        public async Task Save_WeakPin_ConfirmedByUser_Saves()
+        {
+            // Arrange
+            var dialog = new Mock<IDialogService>();
+            dialog.Setup(s => s.ShowConfirmationAsync(It.IsAny<string>(), It.IsAny<string>()))
+                .ReturnsAsync(true);
+            var profileService = new Mock<IProfileService>();
+            var vm = CreatePinSetupViewModel(profileService.Object, dialog.Object);
+
+            vm.HasPin = true;
+            vm.PinCode = "1234";
+            vm.PinConfirm = "1234";
+
+            // Act — user accepts the weak-PIN warning
+            await vm.SaveCommand.ExecuteAsync(null);
+
+            // Assert — the PIN is saved as requested
+            profileService.Verify(
+                s => s.SaveProfileAsync(It.IsAny<ProfileSaveRequest>()),
+                Times.Once);
+        }
+
+        [Fact]
+        public async Task Save_StrongPin_NoConfirmationDialog_Saves()
+        {
+            // Arrange
+            var dialog = new Mock<IDialogService>();
+            var profileService = new Mock<IProfileService>();
+            var vm = CreatePinSetupViewModel(profileService.Object, dialog.Object);
+
+            vm.HasPin = true;
+            vm.PinCode = "4837";
+            vm.PinConfirm = "4837";
+
+            // Act
+            await vm.SaveCommand.ExecuteAsync(null);
+
+            // Assert — no warning is shown, save proceeds
+            dialog.Verify(
+                s => s.ShowConfirmationAsync(It.IsAny<string>(), It.IsAny<string>()),
+                Times.Never);
+            profileService.Verify(
+                s => s.SaveProfileAsync(It.IsAny<ProfileSaveRequest>()),
+                Times.Once);
+        }
+
+        [Fact]
+        public async Task Save_EditWithoutNewPin_KeepsExistingHash_NoWarning()
+        {
+            // Arrange — PIN korumalı profil; düzenlemede yeni PIN girilmiyor
+            var profile = await SeedProfileAsync("Existing PIN", _securityService.HashPin("1234"));
+            using var dbLoad = _contextFactory.CreateDbContext();
+            var existing = await dbLoad.Profiles
+                .Include(p => p.ProviderAccount)
+                .FirstAsync(p => p.Id == profile.Id);
+
+            // M3U kuralına uygun URL — böylece düzenlemede kimlik bilgileri
+            // değişmez ve provider doğrulama adımı tetiklenmez.
+            existing.ProviderAccount.Url = "http://test.com/playlist.m3u";
+            await dbLoad.SaveChangesAsync();
+
+            var dialog = new Mock<IDialogService>();
+            var service = new ProfileService(_contextFactory, _mockDownloadService.Object, _mockLicenseService.Object);
+            var vm = CreatePinSetupViewModel(service, dialog.Object);
+            vm.InitializeForEdit(existing);
+            vm.AccessGrant = ProfileAccessGrant.Create(profile.Id, ProfileAccessPurpose.Edit);
+            vm.ProfileName = "Renamed";
+
+            // Act — PinCode stays empty (existing hash preserved)
+            await vm.SaveCommand.ExecuteAsync(null);
+
+            // Assert — existing weak PIN is not re-flagged on unrelated edits
+            dialog.Verify(
+                s => s.ShowConfirmationAsync(It.IsAny<string>(), It.IsAny<string>()),
+                Times.Never);
+
+            // Assert — the existing hash is preserved, not re-hashed or removed
+            using var dbVerify = _contextFactory.CreateDbContext();
+            var updatedProfile = await dbVerify.Profiles.FindAsync(profile.Id);
+            Assert.NotNull(updatedProfile);
+            Assert.Equal(existing.PinHash, updatedProfile!.PinHash);
+            Assert.Equal("Renamed", updatedProfile.Name);
+        }
+
+        private AddProfileViewModel CreatePinSetupViewModel(
+            IProfileService profileService,
+            IDialogService dialogService)
+        {
+            var mockAvatarService = new Mock<IAvatarService>();
+            mockAvatarService.Setup(s => s.GetAvatarsByCategory())
+                .Returns(new Dictionary<string, List<string>> { { "All", new List<string> { "avatar_1" } } });
+
+            var localization = new Mock<ILocalizationService>();
+            localization.Setup(s => s.GetString(It.IsAny<string>())).Returns((string key) => key);
+
+            var vm = new AddProfileViewModel(
+                profileService,
+                new Mock<IDispatcherService>().Object,
+                mockAvatarService.Object,
+                dialogService,
+                _mockLicenseService.Object,
+                new Mock<IM3UParser>().Object,
+                new Mock<IXtreamCodesService>().Object,
+                new Mock<IStalkerPortalService>().Object,
+                _securityService,
+                localization.Object);
+
+            vm.ProfileName = "PIN Profile";
+            vm.Url = "http://test.com";
+            vm.Username = "test";
+            vm.Password = "test";
+            return vm;
+        }
     }
 
     /// <summary>

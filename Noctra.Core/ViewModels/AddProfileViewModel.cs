@@ -1729,6 +1729,19 @@ public partial class AddProfileViewModel : ObservableObject
             return;
         }
 
+        // Zayıf PIN uyarısı — PIN yasaklanmaz, yalnızca kullanıcı onayı istenir.
+        // Edit modunda yeni kod girilmediyse (mevcut PIN korunuyor) kontrol atlanır.
+        if (HasPin && PinCode.Length == 4 && PinWeaknessEvaluator.IsWeak(PinCode))
+        {
+            var confirmed = await _dialogService.ShowConfirmationAsync(
+                _localizationService.GetString("AddProfile.Pin.Weak.Title"),
+                _localizationService.GetString("AddProfile.Pin.Weak.Message"));
+            if (!confirmed)
+            {
+                return;
+            }
+        }
+
         try
         {
             // Show saving indicator
