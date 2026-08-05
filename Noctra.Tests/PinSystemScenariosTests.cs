@@ -470,6 +470,53 @@ namespace Noctra.Tests
             Assert.Null(updatedProfile!.PendingDeletionAt);
             Assert.False(updatedProfile.IsPendingDeletion);
         }
+
+        [Fact]
+        public async Task PendingDeletion_EditProfileSave_CancelsDeletion()
+        {
+            // Arrange — PIN korumalı, silinme geri sayımındaki profil
+            var profile = await SeedProfileAsync("Doomed Profile", _securityService.HashPin("1234"));
+            var service = new ProfileService(_contextFactory, _mockDownloadService.Object, _mockLicenseService.Object);
+            await service.ScheduleProfileDeletionAsync(profile.Id);
+
+            using var dbLoad = _contextFactory.CreateDbContext();
+            var doomed = await dbLoad.Profiles
+                .Include(p => p.ProviderAccount)
+                .FirstAsync(p => p.Id == profile.Id);
+            Assert.True(doomed.IsPendingDeletion);
+
+            var mockAvatarService = new Mock<IAvatarService>();
+            mockAvatarService.Setup(s => s.GetAvatarsByCategory())
+                .Returns(new Dictionary<string, List<string>> { { "All", new List<string> { "avatar_1" } } });
+
+            var vm = new AddProfileViewModel(
+                service,
+                new Mock<IDispatcherService>().Object,
+                mockAvatarService.Object,
+                new Mock<IDialogService>().Object,
+                _mockLicenseService.Object,
+                new Mock<IM3UParser>().Object,
+                new Mock<IXtreamCodesService>().Object,
+                new Mock<IStalkerPortalService>().Object,
+                _securityService,
+                new Mock<ILocalizationService>().Object);
+
+            vm.InitializeForEdit(doomed);
+            Assert.True(vm.EditingProfile!.IsPendingDeletion);
+            vm.AccessGrant = ProfileAccessGrant.Create(profile.Id, ProfileAccessPurpose.Edit);
+
+            // Act — yönetim modu: doğru PIN kanıtlandı, profil düzenlendi ve kaydedildi
+            vm.ProfileName = "Rescued By Edit";
+            await vm.SaveCommand.ExecuteAsync(null);
+
+            // Assert — üç günlük silme iptal edilmiş olmalı
+            using var dbVerify = _contextFactory.CreateDbContext();
+            var updatedProfile = await dbVerify.Profiles.FindAsync(profile.Id);
+            Assert.NotNull(updatedProfile);
+            Assert.Null(updatedProfile!.PendingDeletionAt);
+            Assert.False(updatedProfile.IsPendingDeletion);
+            Assert.Equal("Rescued By Edit", updatedProfile.Name);
+        }
     }
 
     /// <summary>

@@ -225,6 +225,24 @@ public partial class ProfilesViewModel : ObservableObject
             profile, ProfileAccessPurpose.Load, PinPrompt ?? RejectPrompt);
         if (grant == null) return;
 
+        // Kurtarma yalnızca PIN doğrulandıktan SONRA yapılır — yanlış PIN giren
+        // veya vazgeçen kullanıcı silinme geri sayımını iptal edememeli.
+        if (profile.IsPendingDeletion)
+        {
+            try
+            {
+                await _profileService.CancelProfileDeletionAsync(profile.Id);
+                await _dialogService.ShowMessageAsync(
+                    _localizationService.GetString("Profiles.Pin.Recovered.Title"),
+                    string.Format(_localizationService.GetString("Profiles.Pin.Recovered.MessageFormat"), profile.Name));
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine(
+                    $"[ProfilesViewModel] Failed to cancel deletion for profile {profile.Id}: {ex.Message}");
+            }
+        }
+
         profile.LastUsed = DateTime.UtcNow;
         OnProfileSelected?.Invoke(profile, grant);
         RequestClose?.Invoke();

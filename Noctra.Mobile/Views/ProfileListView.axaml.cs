@@ -82,7 +82,7 @@ public partial class ProfileListView : UserControl
         }
     }
 
-    private async void SelectProfile_Click(object? sender, RoutedEventArgs e)
+    private void SelectProfile_Click(object? sender, RoutedEventArgs e)
     {
         if (_viewModel is null ||
             sender is not Control { DataContext: Profile profile })
@@ -94,21 +94,6 @@ public partial class ProfileListView : UserControl
         {
             _viewModel.EditProfileCommand.Execute(profile);
             return;
-        }
-
-        if (profile.IsPendingDeletion &&
-            Application.Current is App app &&
-            app.Services is not null)
-        {
-            var profileService = app.Services.GetRequiredService<IProfileService>();
-            var dialogService = app.Services.GetRequiredService<IDialogService>();
-            var localizationService = app.Services.GetRequiredService<ILocalizationService>();
-
-            await profileService.CancelProfileDeletionAsync(profile.Id);
-            await _viewModel.RefreshProfilesAsync();
-            await dialogService.ShowMessageAsync(
-                localizationService.GetString("Profiles.Pin.Recovered.Title"),
-                string.Format(localizationService.GetString("Profiles.Pin.Recovered.MessageFormat"), profile.Name));
         }
 
         _viewModel.SelectProfileCommand.Execute(profile);

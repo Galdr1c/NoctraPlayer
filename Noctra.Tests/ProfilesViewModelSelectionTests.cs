@@ -65,12 +65,66 @@ public sealed class ProfilesViewModelSelectionTests
         Assert.Same(profile, selectedProfile);
     }
 
+    [Fact]
+    public async Task SelectProfile_PendingDeletion_RecoversOnlyAfterPinGate()
+    {
+        var profileService = new Mock<IProfileService>();
+        profileService
+            .Setup(service => service.CancelProfileDeletionAsync(42))
+            .Returns(Task.CompletedTask)
+            .Verifiable();
+        var dialogService = new Mock<IDialogService>();
+        dialogService
+            .Setup(service => service.ShowMessageAsync(It.IsAny<string>(), It.IsAny<string>()))
+            .Returns(Task.CompletedTask);
+
+        var viewModel = CreateViewModel(profileService.Object, dialogService.Object);
+        var profile = new Profile { Id = 42, Name = "Doomed", PendingDeletionAt = DateTime.UtcNow };
+        Profile? selectedProfile = null;
+        viewModel.OnProfileSelected += (selected, _) => selectedProfile = selected;
+
+        await viewModel.SelectProfileCommand.ExecuteAsync(profile);
+
+        profileService.Verify(service => service.CancelProfileDeletionAsync(42), Times.Once);
+        Assert.Same(profile, selectedProfile);
+    }
+
+    [Fact]
+    public async Task SelectProfile_PinProtectedPendingDeletion_WrongPin_DoesNotRecover()
+    {
+        var profileService = new Mock<IProfileService>();
+        var dialogService = new Mock<IDialogService>();
+
+        var viewModel = CreateViewModel(profileService.Object, dialogService.Object);
+        viewModel.PinPrompt = (_, _) => Task.FromResult(false);
+
+        var profile = new Profile
+        {
+            Id = 9,
+            Name = "Doomed",
+            PinHash = "hash",
+            PendingDeletionAt = DateTime.UtcNow
+        };
+        Profile? selectedProfile = null;
+        viewModel.OnProfileSelected += (selected, _) => selectedProfile = selected;
+
+        await viewModel.SelectProfileCommand.ExecuteAsync(profile);
+
+        profileService.Verify(service => service.CancelProfileDeletionAsync(It.IsAny<int>()), Times.Never);
+        Assert.Null(selectedProfile);
+    }
+
     private static ProfilesViewModel CreateViewModel(IProfileService profileService)
+    {
+        return CreateViewModel(profileService, Mock.Of<IDialogService>());
+    }
+
+    private static ProfilesViewModel CreateViewModel(IProfileService profileService, IDialogService dialogService)
     {
         return new ProfilesViewModel(
             profileService,
             new ProfileAccessService(),
-            Mock.Of<IDialogService>(),
+            dialogService,
             Mock.Of<IDispatcherService>(),
             Mock.Of<ILicenseService>(),
             Mock.Of<ILocalizationService>());

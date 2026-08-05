@@ -1826,6 +1826,15 @@ public partial class AddProfileViewModel : ObservableObject
                 return;
             }
 
+            // Silinme geri sayımındaki bir profil PIN doğrulamasıyla düzenlendiyse
+            // (yönetim modu) üç günlük silme otomatik iptal edilir — normal giriş
+            // dalında olduğu gibi; aksi halde kullanıcı profili "kurtuldu" sanıp
+            // üç gün sonra silinmesini izleyebilir.
+            if (EditingProfile is { IsPendingDeletion: true })
+            {
+                await _profileService.CancelProfileDeletionAsync(EditingProfile.Id);
+            }
+
             // Success feedback
             SetStatus(_localizationService.GetString("AddProfile.Status.Saved"), FormStatusKind.Success);
             await Task.Delay(400);

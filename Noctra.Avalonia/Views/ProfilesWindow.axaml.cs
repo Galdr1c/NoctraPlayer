@@ -223,7 +223,7 @@ public partial class ProfilesWindow : Window
         }
     }
 
-    private async void SelectProfile_Click(object? sender, RoutedEventArgs e)
+    private void SelectProfile_Click(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not ProfilesViewModel vm || sender is not Control control || control.DataContext is not Profile profile)
         {
@@ -235,17 +235,6 @@ public partial class ProfilesWindow : Window
         {
             vm.EditProfileCommand.Execute(profile);
             return;
-        }
-
-        // PIN doğru girildi — eğer geri sayım aktifse iptal et
-        if (profile.IsPendingDeletion)
-        {
-            await _profileService.CancelProfileDeletionAsync(profile.Id);
-            await _viewModel.RefreshProfilesAsync();
-
-            await _dialogService.ShowMessageAsync(
-                _localizationService.GetString("Profiles.Pin.Recovered.Title"),
-                string.Format(_localizationService.GetString("Profiles.Pin.Recovered.MessageFormat"), profile.Name));
         }
 
         vm.SelectProfileCommand.Execute(profile);
