@@ -954,6 +954,7 @@
   "GlobalSettings.Promo.Title": "Aktionscode",
   "GlobalSettings.Promo.Description": "Hast du einen Aktionscode? Gib den Code ein und genieße die Premium-Funktionen!",
   "GlobalSettings.Promo.Apply": "Code anwenden",
+  "GlobalSettings.Promo.ApplyExtend": "Dauer hinzufügen",
   "GlobalSettings.Promo.Placeholder": "Code hier einfügen...",
   "GlobalSettings.Promo.Status.Free": "Kostenlose Version aktiv",
   "GlobalSettings.Promo.Status.Premium": "Premium aktiv",

@@ -954,6 +954,7 @@
   "GlobalSettings.Promo.Title": "Promosyon Kodu",
   "GlobalSettings.Promo.Description": "Elinde promosyon kodu mu var? Kodu gir ve Premium özelliklerin tadını çıkar!",
   "GlobalSettings.Promo.Apply": "Kodu Kullan",
+  "GlobalSettings.Promo.ApplyExtend": "Süre Ekle",
   "GlobalSettings.Promo.Placeholder": "Kodu buraya yapıştır...",
   "GlobalSettings.Promo.Status.Free": "Free sürüm aktif",
   "GlobalSettings.Promo.Status.Premium": "Premium aktif",

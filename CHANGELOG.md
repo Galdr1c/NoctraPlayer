@@ -13,6 +13,7 @@ Detailed historical engineering notes are archived in [`docs/history/legacy-chan
 
 ### Changed
 
+- **Promo card hidden on permanent Premium**: The promo code card is no longer shown on editions that are already permanently Premium (where redemption is meaningless). On timed promo Premium it stays visible — the system supports stacking duration — and the apply button relabels to "Add Duration" ("Süre Ekle") on desktop and mobile.
 - **Promo config hardening and error taxonomy**: The promo code list is now validated on load — a 256 KB response cap (enforced both via `Content-Length` and a bounded stream read), `text/html` rejection, optional `schemaVersion` (only v1 accepted), and full rejection of configs with empty codes or duplicate normalized codes (e.g. `AB CD` vs `ABCD`) so JSON ordering no longer decides redemption. Load failures are now categorized (`Offline`, `Timeout`, `ServiceUnavailable`, `ConfigurationInvalid`) with localized user-facing messages instead of a blanket "check your internet" error; the developer-facing "URL must be configured by the admin" message was replaced. Deliberate scope note: the list is fetched with `no-cache` (immediate CDN-bypassing updates), which conflicts with ETag reuse, and has no cryptographic signature — both are deferred until a server-side redemption flow replaces client-side validation.
 
 ### Fixed

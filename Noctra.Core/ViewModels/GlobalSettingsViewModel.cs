@@ -341,6 +341,20 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
         }
     }
 
+    /// <summary>
+    /// Kalıcı Premium edition'da promo kartı gizlenir (kod zaten anlamsız);
+    /// süreli promo Premium aktifse kart kalır çünkü sistem süre eklemeyi destekler.
+    /// </summary>
+    public bool CanUsePromoCodes => !_licenseService.IsEditionLockedPremium;
+
+    /// <summary>
+    /// Süreli (promo) Premium aktifken buton "Süre Ekle" der; aksi halde "Kodu Kullan".
+    /// </summary>
+    public string PromoApplyButtonText =>
+        _licenseService.IsPremium && _licenseService.PromoPremiumExpiresAtUtc.HasValue
+            ? _localizationService.GetString("GlobalSettings.Promo.ApplyExtend")
+            : _localizationService.GetString("GlobalSettings.Promo.Apply");
+
     [RelayCommand]
     private void ReportBug()
     {
@@ -374,6 +388,8 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(IsPremium));
         OnPropertyChanged(nameof(PremiumStatusText));
         OnPropertyChanged(nameof(HasCorruptedPromoGrant));
+        OnPropertyChanged(nameof(CanUsePromoCodes));
+        OnPropertyChanged(nameof(PromoApplyButtonText));
     }
 
     private void OnLicenseSubscriptionChanged()
@@ -381,6 +397,8 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(IsPremium));
         OnPropertyChanged(nameof(PremiumStatusText));
         OnPropertyChanged(nameof(HasCorruptedPromoGrant));
+        OnPropertyChanged(nameof(CanUsePromoCodes));
+        OnPropertyChanged(nameof(PromoApplyButtonText));
         PromoCodeStatus = PremiumStatusText;
         IsPromoCodeStatusSuccess = IsPremium;
     }

@@ -73,6 +73,7 @@ public class LocalizationServiceTests
         var keys = new[]
         {
             "GlobalSettings.Promo.SuccessFormat",
+            "GlobalSettings.Promo.ApplyExtend",
             "GlobalSettings.Promo.Error.PremiumEdition",
             "GlobalSettings.Promo.Error.EmptyCode",
             "GlobalSettings.Promo.Error.InvalidCode",

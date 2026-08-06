@@ -1140,8 +1140,9 @@
         </StackPanel>
       </Border>
 
-      <!-- Promo Code Section -->
-      <Border Classes="SettingsSectionCard">
+      <!-- Promo Code Section (kalıcı Premium edition'da gizlenir) -->
+      <Border Classes="SettingsSectionCard"
+              IsVisible="{Binding CanUsePromoCodes}">
         <Border.Background>
             <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
                 <GradientStop Color="#1A6D28D9" Offset="0.0"/>
@@ -1174,7 +1175,7 @@
                                     IsVisible="{Binding !IsApplyingPromoCode}" />
                 <icons:MaterialIcon Kind="Refresh" Width="18" Height="18" Foreground="{DynamicResource PlayerOverlayTextBrush}"
                                     IsVisible="{Binding IsApplyingPromoCode}" />
-                <TextBlock Text="{loc:Translate GlobalSettings.Promo.Apply}" Foreground="{DynamicResource PlayerOverlayTextBrush}" FontWeight="SemiBold" />
+                <TextBlock Text="{Binding PromoApplyButtonText}" Foreground="{DynamicResource PlayerOverlayTextBrush}" FontWeight="SemiBold" />
               </StackPanel>
             </Button>
           </StackPanel>
