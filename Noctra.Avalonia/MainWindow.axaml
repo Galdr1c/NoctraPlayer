@@ -545,20 +545,15 @@
                 <!-- Header Section -->
                 <Grid Grid.Row="0">
                   <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="300"/>
+                    <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                   </Grid.ColumnDefinitions>
-                  <!-- Reduce width to 200 in Downloaded Mode using a Panel/Border trick -->
-                  <Panel Grid.Column="0" HorizontalAlignment="Left" VerticalAlignment="Top">
-                     <Border Height="450" Width="300" CornerRadius="8" ClipToBounds="True" Background="{DynamicResource Surface0Brush}"
-                             IsVisible="{Binding !IsDownloadedSeriesDetailMode}">
-                        <Border.BoxShadow>
-                          <BoxShadows>0 15 50 5 #88000000</BoxShadows>
-                        </Border.BoxShadow>
-                        <controls:RemoteImage Stretch="UniformToFill" Url="{Binding SelectedSeriesPosterUrl}"/>
-                     </Border>
-                     <Border Height="300" Width="200" CornerRadius="8" ClipToBounds="True" Background="{DynamicResource Surface0Brush}"
-                             IsVisible="{Binding IsDownloadedSeriesDetailMode}">
+                  <!-- Poster yalnızca katalog modunda gösterilir; indirilen modda
+                       mobildeki sadeleştirilmiş görünüm gibi poster kaldırıldı
+                       (Auto kolon gizliyken 0 genişliğe düşer). -->
+                  <Panel Grid.Column="0" HorizontalAlignment="Left" VerticalAlignment="Top"
+                         IsVisible="{Binding !IsDownloadedSeriesDetailMode}">
+                     <Border Height="450" Width="300" CornerRadius="8" ClipToBounds="True" Background="{DynamicResource Surface0Brush}">
                         <Border.BoxShadow>
                           <BoxShadows>0 15 50 5 #88000000</BoxShadows>
                         </Border.BoxShadow>
@@ -582,7 +577,8 @@
                           <TextBlock Text="{Binding SelectedSeries.Name}" FontSize="52" FontWeight="Black" 
                                      Foreground="{DynamicResource TextPrimaryBrush}" LetterSpacing="-1"/>
                         </Viewbox>
-                        <TextBlock Text="{loc:Translate Series.Detail.DownloadedEpisodes}" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}"
+                        <TextBlock Text="{Binding SelectedSeriesDownloadedSummaryText}" FontSize="20" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}"
+                                   TextWrapping="Wrap" MaxLines="2"
                                    IsVisible="{Binding IsDownloadedSeriesDetailMode}"/>
                       </StackPanel>
 
@@ -924,6 +920,12 @@
                                                   IsVisible="{Binding $parent[Window].((vm:MainViewModel)DataContext).IsDownloadedSeriesDetailMode, Converter={StaticResource InverseBoolConverter}}"
                                                   ToolTip.Tip="{loc:Translate Series.Episode.Download}">
                                               <materialIcons:MaterialIcon Kind="DownloadOutline" Width="22" Height="22" Foreground="{DynamicResource TextMutedBrush}" Opacity="0.6" ToolTip.Tip="{loc:Translate Player.Overlay.Download.Tooltip}"/>
+                                          </Button>
+                                          <Button Grid.Column="3" Theme="{StaticResource ErrorButton}" BorderThickness="0" MinWidth="48" Padding="8"
+                                                  Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).DeleteDownloadedEpisodeCommand}"
+                                                  CommandParameter="{Binding}"
+                                                  IsVisible="{Binding $parent[Window].((vm:MainViewModel)DataContext).IsDownloadedSeriesDetailMode}">
+                                              <materialIcons:MaterialIcon Kind="TrashCanOutline" Width="22" Height="22" Foreground="{DynamicResource ErrorBrush}"/>
                                           </Button>
                                       </Grid>
                                   </Border>

@@ -107,5 +107,37 @@ namespace Noctra.Tests
             Assert.False(ProfilePinVerifier.IsCurrentFormat(null));
             Assert.False(ProfilePinVerifier.IsCurrentFormat(string.Empty));
         }
+
+        [Fact]
+        public void IsWellFormed_AcceptsOnlyStrictlyValidPin2Verifiers()
+        {
+            // Gerçek verifier — tam format uyumlu
+            Assert.True(ProfilePinVerifier.IsWellFormed(ProfilePinVerifier.Create("1234")));
+
+            // Doğru uzunlukta salt/hash — geçerli
+            var correctSalt = Convert.ToBase64String(new byte[16]);
+            var correctHash = Convert.ToBase64String(new byte[32]);
+            Assert.True(ProfilePinVerifier.IsWellFormed($"PIN2${correctSalt}${correctHash}"));
+
+            // 3 parça fakat salt/hash uzunluğu yanlış (IsCurrentFormat true derdi)
+            Assert.False(ProfilePinVerifier.IsWellFormed("PIN2$AA==$BB=="));
+
+            // Geçersiz Base64
+            Assert.False(ProfilePinVerifier.IsWellFormed("PIN2$!!!not-base64!!!$!!!!"));
+
+            // Eksik / fazla parça
+            Assert.False(ProfilePinVerifier.IsWellFormed("PIN2$only-two-parts"));
+            Assert.False(ProfilePinVerifier.IsWellFormed("PIN2$"));
+            Assert.False(ProfilePinVerifier.IsWellFormed("PIN2$$"));
+
+            // Eski formatlar ve yabancı önek
+            Assert.False(ProfilePinVerifier.IsWellFormed("PBKDF2$SHA256$210000$AA==$BB=="));
+            Assert.False(ProfilePinVerifier.IsWellFormed("83D837DD7E939316F5A94A1216FF2E6F2DC9E9859441F333CC12FA2414468B88"));
+            Assert.False(ProfilePinVerifier.IsWellFormed($"PIN3${correctSalt}${correctHash}"));
+
+            // Null / boş
+            Assert.False(ProfilePinVerifier.IsWellFormed(null));
+            Assert.False(ProfilePinVerifier.IsWellFormed(string.Empty));
+        }
     }
 }

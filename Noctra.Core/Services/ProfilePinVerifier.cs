@@ -69,52 +69,93 @@ public static class ProfilePinVerifier
             return false;
         }
 
-        var parts = storedVerifier.Split('$');
-        if (parts.Length != 3 ||
-            !string.Equals(parts[0], FormatPrefix, StringComparison.Ordinal))
+        if (!TryParseVerifierParts(storedVerifier, out var salt, out var expectedHash))
         {
             return false;
         }
 
-        try
-        {
-            var salt = Convert.FromBase64String(parts[1]);
-            var expectedHash = Convert.FromBase64String(parts[2]);
+        var pinBytes = Encoding.ASCII.GetBytes(pin);
 
-            if (salt.Length != SaltSizeBytes || expectedHash.Length != HashSizeBytes)
-            {
-                return false;
-            }
+        var payload = new byte[Domain.Length + salt.Length + pinBytes.Length];
+        Domain.CopyTo(payload);
+        salt.CopyTo(payload.AsSpan(Domain.Length));
+        pinBytes.CopyTo(payload.AsSpan(Domain.Length + salt.Length));
 
-            var pinBytes = Encoding.ASCII.GetBytes(pin);
+        var actualHash = SHA256.HashData(payload);
+        var result = CryptographicOperations.FixedTimeEquals(actualHash, expectedHash);
 
-            var payload = new byte[Domain.Length + salt.Length + pinBytes.Length];
-            Domain.CopyTo(payload);
-            salt.CopyTo(payload.AsSpan(Domain.Length));
-            pinBytes.CopyTo(payload.AsSpan(Domain.Length + salt.Length));
+        CryptographicOperations.ZeroMemory(payload);
+        CryptographicOperations.ZeroMemory(pinBytes);
+        CryptographicOperations.ZeroMemory(actualHash);
 
-            var actualHash = SHA256.HashData(payload);
-            var result = CryptographicOperations.FixedTimeEquals(actualHash, expectedHash);
-
-            CryptographicOperations.ZeroMemory(payload);
-            CryptographicOperations.ZeroMemory(pinBytes);
-            CryptographicOperations.ZeroMemory(actualHash);
-
-            return result;
-        }
-        catch (FormatException)
-        {
-            return false;
-        }
+        return result;
     }
 
     /// <summary>
     /// Kayıt güncel PIN2 formatındaysa true döner. Eski PBKDF2/legacy SHA-256
     /// kayıtları için false — bu formatlar desteklenmez ve geçiş sırasında
     /// sıfırlanır (bkz. DatabaseSchemaFixupService).
+    ///
+    /// Yalnızca önek kontrolü yapar; gerçek format doğrulaması için
+    /// <see cref="IsWellFormed"/> kullanılmalıdır.
     /// </summary>
     public static bool IsCurrentFormat(string? value)
         => value?.StartsWith(FormatPrefix + "$", StringComparison.Ordinal) == true;
+
+    /// <summary>
+    /// Kaydın tam PIN2 formatına uyduğunu doğrular: PIN2$ öneki, tam 3 parça,
+    /// salt ve hash'in geçerli Base64 olması ve doğru uzunlukları (16/32 bayt).
+    ///
+    /// IsCurrentFormat'ın aksine, PIN2$ önekli fakat bozuk/elle kurcalanmış
+    /// kayıtları da yakalar — böyle kayıtlar <see cref="Verify"/>'de asla
+    /// doğrulanamaz ve DatabaseSchemaFixupService geçiş sırasında sıfırlar.
+    /// </summary>
+    public static bool IsWellFormed(string? value)
+        => value is not null && TryParseVerifierParts(value, out _, out _);
+
+    /// <summary>
+    /// Saklanan verifier'ın PIN2 format kurallarına tam uyduğunu doğrular ve
+    /// salt/hash'i çözer: PIN2$ öneki, tam 3 parça, geçerli Base64 ve doğru
+    /// uzunluklar (16/32 bayt). Format kurallarının TEK kaynağıdır — hem
+    /// <see cref="Verify"/> hem <see cref="IsWellFormed"/> burayı kullanır;
+    /// sabitler değişirse tek yer güncellenir.
+    /// </summary>
+    private static bool TryParseVerifierParts(string storedVerifier, out byte[] salt, out byte[] hash)
+    {
+        salt = [];
+        hash = [];
+
+        if (string.IsNullOrWhiteSpace(storedVerifier) ||
+            !storedVerifier.StartsWith(FormatPrefix + "$", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        var parts = storedVerifier.Split('$');
+        if (parts.Length != 3 || !string.Equals(parts[0], FormatPrefix, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        try
+        {
+            var parsedSalt = Convert.FromBase64String(parts[1]);
+            var parsedHash = Convert.FromBase64String(parts[2]);
+
+            if (parsedSalt.Length != SaltSizeBytes || parsedHash.Length != HashSizeBytes)
+            {
+                return false;
+            }
+
+            salt = parsedSalt;
+            hash = parsedHash;
+            return true;
+        }
+        catch (FormatException)
+        {
+            return false;
+        }
+    }
 
     private static bool IsValidPin(string? pin)
         => pin is

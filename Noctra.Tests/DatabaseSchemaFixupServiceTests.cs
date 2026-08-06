@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Noctra.Core.Services;
 using Noctra.Data;
+using Noctra.Services;
 using Noctra.Services.Interfaces;
 
 namespace Noctra.Tests;
@@ -163,6 +164,88 @@ public sealed class DatabaseSchemaFixupServiceTests
         {
             TryDelete(databasePath);
         }
+    }
+
+    [Fact]
+    public async Task ApplyAsync_ResetsLegacyAndMalformedPin2Hashes_ButKeepsValidOnes()
+    {
+        var databasePath = CreateTempDatabasePath();
+        try
+        {
+            await using var context = CreateContext(databasePath);
+            await context.Database.EnsureCreatedAsync();
+
+            // Eski PBKDF2 / legacy SHA-256 + PIN2$ önekli fakat gerçek formatı
+            // bozuk kayıtlar (kısa salt/hash, geçersiz Base64, eksik parça).
+            // LIKE/önek tabanlı eski SQL bunlardan yalnızca ilk ikisini yakalardı.
+            var legacyPbkdf2 = await SeedProfileAsync(context, "Legacy PBKDF2", "PBKDF2$SHA256$210000$c2FsdA==$aGFzaA==");
+            var legacySha256 = await SeedProfileAsync(context, "Legacy SHA-256", "83D837DD7E939316F5A94A1216FF2E6F2DC9E9859441F333CC12FA2414468B88");
+            var malformedShort = await SeedProfileAsync(context, "Malformed Short", "PIN2$AA==$BB==");
+            var malformedBase64 = await SeedProfileAsync(context, "Malformed Base64", "PIN2$!!!not-base64!!!$!!!!");
+            var malformedParts = await SeedProfileAsync(context, "Malformed Parts", "PIN2$only-two-parts");
+            var validPin = await SeedProfileAsync(context, "Valid PIN", ProfilePinVerifier.Create("1234"));
+            var pinless = await SeedProfileAsync(context, "Pinless", null);
+
+            // Act — Seçenek A: açılamaz kayıtlar bir defalık sıfırlanır
+            var resetCount = await new DatabaseSchemaFixupService()
+                .ApplyAsync(context, DatabaseSchemaFixupProfile.Desktop);
+
+            // Assert — 5 açılamaz kayıt (2 legacy + 3 bozuk PIN2) sıfırlandı;
+            // sağlam PIN2 ve PIN'siz profil korundu.
+            Assert.Equal(5, resetCount);
+
+            await using var verify = CreateContext(databasePath);
+            Assert.Null((await verify.Profiles.FindAsync(legacyPbkdf2.Id))!.PinHash);
+            Assert.Null((await verify.Profiles.FindAsync(legacySha256.Id))!.PinHash);
+            Assert.Null((await verify.Profiles.FindAsync(malformedShort.Id))!.PinHash);
+            Assert.Null((await verify.Profiles.FindAsync(malformedBase64.Id))!.PinHash);
+            Assert.Null((await verify.Profiles.FindAsync(malformedParts.Id))!.PinHash);
+
+            var preserved = await verify.Profiles.FindAsync(validPin.Id);
+            Assert.True(ProfilePinVerifier.IsWellFormed(preserved!.PinHash));
+            Assert.True(ProfilePinVerifier.Verify("1234", preserved.PinHash));
+            Assert.Null((await verify.Profiles.FindAsync(pinless.Id))!.PinHash);
+
+            // Idempotency — ikinci koşu hiçbir kayıt bulamaz (0), sağlam PIN korunur.
+            await using var repeat = CreateContext(databasePath);
+            var secondCount = await new DatabaseSchemaFixupService()
+                .ApplyAsync(repeat, DatabaseSchemaFixupProfile.Desktop);
+            Assert.Equal(0, secondCount);
+
+            await using var verifyAgain = CreateContext(databasePath);
+            var preservedAgain = await verifyAgain.Profiles.FindAsync(validPin.Id);
+            Assert.True(ProfilePinVerifier.Verify("1234", preservedAgain!.PinHash));
+        }
+        finally
+        {
+            TryDelete(databasePath);
+        }
+    }
+
+    private static async Task<Noctra.Models.Profile> SeedProfileAsync(
+        AppDbContext context,
+        string name,
+        string? pinHash)
+    {
+        var account = new Noctra.Models.ProviderAccount
+        {
+            Name = name + " Account",
+            Url = "http://test.com",
+            Type = Noctra.Models.ProfileType.M3U
+        };
+        context.ProviderAccounts.Add(account);
+        await context.SaveChangesAsync();
+
+        var profile = new Noctra.Models.Profile
+        {
+            Name = name,
+            ProviderAccount = account,
+            PinHash = pinHash,
+            LastUsed = DateTime.UtcNow
+        };
+        context.Profiles.Add(profile);
+        await context.SaveChangesAsync();
+        return profile;
     }
 
     [Fact]

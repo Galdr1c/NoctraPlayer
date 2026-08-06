@@ -132,11 +132,12 @@ public partial class App : Application
                             var resetPinCount = await schemaFixups.ApplyAsync(db, DatabaseSchemaFixupProfile.Desktop);
                             if (resetPinCount > 0)
                             {
-                                // Eski (PBKDF2/legacy) PIN'ler sıfırlandı — profil
-                                // ekranı açılırken bir defalık bilgi gösterilir.
+                                // Geçersiz PIN kayıtları (eski PBKDF2/legacy veya bozuk
+                                // PIN2) sıfırlandı — profil ekranı açılırken bir defalık
+                                // bilgi gösterilir.
                                 settingsService.Settings.PinSystemResetNoticePending = true;
                                 await settingsService.SaveAsync();
-                                StartupLogger.Log($"Step 2a: {resetPinCount} legacy profile PIN(s) reset");
+                                StartupLogger.Log($"Step 2a: {resetPinCount} invalid profile PIN(s) reset");
                             }
                             StartupLogger.Log("Step 2b: Checking profiles table...");
                             await db.Profiles.AnyAsync();

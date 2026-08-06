@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Noctra.Data;
+using Noctra.Services;
 using Noctra.Services.Interfaces;
 using System.Data;
 
@@ -7,6 +9,12 @@ namespace Noctra.Core.Services;
 
 public sealed class DatabaseSchemaFixupService : IDatabaseSchemaFixupService
 {
+    private readonly ILogger<DatabaseSchemaFixupService>? _logger;
+
+    public DatabaseSchemaFixupService(ILogger<DatabaseSchemaFixupService>? logger = null)
+    {
+        _logger = logger;
+    }
     public async Task<int> ApplyAsync(
         AppDbContext context,
         DatabaseSchemaFixupProfile profile,
@@ -23,19 +31,18 @@ public sealed class DatabaseSchemaFixupService : IDatabaseSchemaFixupService
         await AddColumnIfMissingAsync(context, "Profiles", "PinLockedUntilUtc", "TEXT", cancellationToken).ConfigureAwait(false);
 
         // PIN sistemi PIN2'ye geçti (hızlı salt'lı SHA-256, PBKDF2 yok). Eski
-        // PBKDF2 / legacy SHA-256 kayıtları artık doğrulanamaz — Seçenek A:
-        // bir defalık sıfırlanır. Idempotent: ikinci çalıştırmada legacy kayıt
-        // kalmaz, dönen sayaç 0 olur. Kilit/deneme sayacı da sıfırlanır.
-        // 'PIN2$%' öneki ProfilePinVerifier.IsCurrentFormat ile aynı kuraldır —
-        // format öneki değişirse iki yer birlikte güncellenmelidir.
-        var clearedLegacyPins = await TryExecuteUpdateAsync(
-            context,
-            """
-            UPDATE Profiles
-            SET PinHash = NULL, FailedPinAttempts = 0, PinLockedUntilUtc = NULL
-            WHERE PinHash IS NOT NULL AND PinHash NOT LIKE 'PIN2$%';
-            """,
-            cancellationToken).ConfigureAwait(false);
+        // PBKDF2 / legacy SHA-256 kayıtları ve PIN2$ önekli fakat gerçek formatı
+        // bozuk (eksik parça, geçersiz Base64, yanlış salt/hash uzunluğu) değerler
+        // artık asla doğrulanamaz — Seçenek A: bir defalık sıfırlanır. Idempotent:
+        // ikinci çalıştırmada geçersiz kayıt kalmaz, dönen sayaç 0 olur.
+        // Kilit/deneme sayacı da sıfırlanır.
+        //
+        // Doğrulama LIKE/önek yerine ProfilePinVerifier.IsWellFormed ile yapılır:
+        // yalnızca 'PIN2$%' önek kontrolü, PIN2$ ile başlayan bozuk kayıtları
+        // kaçırırdı ve böyle kayıtlar Verify()'de asla başarılı olamazdı. Bu
+        // migration best-effort değildir — başarısızlık loglanır ve ApplyAsync
+        // her açılışta çalıştığından sıfırlama bir sonraki açılışta yeniden denenir.
+        var clearedLegacyPins = await ResetInvalidPinHashesAsync(context, cancellationToken).ConfigureAwait(false);
 
         await AddColumnIfMissingAsync(context, "Playlists", "EpgUrl", "TEXT", cancellationToken).ConfigureAwait(false);
         await AddColumnIfMissingAsync(context, "Playlists", "DetectedCountry", "TEXT", cancellationToken).ConfigureAwait(false);
@@ -265,6 +272,72 @@ public sealed class DatabaseSchemaFixupService : IDatabaseSchemaFixupService
         return clearedLegacyPins;
     }
 
+    /// <summary>
+    /// Geçersiz PIN kayıtlarını sıfırlar: eski PBKDF2/legacy SHA-256 formatları
+    /// ve PIN2$ önekli fakat salt/hash'i bozuk değerler. Dönen sayı ikisinin
+    /// toplamıdır — her ikisi de kullanıcı bildirimine dahil edilir. Profiller
+    /// tablosu yoksa (henüz oluşmamış DB) güvenle 0 döner.
+    /// </summary>
+    private async Task<int> ResetInvalidPinHashesAsync(
+        AppDbContext context,
+        CancellationToken cancellationToken)
+    {
+        if (!await TableExistsAsync(context, "Profiles", cancellationToken).ConfigureAwait(false))
+        {
+            return 0;
+        }
+
+        var storedPins = await context.Profiles
+            .Where(profile => profile.PinHash != null)
+            .Select(profile => new { profile.Id, profile.PinHash })
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var unopenableIds = storedPins
+            .Where(item => !ProfilePinVerifier.IsWellFormed(item.PinHash))
+            .Select(item => item.Id)
+            .ToList();
+
+        if (unopenableIds.Count == 0)
+        {
+            return 0;
+        }
+
+        var idList = string.Join(", ", unopenableIds);
+        return await ExecuteUpdateAsync(
+            context,
+            $"UPDATE Profiles SET PinHash = NULL, FailedPinAttempts = 0, PinLockedUntilUtc = NULL WHERE Id IN ({idList});",
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// PIN sıfırlama sorgusunu çalıştırır. Bu migration best-effort değildir:
+    /// başarısızlık sessizce 0 dönmez, Error düzeyinde loglanır; ApplyAsync
+    /// her uygulama açılışında çalıştığından yeniden deneme otomatiktir.
+    /// </summary>
+    private async Task<int> ExecuteUpdateAsync(
+        AppDbContext context,
+        string sql,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await context.Database.ExecuteSqlRawAsync(sql, cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(
+                ex,
+                "PIN reset migration failed; will be retried on next startup. SQL: {Sql}",
+                sql);
+            return 0;
+        }
+    }
+
     private static async Task TryExecuteAsync(AppDbContext context, string sql, CancellationToken cancellationToken)
     {
         try
@@ -277,22 +350,6 @@ public sealed class DatabaseSchemaFixupService : IDatabaseSchemaFixupService
         }
         catch
         {
-        }
-    }
-
-    private static async Task<int> TryExecuteUpdateAsync(AppDbContext context, string sql, CancellationToken cancellationToken)
-    {
-        try
-        {
-            return await context.Database.ExecuteSqlRawAsync(sql, cancellationToken).ConfigureAwait(false);
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch
-        {
-            return 0;
         }
     }
 

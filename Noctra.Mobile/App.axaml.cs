@@ -183,8 +183,9 @@ public partial class App : Application
                         .ApplyAsync(db, DatabaseSchemaFixupProfile.Mobile)
                         .ConfigureAwait(false);
 
-                    // Eski (PBKDF2/legacy) PIN'ler sıfırlandı — profil listesi
-                    // açılırken bir defalık bilgi gösterilir (Seçenek A).
+                    // Geçersiz PIN kayıtları (eski PBKDF2/legacy veya bozuk PIN2)
+                    // sıfırlandı — profil listesi açılırken bir defalık bilgi
+                    // gösterilir (Seçenek A).
                     if (resetPinCount > 0 && settingsService is not null)
                     {
                         settingsService.Settings.PinSystemResetNoticePending = true;
