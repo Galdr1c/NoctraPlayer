@@ -123,14 +123,24 @@ public partial class ProfilesWindow : Window
         // edilir — ölü ViewModel artık dispatcher güncellemesi gönderemez.
         pinWindow.Closed += (_, _) => pinVm.Dispose();
         bool? result = null;
+        var resultWasExplicit = false;
 
         pinVm.PinResult += (_, r) =>
         {
+            resultWasExplicit = true;
             result = r;
             pinWindow.Close();
         };
 
         await pinWindow.ShowDialog(this);
+
+        // X ile (PinResult üretmeden) kapanan pencere = iptal. "PIN'i unuttum"
+        // onayı yalnızca açık butonun null sonucuyla tetiklenir; Escape ve İptal
+        // zaten CancelCommand → PinResult(false) üretir.
+        if (!resultWasExplicit)
+        {
+            return false; // X ile kapatıldı = iptal
+        }
 
         if (result == null)
         {
