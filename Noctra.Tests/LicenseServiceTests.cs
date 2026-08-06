@@ -237,6 +237,32 @@ namespace Noctra.Tests
         }
 
         [Fact]
+        public async Task ApplyPromoCodeAsync_WhenFetchingPromoCodes_ShouldRequestNoCache()
+        {
+            using var _ = TemporarilySetPromoCodesUrl("https://example.com/noctra-promo-codes.json");
+            var settings = new TestSettingsService();
+            var json = JsonSerializer.Serialize(new PromoCodeConfiguration
+            {
+                Codes =
+                {
+                    new PromoCodeDefinition
+                    {
+                        Code = "NOC-AAAA-QQQQ-WWWW",
+                        DurationDays = 1,
+                        IsActive = true
+                    }
+                }
+            });
+            using var httpClient = CreateHttpClient(HttpStatusCode.OK, json);
+            var service = CreateLicenseService(settings, httpClient);
+
+            var result = await service.ApplyPromoCodeAsync("NOC-AAAA-QQQQ-WWWW");
+
+            Assert.True(result.Success);
+            Assert.True(StaticHttpMessageHandler.LastRequestNoCache);
+        }
+
+        [Fact]
         public async Task ApplyPromoCodeAsync_WhenLocalizationIsEnglish_ShouldReturnEnglishMessage()
         {
             using var _ = TemporarilyClearPromoCodesUrl();
@@ -300,8 +326,11 @@ namespace Noctra.Tests
 
         private sealed class StaticHttpMessageHandler(HttpStatusCode statusCode, string content) : HttpMessageHandler
         {
+            public static bool LastRequestNoCache { get; private set; }
+
             protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
             {
+                LastRequestNoCache = request.Headers.CacheControl?.NoCache == true;
                 var response = new HttpResponseMessage(statusCode)
                 {
                     Content = new StringContent(content, Encoding.UTF8, "application/json")

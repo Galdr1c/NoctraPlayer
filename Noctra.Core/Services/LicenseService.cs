@@ -286,7 +286,16 @@ public class LicenseService : ObservableObject, ILicenseService
         try
         {
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(8));
-            using var response = await _httpClient.GetAsync(remoteUrl, cts.Token);
+            // GitHub gist raw yanıtları max-age=300 (5 dk) cache'li olduğundan,
+            // gist güncellendikten hemen sonra eski kod listesi görülebilirdi.
+            // no-cache isteği CDN cache'ini bypass eder; her build'de (debug/
+            // release/store) gist değişiklikleri anında yansır.
+            using var request = new HttpRequestMessage(HttpMethod.Get, remoteUrl);
+            request.Headers.CacheControl = new System.Net.Http.Headers.CacheControlHeaderValue
+            {
+                NoCache = true
+            };
+            using var response = await _httpClient.SendAsync(request, cts.Token);
             response.EnsureSuccessStatusCode();
             var json = await response.Content.ReadAsStringAsync(cts.Token);
             return PromoCodeLoadResult.Ok(ParsePromoCodeJson(json));
