@@ -27,11 +27,22 @@ public enum ProfileAccessPurpose
 /// </summary>
 public sealed record ProfileAccessGrant(int ProfileId, ProfileAccessPurpose Purpose, DateTime ExpiresAtUtc)
 {
-    /// <summary>Grant geçerlilik süresi (dakika).</summary>
+    /// <summary>
+    /// Tek seferlik işlemlerin (yükleme girişi, silme, PIN değişimi) grant
+    /// geçerlilik süresi (dakika). PIN kapısı kısa ömürlü kalır.
+    /// </summary>
     public const double ValidityMinutes = 5;
 
+    /// <summary>
+    /// Düzenleme oturumu grant süresi (dakika). Kullanıcı bağlantı analizi
+    /// yaparken, sağlayıcı bilgilerini düzenlerken veya formu uzun süre açık
+    /// bırakırsa Save sırasında yetkinin süresi dolmamalıdır.
+    /// </summary>
+    public const double EditValidityMinutes = 60;
+
     public static ProfileAccessGrant Create(int profileId, ProfileAccessPurpose purpose)
-        => new(profileId, purpose, DateTime.UtcNow.AddMinutes(ValidityMinutes));
+        => new(profileId, purpose, DateTime.UtcNow.AddMinutes(
+            purpose == ProfileAccessPurpose.Edit ? EditValidityMinutes : ValidityMinutes));
 
     public bool IsExpired => DateTime.UtcNow >= ExpiresAtUtc;
 

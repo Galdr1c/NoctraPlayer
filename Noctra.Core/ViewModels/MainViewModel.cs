@@ -767,8 +767,6 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private Profile? _currentProfile;
 
-    private ProfileAccessGrant? _activeProfileGrant;
-
     public async Task LoadProfileAsync(Profile profile, ProfileAccessGrant? grant = null)
     {
         if (profile == null) return;
@@ -776,12 +774,29 @@ public partial class MainViewModel : ObservableObject
         // PIN korumalı bir profil ancak geçerli bir merkezî erişim yetkisiyle
         // yüklenebilir — deep link, kısayol, otomatik seçim veya yanlış bağlanmış
         // bir komut bu kapıyı atlayamaz. PIN'siz profiller için koruma gerekmez.
+        // (Oturum içi teknik yeniden yüklemeler bu kapıyı tekrar istemez;
+        // LoadProfileCoreAsync özel yolunu kullanır — kullanıcı zaten profilde.)
         if (!string.IsNullOrEmpty(profile.PinHash)
             && (grant == null || !grant.Authorizes(profile.Id, ProfileAccessPurpose.Load)))
         {
             throw new ProfileAccessDeniedException(
                 $"PIN korumalı profil {profile.Id} için yükleme yetkisi yok.");
         }
+
+        await LoadProfileCoreAsync(profile);
+    }
+
+    /// <summary>
+    /// Oturum içi profil yükleme gövdesi. Yalnızca aktif oturumdan çağrılır:
+    /// girişteki <see cref="LoadProfileAsync"/> grant'i doğrular, oturum içi
+    /// teknik yeniden yüklemeler (RefreshSelectedPlaylistAsync) bu yolu kullanır
+    /// ve tekrar kısa ömürlü giriş grant'ine bağlı kalmaz — kullanıcı profilden
+    /// çıkmadan bu kapı yeniden sorulmaz. Private olması deep link, kısayol veya
+    /// yanlış bağlanmış bir komutun bu yola erişememesini garantiler.
+    /// </summary>
+    private async Task LoadProfileCoreAsync(Profile profile)
+    {
+        if (profile == null) return;
 
         PerformanceTrace.Mark("profile.tap", profile.Id, $"profile-{profile.Id}");
         var profileScope = BeginProfileLoadScope(profile.Id);
@@ -796,7 +811,6 @@ public partial class MainViewModel : ObservableObject
         StatusMessage = _localizationService.GetString("Main.Status.PreparingContent");
         CurrentProfileId = profile.Id;
         CurrentProfile = profile;
-        _activeProfileGrant = grant;
         await RefreshActiveImportJobStatusAsync(profileScope.Token);
 
         // Load profile-specific settings
@@ -5082,8 +5096,10 @@ public partial class MainViewModel : ObservableObject
             if (CurrentProfile != null && !isBackground)
             {
                 // If profile has no playlist record, try to load/create it once.
-                // Oturum içi yeniden yükleme: profilin girişte aldığı yetkiyle.
-                await LoadProfileAsync(CurrentProfile, _activeProfileGrant);
+                // Oturum içi teknik yeniden yükleme: girişteki PIN yetkisi zaten
+                // alındı; kısa ömürlü grant'in süresi dolmuş olsa bile bu yol
+                // (LoadProfileCoreAsync) tekrar PIN sormaz — kullanıcı profilde.
+                await LoadProfileCoreAsync(CurrentProfile);
             }
 
             if (SelectedPlaylist == null)

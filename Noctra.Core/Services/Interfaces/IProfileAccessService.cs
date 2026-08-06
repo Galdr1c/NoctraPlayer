@@ -4,8 +4,10 @@ namespace Noctra.Services.Interfaces;
 
 /// <summary>
 /// Profil erişim yetkilerinin (grant) merkezî üretimi ve doğrulaması.
-/// PIN doğrulaması başarılı olduğunda kısa ömürlü ProfileAccessGrant üretilir;
-/// korumalı işlemler (yükleme, düzenleme, PIN değiştirme, silme) bu grant'i talep eder.
+/// PIN doğrulaması başarılı olduğunda ProfileAccessGrant üretilir; korumalı
+/// işlemler (yükleme, düzenleme, PIN değiştirme, silme) bu grant'i talep eder.
+/// Tek seferlik işlemler kısa ömürlüdür (5 dk); düzenleme oturumu grant'i
+/// (Edit) form açıkken Save'i boşa düşürmemek için 60 dk geçerlidir.
 /// </summary>
 public interface IProfileAccessService
 {

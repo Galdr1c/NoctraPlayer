@@ -156,6 +156,27 @@ public sealed class ProfileAccessGrantTests : IDisposable
         Assert.False(grant.Authorizes(1, ProfileAccessPurpose.Load));
     }
 
+    [Fact]
+    public void EditGrant_OutlivesOneShotGrants_ForTheEditSession()
+    {
+        var editGrant = ProfileAccessGrant.Create(1, ProfileAccessPurpose.Edit);
+        var loadGrant = ProfileAccessGrant.Create(1, ProfileAccessPurpose.Load);
+        var deleteGrant = ProfileAccessGrant.Create(1, ProfileAccessPurpose.Delete);
+        var pinChangeGrant = ProfileAccessGrant.Create(1, ProfileAccessPurpose.PinChange);
+
+        // Tek seferlik işlemler ~5 dakika; düzenleme oturumu belirgin biçimde uzun.
+        Assert.InRange(loadGrant.ExpiresAtUtc - DateTime.UtcNow, TimeSpan.FromMinutes(4), TimeSpan.FromMinutes(6));
+        Assert.InRange(deleteGrant.ExpiresAtUtc - DateTime.UtcNow, TimeSpan.FromMinutes(4), TimeSpan.FromMinutes(6));
+        Assert.InRange(pinChangeGrant.ExpiresAtUtc - DateTime.UtcNow, TimeSpan.FromMinutes(4), TimeSpan.FromMinutes(6));
+        Assert.True(editGrant.ExpiresAtUtc > DateTime.UtcNow.AddMinutes(30),
+            "Düzenleme oturumu grant'i kısa ömürlü olmamalı — uzun analiz/forma rağmen Save yetkilendirilmeli.");
+
+        // Düzenleme ekranında 10 dakika sonra Save (ad/PIN değişikliği) hâlâ yetkili.
+        var staleEditGrant = new ProfileAccessGrant(1, ProfileAccessPurpose.Edit, DateTime.UtcNow.AddMinutes(10));
+        Assert.True(staleEditGrant.Authorizes(1, ProfileAccessPurpose.Edit));
+        Assert.True(staleEditGrant.Authorizes(1, ProfileAccessPurpose.PinChange));
+    }
+
     // ── Servis katmanı koruması ───────────────────────────────────────
 
     [Fact]
