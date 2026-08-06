@@ -970,6 +970,8 @@
   "GlobalSettings.Promo.Error.ConfigLoadFailed": "Promo code configuration could not be loaded. Check your internet connection and try again.",
   "GlobalSettings.Promo.Error.ApplyFailedFormat": "Could not apply promo code: {0}",
   "GlobalSettings.Promo.Error.SaveFailed": "Could not apply promo code: settings could not be saved. Please try again.",
+  "GlobalSettings.Promo.Error.DurationLimitExceeded": "The duration of this promo code is invalid.",
+  "GlobalSettings.Promo.Error.TotalDurationLimitReached": "Could not apply the code: the total Premium duration limit has been reached.",
   "Localization.Tests.FallbackEnglishOnly": "__EN_FALLBACK_ONLY__",
   "Home.ContinueWatching.CountFormat": "{0} items",
   "Home.QuickAccess.Title": "Quick Access",

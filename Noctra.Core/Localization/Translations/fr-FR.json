@@ -970,6 +970,8 @@
   "GlobalSettings.Promo.Error.ConfigLoadFailed": "La configuration des codes promo n'a pas pu être chargée. Vérifiez votre connexion internet et réessayez.",
   "GlobalSettings.Promo.Error.ApplyFailedFormat": "Impossible d'appliquer le code promo : {0}",
   "GlobalSettings.Promo.Error.SaveFailed": "Impossible d'appliquer le code promo : les paramètres n'ont pas pu être enregistrés. Veuillez réessayer.",
+  "GlobalSettings.Promo.Error.DurationLimitExceeded": "La durée de ce code promo est invalide.",
+  "GlobalSettings.Promo.Error.TotalDurationLimitReached": "Impossible d'appliquer le code : la limite totale de durée Premium a été atteinte.",
   "Home.ContinueWatching.CountFormat": "{0} éléments",
   "Home.QuickAccess.Title": "Accès rapide",
   "Home.QuickAccess.Live.Description": "Parcourir les chaînes en direct",

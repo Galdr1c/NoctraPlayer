@@ -348,6 +348,129 @@ namespace Noctra.Tests
             Assert.False(retryFirst.Success, "Rollback, ilk kodun kullanılmış durumunu korumalı.");
         }
 
+        [Fact]
+        public async Task ApplyPromoCodeAsync_WhenDurationExceedsMaximum_ShouldFailWithoutException()
+        {
+            using var _ = TemporarilySetPromoCodesUrl("https://example.com/noctra-promo-codes.json");
+            var settings = new TestSettingsService();
+            var json = JsonSerializer.Serialize(new PromoCodeConfiguration
+            {
+                Codes =
+                {
+                    new PromoCodeDefinition
+                    {
+                        Code = "PROMO-TOO-LONG",
+                        DurationDays = int.MaxValue,
+                        IsActive = true
+                    }
+                }
+            });
+            using var httpClient = CreateHttpClient(HttpStatusCode.OK, json);
+            var service = CreateLicenseService(settings, httpClient);
+
+            var result = await service.ApplyPromoCodeAsync("PROMO-TOO-LONG");
+
+            Assert.False(result.Success);
+            Assert.Contains("süresi geçersiz", result.Message);
+            Assert.Null(settings.Settings.PromoGrant);
+            Assert.False(service.IsPremium);
+        }
+
+        [Fact]
+        public async Task ApplyPromoCodeAsync_WhenDurationAtMaximum_ShouldSucceed()
+        {
+            using var _ = TemporarilySetPromoCodesUrl("https://example.com/noctra-promo-codes.json");
+            var settings = new TestSettingsService();
+            var json = JsonSerializer.Serialize(new PromoCodeConfiguration
+            {
+                Codes =
+                {
+                    new PromoCodeDefinition
+                    {
+                        Code = "PROMO-MAX-365",
+                        DurationDays = 365,
+                        IsActive = true
+                    }
+                }
+            });
+            using var httpClient = CreateHttpClient(HttpStatusCode.OK, json);
+            var service = CreateLicenseService(settings, httpClient);
+
+            var result = await service.ApplyPromoCodeAsync("PROMO-MAX-365");
+
+            Assert.True(result.Success);
+            Assert.True(service.IsPremium);
+        }
+
+        [Fact]
+        public async Task ApplyPromoCodeAsync_WhenAccumulatedDurationExceedsLimit_ShouldFail()
+        {
+            using var _ = TemporarilySetPromoCodesUrl("https://example.com/noctra-promo-codes.json");
+            var settings = new TestSettingsService();
+            var json = JsonSerializer.Serialize(new PromoCodeConfiguration
+            {
+                Codes =
+                {
+                    new PromoCodeDefinition { Code = "PROMO-ACC-1", DurationDays = 365, IsActive = true },
+                    new PromoCodeDefinition { Code = "PROMO-ACC-2", DurationDays = 365, IsActive = true },
+                    new PromoCodeDefinition { Code = "PROMO-ACC-3", DurationDays = 365, IsActive = true }
+                }
+            });
+            using var httpClient = CreateHttpClient(HttpStatusCode.OK, json);
+            var service = CreateLicenseService(settings, httpClient);
+
+            var first = await service.ApplyPromoCodeAsync("PROMO-ACC-1");
+            Assert.True(first.Success);
+
+            // 365 + 365 = 730 → tam sınıra ulaşır, kabul edilir
+            var second = await service.ApplyPromoCodeAsync("PROMO-ACC-2");
+            Assert.True(second.Success);
+
+            // 730 + 365 = 1095 > 730 → reddedilir
+            var third = await service.ApplyPromoCodeAsync("PROMO-ACC-3");
+            Assert.False(third.Success);
+            Assert.Contains("üst sınırına ulaşıldı", third.Message);
+            Assert.Equal("PROMO-ACC-2", service.ActivePromoCode);
+        }
+
+        [Fact]
+        public async Task ApplyPromoCodeAsync_WhenCalledConcurrently_BothCodesSurvive()
+        {
+            using var _ = TemporarilySetPromoCodesUrl("https://example.com/noctra-promo-codes.json");
+            var settings = new TestSettingsService();
+            var json = JsonSerializer.Serialize(new PromoCodeConfiguration
+            {
+                Codes =
+                {
+                    new PromoCodeDefinition { Code = "PROMO-CONC-A", DurationDays = 7, IsActive = true },
+                    new PromoCodeDefinition { Code = "PROMO-CONC-B", DurationDays = 30, IsActive = true }
+                }
+            });
+            using var httpClient = CreateHttpClient(HttpStatusCode.OK, json);
+            var service = CreateLicenseService(settings, httpClient);
+
+            var results = await Task.WhenAll(
+                service.ApplyPromoCodeAsync("PROMO-CONC-A"),
+                service.ApplyPromoCodeAsync("PROMO-CONC-B"));
+
+            Assert.All(results, r => Assert.True(r.Success, r.Message));
+
+            // Seri işleme ile süreler birikir: 7 + 30 = 37 gün (hangi sıra olursa olsun)
+            Assert.NotNull(service.PromoPremiumExpiresAtUtc);
+            Assert.InRange(
+                service.PromoPremiumExpiresAtUtc.Value - DateTime.UtcNow,
+                TimeSpan.FromDays(36),
+                TimeSpan.FromDays(38));
+
+            // İkisi de redeemed geçmişinde olmalı: tekrar deneme "zaten kullanılmış" döner
+            var retryA = await service.ApplyPromoCodeAsync("PROMO-CONC-A");
+            var retryB = await service.ApplyPromoCodeAsync("PROMO-CONC-B");
+            Assert.False(retryA.Success);
+            Assert.False(retryB.Success);
+            Assert.Contains("kullanılmış", retryA.Message);
+            Assert.Contains("kullanılmış", retryB.Message);
+        }
+
         private static LicenseService CreateLicenseService(
             TestSettingsService? settings = null,
             HttpClient? httpClient = null,

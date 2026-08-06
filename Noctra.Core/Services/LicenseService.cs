@@ -61,6 +61,16 @@ public class LicenseService : ObservableObject, ILicenseService
     private readonly IPlatformActionService? _platformActionService;
     private bool _manualPremiumOverride;
 
+    /// <summary>
+    /// Promo redemption'ın read–modify–save döngüsünü serileştirir. Aynı anda
+    /// iki ApplyPromoCodeAsync çağrısı olursa ikisi de eski grant'i okuyup kendi
+    /// sonucunu yazabilir ("son yazan kazanır") ve bir kodun süresi ya da
+    /// redeemed geçmişi kaybolabilir. UI'daki IsApplyingPromoCode bayrağı
+    /// yalnızca tek ViewModel'deki çift tıklamayı engeller; servis iki ayrı
+    /// ViewModel, pencere veya doğrudan çağrı karşısında da güvenli olmalıdır.
+    /// </summary>
+    private readonly SemaphoreSlim _redemptionLock = new(1, 1);
+
 #if DEBUG
     private const bool AllowsManualPremiumOverride = true;
 #else
@@ -104,6 +114,20 @@ public class LicenseService : ObservableObject, ILicenseService
         ReadCommentHandling = JsonCommentHandling.Skip,
         AllowTrailingCommas = true
     };
+
+    /// <summary>
+    /// Tek bir promosyon kodunun verebileceği maksimum Premium süresi (gün).
+    /// DurationDays > 0 tek başına yeterli değildir: aşırı büyük değerler
+    /// DateTime.AddDays sınırını aşıp ArgumentOutOfRangeException fırlatabilir
+    /// ve anlamsız derecede uzun Premium süresi üretebilir.
+    /// </summary>
+    private const int MaximumPromoDurationDays = 365;
+
+    /// <summary>
+    /// Birikmiş toplam Premium süresi üst sınırı (gün). Yeni bir kod bu sınırı
+    /// aşan bir toplam süre üretecekse reddedilir.
+    /// </summary>
+    private const int MaximumTotalPromoDurationDays = 730;
 
     // ==========================================
     // FEATURE NAMES
@@ -200,6 +224,19 @@ public class LicenseService : ObservableObject, ILicenseService
     // ==========================================
     public async Task<PromoCodeRedemptionResult> ApplyPromoCodeAsync(string promoCode)
     {
+        await _redemptionLock.WaitAsync();
+        try
+        {
+            return await ApplyPromoCodeCoreAsync(promoCode);
+        }
+        finally
+        {
+            _redemptionLock.Release();
+        }
+    }
+
+    private async Task<PromoCodeRedemptionResult> ApplyPromoCodeCoreAsync(string promoCode)
+    {
         if (_appEditionService.IsPremiumEdition)
         {
             return PromoCodeRedemptionResult.Fail(Localize("GlobalSettings.Promo.Error.PremiumEdition", "Bu paket zaten kalıcı Premium sürüm."));
@@ -230,9 +267,9 @@ public class LicenseService : ObservableObject, ILicenseService
             return PromoCodeRedemptionResult.Fail(Localize("GlobalSettings.Promo.Error.Inactive", "Bu promosyon kodu aktif değil."));
         }
 
-        if (matchedCode.DurationDays <= 0)
+        if (matchedCode.DurationDays is <= 0 or > MaximumPromoDurationDays)
         {
-            return PromoCodeRedemptionResult.Fail(Localize("GlobalSettings.Promo.Error.InvalidDuration", "Bu promosyon kodu için geçerli süre tanımlanmamış."));
+            return PromoCodeRedemptionResult.Fail(Localize("GlobalSettings.Promo.Error.DurationLimitExceeded", "Bu promosyon kodunun süresi geçersiz."));
         }
 
         if (matchedCode.ValidUntilUtc.HasValue && matchedCode.ValidUntilUtc.Value <= DateTime.UtcNow)
@@ -255,6 +292,11 @@ public class LicenseService : ObservableObject, ILicenseService
             ? currentExpiresAt.Value
             : DateTime.UtcNow;
         var expiresAt = startDate.AddDays(matchedCode.DurationDays);
+
+        if (expiresAt > DateTime.UtcNow.AddDays(MaximumTotalPromoDurationDays))
+        {
+            return PromoCodeRedemptionResult.Fail(Localize("GlobalSettings.Promo.Error.TotalDurationLimitReached", "Toplam Premium süresi üst sınırına ulaşıldığı için kod uygulanamadı."));
+        }
 
         if (!redeemedPromoCodes.Any(code => NormalizePromoCode(code).Equals(normalizedCode, StringComparison.OrdinalIgnoreCase)))
         {
