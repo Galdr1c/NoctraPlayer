@@ -308,6 +308,13 @@ public class MainActivity : AvaloniaMainActivity
                 _ = ResumeUpdateFlowSafelyAsync(updateService);
             }
 
+            // Resume/focus sonrası Premium süresi yeniden kontrol edilir;
+            // süre uygulama kapalıyken dolduysa UI burada güncellenir.
+            if (app.Services?.GetService<ILicenseService>() is { } licenseService)
+            {
+                _ = licenseService.RefreshSubscriptionStatusAsync();
+            }
+
             // Resume sonrasında immersive mode durumunu yeniden uygula.
             if (app.Services?.GetService<IPlayerWindowService>() is AndroidPlayerWindowService windowService)
             {

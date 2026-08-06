@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Reflection;
 using System.Text.Json;
+using System.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Noctra.Models;
 using Noctra.Services.Interfaces;
@@ -60,6 +61,16 @@ public class LicenseService : ObservableObject, ILicenseService
     private readonly ILocalizationService? _localizationService;
     private readonly IPlatformActionService? _platformActionService;
     private readonly IStorePurchaseService? _storePurchaseService;
+    private readonly IDispatcherService? _dispatcherService;
+
+    /// <summary>
+    /// Süreli Premium'un (abonelik/promosyon) bitiş anında UI'ı güncelleyen
+    /// timer. Uygulama açık kalırken SubscriptionChanged'in yalnızca settings
+    /// değişikliği/sync'te gelmesi Premium rozetinin süre dolduktan sonra
+    /// ekranda kalmasına yol açardı; bu timer bitiş anında sync tetikler.
+    /// </summary>
+    private Timer? _expiryTimer;
+    private readonly object _expiryTimerGate = new();
 
     /// <summary>
     /// Mağazadan (Google Play) doğrulanan Premium hakları. Yalnızca mağaza
@@ -190,7 +201,8 @@ public class LicenseService : ObservableObject, ILicenseService
         ILocalizationService? localizationService = null,
         ISecurityService? securityService = null,
         IPlatformActionService? platformActionService = null,
-        IStorePurchaseService? storePurchaseService = null)
+        IStorePurchaseService? storePurchaseService = null,
+        IDispatcherService? dispatcherService = null)
     {
         _appEditionService = appEditionService;
         _settingsService = settingsService;
@@ -199,6 +211,7 @@ public class LicenseService : ObservableObject, ILicenseService
         _localizationService = localizationService;
         _platformActionService = platformActionService;
         _storePurchaseService = storePurchaseService;
+        _dispatcherService = dispatcherService;
 
         if (_storePurchaseService is not null)
         {
@@ -779,6 +792,74 @@ public class LicenseService : ObservableObject, ILicenseService
         {
             RaiseSubscriptionChanged();
         }
+
+        ScheduleExpiryCheck();
+    }
+
+    /// <summary>
+    /// Süreli Premium varsa bitiş anına tek seferlik timer kurar (en fazla
+    /// 24 saat ileri; daha uzunsa periyodik yeniden kurulum ile çalışır, böylece
+    /// sistem saati değişikliği / uzun uyku da yakalanır). Bitiş anında sync
+    /// tetiklenir ve SubscriptionChanged ile tüm Premium UI güncellenir.
+    /// Süresiz Premium (kalıcı paket/edisyon) veya Free'de timer kurulmaz.
+    /// </summary>
+    private void ScheduleExpiryCheck()
+    {
+        lock (_expiryTimerGate)
+        {
+            _expiryTimer?.Dispose();
+            _expiryTimer = null;
+
+            if (_currentSubscription.Tier != SubscriptionTier.Premium ||
+                !_currentSubscription.ExpiresAt.HasValue ||
+                _currentSubscription.ExpiresAt.Value <= DateTime.UtcNow)
+            {
+                return;
+            }
+
+            var remaining = _currentSubscription.ExpiresAt.Value - DateTime.UtcNow;
+            if (remaining <= TimeSpan.Zero)
+            {
+                return;
+            }
+
+            var due = remaining > TimeSpan.FromHours(24)
+                ? TimeSpan.FromHours(24)
+                : remaining;
+
+            _expiryTimer = new System.Threading.Timer(
+                OnExpiryCheckElapsed,
+                null,
+                due,
+                System.Threading.Timeout.InfiniteTimeSpan);
+        }
+    }
+
+    private void OnExpiryCheckElapsed(object? state)
+    {
+        // Timer thread pool üzerinde çalışır; SubscriptionChanged aboneleri
+        // (ViewModel'ler) UI thread'de PropertyChanged bekler. Dispatcher varsa
+        // sync UI thread'de yapılır, yoksa doğrudan (test ortamı).
+        void DoSync()
+        {
+            try
+            {
+                SyncSubscriptionFromSettings(notify: true);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[LicenseService] Expiry check failed: {ex.Message}");
+            }
+        }
+
+        if (_dispatcherService is not null)
+        {
+            _dispatcherService.BeginInvoke(DoSync);
+        }
+        else
+        {
+            DoSync();
+        }
     }
 
     private void RaiseSubscriptionChanged()
@@ -1053,6 +1134,16 @@ public class LicenseService : ObservableObject, ILicenseService
     {
         SyncSubscriptionFromSettings(notify: true);
         await Task.CompletedTask;
+    }
+
+    /// <summary>Expiry timer'ı kapatır (uygulama kapanışı / servis sonlandırma).</summary>
+    internal void Shutdown()
+    {
+        lock (_expiryTimerGate)
+        {
+            _expiryTimer?.Dispose();
+            _expiryTimer = null;
+        }
     }
 
     /// <summary>

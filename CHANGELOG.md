@@ -11,6 +11,7 @@ Detailed historical engineering notes are archived in [`docs/history/legacy-chan
 
 ### Added
 
+- **Automatic Premium expiry refresh**: While the app stays open, a timer fires at the exact moment a timed Premium (subscription or promo) expires and pushes a `SubscriptionChanged` notification so the Premium badge, buttons, and feature gates refresh immediately. As a backup, the expiry is re-checked whenever the app regains focus/resumes on both desktop (`Window.Activated`) and Android (`OnResume`). Long durations (over 24 h) are re-armed periodically so system clock changes and long sleeps are also caught.
 - **Play Billing IAP on Android**: Premium can now be purchased directly from Google Play — a monthly auto-renewing subscription and a one-time lifetime package. The upsell sheet shows both plans with live store prices; entitlement is re-verified from Play on every launch and whenever purchases change. Lifetime always wins; otherwise the later of subscription/promo expiry applies. Product IDs (`noctra_premium_monthly`, `noctra_premium_lifetime`) must be created in Play Console.
 
 ### Changed

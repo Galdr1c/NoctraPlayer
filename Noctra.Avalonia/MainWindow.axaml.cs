@@ -110,6 +110,7 @@ public partial class MainWindow : Window
         AddHandler(KeyDownEvent, MainWindow_KeyDown, RoutingStrategies.Tunnel, handledEventsToo: true);
         AddHandler(DesktopCardActions.RequestedEvent, OnCardActionsRequested);
         Opened += MainWindow_Opened;
+        Activated += MainWindow_Activated;
         PositionChanged += MainWindow_PositionChanged;
         Closed += OnClosed;
         _mainViewModel.OnMediaSelected += MainViewModel_OnMediaSelected;
@@ -279,6 +280,25 @@ public partial class MainWindow : Window
         _ = _reviewPromptService.TryShowMainWindowPromptAsync(_reviewPromptCts.Token);
     }
 
+    private void MainWindow_Activated(object? sender, EventArgs e)
+    {
+        // Uygulama yeniden odaklandığında Premium süresi yeniden kontrol edilir;
+        // süre arka planda/uykuda dolduysa Premium rozet ve butonlar burada
+        // tazelenir (LicenseService içindeki expiry timer'ın yedeği).
+        try
+        {
+            if (Application.Current is App app &&
+                app.Services?.GetService<ILicenseService>() is { } licenseService)
+            {
+                _ = licenseService.RefreshSubscriptionStatusAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[MainWindow] License refresh on activate failed: {ex.Message}");
+        }
+    }
+
     private void MainWindow_PositionChanged(object? sender, PixelPointEventArgs e)
     {
         // Pencere hareket ettiğinde (sürükleme dahil) PiP kontrollerini yenile
@@ -308,6 +328,7 @@ public partial class MainWindow : Window
         _mainViewModel.PropertyChanged -= MainViewModel_PropertyChanged;
         _mainViewModel.RequestEditChannel -= MainViewModel_RequestEditChannel;
         Opened -= MainWindow_Opened;
+        Activated -= MainWindow_Activated;
         OverlayControl.EpgChannelSelected -= MainWindow_EpgChannelSelected;
         _playerViewModel.PropertyChanged -= PlayerViewModel_PropertyChanged;
         _playerViewModel.CloseRequested -= PlayerViewModel_CloseRequested;

@@ -171,6 +171,68 @@ namespace Noctra.Tests
             Assert.Equal(promoEnd, service.PremiumExpiresAtUtc);
         }
 
+        // ==========================================
+        // Expiry timer (UI otomatik güncelleme)
+        // ==========================================
+
+        [Fact]
+        public async Task ExpiryTimer_WhenPremiumExpires_TriggersSubscriptionChanged()
+        {
+            // Bitişe kısa süre kalan süreli Premium: timer bitiş anında
+            // SubscriptionChanged tetiklemeli ve IsPremium false olmalı.
+            var settings = new TestSettingsService
+            {
+                PromoPremiumExpiresAtUtc = DateTime.UtcNow.AddSeconds(1),
+                ActivePromoCode = "PROMO-1S"
+            };
+
+            var service = CreateService(CreateFreeEditionMock().Object, settings: settings, store: null);
+            await service.RefreshSubscriptionStatusAsync();
+            Assert.True(service.IsPremium);
+
+            var subscriptionChanged = 0;
+            service.SubscriptionChanged += () => Interlocked.Increment(ref subscriptionChanged);
+
+            // Timer ~1 saniyede tetiklenmeli; 5 sn içinde bekle.
+            await WaitUntilAsync(() => !service.IsPremium, timeoutMs: 5000);
+
+            Assert.False(service.IsPremium);
+            Assert.Equal(SubscriptionTier.Free, service.CurrentTier);
+            Assert.True(subscriptionChanged > 0, "Expiry timer SubscriptionChanged tetiklemeli.");
+        }
+
+        [Fact]
+        public async Task ExpiryTimer_NotScheduled_ForLifetimeOrFree()
+        {
+            // Kalıcı paket: süre yok → timer kurulmaz (beklemede state değişmez).
+            var store = CreateStoreMock(new StoreEntitlement { HasLifetimePremium = true });
+            var service = CreateService(CreateFreeEditionMock().Object, store: store.Object);
+            await service.RefreshSubscriptionStatusAsync();
+            Assert.True(service.IsPremium);
+
+            await Task.Delay(150);
+            Assert.True(service.IsPremium);
+            Assert.Null(service.PremiumExpiresAtUtc);
+        }
+
+        [Fact]
+        public async Task ExpiryTimer_LongExpiry_DoesNotFireEarly()
+        {
+            // 1 saatten uzun süre: timer 24 saat dilimine bölünür, erken ateşlenmez.
+            var settings = new TestSettingsService
+            {
+                PromoPremiumExpiresAtUtc = DateTime.UtcNow.AddHours(2),
+                ActivePromoCode = "PROMO-2H"
+            };
+
+            var service = CreateService(CreateFreeEditionMock().Object, settings: settings, store: null);
+            await service.RefreshSubscriptionStatusAsync();
+            Assert.True(service.IsPremium);
+
+            await Task.Delay(200);
+            Assert.True(service.IsPremium);
+        }
+
         [Fact]
         public async Task StoreEntitlement_None_IsFree()
         {
