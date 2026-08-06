@@ -616,7 +616,9 @@
                                                          PlaceholderText="{loc:Translate GlobalSettings.Promo.Placeholder}"
                                                          VerticalContentAlignment="Center"
                                                          FontSize="15"
-                                                         LetterSpacing="1"/>
+                                                         LetterSpacing="1"
+                                                         MaxLength="24"
+                                                         IsEnabled="{Binding !IsApplyingPromoCode}"/>
                                                 <Button Grid.Column="1"
                                                         Command="{Binding ApplyPromoCodeCommand}"
                                                         Theme="{StaticResource PrimaryButtonStyle}"
@@ -633,17 +635,31 @@
                                             
                                             <!-- Sonuç Mesajları -->
                                             <StackPanel Margin="0,12,0,0" Spacing="4">
-                                                <TextBlock Text="{Binding PromoCodeStatus}" 
-                                                           FontSize="13" FontWeight="Bold" 
-                                                           Foreground="{Binding IsPromoCodeStatusSuccess, Converter={StaticResource BooleanToSuccessWarningBrushConverter}}"
-                                                           TextWrapping="Wrap"
-                                                           IsVisible="{Binding PromoCodeStatus, Converter={StaticResource StringToVisibilityConverter}}"/>
+                                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="6"
+                                                      IsVisible="{Binding PromoCodeStatus, Converter={StaticResource StringToVisibilityConverter}}">
+                                                    <materialIcons:MaterialIcon Kind="CheckCircle" Width="16" Height="16" VerticalAlignment="Center"
+                                                                                HorizontalAlignment="Center"
+                                                                                Foreground="{Binding IsPromoCodeStatusSuccess, Converter={StaticResource BooleanToSuccessWarningBrushConverter}}"
+                                                                                IsVisible="{Binding IsPromoCodeStatusSuccess}"/>
+                                                    <materialIcons:MaterialIcon Kind="AlertCircle" Width="16" Height="16" VerticalAlignment="Center"
+                                                                                HorizontalAlignment="Center"
+                                                                                Foreground="{Binding IsPromoCodeStatusSuccess, Converter={StaticResource BooleanToSuccessWarningBrushConverter}}"
+                                                                                IsVisible="{Binding !IsPromoCodeStatusSuccess}"/>
+                                                    <TextBlock Grid.Column="1"
+                                                               Text="{Binding PromoCodeStatus}" 
+                                                               FontSize="13" FontWeight="Bold" 
+                                                               Foreground="{Binding IsPromoCodeStatusSuccess, Converter={StaticResource BooleanToSuccessWarningBrushConverter}}"
+                                                               TextWrapping="Wrap"
+                                                               VerticalAlignment="Center"
+                                                               AutomationProperties.LiveSetting="Polite"/>
+                                                </Grid>
                                                 <!-- Bozuk PromoGrant uyarısı: hakkı okunamayan kullanıcıya sessiz Free'e düşüşü bildir -->
                                                 <TextBlock Text="{Binding PromoGrantCorruptedMessage}" 
                                                            FontSize="13" FontWeight="SemiBold" 
                                                            Foreground="{DynamicResource WarningBrush}" 
                                                            TextWrapping="Wrap"
-                                                           IsVisible="{Binding HasCorruptedPromoGrant}"/>
+                                                           IsVisible="{Binding HasCorruptedPromoGrant}"
+                                                           AutomationProperties.LiveSetting="Assertive"/>
                                             </StackPanel>
                                         </StackPanel>
                                     </Panel>

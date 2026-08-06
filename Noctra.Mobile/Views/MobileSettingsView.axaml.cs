@@ -140,6 +140,18 @@ public partial class MobileSettingsView : UserControl
         UpsellHost.Show();
     }
 
+    private void PromoCodeTextBox_KeyDown(object? sender, KeyEventArgs e)
+    {
+        // Klavyedeki "Bitti"/Enter tuşu kodu doğrudan uygular (madde 17).
+        if (e.Key != Key.Enter || _viewModel is null)
+        {
+            return;
+        }
+
+        _viewModel.ApplyPromoCodeCommand.Execute(null);
+        e.Handled = true;
+    }
+
     private void DarkTheme_Tapped(object? sender, TappedEventArgs e)
     {
         // Tapped (PointerPressed değil) kullanıyoruz: parmak ekrana değdiği an

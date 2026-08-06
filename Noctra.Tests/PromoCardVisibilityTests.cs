@@ -44,6 +44,62 @@ public class PromoCardVisibilityTests
         Assert.Contains("_licenseService.IsPremium && _licenseService.PromoPremiumExpiresAtUtc.HasValue", vm, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void MobilePromoInput_ConfiguredForMobileUsage_AndDoneKeyAppliesCode()
+    {
+        var view = ReadProjectFile("Noctra.Mobile", "Views", "MobileSettingsView.axaml");
+        var codeBehind = ReadProjectFile("Noctra.Mobile", "Views", "MobileSettingsView.axaml.cs");
+
+        // Madde 20: mobil klavye yapılandırması (max uzunluk, otomatik düzeltme kapalı,
+        // erişilebilirlik adı) + paste sonrası normalize davranışı zaten VM'de.
+        Assert.Contains("x:Name=\"PromoCodeTextBox\"", view, StringComparison.Ordinal);
+        Assert.Contains("MaxLength=\"24\"", view, StringComparison.Ordinal);
+        Assert.Contains("IsTextPredictionEnabled=\"False\"", view, StringComparison.Ordinal);
+        Assert.Contains("IsEnabled=\"{Binding !IsApplyingPromoCode}\"", view, StringComparison.Ordinal);
+        Assert.Contains("KeyDown=\"PromoCodeTextBox_KeyDown\"", view, StringComparison.Ordinal);
+        Assert.Contains("AutomationProperties.Name=\"{loc:Translate GlobalSettings.Promo.Title}\"", view, StringComparison.Ordinal);
+
+        // Madde 17: IME Done/Enter tuşu komutu doğrudan tetikler.
+        Assert.Contains("PromoCodeTextBox_KeyDown", codeBehind, StringComparison.Ordinal);
+        Assert.Contains("ApplyPromoCodeCommand.Execute", codeBehind, StringComparison.Ordinal);
+
+        // Madde 18: dönen loading ikonu (Rotating animasyon stili artık mobilde de var).
+        Assert.Contains("Classes=\"Rotating\"", view, StringComparison.Ordinal);
+
+        // Madde 19: sonuç yalnız renkle değil, ikonlarla da ifade ediliyor.
+        Assert.Contains("Kind=\"CheckCircle\"", view, StringComparison.Ordinal);
+        Assert.Contains("Kind=\"AlertCircle\"", view, StringComparison.Ordinal);
+
+        // Ekran okuyucu canlı duyurusu (LiveSetting).
+        Assert.Contains("AutomationProperties.LiveSetting=\"Polite\"", view, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void MobileApp_HasRotatingIconAnimationStyle()
+    {
+        var app = ReadProjectFile("Noctra.Mobile", "App.axaml");
+
+        Assert.Contains("materialIcons|MaterialIcon.Rotating", app, StringComparison.Ordinal);
+        Assert.Contains("RotateTransform.Angle", app, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void DesktopPromo_InputLockedWhileApplying_AndResultShowsIcons()
+    {
+        var view = ReadProjectFile("Noctra.Avalonia", "Views", "GlobalSettingsWindow.axaml");
+
+        // Madde 16: istek sürerken giriş düzenlenemez.
+        Assert.Contains("IsEnabled=\"{Binding !IsApplyingPromoCode}\"", view, StringComparison.Ordinal);
+        Assert.Contains("MaxLength=\"24\"", view, StringComparison.Ordinal);
+
+        // Madde 19: renk yalnız destekleyici; sonuç ikonlarla da bildiriliyor.
+        Assert.Contains("Kind=\"CheckCircle\"", view, StringComparison.Ordinal);
+        Assert.Contains("Kind=\"AlertCircle\"", view, StringComparison.Ordinal);
+
+        // Ekran okuyucu canlı duyurusu (LiveSetting).
+        Assert.Contains("AutomationProperties.LiveSetting=\"Polite\"", view, StringComparison.Ordinal);
+    }
+
     // ==========================================
     // Davranış testleri (GlobalSettingsViewModel)
     // ==========================================
