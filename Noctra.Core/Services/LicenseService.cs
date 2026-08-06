@@ -12,7 +12,7 @@ namespace Noctra.Services;
 /// License service implementation.
 /// Free/Premium Store paketleri edition-driven çalışır; promosyon kodları Free sürümde süreli Premium açar.
 /// </summary>
-public class LicenseService : ObservableObject, ILicenseService
+public class LicenseService : ObservableObject, ILicenseService, IDisposable
 {
     static LicenseService()
     {
@@ -71,6 +71,13 @@ public class LicenseService : ObservableObject, ILicenseService
     /// </summary>
     private Timer? _expiryTimer;
     private readonly object _expiryTimerGate = new();
+
+    /// <summary>
+    /// Timer'ın hedeflediği bitiş anı. Aynı değer için tekrar planlama yapılmaz
+    /// (getter'lar her çağrıda SyncSubscriptionFromSettings çalıştırdığı için
+    /// gereksiz Timer üretimini/çevrimini önler). Timer tetiklenince sıfırlanır.
+    /// </summary>
+    private DateTime? _scheduledExpiryUtc;
 
     /// <summary>
     /// Mağazadan (Google Play) doğrulanan Premium hakları. Yalnızca mağaza
@@ -807,17 +814,26 @@ public class LicenseService : ObservableObject, ILicenseService
     {
         lock (_expiryTimerGate)
         {
-            _expiryTimer?.Dispose();
-            _expiryTimer = null;
+            var expiresAt = _currentSubscription.Tier == SubscriptionTier.Premium
+                ? _currentSubscription.ExpiresAt
+                : null;
 
-            if (_currentSubscription.Tier != SubscriptionTier.Premium ||
-                !_currentSubscription.ExpiresAt.HasValue ||
-                _currentSubscription.ExpiresAt.Value <= DateTime.UtcNow)
+            if (!expiresAt.HasValue || expiresAt.Value <= DateTime.UtcNow)
+            {
+                _expiryTimer?.Dispose();
+                _expiryTimer = null;
+                _scheduledExpiryUtc = null;
+                return;
+            }
+
+            // Hedef aynıysa mevcut timer'ı koru — getter'ların her çağrıda
+            // yeni Timer üretmesini (churn) önler.
+            if (_scheduledExpiryUtc == expiresAt.Value && _expiryTimer is not null)
             {
                 return;
             }
 
-            var remaining = _currentSubscription.ExpiresAt.Value - DateTime.UtcNow;
+            var remaining = expiresAt.Value - DateTime.UtcNow;
             if (remaining <= TimeSpan.Zero)
             {
                 return;
@@ -827,11 +843,20 @@ public class LicenseService : ObservableObject, ILicenseService
                 ? TimeSpan.FromHours(24)
                 : remaining;
 
-            _expiryTimer = new System.Threading.Timer(
-                OnExpiryCheckElapsed,
-                null,
-                due,
-                System.Threading.Timeout.InfiniteTimeSpan);
+            if (_expiryTimer is null)
+            {
+                _expiryTimer = new System.Threading.Timer(
+                    OnExpiryCheckElapsed,
+                    null,
+                    due,
+                    System.Threading.Timeout.InfiniteTimeSpan);
+            }
+            else
+            {
+                _expiryTimer.Change(due, System.Threading.Timeout.InfiniteTimeSpan);
+            }
+
+            _scheduledExpiryUtc = expiresAt.Value;
         }
     }
 
@@ -840,6 +865,13 @@ public class LicenseService : ObservableObject, ILicenseService
         // Timer thread pool üzerinde çalışır; SubscriptionChanged aboneleri
         // (ViewModel'ler) UI thread'de PropertyChanged bekler. Dispatcher varsa
         // sync UI thread'de yapılır, yoksa doğrudan (test ortamı).
+        // Önce hedefi temizle: SyncSubscriptionFromSettings içindeki
+        // ScheduleExpiryCheck 24 saatlik dilim için yeniden planlayabilsin.
+        lock (_expiryTimerGate)
+        {
+            _scheduledExpiryUtc = null;
+        }
+
         void DoSync()
         {
             try
@@ -854,7 +886,17 @@ public class LicenseService : ObservableObject, ILicenseService
 
         if (_dispatcherService is not null)
         {
-            _dispatcherService.BeginInvoke(DoSync);
+            try
+            {
+                _dispatcherService.BeginInvoke(DoSync);
+            }
+            catch (Exception ex)
+            {
+                // Dispatcher kapanış aşamasındaysa (uygulama sonu) marshal başarısız
+                // olabilir; sync o zaman burada, thread pool üzerinde yapılır.
+                System.Diagnostics.Debug.WriteLine($"[LicenseService] Expiry marshal failed: {ex.Message}");
+                DoSync();
+            }
         }
         else
         {
@@ -1136,13 +1178,17 @@ public class LicenseService : ObservableObject, ILicenseService
         await Task.CompletedTask;
     }
 
-    /// <summary>Expiry timer'ı kapatır (uygulama kapanışı / servis sonlandırma).</summary>
-    internal void Shutdown()
+    /// <summary>
+    /// Expiry timer'ı kapatır. Uygulama kapanışında DI container singleton
+    /// servisi dispose ettiğinde çağrılır; timer arka planda kalmaz.
+    /// </summary>
+    public void Dispose()
     {
         lock (_expiryTimerGate)
         {
             _expiryTimer?.Dispose();
             _expiryTimer = null;
+            _scheduledExpiryUtc = null;
         }
     }
 
