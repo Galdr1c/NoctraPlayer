@@ -959,7 +959,10 @@
   "GlobalSettings.Promo.Status.Free": "Free sürüm aktif",
   "GlobalSettings.Promo.Status.Premium": "Premium aktif",
   "GlobalSettings.Promo.Status.PremiumFormat": "Premium {0} tarihine kadar aktif",
+  "GlobalSettings.Promo.Status.RemainingDaysFormat": "{0} gün kaldı",
   "GlobalSettings.Promo.SuccessFormat": "Promosyon kodu uygulandı. Premium {0} tarihine kadar aktif.",
+  "GlobalSettings.Promo.Success.DaysAddedFormat": "✓ {0} gün Premium eklendi",
+  "GlobalSettings.Promo.Success.NewExpiryFormat": "Yeni bitiş tarihi: {0}",
   "GlobalSettings.Promo.Error.PremiumEdition": "Bu paket zaten kalıcı Premium sürüm.",
   "GlobalSettings.Promo.Error.EmptyCode": "Lütfen promosyon kodunu girin.",
   "GlobalSettings.Promo.Error.InvalidCode": "Promosyon kodu bulunamadı veya geçersiz.",
@@ -1041,5 +1044,10 @@
   "Player.Overlay.Play": "Oynat",
   "Player.Overlay.Pause": "Duraklat",
   "Downloads.Storage.DetailFormat": "Noctra: {0} kullanıldı · Boş: {1}",
-  "Download.Error.UnsupportedStreaming": "Bu yayın türü henüz çevrimdışı indirmeyi desteklemiyor."
+  "Download.Error.UnsupportedStreaming": "Bu yayın türü henüz çevrimdışı indirmeyi desteklemiyor.",
+  "Upsell.Plan.Monthly.Title": "Aylık",
+  "Upsell.Plan.Monthly.Subtitle": "Dilediğin zaman iptal et",
+  "Upsell.Plan.Lifetime.Title": "Kalıcı",
+  "Upsell.Plan.Lifetime.Subtitle": "Tek seferlik ödeme",
+  "Upsell.Plan.Unavailable": "Ürünler yüklenemedi. Lütfen daha sonra tekrar deneyin."
 }

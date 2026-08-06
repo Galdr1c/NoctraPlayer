@@ -551,6 +551,27 @@ public partial class SettingsViewModel : ObservableObject, IAsyncDisposable
     [NotifyCanExecuteChangedFor(nameof(ApplyPromoCodeCommand))]
     private string _promoCodeInput = string.Empty;
 
+    /// <summary>
+    /// Kod girişi yazıldıkça kanonik biçime dönüştürülür: büyük harf + her
+    /// 4 karakterde bir '-' (bkz. PromoCodeFormatter); paste sonrası boşluk/
+    /// ayraç karakterler otomatik temizlenir. Kullanıcı yeni kod yazmaya
+    /// başladığında eski sonuç mesajı temizlenir (madde 15).
+    /// </summary>
+    partial void OnPromoCodeInputChanged(string value)
+    {
+        if (!IsApplyingPromoCode)
+        {
+            PromoCodeStatus = string.Empty;
+            IsPromoCodeStatusSuccess = false;
+        }
+
+        var formatted = PromoCodeFormatter.Normalize(value);
+        if (!string.Equals(formatted, value, StringComparison.Ordinal))
+        {
+            PromoCodeInput = formatted;
+        }
+    }
+
     [ObservableProperty]
     private string _promoCodeStatus = string.Empty;
 
@@ -570,10 +591,15 @@ public partial class SettingsViewModel : ObservableObject, IAsyncDisposable
                 return string.Empty;
             }
 
-            var expiresAt = _licenseService.PromoPremiumExpiresAtUtc;
+            var expiresAt = _licenseService.PremiumExpiresAtUtc;
             if (expiresAt.HasValue)
             {
-                return string.Format(_localizationService.GetString("GlobalSettings.Promo.Status.PremiumFormat"), expiresAt.Value.ToLocalTime().ToString("dd.MM.yyyy HH:mm"));
+                // Yerel kültüre göre tarih (madde 21) + kalan süre bilgisi
+                var expiryText = expiresAt.Value.ToLocalTime().ToString("g", CultureInfo.CurrentCulture);
+                var remainingDays = Math.Max(0, (int)Math.Ceiling((expiresAt.Value - DateTime.UtcNow).TotalDays));
+                var status = string.Format(_localizationService.GetString("GlobalSettings.Promo.Status.PremiumFormat"), expiryText);
+                var remaining = string.Format(_localizationService.GetString("GlobalSettings.Promo.Status.RemainingDaysFormat"), remainingDays);
+                return status + " · " + remaining;
             }
 
             return _localizationService.GetString("GlobalSettings.Promo.Status.Premium");
@@ -594,7 +620,7 @@ public partial class SettingsViewModel : ObservableObject, IAsyncDisposable
             ? _localizationService.GetString("GlobalSettings.Promo.ApplyExtend")
             : _localizationService.GetString("GlobalSettings.Promo.Apply");
 
-    private bool CanApplyPromoCode => !IsApplyingPromoCode && !string.IsNullOrWhiteSpace(PromoCodeInput);
+    private bool CanApplyPromoCode => !IsApplyingPromoCode && PromoCodeFormatter.IsValid(PromoCodeInput);
 
     [RelayCommand(CanExecute = nameof(CanApplyPromoCode))]
     private async Task ApplyPromoCodeAsync()
@@ -608,8 +634,8 @@ public partial class SettingsViewModel : ObservableObject, IAsyncDisposable
         try
         {
             var result = await _licenseService.ApplyPromoCodeAsync(PromoCodeInput);
-            PromoCodeStatus = result.Message;
             IsPromoCodeStatusSuccess = result.Success;
+            PromoCodeStatus = result.Success ? FormatPromoCodeSuccess(result) : result.Message;
             if (result.Success)
             {
                 PromoCodeInput = string.Empty;
@@ -629,6 +655,21 @@ public partial class SettingsViewModel : ObservableObject, IAsyncDisposable
         {
             IsApplyingPromoCode = false;
         }
+    }
+
+    /// <summary>
+    /// Başarılı redemption için tek sonuç kartı metni:
+    /// "✓ N gün Premium eklendi" + "Yeni bitiş tarihi: T". Bitiş tarihi
+    /// Premium kartında (PremiumStatusText) tekrar edilmez.
+    /// </summary>
+    private string FormatPromoCodeSuccess(PromoCodeRedemptionResult result)
+    {
+        var expiryText = result.PremiumExpiresAtUtc.HasValue
+            ? result.PremiumExpiresAtUtc.Value.ToLocalTime().ToString("g", CultureInfo.CurrentCulture)
+            : string.Empty;
+        var addedTemplate = _localizationService.GetString("GlobalSettings.Promo.Success.DaysAddedFormat");
+        var expiryTemplate = _localizationService.GetString("GlobalSettings.Promo.Success.NewExpiryFormat");
+        return string.Format(addedTemplate, result.DurationDays) + Environment.NewLine + string.Format(expiryTemplate, expiryText);
     }
 
     /// <summary>
@@ -1118,8 +1159,6 @@ public partial class SettingsViewModel : ObservableObject, IAsyncDisposable
         OnPropertyChanged(nameof(CanUsePromoCodes));
         OnPropertyChanged(nameof(PromoApplyButtonText));
         AddCustomEpgCommand.NotifyCanExecuteChanged();
-        PromoCodeStatus = PremiumStatusText;
-        IsPromoCodeStatusSuccess = IsPremium;
     }
 
     private void MainViewModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)

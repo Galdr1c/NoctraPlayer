@@ -86,7 +86,12 @@ public class LocalizationServiceTests
             "GlobalSettings.Promo.Error.ServiceUnavailable",
             "GlobalSettings.Promo.Error.ConfigurationInvalid",
             "GlobalSettings.Promo.Error.Generic",
-            "GlobalSettings.Promo.Error.GrantCorrupted"
+            "GlobalSettings.Promo.Error.GrantCorrupted",
+            "Upsell.Plan.Monthly.Title",
+            "Upsell.Plan.Monthly.Subtitle",
+            "Upsell.Plan.Lifetime.Title",
+            "Upsell.Plan.Lifetime.Subtitle",
+            "Upsell.Plan.Unavailable"
         };
 
         foreach (var key in keys)

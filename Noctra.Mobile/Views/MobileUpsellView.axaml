@@ -99,6 +99,59 @@
               </StackPanel>
             </Border>
 
+            <!-- Mağaza ürün seçimi: aylık abonelik + tek seferlik kalıcı paket -->
+            <Grid ColumnDefinitions="*,12,*">
+              <Button Classes="PlanCardButton"
+                      MinHeight="88"
+                      Grid.Column="0"
+                      Padding="12,10"
+                      HorizontalAlignment="Stretch"
+                      Click="MonthlyBuy_Click">
+                <StackPanel Spacing="4">
+                  <TextBlock Text="{loc:Translate Upsell.Plan.Monthly.Title}"
+                             Foreground="{DynamicResource TextPrimaryBrush}"
+                             FontSize="{DynamicResource FBody}"
+                             FontWeight="Bold"
+                             TextAlignment="Center" />
+                  <TextBlock Text="{loc:Translate Upsell.Plan.Monthly.Subtitle}"
+                             Foreground="{DynamicResource TextMutedBrush}"
+                             FontSize="{DynamicResource FOverline}"
+                             TextAlignment="Center" />
+                  <TextBlock x:Name="MonthlyPriceText"
+                             Foreground="{DynamicResource AccentBrush}"
+                             FontSize="{DynamicResource FBodyL}"
+                             FontWeight="Bold"
+                             TextAlignment="Center"
+                             Margin="0,4,0,0" />
+                </StackPanel>
+              </Button>
+
+              <Button Classes="PlanCardButton"
+                      MinHeight="88"
+                      Grid.Column="2"
+                      Padding="12,10"
+                      HorizontalAlignment="Stretch"
+                      Click="LifetimeBuy_Click">
+                <StackPanel Spacing="4">
+                  <TextBlock Text="{loc:Translate Upsell.Plan.Lifetime.Title}"
+                             Foreground="{DynamicResource TextPrimaryBrush}"
+                             FontSize="{DynamicResource FBody}"
+                             FontWeight="Bold"
+                             TextAlignment="Center" />
+                  <TextBlock Text="{loc:Translate Upsell.Plan.Lifetime.Subtitle}"
+                             Foreground="{DynamicResource TextMutedBrush}"
+                             FontSize="{DynamicResource FOverline}"
+                             TextAlignment="Center" />
+                  <TextBlock x:Name="LifetimePriceText"
+                             Foreground="{DynamicResource PremiumBadgeBrush}"
+                             FontSize="{DynamicResource FBodyL}"
+                             FontWeight="Bold"
+                             TextAlignment="Center"
+                             Margin="0,4,0,0" />
+                </StackPanel>
+              </Button>
+            </Grid>
+
             <Button Classes="UpgradeButton"
                     MinHeight="52"
                     Click="Buy_Click">
@@ -111,6 +164,13 @@
                            FontWeight="Bold" />
               </StackPanel>
             </Button>
+
+            <TextBlock x:Name="PlanStatusText"
+                       Foreground="{DynamicResource TextMutedBrush}"
+                       FontSize="{DynamicResource FOverline}"
+                       TextAlignment="Center"
+                       TextWrapping="Wrap"
+                       IsVisible="False" />
 
             <Button Background="Transparent"
                     BorderThickness="0"

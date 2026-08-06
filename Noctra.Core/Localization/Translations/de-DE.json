@@ -959,7 +959,10 @@
   "GlobalSettings.Promo.Status.Free": "Kostenlose Version aktiv",
   "GlobalSettings.Promo.Status.Premium": "Premium aktiv",
   "GlobalSettings.Promo.Status.PremiumFormat": "Premium aktiv bis {0}",
+  "GlobalSettings.Promo.Status.RemainingDaysFormat": "{0} Tage verbleibend",
   "GlobalSettings.Promo.SuccessFormat": "Aktionscode angewendet. Premium ist bis {0} aktiv.",
+  "GlobalSettings.Promo.Success.DaysAddedFormat": "✓ {0} Tage Premium hinzugefügt",
+  "GlobalSettings.Promo.Success.NewExpiryFormat": "Neues Ablaufdatum: {0}",
   "GlobalSettings.Promo.Error.PremiumEdition": "Dieses Paket ist bereits die permanente Premium-Version.",
   "GlobalSettings.Promo.Error.EmptyCode": "Bitte geben Sie einen Aktionscode ein.",
   "GlobalSettings.Promo.Error.InvalidCode": "Aktionscode wurde nicht gefunden oder ist ungültig.",
@@ -1041,5 +1044,10 @@
   "Player.Overlay.Play": "Wiedergabe",
   "Player.Overlay.Pause": "Pause",
   "Downloads.Storage.DetailFormat": "Noctra: {0} belegt · Frei: {1}",
-  "Download.Error.UnsupportedStreaming": "Dieser Stream-Typ unterstützt Offline-Downloads noch nicht."
+  "Download.Error.UnsupportedStreaming": "Dieser Stream-Typ unterstützt Offline-Downloads noch nicht.",
+  "Upsell.Plan.Monthly.Title": "Monatsabo",
+  "Upsell.Plan.Monthly.Subtitle": "Monatlich kündbar",
+  "Upsell.Plan.Lifetime.Title": "Lebenslang",
+  "Upsell.Plan.Lifetime.Subtitle": "Einmalige Zahlung",
+  "Upsell.Plan.Unavailable": "Produkte konnten nicht geladen werden. Bitte später erneut versuchen."
 }

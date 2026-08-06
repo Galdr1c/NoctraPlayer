@@ -59,6 +59,14 @@ public class LicenseService : ObservableObject, ILicenseService
     private readonly HttpClient _httpClient;
     private readonly ILocalizationService? _localizationService;
     private readonly IPlatformActionService? _platformActionService;
+    private readonly IStorePurchaseService? _storePurchaseService;
+
+    /// <summary>
+    /// Mağazadan (Google Play) doğrulanan Premium hakları. Yalnızca mağaza
+    /// desteği olan platformlarda güncellenir; başlangıçta ve haklar değişince
+    /// servis tarafından itilir (LicenseService kendi başına sorgulamaz).
+    /// </summary>
+    private StoreEntitlement _storeEntitlement = StoreEntitlement.None;
     private bool _manualPremiumOverride;
 
     /// <summary>
@@ -181,7 +189,8 @@ public class LicenseService : ObservableObject, ILicenseService
         HttpClient httpClient,
         ILocalizationService? localizationService = null,
         ISecurityService? securityService = null,
-        IPlatformActionService? platformActionService = null)
+        IPlatformActionService? platformActionService = null,
+        IStorePurchaseService? storePurchaseService = null)
     {
         _appEditionService = appEditionService;
         _settingsService = settingsService;
@@ -189,8 +198,45 @@ public class LicenseService : ObservableObject, ILicenseService
         _httpClient = httpClient;
         _localizationService = localizationService;
         _platformActionService = platformActionService;
+        _storePurchaseService = storePurchaseService;
+
+        if (_storePurchaseService is not null)
+        {
+            _storePurchaseService.EntitlementChanged += OnStoreEntitlementChanged;
+            _ = RefreshStoreEntitlementAsync();
+        }
+
         _settingsService.SettingsChanged += OnSettingsChanged;
         SyncSubscriptionFromSettings(notify: false);
+    }
+
+    private void OnStoreEntitlementChanged(object? sender, EventArgs e)
+    {
+        _ = RefreshStoreEntitlementAsync();
+    }
+
+    /// <summary>
+    /// Mağaza haklarını yeniden doğrular ve abonelik durumunu günceller.
+    /// Sorgu başarısız olursa son bilinen hak korunur (fail-open değil,
+    /// mevcut önbellek değeri geçerli kalır).
+    /// </summary>
+    private async Task RefreshStoreEntitlementAsync()
+    {
+        if (_storePurchaseService is null)
+        {
+            return;
+        }
+
+        try
+        {
+            var entitlement = await _storePurchaseService.GetEntitlementAsync();
+            _storeEntitlement = entitlement;
+            SyncSubscriptionFromSettings(notify: true);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[LicenseService] Store entitlement refresh failed: {ex}");
+        }
     }
 
     // ==========================================
@@ -208,6 +254,22 @@ public class LicenseService : ObservableObject, ILicenseService
     public bool CanUpgradeToPremium => _appEditionService.IsFreeEdition;
     public bool IsEditionLockedPremium => _appEditionService.IsPremiumEdition;
     public DateTime? PromoPremiumExpiresAtUtc => ReadPromoGrant()?.ExpiresAtUtc;
+
+    /// <summary>
+    /// Etkin Premium'un biteceği an (mağaza aboneliği veya promosyon;
+    /// kalıcı edisyon/kalıcı paket için null). UI durum metinleri bunu kullanır.
+    /// </summary>
+    public DateTime? PremiumExpiresAtUtc
+    {
+        get
+        {
+            SyncSubscriptionFromSettings(notify: false);
+            return _currentSubscription.Tier == SubscriptionTier.Premium
+                ? _currentSubscription.ExpiresAt
+                : null;
+        }
+    }
+
     public string? ActivePromoCode => ReadPromoGrant()?.ActivePromoCode;
 
     /// <summary>
@@ -671,18 +733,45 @@ public class LicenseService : ObservableObject, ILicenseService
         }
         else
         {
+            // Öncelik sırası: kalıcı mağaza paketi → (abonelik veya promosyon
+            // süresi, hangisi daha geç ise o) → Free. Mağaza hakları yalnızca
+            // mağaza desteği olan platformda (Android) dolu olabilir.
+            var store = _storeEntitlement;
             var promoExpiresAt = ReadPromoGrant()?.ExpiresAtUtc;
-            if (promoExpiresAt.HasValue && promoExpiresAt.Value > DateTime.UtcNow)
+
+            if (store.HasLifetimePremium)
             {
+                // Tek seferlik kalıcı paket: Premium edition gibi süresiz.
                 _currentSubscription.Tier = SubscriptionTier.Premium;
-                _currentSubscription.ExpiresAt = promoExpiresAt;
-                _currentSubscription.IsTrialPeriod = true;
+                _currentSubscription.ExpiresAt = null;
+                _currentSubscription.IsTrialPeriod = false;
             }
             else
             {
-                _currentSubscription.Tier = SubscriptionTier.Free;
-                _currentSubscription.ExpiresAt = null;
-                _currentSubscription.IsTrialPeriod = false;
+                DateTime? endsAt = null;
+                if (store.HasActivePremium && store.SubscriptionExpiresAtUtc.HasValue)
+                {
+                    endsAt = store.SubscriptionExpiresAtUtc;
+                }
+                if (promoExpiresAt.HasValue &&
+                    promoExpiresAt.Value > DateTime.UtcNow &&
+                    (!endsAt.HasValue || promoExpiresAt.Value > endsAt.Value))
+                {
+                    endsAt = promoExpiresAt;
+                }
+
+                if (endsAt.HasValue && endsAt.Value > DateTime.UtcNow)
+                {
+                    _currentSubscription.Tier = SubscriptionTier.Premium;
+                    _currentSubscription.ExpiresAt = endsAt;
+                    _currentSubscription.IsTrialPeriod = true;
+                }
+                else
+                {
+                    _currentSubscription.Tier = SubscriptionTier.Free;
+                    _currentSubscription.ExpiresAt = null;
+                    _currentSubscription.IsTrialPeriod = false;
+                }
             }
         }
 
@@ -698,6 +787,7 @@ public class LicenseService : ObservableObject, ILicenseService
         OnPropertyChanged(nameof(CurrentTier));
         OnPropertyChanged(nameof(CanUpgradeToPremium));
         OnPropertyChanged(nameof(PromoPremiumExpiresAtUtc));
+        OnPropertyChanged(nameof(PremiumExpiresAtUtc));
         OnPropertyChanged(nameof(ActivePromoCode));
         SubscriptionChanged?.Invoke();
     }
@@ -808,7 +898,7 @@ public class LicenseService : ObservableObject, ILicenseService
 
     private static string FormatLocalDate(DateTime utcDate)
     {
-        return utcDate.ToLocalTime().ToString("dd.MM.yyyy HH:mm");
+        return utcDate.ToLocalTime().ToString("g", System.Globalization.CultureInfo.CurrentCulture);
     }
 
     private string Localize(string key, string fallback, params object[] args)
@@ -898,6 +988,31 @@ public class LicenseService : ObservableObject, ILicenseService
             return false;
         }
 
+        // Mağaza desteği olan platformlarda (Android) satın alma Play Billing
+        // üzerinden başlatılır; aylık abonelik önceliklidir. Masaüstünde store
+        // servisi null olduğundan davranış değişmez (URI açma).
+        if (_storePurchaseService is { IsSupported: true })
+        {
+            try
+            {
+                var products = await _storePurchaseService.GetProductsAsync().ConfigureAwait(false);
+                var product = products.FirstOrDefault(p => p.Kind == StoreProductKind.Subscription)
+                              ?? products.FirstOrDefault();
+                if (product is null)
+                {
+                    return false;
+                }
+
+                var result = await _storePurchaseService.LaunchPurchaseAsync(product).ConfigureAwait(false);
+                return result.Success;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[LicenseService] Store purchase flow failed: {ex.Message}");
+                return false;
+            }
+        }
+
         var candidateUris = new[]
         {
             _appEditionService.PremiumStoreLaunchUri,
@@ -957,6 +1072,7 @@ public class LicenseService : ObservableObject, ILicenseService
         OnPropertyChanged(nameof(IsPremium));
         OnPropertyChanged(nameof(CurrentTier));
         OnPropertyChanged(nameof(CanUpgradeToPremium));
+        OnPropertyChanged(nameof(PremiumExpiresAtUtc));
     }
 
     private sealed class EphemeralSettingsService : ISettingsService

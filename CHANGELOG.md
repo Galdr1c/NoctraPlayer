@@ -11,6 +11,8 @@ Detailed historical engineering notes are archived in [`docs/history/legacy-chan
 
 ### Added
 
+- **Play Billing IAP on Android**: Premium can now be purchased directly from Google Play — a monthly auto-renewing subscription and a one-time lifetime package. The upsell sheet shows both plans with live store prices; entitlement is re-verified from Play on every launch and whenever purchases change. Lifetime always wins; otherwise the later of subscription/promo expiry applies. Product IDs (`noctra_premium_monthly`, `noctra_premium_lifetime`) must be created in Play Console.
+
 ### Changed
 
 - **Promo card hidden on permanent Premium**: The promo code card is no longer shown on editions that are already permanently Premium (where redemption is meaningless). On timed promo Premium it stays visible — the system supports stacking duration — and the apply button relabels to "Add Duration" ("Süre Ekle") on desktop and mobile.

@@ -90,6 +90,98 @@ public class PromoCardVisibilityTests
         Assert.Equal("GlobalSettings.Promo.Apply", vm.PromoApplyButtonText);
     }
 
+    [Fact]
+    public async Task ApplyPromoCode_Success_ShowsSingleResultCardWithAddedAndExpiryLines()
+    {
+        var license = new Mock<ILicenseService>();
+        license.SetupGet(l => l.IsEditionLockedPremium).Returns(false);
+        license.SetupGet(l => l.IsPremium).Returns(true);
+        license.SetupGet(l => l.PromoPremiumExpiresAtUtc).Returns(DateTime.UtcNow.AddDays(30));
+        license.Setup(l => l.ApplyPromoCodeAsync(It.IsAny<string>()))
+            .ReturnsAsync(PromoCodeRedemptionResult.Ok("legacy service message", DateTime.UtcNow.AddDays(30), 30));
+
+        var vm = CreateViewModel(
+            lockedPremium: false,
+            isPremium: true,
+            hasExpiry: true,
+            CreateKeyPassthroughLocalization(),
+            license);
+
+        vm.PromoCodeInput = "PROMO30";
+        await vm.ApplyPromoCodeCommand.ExecuteAsync(null);
+
+        // Tek sonuç kartı: "✓ N gün Premium eklendi" + "Yeni bitiş tarihi: T"
+        Assert.True(vm.IsPromoCodeStatusSuccess);
+        Assert.Contains("GlobalSettings.Promo.Success.DaysAddedFormat", vm.PromoCodeStatus);
+        Assert.Contains("GlobalSettings.Promo.Success.NewExpiryFormat", vm.PromoCodeStatus);
+        Assert.Contains(Environment.NewLine, vm.PromoCodeStatus);
+        // Servisin eski tek cümlelik başarı mesajı artık kullanılmaz
+        Assert.DoesNotContain("legacy service message", vm.PromoCodeStatus);
+        Assert.Equal(string.Empty, vm.PromoCodeInput);
+    }
+
+    [Fact]
+    public async Task ApplyPromoCode_Failure_ShowsServiceMessageOnly()
+    {
+        var license = new Mock<ILicenseService>();
+        license.SetupGet(l => l.IsEditionLockedPremium).Returns(false);
+        license.Setup(l => l.ApplyPromoCodeAsync(It.IsAny<string>()))
+            .ReturnsAsync(PromoCodeRedemptionResult.Fail("servis hata mesajı", PromoCodeResultKind.CodeInvalid));
+
+        var vm = CreateViewModel(
+            lockedPremium: false,
+            localization: CreateKeyPassthroughLocalization(),
+            license: license);
+
+        vm.PromoCodeInput = "PROMO30";
+        await vm.ApplyPromoCodeCommand.ExecuteAsync(null);
+
+        Assert.False(vm.IsPromoCodeStatusSuccess);
+        Assert.Equal("servis hata mesajı", vm.PromoCodeStatus);
+    }
+
+    // ==========================================
+    // Madde 14: Aktif Premium bilgisi promo formunun dışında, Premium kartında
+    // ==========================================
+
+    [Fact]
+    public void DesktopGlobalSettings_PremiumStatusText_BoundOnlyInPremiumCard()
+    {
+        var view = ReadProjectFile("Noctra.Avalonia", "Views", "GlobalSettingsWindow.axaml");
+
+        // PremiumStatusText promo kartından çıkarıldı: dosyada tek bağlantı
+        // kalmalı ve o bağlantı PREMIUM CARD bölümünde olmalı.
+        var firstIndex = view.IndexOf("Text=\"{Binding PremiumStatusText}\"", StringComparison.Ordinal);
+        Assert.True(firstIndex >= 0, "PremiumStatusText Premium kartında bağlı olmalı.");
+        Assert.Equal(firstIndex, view.LastIndexOf("Text=\"{Binding PremiumStatusText}\"", StringComparison.Ordinal));
+        Assert.True(view.IndexOf("PREMIUM FOOTER", StringComparison.Ordinal) < firstIndex,
+            "PremiumStatusText bağlantısı PREMIUM FOOTER bölümünde olmalı.");
+    }
+
+    [Fact]
+    public void MobileSettings_PremiumStatusText_BoundOnlyInPremiumCard()
+    {
+        var view = ReadProjectFile("Noctra.Mobile", "Views", "MobileSettingsView.axaml");
+
+        var firstIndex = view.IndexOf("Text=\"{Binding PremiumStatusText}\"", StringComparison.Ordinal);
+        Assert.True(firstIndex >= 0, "PremiumStatusText Premium kartında bağlı olmalı.");
+        Assert.Equal(firstIndex, view.LastIndexOf("Text=\"{Binding PremiumStatusText}\"", StringComparison.Ordinal));
+        Assert.True(view.IndexOf("About", StringComparison.Ordinal) < firstIndex,
+            "PremiumStatusText bağlantısı About (Premium) kartında olmalı.");
+    }
+
+    [Fact]
+    public void ViewModels_DoNotOverwritePromoCodeStatusOnSubscriptionChange()
+    {
+        var globalVm = ReadProjectFile("Noctra.Core", "ViewModels", "GlobalSettingsViewModel.cs");
+        var settingsVm = ReadProjectFile("Noctra.Core", "ViewModels", "SettingsViewModel.cs");
+
+        // Başarı mesajı abonelik event'i tarafından ezilmemeli:
+        // OnLicenseSubscriptionChanged PromoCodeStatus'a yazmamalı.
+        Assert.DoesNotContain("PromoCodeStatus = PremiumStatusText", globalVm, StringComparison.Ordinal);
+        Assert.DoesNotContain("PromoCodeStatus = PremiumStatusText", settingsVm, StringComparison.Ordinal);
+    }
+
     private static Mock<ILocalizationService> CreateKeyPassthroughLocalization()
     {
         var localization = new Mock<ILocalizationService>();
@@ -103,9 +195,10 @@ public class PromoCardVisibilityTests
         bool lockedPremium,
         bool isPremium = false,
         bool hasExpiry = false,
-        Mock<ILocalizationService>? localization = null)
+        Mock<ILocalizationService>? localization = null,
+        Mock<ILicenseService>? license = null)
     {
-        var license = new Mock<ILicenseService>();
+        license ??= new Mock<ILicenseService>();
         license.SetupGet(l => l.IsEditionLockedPremium).Returns(lockedPremium);
         license.SetupGet(l => l.IsPremium).Returns(isPremium);
         license.SetupGet(l => l.PromoPremiumExpiresAtUtc)
@@ -136,8 +229,7 @@ public class PromoCardVisibilityTests
             Mock.Of<IProfileService>(),
             Mock.Of<IEpgService>(),
             localization?.Object ?? Mock.Of<ILocalizationService>(),
-            update.Object);
-    }
+            update.Object);    }
 
     private static string ReadProjectFile(params string[] parts)
     {

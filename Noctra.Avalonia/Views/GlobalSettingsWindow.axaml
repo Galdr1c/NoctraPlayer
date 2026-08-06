@@ -502,9 +502,17 @@
                                         <!-- PREMIUM FOOTER -->
                                         <Grid>
                                             <StackPanel>
+                                                <!-- Aktif Premium bilgisi (bitiş tarihi) promo formunun dışında, Premium kartının içinde -->
+                                                <TextBlock Text="{Binding PremiumStatusText}"
+                                                           FontSize="12"
+                                                           FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource AccentBrush}"
+                                                           TextWrapping="Wrap"
+                                                           Margin="0,0,0,4"
+                                                           IsVisible="{Binding PremiumStatusText, Converter={StaticResource StringToVisibilityConverter}}"/>
                                                 <TextBlock Text="{loc:Translate GlobalSettings.About.Copyright}"
-                                                         FontSize="12"
-                                                         Foreground="{DynamicResource TextMutedBrush}"/>
+                                                           FontSize="12"
+                                                           Foreground="{DynamicResource TextMutedBrush}"/>
                                             </StackPanel>
                                         </Grid>
                                     </StackPanel>
@@ -630,11 +638,6 @@
                                                            Foreground="{Binding IsPromoCodeStatusSuccess, Converter={StaticResource BooleanToSuccessWarningBrushConverter}}"
                                                            TextWrapping="Wrap"
                                                            IsVisible="{Binding PromoCodeStatus, Converter={StaticResource StringToVisibilityConverter}}"/>
-                                                <TextBlock Text="{Binding PremiumStatusText}" 
-                                                           FontSize="13" FontWeight="SemiBold" 
-                                                           Foreground="{DynamicResource SuccessBrush}" 
-                                                           TextWrapping="Wrap"
-                                                           IsVisible="{Binding PremiumStatusText, Converter={StaticResource StringToVisibilityConverter}}"/>
                                                 <!-- Bozuk PromoGrant uyarısı: hakkı okunamayan kullanıcıya sessiz Free'e düşüşü bildir -->
                                                 <TextBlock Text="{Binding PromoGrantCorruptedMessage}" 
                                                            FontSize="13" FontWeight="SemiBold" 

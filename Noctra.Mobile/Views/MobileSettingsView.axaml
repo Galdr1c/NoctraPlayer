@@ -1086,6 +1086,13 @@
                          IsVisible="{Binding !IsPremium}"
                          Foreground="{DynamicResource TextMutedBrush}"
                          FontSize="{DynamicResource FCaption}" />
+              <!-- Aktif Premium bilgisi (bitiş tarihi) promo formunun dışında, Premium kartının içinde -->
+              <TextBlock Text="{Binding PremiumStatusText}"
+                         Foreground="{DynamicResource AccentBrush}"
+                         FontSize="{DynamicResource FCaption}"
+                         FontWeight="SemiBold"
+                         TextWrapping="Wrap"
+                         IsVisible="{Binding PremiumStatusText, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
             </StackPanel>
           </Grid>
         </StackPanel>
@@ -1189,12 +1196,6 @@
                          FontWeight="Bold" 
                          TextWrapping="Wrap" />
             </Border>
-            <TextBlock Text="{Binding PremiumStatusText}"
-                       Foreground="{DynamicResource SuccessBrush}"
-                       FontSize="{DynamicResource FCaption}"
-                       TextWrapping="Wrap"
-                       FontWeight="Bold" 
-                       IsVisible="{Binding PremiumStatusText, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
             <!-- Bozuk PromoGrant uyarısı: hakkı okunamayan kullanıcıya sessiz Free'e düşüşü bildir -->
             <TextBlock Text="{Binding PromoGrantCorruptedMessage}"
                        Foreground="{DynamicResource WarningBrush}"

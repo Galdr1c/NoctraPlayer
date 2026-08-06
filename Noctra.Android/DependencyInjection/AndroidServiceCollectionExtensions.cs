@@ -43,6 +43,7 @@ public static class AndroidServiceCollectionExtensions
         services.AddSingleton<GooglePlayUpdateService>();
         services.AddSingleton<IAppUpdateService>(sp => sp.GetRequiredService<GooglePlayUpdateService>());
         services.AddSingleton<IPlatformActionService, AndroidPlatformActionService>();
+        services.AddSingleton<IStorePurchaseService, AndroidStorePurchaseService>();
         services.AddSingleton<IStorageInfoService>(serviceProvider =>
             new AndroidStorageInfoService(serviceProvider.GetRequiredService<Context>()));
         services.AddSingleton<IThemeService, AndroidThemeService>();
@@ -67,7 +68,8 @@ public static class AndroidServiceCollectionExtensions
                 serviceProvider.GetRequiredService<HttpClient>(),
                 serviceProvider.GetRequiredService<ILocalizationService>(),
                 serviceProvider.GetRequiredService<ISecurityService>(),
-                serviceProvider.GetRequiredService<IPlatformActionService>())); 
+                serviceProvider.GetRequiredService<IPlatformActionService>(),
+                serviceProvider.GetRequiredService<IStorePurchaseService>())); 
         services.AddTransient<WatermarkViewModel>();
         services.AddSingleton<CoreMainViewModel>();
         services.AddSingleton<PlayerViewModel>();

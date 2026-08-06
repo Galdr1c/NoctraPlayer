@@ -12,6 +12,13 @@ public interface ILicenseService
     bool CanUpgradeToPremium { get; }
     bool IsEditionLockedPremium { get; }
     DateTime? PromoPremiumExpiresAtUtc => null;
+
+    /// <summary>
+    /// Etkin Premium'un biteceği an (mağaza aboneliği veya promosyon;
+    /// kalıcı edisyon/kalıcı paket için null).
+    /// </summary>
+    DateTime? PremiumExpiresAtUtc => null;
+
     string? ActivePromoCode => null;
 
     /// <summary>
