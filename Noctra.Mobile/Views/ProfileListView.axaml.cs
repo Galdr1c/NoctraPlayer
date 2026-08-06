@@ -190,7 +190,10 @@ public partial class ProfileListView : UserControl
 
         var purposeKey = purpose switch
         {
-            ProfileAccessPurpose.Edit or ProfileAccessPurpose.Delete or ProfileAccessPurpose.PinChange
+            // Silme, kendi amaca özel çevirisini kullanır; düzenleme ve PIN
+            // değiştirme "düzenleme" metnini paylaşır. (Profiles.Pin.Purpose.Delete)
+            ProfileAccessPurpose.Delete => "Profiles.Pin.Purpose.Delete",
+            ProfileAccessPurpose.Edit or ProfileAccessPurpose.PinChange
                 => "Profiles.Pin.Purpose.Edit",
             _ => "Profiles.Pin.Purpose.Enter"
         };
