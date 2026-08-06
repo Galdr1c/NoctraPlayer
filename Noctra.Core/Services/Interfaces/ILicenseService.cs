@@ -13,6 +13,13 @@ public interface ILicenseService
     bool IsEditionLockedPremium { get; }
     DateTime? PromoPremiumExpiresAtUtc => null;
     string? ActivePromoCode => null;
+
+    /// <summary>
+    /// Kayıtlı PromoGrant çözülemiyorsa true (fail-closed Free'e düşüş sırasında
+    /// kullanıcıya sessiz kalınmamalıdır).
+    /// </summary>
+    bool IsPromoGrantCorrupted => false;
+
     Task<PromoCodeRedemptionResult> ApplyPromoCodeAsync(string promoCode) =>
         Task.FromResult(PromoCodeRedemptionResult.Fail("Promosyon kodu bu lisans servisinde desteklenmiyor."));
     void ActivatePremium();

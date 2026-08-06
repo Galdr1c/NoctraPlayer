@@ -80,9 +80,12 @@ public class LocalizationServiceTests
             "GlobalSettings.Promo.Error.InvalidDuration",
             "GlobalSettings.Promo.Error.Expired",
             "GlobalSettings.Promo.Error.AlreadyRedeemed",
-            "GlobalSettings.Promo.Error.ConfigMissing",
-            "GlobalSettings.Promo.Error.ConfigLoadFailed",
-            "GlobalSettings.Promo.Error.ApplyFailedFormat"
+            "GlobalSettings.Promo.Error.Offline",
+            "GlobalSettings.Promo.Error.Timeout",
+            "GlobalSettings.Promo.Error.ServiceUnavailable",
+            "GlobalSettings.Promo.Error.ConfigurationInvalid",
+            "GlobalSettings.Promo.Error.Generic",
+            "GlobalSettings.Promo.Error.GrantCorrupted"
         };
 
         foreach (var key in keys)

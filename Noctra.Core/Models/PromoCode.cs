@@ -15,10 +15,32 @@ public sealed class PromoCodeDefinition
 
 /// <summary>
 /// Uzak promosyon kodu yapılandırması için JSON kök modeli.
+/// "schemaVersion" alanı opsiyoneldir; yoksa sürüm 1 kabul edilir.
 /// </summary>
 public sealed class PromoCodeConfiguration
 {
+    public int SchemaVersion { get; set; }
     public List<PromoCodeDefinition> Codes { get; set; } = new();
+}
+
+/// <summary>
+/// Promosyon kodu uygulama sonucunun hata kategorisi.
+/// Kullanıcıya yalnızca yerelleştirilmiş, güvenli mesaj gösterilir;
+/// bu kategoriler tanılama ve loglama için ayırt edicidir.
+/// </summary>
+public enum PromoCodeResultKind
+{
+    Success,
+    Offline,
+    Timeout,
+    ServiceUnavailable,
+    ConfigurationInvalid,
+    CodeInvalid,
+    CodeInactive,
+    CodeExpired,
+    AlreadyRedeemed,
+    PersistenceFailed,
+    Unknown
 }
 
 /// <summary>
@@ -30,18 +52,21 @@ public sealed class PromoCodeRedemptionResult
     public string Message { get; init; } = string.Empty;
     public DateTime? PremiumExpiresAtUtc { get; init; }
     public int DurationDays { get; init; }
+    public PromoCodeResultKind Kind { get; init; } = PromoCodeResultKind.Success;
 
     public static PromoCodeRedemptionResult Ok(string message, DateTime premiumExpiresAtUtc, int durationDays) => new()
     {
         Success = true,
         Message = message,
         PremiumExpiresAtUtc = premiumExpiresAtUtc,
-        DurationDays = durationDays
+        DurationDays = durationDays,
+        Kind = PromoCodeResultKind.Success
     };
 
-    public static PromoCodeRedemptionResult Fail(string message) => new()
+    public static PromoCodeRedemptionResult Fail(string message, PromoCodeResultKind kind = PromoCodeResultKind.Unknown) => new()
     {
         Success = false,
-        Message = message
+        Message = message,
+        Kind = kind
     };
 }

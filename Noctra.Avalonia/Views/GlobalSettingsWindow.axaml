@@ -634,6 +634,12 @@
                                                            Foreground="{DynamicResource SuccessBrush}" 
                                                            TextWrapping="Wrap"
                                                            IsVisible="{Binding PremiumStatusText, Converter={StaticResource StringToVisibilityConverter}}"/>
+                                                <!-- Bozuk PromoGrant uyarısı: hakkı okunamayan kullanıcıya sessiz Free'e düşüşü bildir -->
+                                                <TextBlock Text="{Binding PromoGrantCorruptedMessage}" 
+                                                           FontSize="13" FontWeight="SemiBold" 
+                                                           Foreground="{DynamicResource WarningBrush}" 
+                                                           TextWrapping="Wrap"
+                                                           IsVisible="{Binding HasCorruptedPromoGrant}"/>
                                             </StackPanel>
                                         </StackPanel>
                                     </Panel>

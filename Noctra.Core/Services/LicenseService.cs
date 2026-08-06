@@ -62,6 +62,13 @@ public class LicenseService : ObservableObject, ILicenseService
     private bool _manualPremiumOverride;
 
     /// <summary>
+    /// Şifrelenmiş PromoGrant çözülemiyor/çözümlenemiyorsa true olur.
+    /// Fail-closed davranış (Free'e düşme) doğrudur; ancak kullanıcıya sessiz
+    /// kalınmamalıdır — ayarlar ekranı bu bayrağı görüp uyarı gösterir.
+    /// </summary>
+    private bool _promoGrantCorrupted;
+
+    /// <summary>
     /// Promo redemption'ın read–modify–save döngüsünü serileştirir. Aynı anda
     /// iki ApplyPromoCodeAsync çağrısı olursa ikisi de eski grant'i okuyup kendi
     /// sonucunu yazabilir ("son yazan kazanır") ve bir kodun süresi ya da
@@ -129,6 +136,20 @@ public class LicenseService : ObservableObject, ILicenseService
     /// </summary>
     private const int MaximumTotalPromoDurationDays = 730;
 
+    /// <summary>
+    /// Uzak promosyon yapılandırması için kabul edilen maksimum yanıt boyutu
+    /// (bayt). Aşırı büyük bir yanıt yapılandırma hatası sayılır; böylece
+    /// hatalı/beklenmedik bir uç nokta bellek tüketimini şişiremez.
+    /// </summary>
+    private const long MaxPromoConfigBytes = 256 * 1024;
+
+    /// <summary>
+    /// Desteklenen promosyon yapılandırma şema sürümü. JSON içinde
+    /// "schemaVersion" belirtilmişse ve bu değerden büyükse yapılandırma
+    /// tamamen reddedilir (yeni şema bilinmeden yanlış yorumlanmaz).
+    /// </summary>
+    private const int SupportedPromoConfigSchemaVersion = 1;
+
     // ==========================================
     // FEATURE NAMES
     // ==========================================
@@ -189,6 +210,19 @@ public class LicenseService : ObservableObject, ILicenseService
     public DateTime? PromoPremiumExpiresAtUtc => ReadPromoGrant()?.ExpiresAtUtc;
     public string? ActivePromoCode => ReadPromoGrant()?.ActivePromoCode;
 
+    /// <summary>
+    /// Kayıtlı PromoGrant decrypt/deserialize edilemiyorsa true.
+    /// Getter, bayrağı güncellemek için grant'i yeniden okur.
+    /// </summary>
+    public bool IsPromoGrantCorrupted
+    {
+        get
+        {
+            _ = ReadPromoGrant();
+            return _promoGrantCorrupted;
+        }
+    }
+
     public void ActivatePremium()
     {
         if (_appEditionService.IsPremiumEdition || !AllowsManualPremiumOverride)
@@ -237,109 +271,123 @@ public class LicenseService : ObservableObject, ILicenseService
 
     private async Task<PromoCodeRedemptionResult> ApplyPromoCodeCoreAsync(string promoCode)
     {
-        if (_appEditionService.IsPremiumEdition)
-        {
-            return PromoCodeRedemptionResult.Fail(Localize("GlobalSettings.Promo.Error.PremiumEdition", "Bu paket zaten kalıcı Premium sürüm."));
-        }
-
-        var normalizedCode = NormalizePromoCode(promoCode);
-        if (string.IsNullOrWhiteSpace(normalizedCode))
-        {
-            return PromoCodeRedemptionResult.Fail(Localize("GlobalSettings.Promo.Error.EmptyCode", "Lütfen promosyon kodunu girin."));
-        }
-
-        var promoCodesResult = await LoadPromoCodesAsync();
-        if (!promoCodesResult.Success)
-        {
-            return PromoCodeRedemptionResult.Fail(promoCodesResult.ErrorMessage);
-        }
-
-        var matchedCode = promoCodesResult.Codes.FirstOrDefault(code =>
-            NormalizePromoCode(code.Code).Equals(normalizedCode, StringComparison.OrdinalIgnoreCase));
-
-        if (matchedCode == null)
-        {
-            return PromoCodeRedemptionResult.Fail(Localize("GlobalSettings.Promo.Error.InvalidCode", "Promosyon kodu bulunamadı veya geçersiz."));
-        }
-
-        if (!matchedCode.IsActive)
-        {
-            return PromoCodeRedemptionResult.Fail(Localize("GlobalSettings.Promo.Error.Inactive", "Bu promosyon kodu aktif değil."));
-        }
-
-        if (matchedCode.DurationDays is <= 0 or > MaximumPromoDurationDays)
-        {
-            return PromoCodeRedemptionResult.Fail(Localize("GlobalSettings.Promo.Error.DurationLimitExceeded", "Bu promosyon kodunun süresi geçersiz."));
-        }
-
-        if (matchedCode.ValidUntilUtc.HasValue && matchedCode.ValidUntilUtc.Value <= DateTime.UtcNow)
-        {
-            return PromoCodeRedemptionResult.Fail(Localize("GlobalSettings.Promo.Error.Expired", "Bu promosyon kodunun kullanım süresi dolmuş."));
-        }
-
-        var promoGrant = ReadPromoGrant();
-        var redeemedPromoCodes = (promoGrant?.RedeemedPromoCodes ?? new List<string>()).ToList();
-        if (!matchedCode.AllowReuse && redeemedPromoCodes.Any(code =>
-                NormalizePromoCode(code).Equals(normalizedCode, StringComparison.OrdinalIgnoreCase)))
-        {
-            return PromoCodeRedemptionResult.Fail(Localize("GlobalSettings.Promo.Error.AlreadyRedeemed", "Bu promosyon kodu daha önce bu cihazda kullanılmış."));
-        }
-
-        _manualPremiumOverride = false;
-
-        var currentExpiresAt = promoGrant?.ExpiresAtUtc;
-        var startDate = currentExpiresAt.HasValue && currentExpiresAt.Value > DateTime.UtcNow
-            ? currentExpiresAt.Value
-            : DateTime.UtcNow;
-        var expiresAt = startDate.AddDays(matchedCode.DurationDays);
-
-        if (expiresAt > DateTime.UtcNow.AddDays(MaximumTotalPromoDurationDays))
-        {
-            return PromoCodeRedemptionResult.Fail(Localize("GlobalSettings.Promo.Error.TotalDurationLimitReached", "Toplam Premium süresi üst sınırına ulaşıldığı için kod uygulanamadı."));
-        }
-
-        if (!redeemedPromoCodes.Any(code => NormalizePromoCode(code).Equals(normalizedCode, StringComparison.OrdinalIgnoreCase)))
-        {
-            redeemedPromoCodes.Add(normalizedCode);
-        }
-
-        WritePromoGrant(new PromoGrant(
-            normalizedCode,
-            expiresAt,
-            redeemedPromoCodes));
-
         try
         {
-            await _settingsService.SaveAsync();
+            if (_appEditionService.IsPremiumEdition)
+            {
+                return PromoCodeRedemptionResult.Fail(Localize("GlobalSettings.Promo.Error.PremiumEdition", "Bu paket zaten kalıcı Premium sürüm."), PromoCodeResultKind.Unknown);
+            }
+
+            var normalizedCode = NormalizePromoCode(promoCode);
+            if (string.IsNullOrWhiteSpace(normalizedCode))
+            {
+                return PromoCodeRedemptionResult.Fail(Localize("GlobalSettings.Promo.Error.EmptyCode", "Lütfen promosyon kodunu girin."), PromoCodeResultKind.CodeInvalid);
+            }
+
+            var promoCodesResult = await LoadPromoCodesAsync();
+            if (!promoCodesResult.Success)
+            {
+                return PromoCodeRedemptionResult.Fail(promoCodesResult.ErrorMessage, promoCodesResult.Kind);
+            }
+
+            var matchedCode = promoCodesResult.Codes.FirstOrDefault(code =>
+                NormalizePromoCode(code.Code).Equals(normalizedCode, StringComparison.OrdinalIgnoreCase));
+
+            if (matchedCode == null)
+            {
+                return PromoCodeRedemptionResult.Fail(Localize("GlobalSettings.Promo.Error.InvalidCode", "Promosyon kodu bulunamadı veya geçersiz."), PromoCodeResultKind.CodeInvalid);
+            }
+
+            if (!matchedCode.IsActive)
+            {
+                return PromoCodeRedemptionResult.Fail(Localize("GlobalSettings.Promo.Error.Inactive", "Bu promosyon kodu aktif değil."), PromoCodeResultKind.CodeInactive);
+            }
+
+            if (matchedCode.DurationDays is <= 0 or > MaximumPromoDurationDays)
+            {
+                return PromoCodeRedemptionResult.Fail(Localize("GlobalSettings.Promo.Error.DurationLimitExceeded", "Bu promosyon kodunun süresi geçersiz."), PromoCodeResultKind.ConfigurationInvalid);
+            }
+
+            if (matchedCode.ValidUntilUtc.HasValue && matchedCode.ValidUntilUtc.Value <= DateTime.UtcNow)
+            {
+                return PromoCodeRedemptionResult.Fail(Localize("GlobalSettings.Promo.Error.Expired", "Bu promosyon kodunun kullanım süresi dolmuş."), PromoCodeResultKind.CodeExpired);
+            }
+
+            var promoGrant = ReadPromoGrant();
+            var redeemedPromoCodes = (promoGrant?.RedeemedPromoCodes ?? new List<string>()).ToList();
+            if (!matchedCode.AllowReuse && redeemedPromoCodes.Any(code =>
+                    NormalizePromoCode(code).Equals(normalizedCode, StringComparison.OrdinalIgnoreCase)))
+            {
+                return PromoCodeRedemptionResult.Fail(Localize("GlobalSettings.Promo.Error.AlreadyRedeemed", "Bu promosyon kodu daha önce bu cihazda kullanılmış."), PromoCodeResultKind.AlreadyRedeemed);
+            }
+
+            _manualPremiumOverride = false;
+
+            var currentExpiresAt = promoGrant?.ExpiresAtUtc;
+            var startDate = currentExpiresAt.HasValue && currentExpiresAt.Value > DateTime.UtcNow
+                ? currentExpiresAt.Value
+                : DateTime.UtcNow;
+            var expiresAt = startDate.AddDays(matchedCode.DurationDays);
+
+            if (expiresAt > DateTime.UtcNow.AddDays(MaximumTotalPromoDurationDays))
+            {
+                return PromoCodeRedemptionResult.Fail(Localize("GlobalSettings.Promo.Error.TotalDurationLimitReached", "Toplam Premium süresi üst sınırına ulaşıldığı için kod uygulanamadı."), PromoCodeResultKind.Unknown);
+            }
+
+            if (!redeemedPromoCodes.Any(code => NormalizePromoCode(code).Equals(normalizedCode, StringComparison.OrdinalIgnoreCase)))
+            {
+                redeemedPromoCodes.Add(normalizedCode);
+            }
+
+            WritePromoGrant(new PromoGrant(
+                normalizedCode,
+                expiresAt,
+                redeemedPromoCodes));
+
+            try
+            {
+                await _settingsService.SaveAsync();
+            }
+            catch (Exception)
+            {
+                // Kalıcılık başarısız (SettingsPersistenceException veya sarılmamış
+                // bir I/O hatası): kullanıcıya "başarılı" göstermeden önce bellek
+                // durumunu eski grant'a geri al, böylece sonraki açılışla tutarsız
+                // kalmasın. Kayıt başarısız olduğu için disk zaten eski haliyle kalır.
+                if (promoGrant is null)
+                {
+                    _settingsService.Settings.PromoGrant = null;
+                    _settingsService.Settings.ActivePromoCode = null;
+                    _settingsService.Settings.PromoPremiumExpiresAtUtc = null;
+                    _settingsService.Settings.RedeemedPromoCodes.Clear();
+                }
+                else
+                {
+                    WritePromoGrant(promoGrant);
+                }
+
+                return PromoCodeRedemptionResult.Fail(Localize(
+                    "GlobalSettings.Promo.Error.SaveFailed",
+                    "Promosyon kodu uygulanamadı: ayarlar kaydedilemedi. Lütfen tekrar deneyin."),
+                    PromoCodeResultKind.PersistenceFailed);
+            }
+
+            SyncSubscriptionFromSettings(notify: true);
+
+            return PromoCodeRedemptionResult.Ok(
+                Localize("GlobalSettings.Promo.SuccessFormat", "Promosyon kodu uygulandı. Premium {0} tarihine kadar aktif.", FormatLocalDate(expiresAt)),
+                expiresAt,
+                matchedCode.DurationDays);
         }
-        catch (SettingsPersistenceException)
+        catch (Exception ex)
         {
-            // Disk'e yazılamadı: kullanıcıya "başarılı" göstermeden önce bellek
-            // durumunu eski grant'a geri al, böylece sonraki açılışla tutarsız
-            // kalmasın. Kayıt başarısız olduğu için disk zaten eski haliyle kalır.
-            if (promoGrant is null)
-            {
-                _settingsService.Settings.PromoGrant = null;
-                _settingsService.Settings.ActivePromoCode = null;
-                _settingsService.Settings.PromoPremiumExpiresAtUtc = null;
-                _settingsService.Settings.RedeemedPromoCodes.Clear();
-            }
-            else
-            {
-                WritePromoGrant(promoGrant);
-            }
-
-            return PromoCodeRedemptionResult.Fail(Localize(
-                "GlobalSettings.Promo.Error.SaveFailed",
-                "Promosyon kodu uygulanamadı: ayarlar kaydedilemedi. Lütfen tekrar deneyin."));
+            // Beklenmeyen servis hatası: kullanıcıya teknik ayrıntı gösterilmez;
+            // yerelleştirilmiş güvenli mesaj döner, gerçek exception loglanır.
+            System.Diagnostics.Debug.WriteLine($"[LicenseService] ApplyPromoCode failed: {ex}");
+            return PromoCodeRedemptionResult.Fail(
+                Localize("GlobalSettings.Promo.Error.Generic", "Promosyon kodu uygulanamadı. Lütfen daha sonra tekrar deneyin."),
+                PromoCodeResultKind.Unknown);
         }
-
-        SyncSubscriptionFromSettings(notify: true);
-
-        return PromoCodeRedemptionResult.Ok(
-            Localize("GlobalSettings.Promo.SuccessFormat", "Promosyon kodu uygulandı. Premium {0} tarihine kadar aktif.", FormatLocalDate(expiresAt)),
-            expiresAt,
-            matchedCode.DurationDays);
     }
 
     private async Task<PromoCodeLoadResult> LoadPromoCodesAsync()
@@ -347,7 +395,11 @@ public class LicenseService : ObservableObject, ILicenseService
         var remoteUrl = GetRemotePromoCodesUrl();
         if (string.IsNullOrWhiteSpace(remoteUrl))
         {
-            return PromoCodeLoadResult.Fail(Localize("GlobalSettings.Promo.Error.ConfigMissing", "Promosyon kodu yapılandırması bulunamadı. Lütfen uygulama yöneticisinin promosyon kodu URL'sini yapılandırdığından emin olun."));
+            // Store kullanıcısı URL yapılandıramaz; "yöneticiye başvurun" geliştirici
+            // mesajıdır. Bunun yerine kullanıcıya hizmetin kullanılamadığı söylenir.
+            return PromoCodeLoadResult.Fail(
+                Localize("GlobalSettings.Promo.Error.ServiceUnavailable", "Promosyon hizmeti şu anda kullanılamıyor. Lütfen uygulamanın güncel olduğundan emin olup daha sonra tekrar deneyin."),
+                PromoCodeResultKind.ServiceUnavailable);
         }
 
         try
@@ -357,37 +409,205 @@ public class LicenseService : ObservableObject, ILicenseService
             // gist güncellendikten hemen sonra eski kod listesi görülebilirdi.
             // no-cache isteği CDN cache'ini bypass eder; her build'de (debug/
             // release/store) gist değişiklikleri anında yansır.
+            //
+            // Not: Bilinçli kapsam — liste üzerinde ETag/imza yok. no-cache politikası
+            // CDN cache'ini devre dışı bıraktığı için ETag yeniden kullanımıyla çelişir;
+            // imza ise build'e gömülü bir genel anahtar ve güvenilir imzalama altyapısı
+            // gerektirir. Üretim akışı server-side redemption ile değiştirildiğinde
+            // her ikisi de birlikte değerlendirilmelidir.
             using var request = new HttpRequestMessage(HttpMethod.Get, remoteUrl);
             request.Headers.CacheControl = new System.Net.Http.Headers.CacheControlHeaderValue
             {
                 NoCache = true
             };
-            using var response = await _httpClient.SendAsync(request, cts.Token);
-            response.EnsureSuccessStatusCode();
-            var json = await response.Content.ReadAsStringAsync(cts.Token);
+            // ResponseHeadersRead: yanıt gövdesi tamamen belleğe alınmadan başlıklar
+            // gelir gelmez dön; böylece aşağıdaki sınırlı akış okuması (256 KB sınırı)
+            // indirme anında devreye girer ve aşırı büyük gövde belleği şişiremez.
+            using var response = await _httpClient.SendAsync(
+                request,
+                HttpCompletionOption.ResponseHeadersRead,
+                cts.Token);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                // 404 → yapılandırma adresi geçersiz; 5xx/diğer → hizmet çalışmıyor.
+                // Hiçbirinde kullanıcının internetine işaret edilmez.
+                var notFound = response.StatusCode == System.Net.HttpStatusCode.NotFound;
+                return PromoCodeLoadResult.Fail(
+                    Localize(
+                        notFound
+                            ? "GlobalSettings.Promo.Error.ConfigurationInvalid"
+                            : "GlobalSettings.Promo.Error.ServiceUnavailable",
+                        notFound
+                            ? "Promosyon kodu listesi şu anda geçersiz. Lütfen daha sonra tekrar deneyin."
+                            : "Promosyon hizmeti şu anda kullanılamıyor. Lütfen uygulamanın güncel olduğundan emin olup daha sonra tekrar deneyin."),
+                    notFound
+                        ? PromoCodeResultKind.ConfigurationInvalid
+                        : PromoCodeResultKind.ServiceUnavailable);
+            }
+
+            // HTML yanıtı (örn. yanlış konumlandırılmış uç noktanın oturum açma
+            // sayfası) asla kod listesi olarak yorumlanmamalı.
+            var mediaType = response.Content.Headers.ContentType?.MediaType;
+            if (string.Equals(mediaType, "text/html", StringComparison.OrdinalIgnoreCase))
+            {
+                return PromoCodeLoadResult.Fail(
+                    Localize("GlobalSettings.Promo.Error.ConfigurationInvalid", "Promosyon kodu listesi şu anda geçersiz. Lütfen daha sonra tekrar deneyin."),
+                    PromoCodeResultKind.ConfigurationInvalid);
+            }
+
+            // Boyut sınırı: önce Content-Length başlığı, sonra akış sınırlı okunur.
+            if (response.Content.Headers.ContentLength.HasValue &&
+                response.Content.Headers.ContentLength.Value > MaxPromoConfigBytes)
+            {
+                return PromoCodeLoadResult.Fail(
+                    Localize("GlobalSettings.Promo.Error.ConfigurationInvalid", "Promosyon kodu listesi şu anda geçersiz. Lütfen daha sonra tekrar deneyin."),
+                    PromoCodeResultKind.ConfigurationInvalid);
+            }
+
+            var json = await ReadContentWithLimitAsync(response.Content, cts.Token);
             return PromoCodeLoadResult.Ok(ParsePromoCodeJson(json));
         }
-        catch
+        catch (OperationCanceledException)
         {
-            return PromoCodeLoadResult.Fail(Localize("GlobalSettings.Promo.Error.ConfigLoadFailed", "Promosyon kodu yapılandırması yüklenemedi. Lütfen internet bağlantınızı kontrol edip tekrar deneyin."));
+            return PromoCodeLoadResult.Fail(
+                Localize("GlobalSettings.Promo.Error.Timeout", "Promosyon hizmeti yanıt vermedi. Lütfen daha sonra tekrar deneyin."),
+                PromoCodeResultKind.Timeout);
         }
+        catch (HttpRequestException ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[LicenseService] Promo config network error: {ex.Message}");
+            return PromoCodeLoadResult.Fail(
+                Localize("GlobalSettings.Promo.Error.Offline", "İnternet bağlantısı kurulamadı. Lütfen bağlantınızı kontrol edip tekrar deneyin."),
+                PromoCodeResultKind.Offline);
+        }
+        catch (PromoConfigException ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[LicenseService] Promo config invalid: {ex.Message}");
+            return PromoCodeLoadResult.Fail(
+                Localize("GlobalSettings.Promo.Error.ConfigurationInvalid", "Promosyon kodu listesi şu anda geçersiz. Lütfen daha sonra tekrar deneyin."),
+                PromoCodeResultKind.ConfigurationInvalid);
+        }
+        catch (JsonException ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[LicenseService] Promo config JSON invalid: {ex.Message}");
+            return PromoCodeLoadResult.Fail(
+                Localize("GlobalSettings.Promo.Error.ConfigurationInvalid", "Promosyon kodu listesi şu anda geçersiz. Lütfen daha sonra tekrar deneyin."),
+                PromoCodeResultKind.ConfigurationInvalid);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[LicenseService] Promo config load failed: {ex}");
+            return PromoCodeLoadResult.Fail(
+                Localize("GlobalSettings.Promo.Error.ServiceUnavailable", "Promosyon hizmeti şu anda kullanılamıyor. Lütfen uygulamanın güncel olduğundan emin olup daha sonra tekrar deneyin."),
+                PromoCodeResultKind.ServiceUnavailable);
+        }
+    }
+
+    /// <summary>
+    /// Yanıt gövdesini bayt cinsinden sınırlandırılmış biçimde okur.
+    /// Limit aşılırsa <see cref="PromoConfigException"/> fırlatılır;
+    /// böylece aşırı büyük yanıt belleğe alınmaz.
+    /// </summary>
+    private static async Task<string> ReadContentWithLimitAsync(HttpContent content, CancellationToken cancellationToken)
+    {
+        await using var source = await content.ReadAsStreamAsync(cancellationToken);
+        using var buffer = new MemoryStream();
+        var chunk = new byte[16 * 1024];
+        long total = 0;
+        int read;
+        while ((read = await source.ReadAsync(chunk, cancellationToken)) > 0)
+        {
+            total += read;
+            if (total > MaxPromoConfigBytes)
+            {
+                throw new PromoConfigException("Promo config response exceeds the maximum size.");
+            }
+
+            await buffer.WriteAsync(chunk.AsMemory(0, read), cancellationToken);
+        }
+
+        return System.Text.Encoding.UTF8.GetString(buffer.ToArray());
     }
 
     private static List<PromoCodeDefinition> ParsePromoCodeJson(string json)
     {
         if (string.IsNullOrWhiteSpace(json))
         {
-            return new List<PromoCodeDefinition>();
+            throw new PromoConfigException("Promo config is empty.");
         }
 
         var trimmed = json.TrimStart();
+        List<PromoCodeDefinition>? codes;
         if (trimmed.StartsWith("[", StringComparison.Ordinal))
         {
-            return JsonSerializer.Deserialize<List<PromoCodeDefinition>>(json, PromoJsonOptions) ?? new List<PromoCodeDefinition>();
+            codes = JsonSerializer.Deserialize<List<PromoCodeDefinition>>(json, PromoJsonOptions)
+                ?? throw new PromoConfigException("Promo config array could not be deserialized.");
+        }
+        else
+        {
+            var config = JsonSerializer.Deserialize<PromoCodeConfiguration>(json, PromoJsonOptions)
+                ?? throw new PromoConfigException("Promo config could not be deserialized.");
+
+            if (config.SchemaVersion > SupportedPromoConfigSchemaVersion)
+            {
+                throw new PromoConfigException($"Unsupported promo config schema version: {config.SchemaVersion}.");
+            }
+
+            codes = config.Codes;
         }
 
-        var config = JsonSerializer.Deserialize<PromoCodeConfiguration>(json, PromoJsonOptions);
-        return config?.Codes ?? new List<PromoCodeDefinition>();
+        return ValidatePromoCodeList(codes);
+    }
+
+    /// <summary>
+    /// Yapılandırmayı tamamen kabul/reddeder: boş liste, boş kod girişi ve
+    /// normalizasyon sonrası yinelenen kodlar (örn. "AB CD" ve "ABCD") bozuk
+    /// kabul edilir. Böylece FirstOrDefault eşleşmesi JSON sırasına bağlı kalmaz.
+    /// </summary>
+    private static List<PromoCodeDefinition> ValidatePromoCodeList(List<PromoCodeDefinition>? codes)
+    {
+        if (codes is null || codes.Count == 0)
+        {
+            throw new PromoConfigException("Promo config contains no codes.");
+        }
+
+        var normalized = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var result = new List<PromoCodeDefinition>(codes.Count);
+        foreach (var code in codes)
+        {
+            if (code is null)
+            {
+                throw new PromoConfigException("Promo config contains a null entry.");
+            }
+
+            var normalizedCode = NormalizePromoCode(code.Code);
+            if (normalizedCode.Length == 0)
+            {
+                throw new PromoConfigException("Promo config contains an entry with an empty code.");
+            }
+
+            if (!normalized.Add(normalizedCode))
+            {
+                throw new PromoConfigException($"Duplicate promo code after normalization: '{normalizedCode}'.");
+            }
+
+            result.Add(code);
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Promosyon yapılandırma şemasının reddedilmesi gerektiğini belirtir
+    /// (boş/bozuk JSON, yinelenen kod, desteklenmeyen schema sürümü, boyut aşımı).
+    /// </summary>
+    private sealed class PromoConfigException : Exception
+    {
+        public PromoConfigException(string message)
+            : base(message)
+        {
+        }
     }
 
     private string GetRemotePromoCodesUrl()
@@ -411,13 +631,14 @@ public class LicenseService : ObservableObject, ILicenseService
     private sealed record PromoCodeLoadResult(
         bool Success,
         IReadOnlyList<PromoCodeDefinition> Codes,
-        string ErrorMessage)
+        string ErrorMessage,
+        PromoCodeResultKind Kind)
     {
         public static PromoCodeLoadResult Ok(IReadOnlyList<PromoCodeDefinition> codes) =>
-            new(true, codes, string.Empty);
+            new(true, codes, string.Empty, PromoCodeResultKind.Success);
 
-        public static PromoCodeLoadResult Fail(string errorMessage) =>
-            new(false, Array.Empty<PromoCodeDefinition>(), errorMessage);
+        public static PromoCodeLoadResult Fail(string errorMessage, PromoCodeResultKind kind) =>
+            new(false, Array.Empty<PromoCodeDefinition>(), errorMessage, kind);
     }
 
     private sealed record PromoGrant(
@@ -486,6 +707,7 @@ public class LicenseService : ObservableObject, ILicenseService
         var encryptedGrant = _settingsService.Settings.PromoGrant;
         if (string.IsNullOrWhiteSpace(encryptedGrant))
         {
+            _promoGrantCorrupted = false;
             return ImportLegacyPromoGrant();
         }
 
@@ -494,6 +716,7 @@ public class LicenseService : ObservableObject, ILicenseService
             var json = _securityService.Decrypt(encryptedGrant);
             if (string.IsNullOrWhiteSpace(json))
             {
+                _promoGrantCorrupted = true;
                 return null;
             }
 
@@ -502,9 +725,11 @@ public class LicenseService : ObservableObject, ILicenseService
                 string.IsNullOrWhiteSpace(grant.ActivePromoCode) ||
                 grant.ExpiresAtUtc <= DateTime.MinValue)
             {
+                _promoGrantCorrupted = true;
                 return null;
             }
 
+            _promoGrantCorrupted = false;
             return grant with
             {
                 ActivePromoCode = NormalizePromoCode(grant.ActivePromoCode),
@@ -515,8 +740,12 @@ public class LicenseService : ObservableObject, ILicenseService
                     .ToList()
             };
         }
-        catch
+        catch (Exception ex)
         {
+            // Bozuk grant: Free'e düşmek doğru (fail-closed), fakat sessiz
+            // kalmamak gerekir — ayarlar ekranı uyarı gösterebilir.
+            System.Diagnostics.Debug.WriteLine($"[LicenseService] Promo grant corrupt: {ex.Message}");
+            _promoGrantCorrupted = true;
             return null;
         }
     }

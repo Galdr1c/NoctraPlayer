@@ -373,12 +373,14 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
         LoadSettings();
         OnPropertyChanged(nameof(IsPremium));
         OnPropertyChanged(nameof(PremiumStatusText));
+        OnPropertyChanged(nameof(HasCorruptedPromoGrant));
     }
 
     private void OnLicenseSubscriptionChanged()
     {
         OnPropertyChanged(nameof(IsPremium));
         OnPropertyChanged(nameof(PremiumStatusText));
+        OnPropertyChanged(nameof(HasCorruptedPromoGrant));
         PromoCodeStatus = PremiumStatusText;
         IsPromoCodeStatusSuccess = IsPremium;
     }
@@ -581,7 +583,10 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
         }
         catch (Exception ex)
         {
-            PromoCodeStatus = string.Format(_localizationService.GetString("GlobalSettings.Promo.Error.ApplyFailedFormat"), ex.Message);
+            // Kullanıcıya teknik/İngilizce runtime mesajı gösterilmez; gerçek
+            // exception loglanır, yerelleştirilmiş güvenli mesaj gösterilir.
+            System.Diagnostics.Debug.WriteLine($"[GlobalSettingsViewModel] ApplyPromoCode failed: {ex}");
+            PromoCodeStatus = _localizationService.GetString("GlobalSettings.Promo.Error.Generic");
             IsPromoCodeStatusSuccess = false;
         }
         finally
@@ -589,6 +594,14 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
             IsApplyingPromoCode = false;
         }
     }
+
+    /// <summary>
+    /// Kayıtlı Premium hakkı çözülemiyorsa true — ayarlar ekranı uyarı gösterir.
+    /// </summary>
+    public bool HasCorruptedPromoGrant => _licenseService.IsPromoGrantCorrupted;
+
+    public string PromoGrantCorruptedMessage =>
+        _localizationService.GetString("GlobalSettings.Promo.Error.GrantCorrupted");
 
 
 

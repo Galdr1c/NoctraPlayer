@@ -605,7 +605,10 @@ public partial class SettingsViewModel : ObservableObject, IAsyncDisposable
         }
         catch (Exception ex)
         {
-            PromoCodeStatus = string.Format(_localizationService.GetString("GlobalSettings.Promo.Error.ApplyFailedFormat"), ex.Message);
+            // Kullanıcıya teknik/İngilizce runtime mesajı gösterilmez; gerçek
+            // exception loglanır, yerelleştirilmiş güvenli mesaj gösterilir.
+            System.Diagnostics.Debug.WriteLine($"[SettingsViewModel] ApplyPromoCode failed: {ex}");
+            PromoCodeStatus = _localizationService.GetString("GlobalSettings.Promo.Error.Generic");
             IsPromoCodeStatusSuccess = false;
         }
         finally
@@ -613,6 +616,14 @@ public partial class SettingsViewModel : ObservableObject, IAsyncDisposable
             IsApplyingPromoCode = false;
         }
     }
+
+    /// <summary>
+    /// Kayıtlı Premium hakkı çözülemiyorsa true — ayarlar ekranı uyarı gösterir.
+    /// </summary>
+    public bool HasCorruptedPromoGrant => _licenseService.IsPromoGrantCorrupted;
+
+    public string PromoGrantCorruptedMessage =>
+        _localizationService.GetString("GlobalSettings.Promo.Error.GrantCorrupted");
 
     [ObservableProperty]
     private string _updateStatusText = string.Empty;
@@ -827,6 +838,8 @@ public partial class SettingsViewModel : ObservableObject, IAsyncDisposable
         {
             LoadSettings();
         }
+
+        OnPropertyChanged(nameof(HasCorruptedPromoGrant));
     }
 
     public void EnableAutoSave()
@@ -1085,6 +1098,7 @@ public partial class SettingsViewModel : ObservableObject, IAsyncDisposable
     {
         OnPropertyChanged(nameof(IsPremium));
         OnPropertyChanged(nameof(PremiumStatusText));
+        OnPropertyChanged(nameof(HasCorruptedPromoGrant));
         AddCustomEpgCommand.NotifyCanExecuteChanged();
         PromoCodeStatus = PremiumStatusText;
         IsPromoCodeStatusSuccess = IsPremium;

@@ -1194,6 +1194,13 @@
                        TextWrapping="Wrap"
                        FontWeight="Bold" 
                        IsVisible="{Binding PremiumStatusText, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
+            <!-- Bozuk PromoGrant uyarısı: hakkı okunamayan kullanıcıya sessiz Free'e düşüşü bildir -->
+            <TextBlock Text="{Binding PromoGrantCorruptedMessage}"
+                       Foreground="{DynamicResource WarningBrush}"
+                       FontSize="{DynamicResource FCaption}"
+                       TextWrapping="Wrap"
+                       FontWeight="Bold" 
+                       IsVisible="{Binding HasCorruptedPromoGrant}" />
           </StackPanel>
         </StackPanel>
       </Border>

@@ -69,7 +69,7 @@ namespace Noctra.Tests
         }
 
         [Fact]
-        public async Task ApplyPromoCodeAsync_WhenConfigUrlMissing_ShouldReturnConfigurationError()
+        public async Task ApplyPromoCodeAsync_WhenConfigUrlMissing_ShouldReturnServiceUnavailableError()
         {
             using var _ = TemporarilyClearPromoCodesUrl();
             var service = CreateLicenseService();
@@ -77,11 +77,12 @@ namespace Noctra.Tests
             var result = await service.ApplyPromoCodeAsync("PROMO-EXAMPLE-7D");
 
             Assert.False(result.Success);
-            Assert.Contains("yapılandırması bulunamadı", result.Message);
+            Assert.Equal(PromoCodeResultKind.ServiceUnavailable, result.Kind);
+            Assert.Contains("şu anda kullanılamıyor", result.Message);
         }
 
         [Fact]
-        public async Task ApplyPromoCodeAsync_WhenRemoteConfigFails_ShouldReturnLoadError()
+        public async Task ApplyPromoCodeAsync_WhenRemoteConfigReturnsServerError_ShouldReturnServiceUnavailable()
         {
             using var _ = TemporarilySetPromoCodesUrl("https://example.com/noctra-promo-codes.json");
             var settings = new TestSettingsService();
@@ -91,7 +92,224 @@ namespace Noctra.Tests
             var result = await service.ApplyPromoCodeAsync("PROMO-EXAMPLE-7D");
 
             Assert.False(result.Success);
-            Assert.Contains("yüklenemedi", result.Message);
+            Assert.Equal(PromoCodeResultKind.ServiceUnavailable, result.Kind);
+            Assert.Contains("kullanılamıyor", result.Message);
+        }
+
+        [Fact]
+        public async Task ApplyPromoCodeAsync_WhenRemoteConfigReturnsNotFound_ShouldReturnConfigurationInvalid()
+        {
+            using var _ = TemporarilySetPromoCodesUrl("https://example.com/noctra-promo-codes.json");
+            var settings = new TestSettingsService();
+            using var httpClient = CreateHttpClient(HttpStatusCode.NotFound, "{}");
+            var service = CreateLicenseService(settings, httpClient);
+
+            var result = await service.ApplyPromoCodeAsync("PROMO-EXAMPLE-7D");
+
+            Assert.False(result.Success);
+            Assert.Equal(PromoCodeResultKind.ConfigurationInvalid, result.Kind);
+        }
+
+        [Fact]
+        public async Task ApplyPromoCodeAsync_WhenNetworkRequestFails_ShouldReturnOffline()
+        {
+            using var _ = TemporarilySetPromoCodesUrl("https://example.com/noctra-promo-codes.json");
+            var settings = new TestSettingsService();
+            using var httpClient = new HttpClient(new StaticHttpMessageHandler(
+                HttpStatusCode.OK,
+                "{}",
+                throwException: new HttpRequestException("no route to host")));
+            var service = CreateLicenseService(settings, httpClient);
+
+            var result = await service.ApplyPromoCodeAsync("PROMO-EXAMPLE-7D");
+
+            Assert.False(result.Success);
+            Assert.Equal(PromoCodeResultKind.Offline, result.Kind);
+        }
+
+        [Fact]
+        public async Task ApplyPromoCodeAsync_WhenRequestTimesOut_ShouldReturnTimeout()
+        {
+            using var _ = TemporarilySetPromoCodesUrl("https://example.com/noctra-promo-codes.json");
+            var settings = new TestSettingsService();
+            using var httpClient = new HttpClient(new StaticHttpMessageHandler(
+                HttpStatusCode.OK,
+                "{}",
+                throwException: new TaskCanceledException("timed out")));
+            var service = CreateLicenseService(settings, httpClient);
+
+            var result = await service.ApplyPromoCodeAsync("PROMO-EXAMPLE-7D");
+
+            Assert.False(result.Success);
+            Assert.Equal(PromoCodeResultKind.Timeout, result.Kind);
+        }
+
+        [Fact]
+        public async Task ApplyPromoCodeAsync_WhenConfigJsonIsBroken_ShouldReturnConfigurationInvalid()
+        {
+            using var _ = TemporarilySetPromoCodesUrl("https://example.com/noctra-promo-codes.json");
+            var settings = new TestSettingsService();
+            using var httpClient = CreateHttpClient(HttpStatusCode.OK, "this is not json");
+            var service = CreateLicenseService(settings, httpClient);
+
+            var result = await service.ApplyPromoCodeAsync("PROMO-EXAMPLE-7D");
+
+            Assert.False(result.Success);
+            Assert.Equal(PromoCodeResultKind.ConfigurationInvalid, result.Kind);
+        }
+
+        [Fact]
+        public async Task ApplyPromoCodeAsync_WhenConfigHasDuplicateNormalizedCodes_ShouldRejectConfig()
+        {
+            // "AB CD" ve "ABCD" normalize edilince aynı koda dönüşür; JSON
+            // sırası davranışı belirlememeli, tüm yapılandırma reddedilmeli.
+            using var _ = TemporarilySetPromoCodesUrl("https://example.com/noctra-promo-codes.json");
+            var settings = new TestSettingsService();
+            var json = JsonSerializer.Serialize(new PromoCodeConfiguration
+            {
+                Codes =
+                {
+                    new PromoCodeDefinition { Code = "AB CD", DurationDays = 7, IsActive = true },
+                    new PromoCodeDefinition { Code = "ABCD", DurationDays = 7, IsActive = true }
+                }
+            });
+            using var httpClient = CreateHttpClient(HttpStatusCode.OK, json);
+            var service = CreateLicenseService(settings, httpClient);
+
+            var result = await service.ApplyPromoCodeAsync("ABCD");
+
+            Assert.False(result.Success);
+            Assert.Equal(PromoCodeResultKind.ConfigurationInvalid, result.Kind);
+            Assert.False(service.IsPremium);
+            Assert.Null(settings.Settings.PromoGrant);
+        }
+
+        [Fact]
+        public async Task ApplyPromoCodeAsync_WhenConfigHasEmptyCodeEntry_ShouldRejectConfig()
+        {
+            using var _ = TemporarilySetPromoCodesUrl("https://example.com/noctra-promo-codes.json");
+            var settings = new TestSettingsService();
+            var json = JsonSerializer.Serialize(new PromoCodeConfiguration
+            {
+                Codes =
+                {
+                    new PromoCodeDefinition { Code = "   ", DurationDays = 7, IsActive = true }
+                }
+            });
+            using var httpClient = CreateHttpClient(HttpStatusCode.OK, json);
+            var service = CreateLicenseService(settings, httpClient);
+
+            var result = await service.ApplyPromoCodeAsync("ABCD");
+
+            Assert.False(result.Success);
+            Assert.Equal(PromoCodeResultKind.ConfigurationInvalid, result.Kind);
+        }
+
+        [Fact]
+        public async Task ApplyPromoCodeAsync_WhenConfigHasUnsupportedSchemaVersion_ShouldRejectConfig()
+        {
+            using var _ = TemporarilySetPromoCodesUrl("https://example.com/noctra-promo-codes.json");
+            var settings = new TestSettingsService();
+            const string json = """
+                {
+                  "schemaVersion": 2,
+                  "codes": [ { "code": "ABCD", "durationDays": 7, "isActive": true } ]
+                }
+                """;
+            using var httpClient = CreateHttpClient(HttpStatusCode.OK, json);
+            var service = CreateLicenseService(settings, httpClient);
+
+            var result = await service.ApplyPromoCodeAsync("ABCD");
+
+            Assert.False(result.Success);
+            Assert.Equal(PromoCodeResultKind.ConfigurationInvalid, result.Kind);
+        }
+
+        [Fact]
+        public async Task ApplyPromoCodeAsync_WhenConfigResponseExceedsSizeLimit_ShouldRejectConfig()
+        {
+            using var _ = TemporarilySetPromoCodesUrl("https://example.com/noctra-promo-codes.json");
+            var settings = new TestSettingsService();
+            var json = JsonSerializer.Serialize(new PromoCodeConfiguration
+            {
+                Codes =
+                {
+                    new PromoCodeDefinition { Code = "ABCD", DurationDays = 7, IsActive = true }
+                }
+            });
+            // 300 KB'lik yanıt 256 KB sınırını aşar.
+            var oversized = json + new string(' ', 300 * 1024);
+            using var httpClient = CreateHttpClient(HttpStatusCode.OK, oversized);
+            var service = CreateLicenseService(settings, httpClient);
+
+            var result = await service.ApplyPromoCodeAsync("ABCD");
+
+            Assert.False(result.Success);
+            Assert.Equal(PromoCodeResultKind.ConfigurationInvalid, result.Kind);
+        }
+
+        [Fact]
+        public async Task ApplyPromoCodeAsync_WhenConfigHasSchemaVersionOne_ShouldAcceptConfig()
+        {
+            using var _ = TemporarilySetPromoCodesUrl("https://example.com/noctra-promo-codes.json");
+            var settings = new TestSettingsService();
+            const string json = """
+                {
+                  "schemaVersion": 1,
+                  "codes": [ { "code": "ABCD", "durationDays": 7, "isActive": true } ]
+                }
+                """;
+            using var httpClient = CreateHttpClient(HttpStatusCode.OK, json);
+            var service = CreateLicenseService(settings, httpClient);
+
+            var result = await service.ApplyPromoCodeAsync("ABCD");
+
+            Assert.True(result.Success);
+            Assert.True(service.IsPremium);
+        }
+
+        [Fact]
+        public async Task ApplyPromoCodeAsync_WhenConfigStreamExceedsSizeLimit_ShouldRejectConfig()
+        {
+            // Content-Length başlığı olmayan (chunked benzeri) gövde: sınır
+            // akış okumasında uygulanmalı, yalnızca başlık ön kontrolüne değil.
+            using var _ = TemporarilySetPromoCodesUrl("https://example.com/noctra-promo-codes.json");
+            var settings = new TestSettingsService();
+            var json = JsonSerializer.Serialize(new PromoCodeConfiguration
+            {
+                Codes =
+                {
+                    new PromoCodeDefinition { Code = "ABCD", DurationDays = 7, IsActive = true }
+                }
+            });
+            var oversized = Encoding.UTF8.GetBytes(json + new string(' ', 300 * 1024));
+            using var httpClient = new HttpClient(new StaticHttpMessageHandler(
+                HttpStatusCode.OK,
+                "",
+                contentOverride: new NoLengthContent(oversized)));
+            var service = CreateLicenseService(settings, httpClient);
+
+            var result = await service.ApplyPromoCodeAsync("ABCD");
+
+            Assert.False(result.Success);
+            Assert.Equal(PromoCodeResultKind.ConfigurationInvalid, result.Kind);
+        }
+
+        [Fact]
+        public async Task ApplyPromoCodeAsync_WhenConfigResponseIsHtml_ShouldRejectConfig()
+        {
+            using var _ = TemporarilySetPromoCodesUrl("https://example.com/noctra-promo-codes.json");
+            var settings = new TestSettingsService();
+            using var httpClient = new HttpClient(new StaticHttpMessageHandler(
+                HttpStatusCode.OK,
+                "<html><body>sign in</body></html>",
+                contentType: "text/html"));
+            var service = CreateLicenseService(settings, httpClient);
+
+            var result = await service.ApplyPromoCodeAsync("ABCD");
+
+            Assert.False(result.Success);
+            Assert.Equal(PromoCodeResultKind.ConfigurationInvalid, result.Kind);
         }
 
         [Fact]
@@ -153,7 +371,7 @@ namespace Noctra.Tests
             var result = await service.ApplyPromoCodeAsync("PROMO-EXAMPLE-7D");
 
             Assert.False(result.Success);
-            Assert.Contains("yapılandırması bulunamadı", result.Message);
+            Assert.Contains("şu anda kullanılamıyor", result.Message);
             Assert.False(service.IsPremium);
         }
 
@@ -198,6 +416,31 @@ namespace Noctra.Tests
             Assert.False(service.IsPremium);
             Assert.Null(service.ActivePromoCode);
             Assert.Null(service.PromoPremiumExpiresAtUtc);
+
+            // Fail-closed davranış doğru; ancak sessiz kalmamalı — ayarlar ekranı
+            // bu bayrağı görüp bozuk grant uyarısı gösterebilmeli.
+            Assert.True(service.IsPromoGrantCorrupted);
+        }
+
+        [Fact]
+        public void IsPromoGrantCorrupted_WhenGrantIsValid_ShouldBeFalse()
+        {
+            using var _ = TemporarilySetPromoCodesUrl("https://example.com/noctra-promo-codes.json");
+            var settings = new TestSettingsService();
+            var json = JsonSerializer.Serialize(new PromoCodeConfiguration
+            {
+                Codes =
+                {
+                    new PromoCodeDefinition { Code = "PROMO-EXAMPLE-7D", DurationDays = 7, IsActive = true }
+                }
+            });
+            using var httpClient = CreateHttpClient(HttpStatusCode.OK, json);
+            var service = CreateLicenseService(settings, httpClient);
+
+            var result = service.ApplyPromoCodeAsync("PROMO-EXAMPLE-7D").GetAwaiter().GetResult();
+
+            Assert.True(result.Success);
+            Assert.False(service.IsPromoGrantCorrupted);
         }
 
         [Fact]
@@ -273,7 +516,7 @@ namespace Noctra.Tests
             var result = await service.ApplyPromoCodeAsync("PROMO-EXAMPLE-7D");
 
             Assert.False(result.Success);
-            Assert.Equal("Promo code configuration was not found. Make sure the promo code URL is configured by the app administrator.", result.Message);
+            Assert.Equal("The promotion service is currently unavailable. Please make sure your app is up to date and try again later.", result.Message);
         }
 
         [Fact]
@@ -527,18 +770,50 @@ namespace Noctra.Tests
             public Task<int> CleanOrphanedSettingsAsync(IEnumerable<int> activeProfileIds) => Task.FromResult(0);
         }
 
-        private sealed class StaticHttpMessageHandler(HttpStatusCode statusCode, string content) : HttpMessageHandler
+        private sealed class StaticHttpMessageHandler(
+            HttpStatusCode statusCode,
+            string content,
+            string? contentType = "application/json",
+            Exception? throwException = null,
+            HttpContent? contentOverride = null) : HttpMessageHandler
         {
             public static bool LastRequestNoCache { get; private set; }
 
             protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
             {
                 LastRequestNoCache = request.Headers.CacheControl?.NoCache == true;
+
+                if (throwException is not null)
+                {
+                    throw throwException;
+                }
+
                 var response = new HttpResponseMessage(statusCode)
                 {
-                    Content = new StringContent(content, Encoding.UTF8, "application/json")
+                    Content = contentOverride ?? (contentType is null
+                        ? new StringContent(content, Encoding.UTF8)
+                        : new StringContent(content, Encoding.UTF8, contentType))
                 };
                 return Task.FromResult(response);
+            }
+        }
+
+        /// <summary>
+        /// Content-Length üretmeyen (chunked benzeri) gövde — akış sınırı yolunu test eder.
+        /// </summary>
+        private sealed class NoLengthContent : HttpContent
+        {
+            private readonly byte[] _bytes;
+
+            public NoLengthContent(byte[] bytes) => _bytes = bytes;
+
+            protected override Task SerializeToStreamAsync(Stream stream, TransportContext? context)
+                => stream.WriteAsync(_bytes, 0, _bytes.Length);
+
+            protected override bool TryComputeLength(out long length)
+            {
+                length = 0;
+                return false;
             }
         }
 
