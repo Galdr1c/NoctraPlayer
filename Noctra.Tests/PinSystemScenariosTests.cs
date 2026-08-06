@@ -619,6 +619,42 @@ namespace Noctra.Tests
         }
 
         [Fact]
+        public void DeletionUrgency_IsContinuousAcross24HourBoundary()
+        {
+            // 25 saat kala → 0.6'nın hemen üzerinde (eski davranış 1.0 atlardı)
+            var profile = new Profile
+            {
+                PendingDeletionAt = DateTime.UtcNow.AddHours(25 - 72)
+            };
+            var justAbove24h = profile.DeletionUrgency;
+            Assert.InRange(justAbove24h, 0.60, 0.65);
+            Assert.True(justAbove24h < 1.0, "24 saat sınırının hemen üzerinde 1.0'a sıçramamalı");
+
+            // 24 saat kala → 0.6 civarı (sürekli geçiş)
+            profile.PendingDeletionAt = DateTime.UtcNow.AddHours(24 - 72);
+            Assert.InRange(profile.DeletionUrgency, 0.58, 0.61);
+
+            // 12 saat kala → 0.3 civarı
+            profile.PendingDeletionAt = DateTime.UtcNow.AddHours(12 - 72);
+            Assert.InRange(profile.DeletionUrgency, 0.28, 0.31);
+        }
+
+        [Fact]
+        public void DeletionUrgency_ClampsAtEnds()
+        {
+            // 72 saat ve üzeri → 1.0 (normal)
+            var fresh = new Profile { PendingDeletionAt = DateTime.UtcNow.AddHours(1) };
+            Assert.Equal(1.0, fresh.DeletionUrgency);
+
+            // Süre dolmuş → 0.0 (tam kırmızı)
+            var expired = new Profile { PendingDeletionAt = DateTime.UtcNow.AddHours(-72) };
+            Assert.Equal(0.0, expired.DeletionUrgency);
+
+            // Silme yok → 1.0 (renk normal kalır)
+            Assert.Equal(1.0, new Profile().DeletionUrgency);
+        }
+
+        [Fact]
         public async Task DeletionLifecycle_Schedule_SetsPendingAt()
         {
             // Arrange

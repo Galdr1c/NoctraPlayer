@@ -80,7 +80,9 @@ public class Profile
 
     /// <summary>
     /// Renk geçişi için: 0.0 (tam kırmızı) - 1.0 (normal)
-    /// Son 12 saat kırmızıya, son 24 saat turuncuya döner
+    /// Sürekli eğri: 0s → 0.0, 12s → 0.3, 24s → 0.6, 72s → 1.0.
+    /// 24 saat sınırında ani sıçrama olmaz (eski davranış 24s üstünde
+    /// doğrudan 1.0 dönerdi; 0.6 → 1.0 atlaması görsel kesintiye yol açardı).
     /// </summary>
     [NotMapped]
     public double DeletionUrgency
@@ -90,8 +92,9 @@ public class Profile
             if (!IsPendingDeletion || TimeUntilDeletion == null) return 1.0;
             var totalHours = TimeUntilDeletion.Value.TotalHours;
             if (totalHours <= 0) return 0.0;
-            if (totalHours <= 12) return totalHours / 12.0 * 0.3;       // 0.0–0.3
+            if (totalHours <= 12) return totalHours / 12.0 * 0.3;              // 0.0–0.3
             if (totalHours <= 24) return 0.3 + (totalHours - 12) / 12.0 * 0.3; // 0.3–0.6
+            if (totalHours <= 72) return 0.6 + (totalHours - 24) / 48.0 * 0.4; // 0.6–1.0
             return 1.0;
         }
     }
