@@ -121,11 +121,6 @@ public partial class App : Application
 
             ApplyApplicationLanguage(settingsService.Settings.Language);
 
-            if (string.IsNullOrWhiteSpace(settingsService.Settings.PromoCodeConfigUrl))
-            {
-                settingsService.Settings.PromoCodeConfigUrl = Mobile.Services.MobileAppConfig.PromoCodesUrl;
-            }
-
             // React to settings changes (language / theme hot-reload)
             settingsService.SettingsChanged += () =>
             {

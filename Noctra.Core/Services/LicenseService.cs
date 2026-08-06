@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Reflection;
 using System.Text.Json;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Noctra.Models;
@@ -67,12 +68,34 @@ public class LicenseService : ObservableObject, ILicenseService
 #endif
 
     /// <summary>
-    /// Developer: Uzak JSON adresini burada sabitleyebilir, settings.json içindeki
-    /// promoCodeConfigUrl alanı veya NOCTRA_PROMO_CODES_URL environment değişkeni ile verebilirsin.
+    /// Release build'de kullanılan güvenilir promosyon kodu JSON adresi.
+    /// URL kaynak kodda TUTULMAZ (GitHub'da görünmemesi için) — build sırasında
+    /// NOCTRA_PROMO_CODES_URL ortam değişkeninden okunup assembly metadata
+    /// olarak derlemeye gömülür (bkz. Noctra.Core.csproj). Kullanıcının
+    /// değiştirebileceği settings.json alanından veya runtime ortam
+    /// değişkeninden ASLA alınmaz.
     /// Beklenen JSON:
     /// { "codes": [ { "code": "PROMO-EXAMPLE-7D", "durationDays": 7, "isActive": true } ] }
+    /// Üretimde bu akış server-side redemption ile değiştirilmelidir; client-side
+    /// doğrulama yalnızca test/basit kampanyalar içindir.
     /// </summary>
-    private const string DefaultRemotePromoCodesUrl = "";
+    private static string TrustedPromoEndpoint
+    {
+        get
+        {
+#if DEBUG
+            // DEBUG'da URL yalnızca runtime ortamından gelir (LoadDotEnv → .env
+            // veya NOCTRA_PROMO_CODES_URL). Build-time metadata okunmaz; böylece
+            // testler .env içeriğinden bağımsız, deterministik kalır.
+            return string.Empty;
+#else
+            return Assembly.GetExecutingAssembly()
+                .GetCustomAttributes<AssemblyMetadataAttribute>()
+                .FirstOrDefault(a => string.Equals(a.Key, "Noctra.PromoEndpoint", StringComparison.Ordinal))
+                ?.Value ?? string.Empty;
+#endif
+        }
+    }
 
 
     private static readonly JsonSerializerOptions PromoJsonOptions = new()
@@ -293,19 +316,20 @@ public class LicenseService : ObservableObject, ILicenseService
 
     private string GetRemotePromoCodesUrl()
     {
-        var envUrl = Environment.GetEnvironmentVariable("NOCTRA_PROMO_CODES_URL");
-        if (!string.IsNullOrWhiteSpace(envUrl))
+        // Kullanıcının ayar dosyasını değiştirip kendi promosyon JSON'unu
+        // işaret etmesi, uygulamanın kendi geçerli PromoGrant üretmesiyle
+        // sonuçlanırdı. Bu yüzden yalnızca DEBUG'da env override'ı kabul
+        // edilir (geliştirici test kampanyaları); Release'de adres yalnızca
+        // derleme sabitinden gelir ve kullanıcı girdisinden etkilenemez.
+#if DEBUG
+        var overrideUrl = Environment.GetEnvironmentVariable("NOCTRA_PROMO_CODES_URL");
+        if (!string.IsNullOrWhiteSpace(overrideUrl))
         {
-            return envUrl.Trim();
+            return overrideUrl.Trim();
         }
+#endif
 
-        var settingsUrl = _settingsService.Settings.PromoCodeConfigUrl;
-        if (!string.IsNullOrWhiteSpace(settingsUrl))
-        {
-            return settingsUrl.Trim();
-        }
-
-        return DefaultRemotePromoCodesUrl;
+        return TrustedPromoEndpoint;
     }
 
     private sealed record PromoCodeLoadResult(

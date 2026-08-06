@@ -83,11 +83,8 @@ namespace Noctra.Tests
         [Fact]
         public async Task ApplyPromoCodeAsync_WhenRemoteConfigFails_ShouldReturnLoadError()
         {
-            using var _ = TemporarilyClearPromoCodesUrl();
-            var settings = new TestSettingsService
-            {
-                Settings = { PromoCodeConfigUrl = "https://example.com/noctra-promo-codes.json" }
-            };
+            using var _ = TemporarilySetPromoCodesUrl("https://example.com/noctra-promo-codes.json");
+            var settings = new TestSettingsService();
             using var httpClient = CreateHttpClient(HttpStatusCode.InternalServerError, "{}");
             var service = CreateLicenseService(settings, httpClient);
 
@@ -98,13 +95,10 @@ namespace Noctra.Tests
         }
 
         [Fact]
-        public async Task ApplyPromoCodeAsync_WhenSettingsConfigUrlHasCode_ShouldActivatePromoPremium()
+        public async Task ApplyPromoCodeAsync_WhenEnvConfigUrlHasCode_ShouldActivatePromoPremium()
         {
-            using var _ = TemporarilyClearPromoCodesUrl();
-            var settings = new TestSettingsService
-            {
-                Settings = { PromoCodeConfigUrl = "https://example.com/noctra-promo-codes.json" }
-            };
+            using var _ = TemporarilySetPromoCodesUrl("https://example.com/noctra-promo-codes.json");
+            var settings = new TestSettingsService();
             var json = JsonSerializer.Serialize(new PromoCodeConfiguration
             {
                 Codes =
@@ -129,13 +123,45 @@ namespace Noctra.Tests
         }
 
         [Fact]
-        public async Task ApplyPromoCodeAsync_WhenCodeIsAccepted_ShouldPersistEncryptedPromoGrantOnly()
+        public async Task ApplyPromoCodeAsync_WhenOnlySettingsConfigUrlExists_ShouldNotUseUntrustedUrl()
         {
+            // Güvenlik: settings.json kullanıcı tarafından düzenlenebilir —
+            // oradaki PromoCodeConfigUrl asla promosyon kaynağı olarak
+            // kullanılmamalı; aksi halde kullanıcı kendi JSON'unu işaret
+            // edip kendine Premium açabilirdi.
             using var _ = TemporarilyClearPromoCodesUrl();
             var settings = new TestSettingsService
             {
                 Settings = { PromoCodeConfigUrl = "https://example.com/noctra-promo-codes.json" }
             };
+            var json = JsonSerializer.Serialize(new PromoCodeConfiguration
+            {
+                Codes =
+                {
+                    new PromoCodeDefinition
+                    {
+                        Code = "PROMO-EXAMPLE-7D",
+                        DurationDays = 36500,
+                        IsActive = true,
+                        AllowReuse = true
+                    }
+                }
+            });
+            using var httpClient = CreateHttpClient(HttpStatusCode.OK, json);
+            var service = CreateLicenseService(settings, httpClient);
+
+            var result = await service.ApplyPromoCodeAsync("PROMO-EXAMPLE-7D");
+
+            Assert.False(result.Success);
+            Assert.Contains("yapılandırması bulunamadı", result.Message);
+            Assert.False(service.IsPremium);
+        }
+
+        [Fact]
+        public async Task ApplyPromoCodeAsync_WhenCodeIsAccepted_ShouldPersistEncryptedPromoGrantOnly()
+        {
+            using var _ = TemporarilySetPromoCodesUrl("https://example.com/noctra-promo-codes.json");
+            var settings = new TestSettingsService();
             var json = JsonSerializer.Serialize(new PromoCodeConfiguration
             {
                 Codes =
@@ -245,6 +271,13 @@ namespace Noctra.Tests
         {
             var previousValue = Environment.GetEnvironmentVariable("NOCTRA_PROMO_CODES_URL");
             Environment.SetEnvironmentVariable("NOCTRA_PROMO_CODES_URL", null);
+            return new RestoreEnvironmentVariable("NOCTRA_PROMO_CODES_URL", previousValue);
+        }
+
+        private static IDisposable TemporarilySetPromoCodesUrl(string url)
+        {
+            var previousValue = Environment.GetEnvironmentVariable("NOCTRA_PROMO_CODES_URL");
+            Environment.SetEnvironmentVariable("NOCTRA_PROMO_CODES_URL", url);
             return new RestoreEnvironmentVariable("NOCTRA_PROMO_CODES_URL", previousValue);
         }
 

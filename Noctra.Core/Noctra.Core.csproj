@@ -20,6 +20,23 @@
   </ItemGroup>
 
   <ItemGroup>
+    <AssemblyMetadata Include="Noctra.PromoEndpoint" Value="$(NOCTRA_PROMO_CODES_URL)" Condition="'$(NOCTRA_PROMO_CODES_URL)' != ''" />
+  </ItemGroup>
+
+  <Target Name="LoadPromoEndpointFromDotEnv" BeforeTargets="GetAssemblyAttributes" Condition="'$(Configuration)' == 'Release' and '$(NOCTRA_PROMO_CODES_URL)' == '' and Exists('$(MSBuildThisFileDirectory)..\.env')">
+    <ReadLinesFromFile File="$(MSBuildThisFileDirectory)..\.env">
+      <Output TaskParameter="Lines" ItemName="_PromoEnvLine" />
+    </ReadLinesFromFile>
+    <ItemGroup>
+      <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute"
+                         Condition="$([System.String]::Copy('%(_PromoEnvLine.Identity)').StartsWith('NOCTRA_PROMO_CODES_URL='))">
+        <_Parameter1>Noctra.PromoEndpoint</_Parameter1>
+        <_Parameter2>$([System.String]::Copy('%(_PromoEnvLine.Identity)').Remove(0, 23).Trim())</_Parameter2>
+      </AssemblyAttribute>
+    </ItemGroup>
+  </Target>
+
+  <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
     <PackageReference Include="LibVLCSharp" Version="3.9.5" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.2" />

@@ -7,13 +7,6 @@ namespace Noctra.Mobile.Services;
 /// </summary>
 public static class MobileAppConfig
 {
-    /// <summary>
-    /// Promo code JSON URL. Change this before building the mobile app.
-    /// Expected JSON format:
-    /// { "codes": [ { "code": "PROMO-EXAMPLE-7D", "durationDays": 7, "isActive": true } ] }
-    /// </summary>
-    public const string PromoCodesUrl = "https://gist.githubusercontent.com/Galdr1c/da2f7dde1641623bf62e78c414fdd54c/raw/noctra_promo_codes.json";
-    
     // ========== DEVELOPMENT TESTING ==========
     // For local testing, you can use:
     // 1. A test file in project root: "file:///path/to/test-promo-codes.json"
