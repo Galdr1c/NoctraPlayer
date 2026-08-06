@@ -6,8 +6,9 @@ namespace Noctra.ViewModels;
 
 public partial class PinEntryViewModel : ObservableObject, IDisposable
 {
-    private readonly IProfilePinService _pinService;
+    private readonly IProfileService _profileService;
     private readonly IDispatcherService _dispatcherService;
+    private readonly int _profileId;
     private readonly string _pinVerifier;
     private readonly ILocalizationService _localizationService;
     private readonly CancellationTokenSource _lockoutCts = new();
@@ -30,6 +31,16 @@ public partial class PinEntryViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(LockoutMessageText))]
     private int _lockSecondsRemaining;
+
+    /// <summary>
+    /// Doğrulama + kalıcı sayaç/kilit güncellemesi (VerifyAttemptAsync) devam
+    /// ederken keypad kısa süreliğine devre dışı kalır. Böylece art arda girilen
+    /// PIN'ler veritabanındaki deneme sayacını yarışa sokmaz; her deneme atomik
+    /// servis çağrısıyla tamamlanmadan bir sonraki başlayamaz.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsKeypadEnabled))]
+    private bool _isVerifying;
 
     /// <summary>
     /// Lockout sırasında gösterilen birleşik mesaj — neden kilitlenildiği ve
@@ -57,10 +68,9 @@ public partial class PinEntryViewModel : ObservableObject, IDisposable
     private int _shakeTrigger;
 
     /// <summary>
-    /// PIN2 doğrulaması senkrondur ve mikrosaniye mertebesinde tamamlanır —
-    /// spinner veya background thread gerekmez, keypad yalnızca lockout'ta devre dışı kalır.
+    /// Keypad yalnızca kilit veya devam eden doğrulama sırasında devre dışı kalır.
     /// </summary>
-    public bool IsKeypadEnabled => !IsLocked;
+    public bool IsKeypadEnabled => !IsLocked && !IsVerifying;
 
     public int PinLength => EnteredPin.Length;
 
@@ -85,14 +95,17 @@ public partial class PinEntryViewModel : ObservableObject, IDisposable
     public event EventHandler<bool?>? PinResult;
 
     /// <summary>
-    /// Her başarısız denemede tetiklenir. Parametre: güncel toplam başarısız
-    /// deneme sayısı. UI bu sayıyı kalıcı state'e (ProfileService) yazar.
+    /// Her başarısız denemede tetiklenir. Parametre: veritabanındaki kalıcı
+    /// toplam başarısız deneme sayısı (atomik servis yanıtından alınır).
+    /// Sayaç ve kilit artık tek servis çağrısında güncellenir — UI'ın ayrıca
+    /// persist etmesi gerekmez.
     /// </summary>
     public event EventHandler<int>? AttemptFailed;
 
     public PinEntryViewModel(
-        IProfilePinService pinService,
+        IProfileService profileService,
         IDispatcherService dispatcherService,
+        int profileId,
         string pinVerifier,
         string profileName,
         string profileAvatar,
@@ -101,8 +114,9 @@ public partial class PinEntryViewModel : ObservableObject, IDisposable
         int failedAttempts = 0,
         DateTime? lockedUntilUtc = null)
     {
-        _pinService = pinService;
+        _profileService = profileService;
         _dispatcherService = dispatcherService;
+        _profileId = profileId;
         _pinVerifier = pinVerifier;
         ProfileName = profileName;
         ProfileAvatar = profileAvatar;
@@ -117,22 +131,25 @@ public partial class PinEntryViewModel : ObservableObject, IDisposable
     }
 
     [RelayCommand]
-    private void PressDigit(string digit)
+    private async Task PressDigit(string digit)
     {
-        if (IsLocked || EnteredPin.Length >= 4) return;
+        if (IsLocked || IsVerifying || EnteredPin.Length >= 4) return;
 
         EnteredPin += digit;
         OnPropertyChanged(nameof(PinLength));
         OnPropertyChanged(nameof(PinProgressA11yText));
 
-        // 4 hane dolunca otomatik doğrula — senkron, anında
+        // 4 hane dolunca otomatik doğrula — tek atomik servis çağrısı
+        // (PIN kontrolü + kalıcı sayaç/kilit güncellemesi birlikte).
         if (EnteredPin.Length == 4)
-            VerifyPin();
+            await VerifyPinAsync();
     }
 
     [RelayCommand]
     private void Backspace()
     {
+        if (IsLocked || IsVerifying) return;
+
         if (EnteredPin.Length > 0)
             EnteredPin = EnteredPin[..^1];
 
@@ -141,33 +158,77 @@ public partial class PinEntryViewModel : ObservableObject, IDisposable
         ErrorMessage = string.Empty;
     }
 
-    private void VerifyPin()
+    /// <summary>
+    /// PIN'i doğrular ve deneme sayacını/kilit durumunu TEK atomik servis
+    /// çağrısıyla günceller. Sonuç kalıcı state'ten geldiği için UI yerel
+    /// sayacına güvenmez; eşzamanlı denemeler sayaçta kayıp yaratamaz.
+    /// </summary>
+    private async Task VerifyPinAsync()
     {
-        if (_pinService.Verify(EnteredPin, _pinVerifier))
+        if (_disposed) return;
+
+        IsVerifying = true;
+        try
         {
-            PinResult?.Invoke(this, true);
-            return;
+            var result = await _profileService.VerifyAttemptAsync(
+                _profileId,
+                EnteredPin,
+                _pinVerifier);
+
+            if (_disposed) return;
+
+            if (result.IsValid)
+            {
+                _attemptCount = 0;
+                PinResult?.Invoke(this, true);
+                return;
+            }
+
+            // Kalıcı sayaç servisten gelir — eşiğe (MaxAttempts) dayalı mesajlar
+            // veritabanındaki gerçek sayaçla tutarlıdır.
+            _attemptCount = result.State.FailedPinAttempts;
+            EnteredPin = string.Empty;
+            OnPropertyChanged(nameof(PinLength));
+            OnPropertyChanged(nameof(PinProgressA11yText));
+
+            ShakeTrigger++;
+            AttemptFailed?.Invoke(this, _attemptCount);
+
+            if (result.State.IsLocked)
+            {
+                // Neden + geri sayım birlikte gösterilir (LockoutMessageText);
+                // ApplyLockout ayrıca ErrorMessage'i temizler (UI çakışması olmaz).
+                ApplyLockout(result.State.PinLockedUntilUtc!.Value);
+                return;
+            }
+
+            int remaining = MaxAttempts - _attemptCount;
+            ErrorMessage = remaining <= 0
+                ? _localizationService.GetString("PinEntry.Error.TooManyAttempts")
+                : remaining == 1
+                    ? _localizationService.GetString("PinEntry.Error.WrongPinLast")
+                    : string.Format(_localizationService.GetString("PinEntry.Error.WrongPinRemainingFormat"), remaining);
         }
+        catch
+        {
+            if (_disposed) return;
 
-        _attemptCount++;
-        EnteredPin = string.Empty;
-        OnPropertyChanged(nameof(PinLength));
-        OnPropertyChanged(nameof(PinProgressA11yText));
-
-        ShakeTrigger++;
-        AttemptFailed?.Invoke(this, _attemptCount);
-
-        int remaining = MaxAttempts - _attemptCount;
-        ErrorMessage = remaining <= 0
-            ? _localizationService.GetString("PinEntry.Error.TooManyAttempts")
-            : remaining == 1
-                ? _localizationService.GetString("PinEntry.Error.WrongPinLast")
-                : string.Format(_localizationService.GetString("PinEntry.Error.WrongPinRemainingFormat"), remaining);
+            // DB/verifier hatası kilit akışını bozmasın — giriş temizlenir,
+            // genel hata gösterilir; sayaç artırılmaz (hiçbir şey kalıcılaşmadı).
+            EnteredPin = string.Empty;
+            OnPropertyChanged(nameof(PinLength));
+            OnPropertyChanged(nameof(PinProgressA11yText));
+            ErrorMessage = _localizationService.GetString("PinEntry.Error.VerificationFailed");
+        }
+        finally
+        {
+            IsVerifying = false;
+        }
     }
 
     /// <summary>
-    /// Kalıcı lockout başladığında UI tarafından çağrılır — kilit ekranını
-    /// açar ve verilen zamana kadar geri sayım başlatır.
+    /// Kalıcı lockout başladığında çağrılır — kilit ekranını açar ve verilen
+    /// zamana kadar geri sayım başlatır.
     /// </summary>
     public void ApplyLockout(DateTime untilUtc)
     {

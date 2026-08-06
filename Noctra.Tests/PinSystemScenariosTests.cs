@@ -332,8 +332,9 @@ namespace Noctra.Tests
             // Arrange — using: lockout sayacı test sonunda iptal edilir, aksi
             // halde 30 saniyelik detached Task.Run test paketinde yaşamaya devam eder.
             using var vm = new PinEntryViewModel(
-                _pinService,
+                new Mock<IProfileService>().Object,
                 new Mock<IDispatcherService>().Object,
+                1, // profileId
                 _pinService.CreateVerifier("1234"),
                 "Test",
                 string.Empty,
@@ -364,8 +365,9 @@ namespace Noctra.Tests
                 .Returns("Çok fazla yanlış PIN girdiniz. {0} saniye sonra tekrar deneyebilirsiniz.");
 
             var vm = new PinEntryViewModel(
-                _pinService,
+                new Mock<IProfileService>().Object,
                 new Mock<IDispatcherService>().Object,
+                1, // profileId
                 _pinService.CreateVerifier("1234"),
                 "Test",
                 string.Empty,
@@ -402,8 +404,9 @@ namespace Noctra.Tests
                 .Returns("{1} of {0} digits entered");
 
             var vm = new PinEntryViewModel(
-                _pinService,
+                new Mock<IProfileService>().Object,
                 new Mock<IDispatcherService>().Object,
+                1, // profileId
                 _pinService.CreateVerifier("1234"),
                 "Test",
                 string.Empty,
@@ -434,8 +437,9 @@ namespace Noctra.Tests
             // Arrange
             var dispatcher = new Mock<IDispatcherService>();
             var vm = new PinEntryViewModel(
-                _pinService,
+                new Mock<IProfileService>().Object,
                 dispatcher.Object,
+                1, // profileId
                 _pinService.CreateVerifier("1234"),
                 "Test",
                 string.Empty,
@@ -467,8 +471,9 @@ namespace Noctra.Tests
                 .Callback<Action>(action => action());
 
             var vm = new PinEntryViewModel(
-                _pinService,
+                new Mock<IProfileService>().Object,
                 dispatcher.Object,
+                1, // profileId
                 _pinService.CreateVerifier("1234"),
                 "Test",
                 string.Empty,
@@ -495,16 +500,25 @@ namespace Noctra.Tests
         }
 
         [Fact]
-        public void PinEntry_ResumesAttemptCount_FromPersistedState()
+        public async Task PinEntry_ResumesAttemptCount_FromPersistedState()
         {
-            // Arrange
+            // Arrange — veritabanında 4 kalıcı hata olan profil; UI bunu devralır.
+            var verifier = _pinService.CreateVerifier("1234");
+            var profile = await SeedProfileAsync("Persisted State", verifier);
+            profile.FailedPinAttempts = 4;
+            _context.Entry(profile).State = EntityState.Modified;
+            await _context.SaveChangesAsync();
+
+            var service = new ProfileService(_contextFactory, _mockDownloadService.Object, _mockLicenseService.Object);
+
             var localization = new Mock<ILocalizationService>();
             localization.Setup(s => s.GetString(It.IsAny<string>())).Returns((string key) => key);
 
             var vm = new PinEntryViewModel(
-                _pinService,
+                service,
                 new Mock<IDispatcherService>().Object,
-                _pinService.CreateVerifier("1234"),
+                profile.Id,
+                verifier,
                 "Test",
                 string.Empty,
                 "Login",
@@ -514,24 +528,42 @@ namespace Noctra.Tests
             var failed = 0;
             vm.AttemptFailed += (_, count) => failed = count;
 
-            // Act — one wrong entry after 4 persisted failures reaches the threshold
-            foreach (var digit in "1111")
+            using (vm)
             {
-                vm.PressDigitCommand.Execute(digit.ToString());
+                // Act — 4 kalıcı hatanın ardından 5. yanlış giriş (atomik servis çağrısı)
+                vm.PressDigitCommand.Execute("1");
+                vm.PressDigitCommand.Execute("1");
+                vm.PressDigitCommand.Execute("1");
+                await vm.PressDigitCommand.ExecuteAsync("1");
+
+                // Assert — 5. hata kilidi kalıcılaştırır ve UI kilitlenir;
+                // sayaç artık veritabanından gelir (UI yerel sayacına güvenmez).
+                Assert.Equal(5, failed);
+                Assert.True(vm.IsLocked);
+                Assert.True(vm.LockSecondsRemaining > 0);
+                Assert.False(vm.ShowErrorMessage);
             }
 
-            // Assert — the 5th failure is reported so the caller can persist the lock
-            Assert.Equal(5, failed);
-            Assert.Equal("PinEntry.Error.TooManyAttempts", vm.ErrorMessage);
+            // Kalıcılık — uygulama yeniden açılsa bile kilit sürer.
+            using var dbVerify = _contextFactory.CreateDbContext();
+            var persisted = await dbVerify.Profiles.FindAsync(profile.Id);
+            Assert.Equal(5, persisted!.FailedPinAttempts);
+            Assert.NotNull(persisted.PinLockedUntilUtc);
         }
 
         [Fact]
-        public void PinEntry_CorrectPin_VerifiesSynchronously()
+        public async Task PinEntry_CorrectPin_VerifiesAtomically()
         {
-            // Arrange
+            // Arrange — servis doğru PIN için atomik başarı döndürür (sayaç sıfırlanır)
+            var profileService = new Mock<IProfileService>();
+            profileService
+                .Setup(s => s.VerifyAttemptAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>()))
+                .ReturnsAsync(new ProfilePinAttemptResult(true, new PinVerificationState(0, null, false, null)));
+
             var vm = new PinEntryViewModel(
-                _pinService,
+                profileService.Object,
                 new Mock<IDispatcherService>().Object,
+                1, // profileId
                 _pinService.CreateVerifier("1234"),
                 "Test",
                 string.Empty,
@@ -543,31 +575,36 @@ namespace Noctra.Tests
 
             using (vm)
             {
-                // Act — 4. rakam girildiği anda doğrulama senkron tamamlanır
-                foreach (var digit in "1234")
-                {
-                    vm.PressDigitCommand.Execute(digit.ToString());
-                }
+                // Act — 4. rakam doğrulamayı başlatır; servis dönünce sonuç gelir
+                vm.PressDigitCommand.Execute("1");
+                vm.PressDigitCommand.Execute("2");
+                vm.PressDigitCommand.Execute("3");
+                await vm.PressDigitCommand.ExecuteAsync("4");
 
-                // Assert — spinner/IsVerifying yok; sonuç anında gelir, keypad açık kalır
+                // Assert — doğru PIN anında döner, keypad yeniden etkinleşir
                 Assert.True(result);
                 Assert.Equal("1234", vm.EnteredPin);
                 Assert.True(vm.IsKeypadEnabled);
+                Assert.False(vm.IsVerifying);
             }
         }
 
         [Fact]
-        public void PinEntry_LegacyFormatHash_IsRejected()
+        public async Task PinEntry_LegacyFormatHash_IsRejected()
         {
             // Arrange — eski (PBKDF2/legacy SHA-256) hash'ler PIN2'ye geçişte
-            // sıfırlanır; doğrulama artık bu formatları kabul etmez.
+            // sıfırlanır; atomik doğrulama artık bu formatları kabul etmez.
             const string legacyHashFor1234 = "83D837DD7E939316F5A94A1216FF2E6F2DC9E9859441F333CC12FA2414468B88";
+            var profile = await SeedProfileAsync("Legacy", legacyHashFor1234);
+            var service = new ProfileService(_contextFactory, _mockDownloadService.Object, _mockLicenseService.Object);
+
             var localization = new Mock<ILocalizationService>();
             localization.Setup(s => s.GetString(It.IsAny<string>())).Returns((string key) => key);
 
             var vm = new PinEntryViewModel(
-                _pinService,
+                service,
                 new Mock<IDispatcherService>().Object,
+                profile.Id,
                 legacyHashFor1234,
                 "Test",
                 string.Empty,
@@ -580,10 +617,10 @@ namespace Noctra.Tests
             using (vm)
             {
                 // Act
-                foreach (var digit in "1234")
-                {
-                    vm.PressDigitCommand.Execute(digit.ToString());
-                }
+                vm.PressDigitCommand.Execute("1");
+                vm.PressDigitCommand.Execute("2");
+                vm.PressDigitCommand.Execute("3");
+                await vm.PressDigitCommand.ExecuteAsync("4");
 
                 // Assert — legacy format başarısız deneme olarak sayılır, giriş temizlenir
                 Assert.Equal(1, failedAttempts);
@@ -937,6 +974,60 @@ namespace Noctra.Tests
             vm.TouchField("PinConfirm");
             Assert.Null(vm.PinError);
             Assert.Null(vm.PinConfirmationError);
+        }
+
+        [Fact]
+        public async Task PinLockout_ConcurrentWrongAttempts_NoLostUpdates()
+        {
+            // Arrange — aynı profilde 5 EŞZAMANLI yanlış deneme. Eski akışta
+            // her deneme ayrı DbContext'te oku-artır-yaz yaptığı için güncellemeler
+            // kaybolurdu (UI 5 derken DB 1-2 kalabilirdi).
+            var verifier = _pinService.CreateVerifier("1234");
+            var profile = await SeedProfileAsync("Concurrent Race", verifier);
+            var service = new ProfileService(_contextFactory, _mockDownloadService.Object, _mockLicenseService.Object);
+
+            // Act — hepsi aynı anda başlar; servis profil bazında serileştirir.
+            var tasks = Enumerable.Range(0, 5)
+                .Select(_ => service.VerifyAttemptAsync(profile.Id, "9999", verifier))
+                .ToArray();
+            var results = await Task.WhenAll(tasks);
+
+            // Assert — kayıp güncelleme yok: 5 denemenin TAMAMI sayılmalı,
+            // tam olarak biri kilidi tetiklemeli.
+            Assert.Equal(5, results.Count(r => !r.IsValid));
+            Assert.Equal(1, results.Count(r => r.State.IsLocked));
+
+            using var dbVerify = _contextFactory.CreateDbContext();
+            var persisted = await dbVerify.Profiles.FindAsync(profile.Id);
+            Assert.Equal(5, persisted!.FailedPinAttempts);
+            Assert.NotNull(persisted.PinLockedUntilUtc);
+        }
+
+        [Fact]
+        public async Task PinLockout_LockedProfile_RejectsAttemptsUntilExpiry()
+        {
+            // Arrange — 5 hata ile kilitlenmiş profil
+            var verifier = _pinService.CreateVerifier("1234");
+            var profile = await SeedProfileAsync("Hard Locked", verifier);
+            var service = new ProfileService(_contextFactory, _mockDownloadService.Object, _mockLicenseService.Object);
+
+            for (var i = 0; i < 5; i++)
+            {
+                await service.VerifyAttemptAsync(profile.Id, "9999", verifier);
+            }
+
+            // Act — kilit sırasında DOĞRU PIN bile kabul edilmez; sayaç sıfırlanmaz
+            var result = await service.VerifyAttemptAsync(profile.Id, "1234", verifier);
+
+            // Assert — doğrulama reddedilir, kilit sürer
+            Assert.False(result.IsValid);
+            Assert.True(result.State.IsLocked);
+            Assert.True(result.State.RemainingLockDuration!.Value.TotalSeconds is > 20 and <= 30);
+
+            using var dbVerify = _contextFactory.CreateDbContext();
+            var persisted = await dbVerify.Profiles.FindAsync(profile.Id);
+            Assert.Equal(5, persisted!.FailedPinAttempts);
+            Assert.NotNull(persisted.PinLockedUntilUtc);
         }
 
         private AddProfileViewModel CreatePinSetupViewModel(

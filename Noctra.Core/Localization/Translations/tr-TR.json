@@ -678,6 +678,7 @@
   "PinEntry.Error.WrongPinLast": "Yanlış PIN. Son deneme hakkınız.",
   "PinEntry.Error.WrongPinRemainingFormat": "Yanlış PIN. {0} deneme hakkınız kaldı.",
   "PinEntry.Error.TooManyAttempts": "Çok fazla yanlış PIN girdiniz.",
+  "PinEntry.Error.VerificationFailed": "PIN doğrulaması başarısız oldu. Lütfen tekrar deneyin.",
   "Main.Error.PlaylistUnreachableFormat": "⚠️ Playlist kaynağına erişilemiyor (HTTP {0}). URL değişmiş olabilir, profil ayarlarını kontrol edin.",
   "Main.Error.InternetOrUrlCheck": "⚠️ Playlist kaynağına ulaşılamıyor. İnternet bağlantınızı veya URL'yi kontrol edin.",
   "Error.Common.Default": "Bilinmeyen bir hata oluştu. Lütfen tekrar deneyin.",

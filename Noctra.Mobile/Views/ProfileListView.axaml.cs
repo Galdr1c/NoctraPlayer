@@ -207,9 +207,14 @@ public partial class ProfileListView : UserControl
         }
 
         var completion = new TaskCompletionSource<bool?>();
+        // Doğrulama + sayaç/kilit güncellemesi tek atomik servis çağrısında
+        // yapılır (VerifyAttemptAsync) — ViewModel keypad'i doğrulama boyunca
+        // kilitler, UI ayrıca persist etmez. Böylece art arda girilen hatalı
+        // PIN'ler veritabanındaki sayacı kaybettiremez.
         var pinViewModel = new PinEntryViewModel(
-            app.Services.GetRequiredService<IProfilePinService>(),
+            app.Services.GetRequiredService<IProfileService>(),
             app.Services.GetRequiredService<IDispatcherService>(),
+            profile.Id,
             profile.PinHash,
             profile.Name,
             profile.Avatar,
@@ -219,14 +224,12 @@ public partial class ProfileListView : UserControl
             state.PinLockedUntilUtc);
 
         _activePinEntryViewModel = pinViewModel;
-        pinViewModel.AttemptFailed += PinEntry_AttemptFailed;
         pinViewModel.PinResult += PinEntry_PinResult;
         PinEntryContent.DataContext = pinViewModel;
         PinEntryHost.IsVisible = true;
         PinEntryContent.Focus();
 
         var result = await completion.Task;
-        pinViewModel.AttemptFailed -= PinEntry_AttemptFailed;
         pinViewModel.PinResult -= PinEntry_PinResult;
         // Akış bitti (doğru PIN, iptal veya "şifremi unuttum") — devam eden
         // lockout sayacını iptal et; ölü ViewModel artık UI güncellemesi yapamaz.
@@ -241,34 +244,8 @@ public partial class ProfileListView : UserControl
 
         return result == true;
 
-        void PinEntry_AttemptFailed(object? sender, int attemptCount)
-        {
-            _ = PersistFailureAsync();
-
-            async Task PersistFailureAsync()
-            {
-                try
-                {
-                    var newState = await profileService.RegisterPinFailureAsync(profile.Id);
-                    if (newState.IsLocked)
-                    {
-                        pinViewModel.ApplyLockout(newState.PinLockedUntilUtc!.Value);
-                    }
-                }
-                catch
-                {
-                    // DB hatası kilit akışını bozmasın
-                }
-            }
-        }
-
         void PinEntry_PinResult(object? sender, bool? value)
         {
-            if (value == true)
-            {
-                _ = profileService.ResetPinAttemptsAsync(profile.Id);
-            }
-
             completion.TrySetResult(value);
         }
 

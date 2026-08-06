@@ -639,7 +639,7 @@ public sealed class MobileRecentRegressionTests
         var source = File.ReadAllText(
             ProjectFile("Noctra.Mobile", "Views", "ProfileListView.axaml.cs"));
         var methodStart = source.IndexOf(
-            "private async void ViewModel_OnProfileSelected(Profile profile)",
+            "private async void ViewModel_OnProfileSelected(Profile profile, ProfileAccessGrant? grant)",
             StringComparison.Ordinal);
         var methodEnd = source.IndexOf(
             "public bool TryHandleBack()",
@@ -651,14 +651,16 @@ public sealed class MobileRecentRegressionTests
         Assert.DoesNotContain("CreateDbContextAsync", method, StringComparison.Ordinal);
         Assert.DoesNotContain("reloadedProfile", method, StringComparison.Ordinal);
         Assert.Contains("loadingViewModel.SetProfile(profile)", method, StringComparison.Ordinal);
-        Assert.Contains("mainViewModel.LoadProfileAsync(profile)", method, StringComparison.Ordinal);
+        // LoadProfileAsync artık merkezî erişim yetkisini (grant) alır — PIN kapısı
+        // ViewModel'de doğrulanmadan yükleme başlatılamaz.
+        Assert.Contains("mainViewModel.LoadProfileAsync(profile, grant)", method, StringComparison.Ordinal);
         Assert.True(
             method.IndexOf("ProfileLoadingHost.IsVisible = true", StringComparison.Ordinal) <
-            method.IndexOf("mainViewModel.LoadProfileAsync(profile)", StringComparison.Ordinal));
+            method.IndexOf("mainViewModel.LoadProfileAsync(profile, grant)", StringComparison.Ordinal));
         Assert.Contains("DispatcherPriority.Background", method, StringComparison.Ordinal);
         Assert.True(
             method.IndexOf("DispatcherPriority.Background", StringComparison.Ordinal) <
-            method.IndexOf("mainViewModel.LoadProfileAsync(profile)", StringComparison.Ordinal));
+            method.IndexOf("mainViewModel.LoadProfileAsync(profile, grant)", StringComparison.Ordinal));
     }
 
     [Fact]

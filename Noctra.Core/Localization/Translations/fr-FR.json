@@ -678,6 +678,7 @@
   "PinEntry.Error.WrongPinLast": "Code PIN incorrect. Dernière tentative.",
   "PinEntry.Error.WrongPinRemainingFormat": "Code PIN incorrect. {0} tentatives restantes.",
   "PinEntry.Error.TooManyAttempts": "Vous avez saisi trop de codes PIN incorrects.",
+  "PinEntry.Error.VerificationFailed": "Échec de la vérification du code PIN. Veuillez réessayer.",
   "Main.Error.PlaylistUnreachableFormat": "⚠️ Source de la playlist inaccessible (HTTP {0}). L'URL a peut-être changé, vérifiez les paramètres du profil.",
   "Main.Error.InternetOrUrlCheck": "⚠️ Source de la playlist inaccessible. Vérifiez votre connexion internet ou l'URL.",
   "Error.Common.Default": "Une erreur inconnue est survenue. Veuillez réessayer.",

@@ -678,6 +678,7 @@
   "PinEntry.Error.WrongPinLast": "Incorrect PIN. Last attempt.",
   "PinEntry.Error.WrongPinRemainingFormat": "Incorrect PIN. {0} attempts remaining.",
   "PinEntry.Error.TooManyAttempts": "You entered too many incorrect PINs.",
+  "PinEntry.Error.VerificationFailed": "PIN verification failed. Please try again.",
   "Main.Error.PlaylistUnreachableFormat": "⚠️ Playlist source unreachable (HTTP {0}). URL may have changed, check profile settings.",
   "Main.Error.InternetOrUrlCheck": "⚠️ Playlist source unreachable. Check your internet connection or URL.",
   "Error.Common.Default": "An unknown error occurred. Please try again.",

@@ -50,6 +50,24 @@ public interface IProfileService
     Task<PinVerificationState> GetPinVerificationStateAsync(int profileId);
 
     /// <summary>
+    /// PIN doğrulama ile deneme sayacı/kilit güncellemesini TEK atomik işlemde
+    /// yapar. Servis profil bazında serileştirir (per-profile semaphore); art arda
+    /// veya eşzamanlı denemeler veritabanındaki sayacı kaybettirmez (race yok).
+    ///
+    /// - Doğru PIN: sayaç sıfırlanır, kilit temizlenir.
+    /// - Yanlış PIN: sayaç artırılır; eşiğe ulaşılırsa kalıcı kilit yazılır.
+    /// - Profil zaten kilitliyse doğrulamaya girilmez, güncel kilit durumu döner.
+    ///
+    /// Çağıran (PinEntryViewModel) keypad'i bu çağrı süresince devre dışı
+    /// bırakmalıdır — böylece her deneme kalıcı state'e işlenmeden bir sonraki
+    /// deneme başlayamaz.
+    /// </summary>
+    Task<ProfilePinAttemptResult> VerifyAttemptAsync(
+        int profileId,
+        string pin,
+        string verifier);
+
+    /// <summary>
     /// Art arda başarısız PIN denemesini kaydeder; eşiğe ulaşıldığında
     /// profili kalıcı olarak kilitler. Yeni durumu döndürür.
     /// </summary>
@@ -69,6 +87,15 @@ public sealed record PinVerificationState(
     DateTime? PinLockedUntilUtc,
     bool IsLocked,
     TimeSpan? RemainingLockDuration);
+
+/// <summary>
+/// Atomik PIN denemesi sonucu. Doğrulama sonucu ve güncel kalıcı durum
+/// (deneme sayacı / kilit) tek servis çağrısında birlikte döner — UI ayrıca
+/// persist etmez, böylece gecikmiş yazmalar birbirini ezemez.
+/// </summary>
+public sealed record ProfilePinAttemptResult(
+    bool IsValid,
+    PinVerificationState State);
 
 /// <summary>
 /// Immutable request object for profile save operations.

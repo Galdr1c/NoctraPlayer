@@ -678,6 +678,7 @@
   "PinEntry.Error.WrongPinLast": "PIN incorrecto. Último intento.",
   "PinEntry.Error.WrongPinRemainingFormat": "PIN incorrecto. {0} intentos restantes.",
   "PinEntry.Error.TooManyAttempts": "Ha ingresado demasiados PIN incorrectos.",
+  "PinEntry.Error.VerificationFailed": "Error en la verificación del PIN. Inténtelo de nuevo.",
   "Main.Error.PlaylistUnreachableFormat": "⚠️ Fuente inaccesible (HTTP {0}). La URL puede haber cambiado.",
   "Main.Error.InternetOrUrlCheck": "⚠️ Fuente inaccesible. Revisa tu conexión o URL.",
   "Error.Common.Default": "Ocurrió un error desconocido. Por favor intenta de nuevo.",

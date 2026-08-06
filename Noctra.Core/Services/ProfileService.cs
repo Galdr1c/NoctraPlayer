@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Microsoft.EntityFrameworkCore;
 using Noctra.Data;
 using Noctra.Models;
@@ -12,24 +13,38 @@ public class ProfileService : IProfileService
     private readonly ILicenseService _licenseService;
     private readonly ISettingsService? _settingsService;
     private readonly IProfileAccessService _profileAccessService;
+    private readonly IProfilePinService _pinService;
     private const string ProfilesLimitKey = "profiles";
 
     public const int MaxPinAttempts = 5;
     public const int PinLockoutDurationSeconds = 30;
+
+    /// <summary>
+    /// Profil bazlı PIN deneme senkronizasyonu. PIN doğrulama, deneme sayacı
+    /// ve kilit işlemleri aynı profil için serileştirilir — böylece eşzamanlı
+    /// (veya hızlı art arda) denemeler sayaçtaki güncellemeleri kaybettiremez.
+    /// Profil sayısı küçük olduğundan girişler yaşam süresi boyunca tutulur.
+    /// </summary>
+    private readonly ConcurrentDictionary<int, SemaphoreSlim> _pinSemaphores = new();
 
     public ProfileService(
         IDbContextFactory<AppDbContext> contextFactory,
         IContentDownloadService contentDownloadService,
         ILicenseService licenseService,
         ISettingsService? settingsService = null,
-        IProfileAccessService? profileAccessService = null)
+        IProfileAccessService? profileAccessService = null,
+        IProfilePinService? pinService = null)
     {
         _contextFactory = contextFactory;
         _contentDownloadService = contentDownloadService;
         _licenseService = licenseService;
         _settingsService = settingsService;
         _profileAccessService = profileAccessService ?? new ProfileAccessService();
+        _pinService = pinService ?? new ProfilePinService();
     }
+
+    private SemaphoreSlim GetProfilePinSemaphore(int profileId) =>
+        _pinSemaphores.GetOrAdd(profileId, static _ => new SemaphoreSlim(1, 1));
 
     public async Task<Profile?> SaveProfileAsync(ProfileSaveRequest request)
     {
@@ -347,62 +362,162 @@ public class ProfileService : IProfileService
 
     public async Task<PinVerificationState> GetPinVerificationStateAsync(int profileId)
     {
-        await using var db = await _contextFactory.CreateDbContextAsync();
-        var profile = await db.Profiles.FindAsync(profileId);
-        if (profile == null)
+        var semaphore = GetProfilePinSemaphore(profileId);
+        await semaphore.WaitAsync();
+        try
         {
-            return new PinVerificationState(0, null, false, null);
-        }
+            await using var db = await _contextFactory.CreateDbContextAsync();
+            var profile = await db.Profiles.FindAsync(profileId);
+            if (profile == null)
+            {
+                return new PinVerificationState(0, null, false, null);
+            }
 
-        var now = DateTime.UtcNow;
-        if (profile.PinLockedUntilUtc is { } until && until <= now)
+            var now = DateTime.UtcNow;
+            if (profile.PinLockedUntilUtc is { } until && until <= now)
+            {
+                profile.FailedPinAttempts = 0;
+                profile.PinLockedUntilUtc = null;
+                await db.SaveChangesAsync();
+                return new PinVerificationState(0, null, false, null);
+            }
+
+            return ToPinVerificationState(profile, now);
+        }
+        finally
         {
-            profile.FailedPinAttempts = 0;
-            profile.PinLockedUntilUtc = null;
+            semaphore.Release();
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<ProfilePinAttemptResult> VerifyAttemptAsync(
+        int profileId,
+        string pin,
+        string verifier)
+    {
+        var semaphore = GetProfilePinSemaphore(profileId);
+        await semaphore.WaitAsync();
+        try
+        {
+            await using var db = await _contextFactory.CreateDbContextAsync();
+            var profile = await db.Profiles.FindAsync(profileId);
+            if (profile == null)
+            {
+                return new ProfilePinAttemptResult(
+                    false,
+                    new PinVerificationState(0, null, false, null));
+            }
+
+            var now = DateTime.UtcNow;
+
+            // Süresi dolmuş kilit — sayaç sıfırlanır, kilit temizlenir.
+            if (profile.PinLockedUntilUtc is { } until && until <= now)
+            {
+                profile.FailedPinAttempts = 0;
+                profile.PinLockedUntilUtc = null;
+            }
+
+            // Aktif kilit — doğrulamaya girilmez, güncel kilit durumu döner.
+            if (profile.PinLockedUntilUtc is { } activeUntil && activeUntil > now)
+            {
+                return new ProfilePinAttemptResult(
+                    false,
+                    ToPinVerificationState(profile, now));
+            }
+
+            // Savunma: PIN'siz (boş verifier) profil için sayaç kirletilmez —
+            // UI bu profillerde kapıyı hiç açmaz; servis yalnızca bağımsız
+            // olarak da güvenli davranır (sayacı artırmadan reddeder).
+            if (string.IsNullOrWhiteSpace(verifier))
+            {
+                return new ProfilePinAttemptResult(
+                    false,
+                    ToPinVerificationState(profile, now));
+            }
+
+            if (_pinService.Verify(pin, verifier))
+            {
+                profile.FailedPinAttempts = 0;
+                profile.PinLockedUntilUtc = null;
+                await db.SaveChangesAsync();
+                return new ProfilePinAttemptResult(
+                    true,
+                    new PinVerificationState(0, null, false, null));
+            }
+
+            profile.FailedPinAttempts++;
+            if (profile.FailedPinAttempts >= MaxPinAttempts)
+            {
+                profile.PinLockedUntilUtc = now.AddSeconds(PinLockoutDurationSeconds);
+            }
+
             await db.SaveChangesAsync();
-            return new PinVerificationState(0, null, false, null);
+            return new ProfilePinAttemptResult(
+                false,
+                ToPinVerificationState(profile, now));
         }
-
-        return ToPinVerificationState(profile, now);
+        finally
+        {
+            semaphore.Release();
+        }
     }
 
     public async Task<PinVerificationState> RegisterPinFailureAsync(int profileId)
     {
-        await using var db = await _contextFactory.CreateDbContextAsync();
-        var profile = await db.Profiles.FindAsync(profileId);
-        if (profile == null)
+        var semaphore = GetProfilePinSemaphore(profileId);
+        await semaphore.WaitAsync();
+        try
         {
-            return new PinVerificationState(0, null, false, null);
-        }
+            await using var db = await _contextFactory.CreateDbContextAsync();
+            var profile = await db.Profiles.FindAsync(profileId);
+            if (profile == null)
+            {
+                return new PinVerificationState(0, null, false, null);
+            }
 
-        var now = DateTime.UtcNow;
-        if (profile.PinLockedUntilUtc is { } until && until > now)
-        {
+            var now = DateTime.UtcNow;
+            if (profile.PinLockedUntilUtc is { } until && until > now)
+            {
+                return ToPinVerificationState(profile, now);
+            }
+
+            profile.FailedPinAttempts++;
+            if (profile.FailedPinAttempts >= MaxPinAttempts)
+            {
+                profile.PinLockedUntilUtc = now.AddSeconds(PinLockoutDurationSeconds);
+            }
+
+            await db.SaveChangesAsync();
             return ToPinVerificationState(profile, now);
         }
-
-        profile.FailedPinAttempts++;
-        if (profile.FailedPinAttempts >= MaxPinAttempts)
+        finally
         {
-            profile.PinLockedUntilUtc = now.AddSeconds(PinLockoutDurationSeconds);
+            semaphore.Release();
         }
-
-        await db.SaveChangesAsync();
-        return ToPinVerificationState(profile, now);
     }
 
     public async Task ResetPinAttemptsAsync(int profileId)
     {
-        await using var db = await _contextFactory.CreateDbContextAsync();
-        var profile = await db.Profiles.FindAsync(profileId);
-        if (profile == null)
+        var semaphore = GetProfilePinSemaphore(profileId);
+        await semaphore.WaitAsync();
+        try
         {
-            return;
-        }
+            await using var db = await _contextFactory.CreateDbContextAsync();
+            var profile = await db.Profiles.FindAsync(profileId);
+            if (profile == null)
+            {
+                return;
+            }
 
-        profile.FailedPinAttempts = 0;
-        profile.PinLockedUntilUtc = null;
-        await db.SaveChangesAsync();
+            profile.FailedPinAttempts = 0;
+            profile.PinLockedUntilUtc = null;
+            await db.SaveChangesAsync();
+        }
+        finally
+        {
+            semaphore.Release();
+        }
     }
 
     private static PinVerificationState ToPinVerificationState(Profile profile, DateTime now)

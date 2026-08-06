@@ -19,7 +19,6 @@ public partial class ProfilesWindow : Window
     private readonly IDbContextFactory<AppDbContext> _contextFactory;
     private readonly IDialogService _dialogService;
     private readonly ISettingsService _settingsService;
-    private readonly IProfilePinService _pinService;
     private readonly IProfileService _profileService;
     private readonly IDispatcherService _dispatcherService;
     private readonly MainWindow _mainWindow;
@@ -36,7 +35,6 @@ public partial class ProfilesWindow : Window
             ((App)Application.Current!).Services.GetRequiredService<IDbContextFactory<AppDbContext>>(),
             ((App)Application.Current!).Services.GetRequiredService<IDialogService>(),
             ((App)Application.Current!).Services.GetRequiredService<ISettingsService>(),
-            ((App)Application.Current!).Services.GetRequiredService<IProfilePinService>(),
             ((App)Application.Current!).Services.GetRequiredService<IProfileService>(),
             ((App)Application.Current!).Services.GetRequiredService<IDispatcherService>(),
             ((App)Application.Current!).Services.GetRequiredService<MainWindow>(),
@@ -50,7 +48,6 @@ public partial class ProfilesWindow : Window
         IDbContextFactory<AppDbContext> contextFactory,
         IDialogService dialogService,
         ISettingsService settingsService,
-        IProfilePinService pinService,
         IProfileService profileService,
         IDispatcherService dispatcherService,
         MainWindow mainWindow,
@@ -62,7 +59,6 @@ public partial class ProfilesWindow : Window
         _contextFactory = contextFactory;
         _dialogService = dialogService;
         _settingsService = settingsService;
-        _pinService = pinService;
         _profileService = profileService;
         _dispatcherService = dispatcherService;
         _mainWindow = mainWindow;
@@ -106,9 +102,14 @@ public partial class ProfilesWindow : Window
             return false;
         }
 
+        // Doğrulama + sayaç/kilit güncellemesi tek atomik servis çağrısında
+        // yapılır (VerifyAttemptAsync) — ViewModel keypad'i doğrulama boyunca
+        // kilitler, bu pencere ayrıca persist etmez. Art arda hatalı PIN'ler
+        // veritabanındaki sayacı kaybettiremez, gecikmiş yazma kilidi bozamaz.
         var pinVm = new PinEntryViewModel(
-            _pinService,
+            _profileService,
             _dispatcherService,
+            profile.Id,
             profile.PinHash,
             profile.Name,
             profile.Avatar,
@@ -123,36 +124,8 @@ public partial class ProfilesWindow : Window
         pinWindow.Closed += (_, _) => pinVm.Dispose();
         bool? result = null;
 
-        // Kalıcılık — her başarısız deneme veritabanına yazılır; kilit
-        // tetiklendiğinde PIN penceresi kilit durumuna geçer.
-        pinVm.AttemptFailed += (_, _) =>
-        {
-            _ = PersistFailureAsync();
-
-            async Task PersistFailureAsync()
-            {
-                try
-                {
-                    var newState = await _profileService.RegisterPinFailureAsync(profile.Id);
-                    if (newState.IsLocked)
-                    {
-                        pinVm.ApplyLockout(newState.PinLockedUntilUtc!.Value);
-                    }
-                }
-                catch
-                {
-                    // DB hatası kilit akışını bozmasın
-                }
-            }
-        };
-
         pinVm.PinResult += (_, r) =>
         {
-            if (r == true)
-            {
-                _ = _profileService.ResetPinAttemptsAsync(profile.Id);
-            }
-
             result = r;
             pinWindow.Close();
         };
