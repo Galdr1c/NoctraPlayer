@@ -241,7 +241,7 @@ public class LicenseService : ObservableObject, ILicenseService
         }
 
         var promoGrant = ReadPromoGrant();
-        var redeemedPromoCodes = promoGrant?.RedeemedPromoCodes ?? new List<string>();
+        var redeemedPromoCodes = (promoGrant?.RedeemedPromoCodes ?? new List<string>()).ToList();
         if (!matchedCode.AllowReuse && redeemedPromoCodes.Any(code =>
                 NormalizePromoCode(code).Equals(normalizedCode, StringComparison.OrdinalIgnoreCase)))
         {
@@ -266,7 +266,32 @@ public class LicenseService : ObservableObject, ILicenseService
             expiresAt,
             redeemedPromoCodes));
 
-        await _settingsService.SaveAsync();
+        try
+        {
+            await _settingsService.SaveAsync();
+        }
+        catch (SettingsPersistenceException)
+        {
+            // Disk'e yazılamadı: kullanıcıya "başarılı" göstermeden önce bellek
+            // durumunu eski grant'a geri al, böylece sonraki açılışla tutarsız
+            // kalmasın. Kayıt başarısız olduğu için disk zaten eski haliyle kalır.
+            if (promoGrant is null)
+            {
+                _settingsService.Settings.PromoGrant = null;
+                _settingsService.Settings.ActivePromoCode = null;
+                _settingsService.Settings.PromoPremiumExpiresAtUtc = null;
+                _settingsService.Settings.RedeemedPromoCodes.Clear();
+            }
+            else
+            {
+                WritePromoGrant(promoGrant);
+            }
+
+            return PromoCodeRedemptionResult.Fail(Localize(
+                "GlobalSettings.Promo.Error.SaveFailed",
+                "Promosyon kodu uygulanamadı: ayarlar kaydedilemedi. Lütfen tekrar deneyin."));
+        }
+
         SyncSubscriptionFromSettings(notify: true);
 
         return PromoCodeRedemptionResult.Ok(

@@ -656,7 +656,7 @@ public partial class GlobalSettingsViewModel : ObservableObject, IDisposable
         s.HardwareAcceleration = Settings.HardwareAcceleration;
         s.DiagnosticDataConsent = Settings.DiagnosticDataConsent;
         
-        _ = _settingsService.SaveAsync();
+        _ = _settingsService.SaveAsyncBestEffort();
     }
 
     public void Dispose()

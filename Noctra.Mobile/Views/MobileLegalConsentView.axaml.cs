@@ -106,7 +106,15 @@ public partial class MobileLegalConsentView : UserControl
             settings.PrivacyNoticeVersion = AppSettings.CurrentPrivacyNoticeVersion;
             settings.LegalConsentAcceptedAtUtc = DateTime.UtcNow;
             settings.DiagnosticDataConsent = DiagnosticDataConsent;
-            await _settingsService.SaveAsync();
+            try
+            {
+                await _settingsService.SaveAsync();
+            }
+            catch (SettingsPersistenceException)
+            {
+                // Kayıt başarısız: kullanıcı onayı yine de bu oturumda uygulanır;
+                // hata loglanmıştır ve bir sonraki açılışta yeniden istenir.
+            }
         }
 
         HasAccepted = true;

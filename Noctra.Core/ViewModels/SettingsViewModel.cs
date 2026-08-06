@@ -242,7 +242,7 @@ public partial class SettingsViewModel : ObservableObject, IAsyncDisposable
             _settingsService.Settings.IsDarkTheme = value;
             if (!_autoSaveEnabled)
             {
-                _ = _settingsChangeOriginGate.RunOwnedSaveAsync(_settingsService.SaveAsync);
+                _ = _settingsChangeOriginGate.RunOwnedSaveAsync(_settingsService.SaveAsyncBestEffort);
             }
         }
     }
@@ -1269,7 +1269,7 @@ public partial class SettingsViewModel : ObservableObject, IAsyncDisposable
 
         if (removed)
         {
-            await _settingsChangeOriginGate.RunOwnedSaveAsync(_settingsService.SaveAsync);
+            await _settingsChangeOriginGate.RunOwnedSaveAsync(_settingsService.SaveAsyncBestEffort);
             _mainViewModel.ScheduleImmediateFilter();
         }
     }
@@ -1463,7 +1463,14 @@ public partial class SettingsViewModel : ObservableObject, IAsyncDisposable
         }
 
         applyChanges(settingsService.Settings);
-        await settingsService.SaveAsync();
+        try
+        {
+            await settingsService.SaveAsync();
+        }
+        catch (SettingsPersistenceException)
+        {
+            return false;
+        }
         return true;
     }
 

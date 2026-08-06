@@ -60,7 +60,7 @@ public sealed class AndroidReviewPromptService : IReviewPromptService
         {
             var settings = _settingsService.Settings;
             settings.ReviewPromptLaunchCount++;
-            await _settingsService.SaveAsync();
+            await _settingsService.SaveAsyncBestEffort();
 
             if (!IsEligible(settings, DateTime.UtcNow))
             {

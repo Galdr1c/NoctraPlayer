@@ -969,6 +969,7 @@
   "GlobalSettings.Promo.Error.ConfigMissing": "Aktionscode-Konfiguration wurde nicht gefunden. Stellen Sie sicher, dass die Aktionscode-URL vom App-Administrator konfiguriert wurde.",
   "GlobalSettings.Promo.Error.ConfigLoadFailed": "Aktionscode-Konfiguration konnte nicht geladen werden. Prüfen Sie Ihre Internetverbindung und versuchen Sie es erneut.",
   "GlobalSettings.Promo.Error.ApplyFailedFormat": "Aktionscode konnte nicht angewendet werden: {0}",
+  "GlobalSettings.Promo.Error.SaveFailed": "Aktionscode konnte nicht angewendet werden: Einstellungen konnten nicht gespeichert werden. Bitte versuchen Sie es erneut.",
   "Home.ContinueWatching.CountFormat": "{0} Einträge",
   "Home.QuickAccess.Title": "Schnellzugriff",
   "Home.QuickAccess.Live.Description": "Live-Kanäle durchsuchen",

@@ -276,6 +276,78 @@ namespace Noctra.Tests
             Assert.Equal("Promo code configuration was not found. Make sure the promo code URL is configured by the app administrator.", result.Message);
         }
 
+        [Fact]
+        public async Task ApplyPromoCodeAsync_WhenSaveFailsAndNoPreviousGrant_ShouldFailAndKeepMemoryClean()
+        {
+            using var _ = TemporarilySetPromoCodesUrl("https://example.com/noctra-promo-codes.json");
+            var settings = new TestSettingsService { ThrowOnSave = true };
+            var json = JsonSerializer.Serialize(new PromoCodeConfiguration
+            {
+                Codes =
+                {
+                    new PromoCodeDefinition
+                    {
+                        Code = "PROMO-EXAMPLE-7D",
+                        DurationDays = 7,
+                        IsActive = true
+                    }
+                }
+            });
+            using var httpClient = CreateHttpClient(HttpStatusCode.OK, json);
+            var service = CreateLicenseService(settings, httpClient);
+
+            var result = await service.ApplyPromoCodeAsync("PROMO-EXAMPLE-7D");
+
+            Assert.False(result.Success);
+            Assert.Contains("kaydedilemedi", result.Message);
+            Assert.Null(settings.Settings.PromoGrant);
+            Assert.False(service.IsPremium);
+            Assert.Null(service.ActivePromoCode);
+            Assert.Null(service.PromoPremiumExpiresAtUtc);
+        }
+
+        [Fact]
+        public async Task ApplyPromoCodeAsync_WhenSaveFailsAndPreviousGrantExists_ShouldRestorePreviousGrant()
+        {
+            using var _ = TemporarilySetPromoCodesUrl("https://example.com/noctra-promo-codes.json");
+            var settings = new TestSettingsService();
+            var json = JsonSerializer.Serialize(new PromoCodeConfiguration
+            {
+                Codes =
+                {
+                    new PromoCodeDefinition { Code = "PROMO-FIRST-7D", DurationDays = 7, IsActive = true },
+                    new PromoCodeDefinition { Code = "PROMO-SECOND-7D", DurationDays = 7, IsActive = true }
+                }
+            });
+            using var httpClient = CreateHttpClient(HttpStatusCode.OK, json);
+            var service = CreateLicenseService(settings, httpClient);
+
+            var firstResult = await service.ApplyPromoCodeAsync("PROMO-FIRST-7D");
+            Assert.True(firstResult.Success);
+
+            var previousGrant = settings.Settings.PromoGrant;
+            var previousExpiry = service.PromoPremiumExpiresAtUtc;
+            settings.ThrowOnSave = true;
+
+            var secondResult = await service.ApplyPromoCodeAsync("PROMO-SECOND-7D");
+
+            Assert.False(secondResult.Success);
+            Assert.Contains("kaydedilemedi", secondResult.Message);
+            Assert.Equal("PROMO-FIRST-7D", service.ActivePromoCode);
+            Assert.Equal(previousExpiry, service.PromoPremiumExpiresAtUtc);
+            Assert.True(service.IsPremium);
+
+            // Şifrelenmiş grant her yazımda yeni IV ile üretildiğinden string
+            // eşitliği doğrulanamaz; rollback'i davranışsal doğrula:
+            // kaydedilemeyen ikinci kod redeemed listesine girmedi.
+            settings.ThrowOnSave = false;
+            var retrySecond = await service.ApplyPromoCodeAsync("PROMO-SECOND-7D");
+            Assert.True(retrySecond.Success, $"Rollback sonrası ikinci kod tekrar denenebilir olmalı. Mesaj: {retrySecond.Message}");
+
+            var retryFirst = await service.ApplyPromoCodeAsync("PROMO-FIRST-7D");
+            Assert.False(retryFirst.Success, "Rollback, ilk kodun kullanılmış durumunu korumalı.");
+        }
+
         private static LicenseService CreateLicenseService(
             TestSettingsService? settings = null,
             HttpClient? httpClient = null,
@@ -309,6 +381,7 @@ namespace Noctra.Tests
 
         private sealed class TestSettingsService : ISettingsService
         {
+            public bool ThrowOnSave { get; set; }
             public AppSettings Settings { get; } = new();
             public event Action? SettingsChanged;
             public Task LoadAsync() => Task.CompletedTask;
@@ -316,6 +389,13 @@ namespace Noctra.Tests
             public Task<AppSettings?> PeekProfileSettingsAsync(int profileId) => Task.FromResult<AppSettings?>(Settings);
             public Task SaveAsync()
             {
+                if (ThrowOnSave)
+                {
+                    throw new SettingsPersistenceException(
+                        "Simulated write failure",
+                        new System.IO.IOException("disk full"));
+                }
+
                 SettingsChanged?.Invoke();
                 return Task.CompletedTask;
             }

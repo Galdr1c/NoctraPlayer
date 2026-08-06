@@ -5380,7 +5380,14 @@ public partial class MainViewModel : ObservableObject
 
         if (removed)
         {
-            await _settingsService.SaveAsync();
+            try
+            {
+                await _settingsService.SaveAsync();
+            }
+            catch (SettingsPersistenceException ex)
+            {
+                _logger?.LogError(ex, "Failed to persist unhidden group");
+            }
             StatusMessage = string.Format(CultureInfo.CurrentCulture,
                 _localizationService.GetString("Main.Status.CategoryUnhidden"), groupName);
             ScheduleImmediateFilter();

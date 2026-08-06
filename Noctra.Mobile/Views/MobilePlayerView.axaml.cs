@@ -504,7 +504,7 @@ public partial class MobilePlayerView : UserControl
 
         _gestureHintCheckStarted = true;
         settingsService.Settings.HasSeenMobilePlayerGestureHints = true;
-        _ = settingsService.SaveAsync();
+        _ = settingsService.SaveAsyncBestEffort();
 
         Dispatcher.UIThread.Post(() =>
         {

@@ -4,6 +4,7 @@ using Noctra.Models;
 using System;
 using System.IO;
 using System.Text.Json;
+using Noctra.Core.Services;
 
 namespace Noctra.Tests
 {
@@ -231,6 +232,101 @@ namespace Noctra.Tests
             // Cleanup NOT strictly necessary for this specific mock-less test 
             // as it uses the real LocalAppData if we don't mock the constructor path.
             // In an ideal world, the SettingsService would take a path parameter.
+        }
+    }
+
+    public class SettingsServicePersistenceTests : IDisposable
+    {
+        private readonly string _testDir;
+
+        public SettingsServicePersistenceTests()
+        {
+            _testDir = Path.Combine(Path.GetTempPath(), "NoctraPersistenceTests", Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(_testDir);
+        }
+
+        private SettingsService CreateService()
+            => new(new TestAppPathService(_testDir));
+
+        [Fact]
+        public async Task SaveAsync_WhenDiskWriteFails_ShouldThrowSettingsPersistenceException()
+        {
+            var service = CreateService();
+            var settingsPath = Path.Combine(_testDir, "settings.json");
+
+            // Hedef dosyayı kilitle: File.Replace/File.Move atomik yazımın
+            // son adımı IOException fırlatır.
+            await using var lockStream = new FileStream(
+                settingsPath,
+                FileMode.Create,
+                FileAccess.ReadWrite,
+                FileShare.None);
+
+            await Assert.ThrowsAsync<SettingsPersistenceException>(() => service.SaveAsync());
+        }
+
+        [Fact]
+        public async Task SaveAsync_WhenDiskWriteFails_ShouldNotRaiseSettingsChanged()
+        {
+            var service = CreateService();
+            var settingsPath = Path.Combine(_testDir, "settings.json");
+            var eventRaised = 0;
+            service.SettingsChanged += () => eventRaised++;
+
+            await using var lockStream = new FileStream(
+                settingsPath,
+                FileMode.Create,
+                FileAccess.ReadWrite,
+                FileShare.None);
+
+            await Assert.ThrowsAsync<SettingsPersistenceException>(() => service.SaveAsync());
+
+            Assert.Equal(0, eventRaised);
+        }
+
+        [Fact]
+        public async Task SaveAsync_WhenSucceeds_ShouldRaiseSettingsChangedOnlyAfterWrite()
+        {
+            var service = CreateService();
+            var settingsPath = Path.Combine(_testDir, "settings.json");
+            var fileExistedAtEventTime = false;
+            service.SettingsChanged += () => fileExistedAtEventTime = File.Exists(settingsPath);
+
+            await service.SaveAsync();
+
+            Assert.True(fileExistedAtEventTime, "SettingsChanged, disk yazımı tamamlanmadan önce tetiklenmemeli.");
+            Assert.True(File.Exists(settingsPath));
+        }
+
+        public void Dispose()
+        {
+            try
+            {
+                if (Directory.Exists(_testDir))
+                {
+                    Directory.Delete(_testDir, recursive: true);
+                }
+            }
+            catch
+            {
+                // Best-effort cleanup.
+            }
+        }
+
+        private sealed class TestAppPathService(string userDataDirectory) : IAppPathService
+        {
+            public string UserDataDirectory => userDataDirectory;
+            public string SettingsDirectory => Path.Combine(userDataDirectory, "Profiles");
+            public string DownloadsDirectory => Path.Combine(userDataDirectory, "Downloads");
+            public string LegacyDownloadsDirectory => Path.Combine(userDataDirectory, "LegacyDownloads");
+            public string DatabasePath => Path.Combine(userDataDirectory, "noctra.db");
+            public string LegacyDatabasePath => Path.Combine(userDataDirectory, "noctra_legacy.db");
+            public string TempPlaybackDirectory => Path.Combine(userDataDirectory, "Temp");
+            public string LogsDirectory => Path.Combine(userDataDirectory, "Logs");
+
+            public void EnsureUserDataDirectory() => Directory.CreateDirectory(userDataDirectory);
+            public string NormalizeDownloadDirectory(string? path)
+                => string.IsNullOrWhiteSpace(path) ? DownloadsDirectory : path;
         }
     }
 }

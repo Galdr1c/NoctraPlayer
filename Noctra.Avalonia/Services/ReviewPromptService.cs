@@ -51,7 +51,7 @@ public sealed class ReviewPromptService : IReviewPromptService
         {
             var settings = _settingsService.Settings;
             settings.ReviewPromptLaunchCount++;
-            await _settingsService.SaveAsync();
+            await _settingsService.SaveAsyncBestEffort();
 
             if (!IsEligible(settings, DateTime.UtcNow))
             {
@@ -102,7 +102,7 @@ public sealed class ReviewPromptService : IReviewPromptService
 
             var reviewUri = BuildReviewUri();
             settings.ReviewPromptLastShownAtUtc = DateTime.UtcNow;
-            await _settingsService.SaveAsync();
+            await _settingsService.SaveAsyncBestEffort();
 
             var dialog = new ReviewPromptWindow();
             var result = await dialog.ShowDialog<ReviewPromptResult?>(owner) ?? ReviewPromptResult.Later;
@@ -120,17 +120,17 @@ public sealed class ReviewPromptService : IReviewPromptService
                         settings.ReviewPromptSnoozedUntilUtc = DateTime.UtcNow.Add(SnoozeDuration);
                     }
 
-                    await _settingsService.SaveAsync();
+                    await _settingsService.SaveAsyncBestEffort();
                     break;
 
                 case ReviewPromptResult.Never:
                     settings.ReviewPromptDismissed = true;
-                    await _settingsService.SaveAsync();
+                    await _settingsService.SaveAsyncBestEffort();
                     break;
 
                 default:
                     settings.ReviewPromptSnoozedUntilUtc = DateTime.UtcNow.Add(SnoozeDuration);
-                    await _settingsService.SaveAsync();
+                    await _settingsService.SaveAsyncBestEffort();
                     break;
             }
         }

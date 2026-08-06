@@ -969,6 +969,7 @@
   "GlobalSettings.Promo.Error.ConfigMissing": "Promosyon kodu yapılandırması bulunamadı. Lütfen uygulama yöneticisinin promosyon kodu URL'sini yapılandırdığından emin olun.",
   "GlobalSettings.Promo.Error.ConfigLoadFailed": "Promosyon kodu yapılandırması yüklenemedi. Lütfen internet bağlantınızı kontrol edip tekrar deneyin.",
   "GlobalSettings.Promo.Error.ApplyFailedFormat": "Promosyon kodu uygulanamadı: {0}",
+  "GlobalSettings.Promo.Error.SaveFailed": "Promosyon kodu uygulanamadı: ayarlar kaydedilemedi. Lütfen tekrar deneyin.",
   "Home.ContinueWatching.CountFormat": "{0} öğe",
   "Home.QuickAccess.Title": "Hızlı Erişim",
   "Home.QuickAccess.Live.Description": "Canlı kanallara göz at",

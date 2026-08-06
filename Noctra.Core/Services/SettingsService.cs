@@ -387,10 +387,6 @@ public class SettingsService : ISettingsService
         {
             var profileId = Settings.ProfileId;
 
-            // Önce dinleyicileri bilgilendir: bellek ayarları zaten güncel olduğundan
-            // player reinit gibi tepkiler disk I/O'sunu beklememeli.
-            SettingsChanged?.Invoke();
-
             // 1. Save current profile settings
             var path = GetSettingsPath(profileId);
             var json = SerializePersistableSettings(Settings, profileId);
@@ -414,10 +410,22 @@ public class SettingsService : ISettingsService
         catch (Exception ex)
         {
             _logger?.LogError(ex, "Failed to save settings");
+            throw new SettingsPersistenceException("Ayarlar diske yazılamadı.", ex);
         }
         finally
         {
             _saveLock.Release();
+        }
+
+        // Yazım başarıyla tamamlandıktan sonra dinleyicileri bilgilendir.
+        // Başarısız bir kayıt, yazılmamış durumu "kaydedildi" gibi göstermemeli.
+        try
+        {
+            SettingsChanged?.Invoke();
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error in SettingsChanged handler after successful save");
         }
     }
 
@@ -585,7 +593,13 @@ public class SettingsService : ISettingsService
             DownloadPath = defaultDownloadPath
         };
 
-        _ = SaveAsync();
+        _ = SaveAsync().ContinueWith(t =>
+        {
+            if (t.IsFaulted)
+            {
+                _logger?.LogError(t.Exception?.GetBaseException(), "Failed to persist settings after reset to defaults");
+            }
+        }, TaskScheduler.Default);
     }
 
     public async Task<int> CleanOrphanedSettingsAsync(IEnumerable<int> activeProfileIds)
