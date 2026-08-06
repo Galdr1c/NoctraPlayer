@@ -587,10 +587,24 @@ public class SettingsService : ISettingsService
     {
         var profileId = Settings.ProfileId;
         var defaultDownloadPath = Settings.DownloadPath; // Keep download path
+
+        // Uygulama/cihaz seviyesi hak ve izinler kullanıcı tercihi değildir;
+        // "varsayılana dön" ile kaybolmamalıdır: promosyon hakkı (PromoGrant),
+        // promosyon yapılandırması (PromoCodeConfigUrl), yasal onay durumu ve
+        // tanılama verisi izni. Tema, buffer, altyazı gibi tercihler sıfırlanır.
         _currentSettings = new AppSettings
         {
             ProfileId = profileId,
-            DownloadPath = defaultDownloadPath
+            DownloadPath = defaultDownloadPath,
+
+            PromoGrant = Settings.PromoGrant,
+            PromoCodeConfigUrl = Settings.PromoCodeConfigUrl,
+
+            LegalConsentAccepted = Settings.LegalConsentAccepted,
+            LegalConsentVersion = Settings.LegalConsentVersion,
+            LegalConsentAcceptedAtUtc = Settings.LegalConsentAcceptedAtUtc,
+            PrivacyNoticeVersion = Settings.PrivacyNoticeVersion,
+            DiagnosticDataConsent = Settings.DiagnosticDataConsent
         };
 
         _ = SaveAsync().ContinueWith(t =>

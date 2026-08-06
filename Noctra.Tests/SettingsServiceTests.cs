@@ -298,6 +298,44 @@ namespace Noctra.Tests
             Assert.True(File.Exists(settingsPath));
         }
 
+        [Fact]
+        public async Task ResetToDefaults_ShouldPreservePromoAndLegalState()
+        {
+            var service = CreateService();
+            service.Settings.PromoGrant = "encrypted-grant";
+            service.Settings.PromoCodeConfigUrl = "https://example.com/promo.json";
+            service.Settings.LegalConsentAccepted = true;
+            service.Settings.LegalConsentVersion = AppSettings.CurrentLegalConsentVersion;
+            service.Settings.LegalConsentAcceptedAtUtc = DateTime.UtcNow;
+            service.Settings.PrivacyNoticeVersion = AppSettings.CurrentPrivacyNoticeVersion;
+            service.Settings.DiagnosticDataConsent = true;
+            service.Settings.IsDarkTheme = true;
+            service.Settings.Language = "tr";
+
+            service.ResetToDefaults();
+
+            // Haklar ve izinler korunur
+            Assert.Equal("encrypted-grant", service.Settings.PromoGrant);
+            Assert.Equal("https://example.com/promo.json", service.Settings.PromoCodeConfigUrl);
+            Assert.True(service.Settings.LegalConsentAccepted);
+            Assert.Equal(AppSettings.CurrentLegalConsentVersion, service.Settings.LegalConsentVersion);
+            Assert.NotNull(service.Settings.LegalConsentAcceptedAtUtc);
+            Assert.Equal(AppSettings.CurrentPrivacyNoticeVersion, service.Settings.PrivacyNoticeVersion);
+            Assert.True(service.Settings.DiagnosticDataConsent);
+
+            // Kullanıcı tercihleri varsayılana döner (IsDarkTheme default true,
+            // Language default "en")
+            Assert.True(service.Settings.IsDarkTheme);
+            Assert.Equal("en", service.Settings.Language);
+
+            // Diske yazılan durum da hakları içermeli
+            await service.SaveAsync();
+            var json = await File.ReadAllTextAsync(Path.Combine(_testDir, "settings.json"));
+            Assert.Contains("promoGrant", json);
+            Assert.Contains("promoCodeConfigUrl", json);
+            Assert.Contains("legalConsentAccepted", json);
+        }
+
         public void Dispose()
         {
             try
