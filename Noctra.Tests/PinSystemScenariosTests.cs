@@ -86,7 +86,6 @@ namespace Noctra.Tests
             {
                 ProfileName = "PIN Profile",
                 Avatar = "default",
-                IsChild = false,
                 Url = "http://test.com",
                 Username = "test",
                 EncryptedPassword = "test",
@@ -198,7 +197,6 @@ namespace Noctra.Tests
                 ExistingIds = new ExistingProfileIds ( profile.Id, profile.ProviderAccountId ),
                 ProfileName = "New PIN",
                 Avatar = "default",
-                IsChild = false,
                 Url = "http://test.com",
                 Username = "test",
                 EncryptedPassword = "test",
@@ -230,7 +228,6 @@ namespace Noctra.Tests
                 ExistingIds = new ExistingProfileIds ( profile.Id, profile.ProviderAccountId ),
                 ProfileName = "No PIN",
                 Avatar = "default",
-                IsChild = false,
                 Url = "http://test.com",
                 Username = "test",
                 EncryptedPassword = "test",

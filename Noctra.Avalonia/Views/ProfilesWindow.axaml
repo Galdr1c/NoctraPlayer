@@ -46,23 +46,6 @@
                         <!-- Avatar Area -->
                         <Grid Grid.Row="0" Height="150" Margin="0,0,0,12" ClipToBounds="False">
                             <Grid x:Name="AvatarRoot" Width="150" Height="150" HorizontalAlignment="Center" VerticalAlignment="Center" ClipToBounds="False">
-                                <!-- 1. Kid Frame (gradyan kenarlık) -->
-                                <Border x:Name="KidFrame"
-                                        Width="132" Height="132"
-                                        CornerRadius="15"
-                                        BorderThickness="3.5"
-                                        IsVisible="{Binding IsChild}"
-                                        IsHitTestVisible="False"
-                                        BoxShadow="0 0 16 0 #708B5CF6">
-                                    <Border.BorderBrush>
-                                        <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
-                                            <GradientStop Color="#FFB7A6F6" Offset="0"/>
-                                            <GradientStop Color="#FF8B5CF6" Offset="0.5"/>
-                                            <GradientStop Color="#FF7C3AED" Offset="1"/>
-                                        </LinearGradientBrush>
-                                    </Border.BorderBrush>
-                                </Border>
-
                                 <!-- 2. Avatar Content -->
                                 <Border Width="{StaticResource RatioSquareSize}" Height="{StaticResource RatioSquareSize}"
                                         CornerRadius="12" ClipToBounds="True"

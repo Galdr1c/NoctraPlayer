@@ -1064,7 +1064,6 @@ namespace Noctra.Tests
                 ExistingIds = new ExistingProfileIds(profile.Id, account.Id),
                 ProfileName = profile.Name,
                 Avatar = profile.Avatar,
-                IsChild = profile.IsChild,
                 Url = "http://new.example.com",
                 Username = "new-user",
                 EncryptedPassword = "new-pass",

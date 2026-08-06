@@ -27,6 +27,13 @@ public class Profile
     public string Avatar { get; set; } = "default"; // Asset name or path
     public string Color { get; set; } = "#FF6B00"; // Default accent color
 
+    /// <summary>
+    /// Çocuk profili özelliği kaldırıldı. Bu kolon yalnızca eski kayıtları
+    /// standarta çeviren ResetChildModeAsync migration'ı için korunuyor;
+    /// uygulama kodu artık bu değeri yazmıyor (yeni profiller her zaman
+    /// standarttır, düzenleme IsChild'a dokunmaz). İleride kolonla birlikte
+    /// silinebilir.
+    /// </summary>
     public bool IsChild { get; set; }
 
     public DateTime LastUsed { get; set; } = DateTime.MinValue;

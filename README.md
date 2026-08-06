@@ -35,7 +35,7 @@ Noctra does **not** provide content. It only displays IPTV playlists and provide
 - **Metadata enrichment**: provider poster first, TMDB fallback where appropriate, localized title/overview/cast/rating data.
 - **EPG**: playlist EPG, custom XMLTV sources, time offset, matching, refresh, and cleanup.
 - **Offline media**: encrypted local downloads for VOD and series episodes.
-- **Profiles**: avatar, provider credentials, PIN, child profile rules, favorites, watch history, and settings per profile.
+- **Profiles**: avatar, provider credentials, PIN, favorites, watch history, and settings per profile.
 - **Mobile-first features**: Picture-in-Picture, gesture controls, background playback, sleep timer, and subtitle/audio track selection.
 - **Store-ready editions**: Free/Premium build metadata and MSIX/AAB packaging flow.
 

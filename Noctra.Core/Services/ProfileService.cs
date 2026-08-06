@@ -142,7 +142,6 @@ public class ProfileService : IProfileService
                 Name = request.ProfileName,
                 ProviderAccount = account,
                 Avatar = request.Avatar,
-                IsChild = request.IsChild,
                 PinHash = request.PinHash,
                 LastUsed = DateTime.UtcNow
             };

@@ -161,9 +161,6 @@ public class TmdbSyncService : ITmdbSyncService
                 series.NetworkLogoUrl = meta.NetworkLogoUrl;
                 series.ContentRating = meta.ContentRating;
             });
-
-            if (await CheckAndPurgeUnsafeSeriesAsync(context, dbSeries, cancellationToken))
-                return;
         }
 
         await context.SaveChangesAsync(cancellationToken);
@@ -251,9 +248,6 @@ public class TmdbSyncService : ITmdbSyncService
                 if (!string.IsNullOrEmpty(dbSeries.TrailerUrl))
                     series.TrailerUrl = dbSeries.TrailerUrl;
             });
-
-            if (await CheckAndPurgeUnsafeSeriesAsync(context, dbSeries, cancellationToken))
-                return;
         }
 
         await context.SaveChangesAsync(cancellationToken);
@@ -293,41 +287,4 @@ public class TmdbSyncService : ITmdbSyncService
                coverUrl.Contains("default", StringComparison.OrdinalIgnoreCase);
     }
 
-    private async Task<bool> CheckAndPurgeUnsafeSeriesAsync(AppDbContext context, Series dbSeries, CancellationToken cancellationToken)
-    {
-        var playlist = await context.Playlists
-            .Include(p => p.Profile)
-            .FirstOrDefaultAsync(p => p.Id == dbSeries.PlaylistId, cancellationToken);
-        
-        if (playlist?.Profile?.IsChild == true)
-        {
-            if (!ChildSafetyHelper.IsSafeRating(dbSeries.ContentRating))
-            {
-                _logger?.LogWarning("[TmdbSync] PURGING UNSAFE SERIES '{Name}' (Rating: {Rating}) from child profile", dbSeries.Name, dbSeries.ContentRating);
-                
-                // Delete associated channels: exact match or start-of-word match only.
-                // Avoid Contains() — "Man" would incorrectly match "Superman", "Batman", "Mandalorian", etc.
-                var seriesName = dbSeries.Name ?? string.Empty;
-                if (string.IsNullOrEmpty(seriesName))
-                    return true; // Can't safely match; remove series to avoid stale data
-
-                var channelsToDelete = await context.Channels
-                    .Where(c => c.PlaylistId == dbSeries.PlaylistId &&
-                               (c.Type == ChannelType.Series || c.Type == ChannelType.VOD) &&
-                               (c.Name == seriesName ||
-                                c.Name.StartsWith(seriesName + " ") ||
-                                c.Name.StartsWith(seriesName + ".") ||
-                                c.Name.StartsWith(seriesName + " - ")))
-                    .ToListAsync(cancellationToken);
-                
-                if (channelsToDelete.Any())
-                    context.Channels.RemoveRange(channelsToDelete);
-                    
-                context.Series.Remove(dbSeries);
-                await context.SaveChangesAsync(cancellationToken);
-                return true;
-            }
-        }
-        return false;
-    }
 }

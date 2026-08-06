@@ -139,6 +139,18 @@ public partial class App : Application
                                 await settingsService.SaveAsync();
                                 StartupLogger.Log($"Step 2a: {resetPinCount} invalid profile PIN(s) reset");
                             }
+
+                            // Çocuk profili özelliği kaldırıldı — eski çocuk profilleri
+                            // standart profile çevrilir (profil verisi korunur); sahibine
+                            // bir defalık bilgi gösterilir.
+                            var childResetCount = await schemaFixups.ResetChildModeAsync(db);
+                            if (childResetCount > 0)
+                            {
+                                settingsService.Settings.ChildModeRemovedNoticePending = true;
+                                await settingsService.SaveAsync();
+                                StartupLogger.Log($"Step 2a: {childResetCount} child profile(s) converted to standard profiles");
+                            }
+
                             StartupLogger.Log("Step 2b: Checking profiles table...");
                             await db.Profiles.AnyAsync();
                             StartupLogger.Log("Step 2: ✅ EF Core ready");

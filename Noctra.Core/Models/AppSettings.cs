@@ -312,6 +312,14 @@ public class AppSettings
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool PinSystemResetNoticePending { get; set; } = false;
 
+    /// <summary>
+    /// Çocuk profili özelliği kaldırıldı (Faz 1) — eski IsChild=true profiller
+    /// standart profile çevrildiyse kullanıcıya bir defalık bilgi gösterilir.
+    /// Bilgi gösterildiğinde false yapılır.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool ChildModeRemovedNoticePending { get; set; } = false;
+
 
     // ============ Promosyon Kodu / Süreli Premium ============
 

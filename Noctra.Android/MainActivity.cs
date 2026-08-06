@@ -492,7 +492,6 @@ public class MainActivity : AvaloniaMainActivity
         {
             ProfileName = "Noctra Performance",
             Avatar = "default",
-            IsChild = false,
             Url = url,
             Username = "benchmark",
             EncryptedPassword = securityService.Encrypt("benchmark") ?? string.Empty,

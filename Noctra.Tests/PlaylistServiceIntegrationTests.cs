@@ -409,8 +409,10 @@ namespace Noctra.Tests
         }
 
         [Fact]
-        public async Task AddFromUrlAsync_WhenChildFilterRemovesAllChannels_DoesNotCreatePlaylistAndFailsImportJob()
+        public async Task AddFromUrlAsync_WithChildProfile_ImportsAllChannelsLikeNormalProfile()
         {
+            // Çocuk profili özelliği kaldırıldı (Faz 1) — IsChild=true olan eski
+            // profiller de tüm içerikleri normal profil gibi alır; filtre yok.
             var service = CreateService();
             int profileId;
             using (var setupContext = new AppDbContext(_options))
@@ -432,17 +434,17 @@ namespace Noctra.Tests
                     new Channel { Name = "Adult Only", GroupTitle = "Adult", StreamUrl = "adult-url", Type = ChannelType.Live }
                 });
 
-            await Assert.ThrowsAsync<InvalidOperationException>(() =>
-                service.AddFromUrlAsync("Adult Only", "http://child.test/adult-only.m3u", profileId));
+            var playlist = await service.AddFromUrlAsync("Adult Only", "http://child.test/adult-only.m3u", profileId);
 
             using var context = new AppDbContext(_options);
-            Assert.Equal(0, await context.Playlists.CountAsync());
-            Assert.Equal(0, await context.Channels.CountAsync());
+            Assert.Equal(1, await context.Channels.CountAsync());
+            Assert.Equal("Adult Only", (await context.Channels.SingleAsync()).Name);
+            Assert.Equal(1, (await context.Playlists.SingleAsync()).ChannelCount);
 
             var job = await context.ImportJobs.SingleAsync();
             Assert.Equal(ImportJobKind.M3U, job.Kind);
-            Assert.Equal(ImportJobStatus.Failed, job.Status);
-            Assert.Null(job.PlaylistId);
+            Assert.Equal(ImportJobStatus.Completed, job.Status);
+            Assert.Equal(playlist.Id, job.PlaylistId);
             Assert.Equal(profileId, job.ProfileId);
         }
 
@@ -577,8 +579,10 @@ namespace Noctra.Tests
         }
 
         [Fact]
-        public async Task RefreshAsync_WhenChildFilterRemovesAllNewChannels_PreservesExistingChannels()
+        public async Task RefreshAsync_WithChildProfile_AddsAllParsedChannelsLikeNormalProfile()
         {
+            // Çocuk profili özelliği kaldırıldı (Faz 1) — eski çocuk profillerde
+            // de filtre uygulanmaz; yeni içerikler normal profil gibi eklenir.
             var service = CreateService();
 
             int profileId;
@@ -610,7 +614,7 @@ namespace Noctra.Tests
                     new Channel { Name = "Adult Only", GroupTitle = "Adult", StreamUrl = "adult-url", Type = ChannelType.Live }
                 });
 
-            await Assert.ThrowsAsync<InvalidOperationException>(() => service.RefreshAsync(playlist.Id));
+            await service.RefreshAsync(playlist.Id);
 
             using var verifyContext = new AppDbContext(_options);
             var remainingChannels = await verifyContext.Channels
@@ -619,7 +623,9 @@ namespace Noctra.Tests
                 .ToListAsync();
 
             var persistedPlaylist = await verifyContext.Playlists.SingleAsync(p => p.Id == playlist.Id);
-            Assert.Equal(new[] { "Kid Show" }, remainingChannels);
+            // Refresh, kanalları yeniden çekilen setle değiştirir (filtre yok) —
+            // eski çocuk filtresi "Adult Only"yi atıp eski seti korurdu.
+            Assert.Equal(new[] { "Adult Only" }, remainingChannels);
             Assert.Equal(1, persistedPlaylist.ChannelCount);
         }
 
@@ -1293,8 +1299,10 @@ namespace Noctra.Tests
         }
 
         [Fact]
-        public async Task RefreshAsync_WithChildProfile_ShouldApplyFilter()
+        public async Task RefreshAsync_WithChildProfile_DoesNotFilterContent()
         {
+            // Çocuk profili özelliği kaldırıldı (Faz 1) — IsChild=true olsa bile
+            // hiçbir içerik filtrelenmez; profil normal profil gibi çalışır.
             // Arrange
             var service = CreateService();
             
@@ -1324,12 +1332,10 @@ namespace Noctra.Tests
             // Give background tasks a moment
             await Task.Delay(200);
 
-            // Assert
+            // Assert — filtre yok: her iki kanal da alınır
             using (var context = new AppDbContext(_options))
             {
-                Assert.Equal(1, await context.Channels.CountAsync(c => c.PlaylistId == playlist.Id));
-                var dbChannel = await context.Channels.FirstAsync();
-                Assert.Equal("Kid Show", dbChannel.Name);
+                Assert.Equal(2, await context.Channels.CountAsync(c => c.PlaylistId == playlist.Id));
             }
         }
 

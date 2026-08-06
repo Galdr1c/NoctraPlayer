@@ -242,23 +242,6 @@
                         HorizontalAlignment="Center"
                         ClipToBounds="False">
 
-                    <!-- Çocuk profili çerçevesi (gradyan kenarlık) -->
-                    <Border HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                            Margin="1"
-                            CornerRadius="14"
-                            BorderThickness="3.5"
-                            IsVisible="{Binding IsChild}"
-                            IsHitTestVisible="False"
-                            BoxShadow="0 0 16 0 #708B5CF6">
-                      <Border.BorderBrush>
-                        <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
-                          <GradientStop Color="#FFB7A6F6" Offset="0" />
-                          <GradientStop Color="#FF8B5CF6" Offset="0.5" />
-                          <GradientStop Color="#FF7C3AED" Offset="1" />
-                        </LinearGradientBrush>
-                      </Border.BorderBrush>
-                    </Border>
-
                     <!-- Avatar resmi -->
                     <Border Width="140" Height="140"
                             CornerRadius="12"

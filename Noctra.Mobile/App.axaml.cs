@@ -191,6 +191,19 @@ public partial class App : Application
                         settingsService.Settings.PinSystemResetNoticePending = true;
                         await settingsService.SaveAsync().ConfigureAwait(false);
                     }
+
+                    // Çocuk profili özelliği kaldırıldı — eski çocuk profilleri
+                    // standart profile çevrilir (profil verisi korunur); sahibine
+                    // bir defalık bilgi gösterilir.
+                    var childResetCount = await schemaFixups
+                        .ResetChildModeAsync(db)
+                        .ConfigureAwait(false);
+
+                    if (childResetCount > 0 && settingsService is not null)
+                    {
+                        settingsService.Settings.ChildModeRemovedNoticePending = true;
+                        await settingsService.SaveAsync().ConfigureAwait(false);
+                    }
                 }
 
                 PerformanceTrace.Mark("app.db.init.end");

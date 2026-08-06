@@ -20,4 +20,13 @@ public interface IDatabaseSchemaFixupService
         AppDbContext context,
         DatabaseSchemaFixupProfile profile,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Çocuk profili özelliği kaldırıldı (Faz 1) — IsChild=1 kayıtlarını
+    /// standart profile çevirir. Dönen değer: dönüştürülen profil sayısı
+    /// (0 = yok). Idempotent; ikinci çalıştırmada 0 döner.
+    /// </summary>
+    Task<int> ResetChildModeAsync(
+        AppDbContext context,
+        CancellationToken cancellationToken = default);
 }

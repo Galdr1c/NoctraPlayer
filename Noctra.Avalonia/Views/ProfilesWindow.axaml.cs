@@ -250,6 +250,17 @@ public partial class ProfilesWindow : Window
                 await _settingsService.SaveAsync();
             }
 
+            // Çocuk profili özelliği kaldırıldı (Faz 1) — eski çocuk profiller
+            // standart profile çevrildi; bir defalık bilgi gösterilir.
+            if (_settingsService.Settings.ChildModeRemovedNoticePending)
+            {
+                await _dialogService.ShowMessageAsync(
+                    _localizationService.GetString("Profiles.Child.Notice.Title"),
+                    _localizationService.GetString("Profiles.Child.Notice.Message"));
+                _settingsService.Settings.ChildModeRemovedNoticePending = false;
+                await _settingsService.SaveAsync();
+            }
+
             if (DisableAutoSelect || !_settingsService.Settings.AutoSelectLastProfile || _autoSelectTriggered)
             {
                 return;

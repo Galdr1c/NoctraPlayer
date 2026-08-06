@@ -8,7 +8,6 @@ using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Http.Headers;
-using System.Text.RegularExpressions;
 using Noctra.Core.Services;
 using Noctra.Diagnostics;
 using System.Diagnostics;
@@ -93,44 +92,6 @@ public partial class PlaylistService : IPlaylistService
                 {
                     System.Diagnostics.Debug.WriteLine($"[PlaylistService] Found existing playlist: {existing.Id} with {existing.ChannelCount} channels");
                     await EnsureLinearStreamChannelTypesRepairedOnceAsync(context, existing.Id);
-                    
-                    // YENİ: Child profile ise mevcut kanalları kontrol et ve temizle
-                    var profile = await context.Profiles.AsNoTracking().FirstOrDefaultAsync(p => p.Id == profileId);
-                    if (profile?.IsChild == true)
-                    {
-                        var channelsInDb = await context.Channels
-                            .Where(c => c.PlaylistId == existing.Id)
-                            .ToListAsync();
-                            
-                        var kept = ApplyChildFilter(channelsInDb.ToList());
-                        var keptIds = new HashSet<int>(kept.Select(c => c.Id));
-                        var toDeleteIds = channelsInDb
-                            .Where(c => !keptIds.Contains(c.Id))
-                            .Select(c => c.Id)
-                            .ToList();
-                            
-                        if (toDeleteIds.Any())
-                        {
-                            System.Diagnostics.Debug.WriteLine($"[PlaylistService] Purging {toDeleteIds.Count} non-compliant channels from EXISTING playlist for child profile.");
-                            
-                            // Batch deletion to avoid SQL parameter limits
-                            const int deleteBatchSize = 500;
-                            for (int i = 0; i < toDeleteIds.Count; i += deleteBatchSize)
-                            {
-                                var batch = toDeleteIds.Skip(i).Take(deleteBatchSize).ToList();
-                                await context.Channels
-                                    .Where(c => batch.Contains(c.Id))
-                                    .ExecuteDeleteAsync();
-                            }
-                                
-                            existing.ChannelCount = channelsInDb.Count - toDeleteIds.Count;
-                            await context.SaveChangesAsync();
-                        }
-                        
-                        // Deep metadata purge for child profile
-                        await PurgeNonCompliantSeriesAsync(context, existing.Id, true);
-                    }
-                    
                     return existing;
                 }
                 
@@ -173,18 +134,6 @@ public partial class PlaylistService : IPlaylistService
             // Otomatik organizasyon: dedup, kategorize, sıralama
             var organized = _organizer.Organize(channels);
             
-            var isChild = false;
-            if (profileId.HasValue) 
-            {
-                var profile = await context.Profiles.AsNoTracking().FirstOrDefaultAsync(p => p.Id == profileId);
-                isChild = profile?.IsChild ?? false;
-            }
-
-            if (isChild)
-            {
-                organized = ApplyChildFilter(organized).ToList();
-            }
-
             System.Diagnostics.Debug.WriteLine($"[PlaylistService] Organized: {channels.Count} › {organized.Count} channels");
 
             await ReportImportJobProgressAsync(importJob, organized, "Organized").ConfigureAwait(false);
@@ -1152,52 +1101,6 @@ WHERE PlaylistId = {playlistId}
             await ReportImportJobProgressAsync(importJob, rawChannels, "Parsed").ConfigureAwait(false);
             var channels = _organizer.Organize(rawChannels);
 
-            var isChild = false;
-            if (profileId.HasValue) 
-            {
-                var profile = await context.Profiles.AsNoTracking().FirstOrDefaultAsync(p => p.Id == profileId);
-                isChild = profile?.IsChild ?? false;
-            }
-
-            if (isChild)
-            {
-                channels = ApplyChildFilter(channels).ToList();
-                
-                // Consistency check: if for some reason this file was already added to this profile, clean up existing data
-                var existing = await context.Playlists
-                    .Include(p => p.Channels)
-                    .FirstOrDefaultAsync(p => p.FilePath == filePath && p.ProfileId == profileId && p.IsActive);
-                    
-                if (existing != null)
-                {
-                    var kept = ApplyChildFilter(existing.Channels.ToList());
-                    var keptIds = new HashSet<int>(kept.Select(c => c.Id));
-                    var toDeleteIds = existing.Channels
-                        .Where(c => !keptIds.Contains(c.Id))
-                        .Select(c => c.Id)
-                        .ToList();
-
-                    if (toDeleteIds.Any())
-                    {
-                        // Batch deletion to avoid SQL parameter limits
-                        const int deleteBatchSize = 500;
-                        for (int i = 0; i < toDeleteIds.Count; i += deleteBatchSize)
-                        {
-                            var batch = toDeleteIds.Skip(i).Take(deleteBatchSize).ToList();
-                            await context.Channels
-                                .Where(c => batch.Contains(c.Id))
-                                .ExecuteDeleteAsync();
-                        }
-                            
-                        existing.ChannelCount = existing.Channels.Count - toDeleteIds.Count;
-                        await context.SaveChangesAsync();
-                    }
-                    
-                    // Deep metadata purge for child profile
-                    await PurgeNonCompliantSeriesAsync(context, existing.Id, true);
-                }
-            }
-            
             // Otomatik organizasyon: dedup, kategorize, sıralama
             var organized = _organizer.Organize(channels.ToList());
             await ReportImportJobProgressAsync(importJob, organized, "Organized").ConfigureAwait(false);
@@ -1306,12 +1209,6 @@ WHERE PlaylistId = {playlistId}
                     context.Playlists.Update(playlist);
                     await context.SaveChangesAsync();
 
-                    if (playlist.Profile?.IsChild == true)
-                    {
-                        // Ensure existing content is safe even if metadata hasn't changed
-                        await EnsureChildProfileCleanedAsync(context, playlist);
-                    }
-
                     await CompleteImportJobAsync(importJob, "Unchanged").ConfigureAwait(false);
                     return playlist;
                 }
@@ -1350,15 +1247,6 @@ WHERE PlaylistId = {playlistId}
         else if (organizedChannels.Count == 0)
         {
             throw new InvalidOperationException(_localizationService.GetString("Playlist.Error.EmptyNoDelete"));
-        }
-
-        if (playlist.Profile?.IsChild == true)
-        {
-            organizedChannels = ApplyChildFilter(organizedChannels).ToList();
-            if (organizedChannels.Count == 0)
-            {
-                throw new InvalidOperationException(_localizationService.GetString("Playlist.Error.EmptyNoDelete"));
-            }
         }
 
         // 1. MEVCUT KULLANICI VERİLERİNİ YEDEKLE (Favori, İzleme Geçmişi vb.)
@@ -1712,9 +1600,6 @@ WHERE PlaylistId = {playlistId}
         IAsyncEnumerable<Channel> channelStream)
     {
         const int batchSize = 500;
-        var isChild = profileId.HasValue &&
-                      await context.Profiles.AsNoTracking()
-                          .AnyAsync(p => p.Id == profileId && p.IsChild);
         var playlist = new Playlist
         {
             Name = name,
@@ -1749,7 +1634,7 @@ WHERE PlaylistId = {playlistId}
                 batch.Add(channel);
                 if (batch.Count >= batchSize)
                 {
-                    var written = await WriteStreamingBatchAsync(context, playlist.Id, batch, isChild);
+                    var written = await WriteStreamingBatchAsync(context, playlist.Id, batch);
                     CountChannels(written, ref liveCount, ref vodCount, ref seriesCount);
                     await ReportImportJobCountsAsync(importJob, "Writing", liveCount, vodCount, seriesCount);
                     batch.Clear();
@@ -1758,7 +1643,7 @@ WHERE PlaylistId = {playlistId}
 
             if (batch.Count > 0)
             {
-                var written = await WriteStreamingBatchAsync(context, playlist.Id, batch, isChild);
+                var written = await WriteStreamingBatchAsync(context, playlist.Id, batch);
                 CountChannels(written, ref liveCount, ref vodCount, ref seriesCount);
                 batch.Clear();
             }
@@ -1812,14 +1697,9 @@ WHERE PlaylistId = {playlistId}
     private async Task<List<Channel>> WriteStreamingBatchAsync(
         AppDbContext context,
         int playlistId,
-        List<Channel> batch,
-        bool applyChildFilter)
+        List<Channel> batch)
     {
         var organized = _organizer.Organize(batch, trustProviderTypes: true);
-        if (applyChildFilter)
-        {
-            organized = ApplyChildFilter(organized).ToList();
-        }
 
         foreach (var channel in organized)
         {
@@ -2275,219 +2155,6 @@ WHERE PlaylistId = {playlistId}
             .Trim()
             .ToLowerInvariant()
             .Split(' ', StringSplitOptions.RemoveEmptyEntries));
-    }
-
-    private static string NormalizeForFilter(string? text)
-    {
-        if (string.IsNullOrWhiteSpace(text)) return string.Empty;
-
-        return text.ToLowerInvariant()
-            .Replace("ş", "s")
-            .Replace("ç", "c")
-            .Replace("ğ", "g")
-            .Replace("ü", "u")
-            .Replace("ö", "o")
-            .Replace("ı", "i")
-            .Replace("i̇", "i"); // Handle potential combined characters
-    }
-
-    private static bool ContainsAny(string? text, string[] words)
-    {
-        if (string.IsNullOrWhiteSpace(text) || words == null || words.Length == 0) return false;
-
-        var normalizedText = NormalizeForFilter(text);
-        
-        // Use Regex with word boundaries for more accurate matching (prevents false positives like 'adam' in 'madam')
-        // We compile the regex list or cache it if performance becomes an issue, but for now, simple loop or combined regex.
-        foreach (var word in words)
-        {
-            var normalizedWord = NormalizeForFilter(word);
-            if (string.IsNullOrWhiteSpace(normalizedWord)) continue;
-
-            // Use \b for word boundaries. Note: \b might not handle non-ascii perfectly, 
-            // but after normalization to latin chars, it works well.
-            if (Regex.IsMatch(normalizedText, $@"\b{Regex.Escape(normalizedWord)}\b", RegexOptions.IgnoreCase))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private static IReadOnlyCollection<Channel> ApplyChildFilter(IReadOnlyCollection<Channel> channels)
-    {
-        var safeCategories = ChildSafetyHelper.GetSafeCategories();
-        var dangerousCategories = ChildSafetyHelper.GetDangerousCategories();
-        var criticalBlacklist = ChildSafetyHelper.GetCriticalBlacklist();
-        var kidFriendlyTitles = ChildSafetyHelper.GetKidFriendlyTitles();
-
-        var filtered = channels.Where(c => 
-        {
-            // 1. KESİN RED (Hard Blacklist)
-            if (ContainsAny(c.Name, criticalBlacklist) || ContainsAny(c.GroupTitle, criticalBlacklist))
-                return false;
-
-            string category = c.GroupTitle ?? string.Empty;
-            string title = c.Name ?? string.Empty;
-
-            // 1.5. KID-FRIENDLY CHECK (Öncelik: Bariz çocuk içeriği her durumda geçsin)
-            // IsOldContent kontrolünden ÖNCE gelmeli ki Toy Story (1995) gibi çocuk klasikleri engellenmesin.
-            bool isKidFriendlyByName = ContainsAny(title, kidFriendlyTitles);
-            bool isKidFriendlyByCategory = ContainsAny(category, kidFriendlyTitles);
-            
-            if (isKidFriendlyByName || isKidFriendlyByCategory)
-            {
-                // Bariz çocuk içeriği: ContentRating'e bakılmaksızın izin ver
-                return true;
-            }
-
-            // 1.6. TARİH BAZLI ENGELLEME (2000 ve öncesi)
-            // Bu noktaya geldiyse bariz çocuk içeriği değil, güvenle engelleyebiliriz.
-            if (ChildSafetyHelper.IsOldContent(title) || ChildSafetyHelper.IsOldContent(category))
-                return false;
-
-            // 1.7. SERTİFİKA BAZLI FİLTRELEME (Yaş Sınırı - TMDB)
-            // Eğer metadata'dan gelen bir sertifika varsa, kelime bazlı tahminden daha güvenilirdir.
-            if (!string.IsNullOrEmpty(c.ContentRating))
-            {
-                if (!ChildSafetyHelper.IsSafeRating(c.ContentRating))
-                    return false;
-                
-                // Eğer sertifika kesin güvenliyse (G, TV-Y vb.) ve ana kara listeye girmiyorsa izin ver.
-                if (ChildSafetyHelper.IsSafeRating(c.ContentRating))
-                    return true;
-            }
-
-            // 2. KATEGORİ SINIFLANDIRMASI
-            bool isExplicitlySafe = ContainsAny(category, safeCategories);
-            bool isExplicitlyDangerous = ContainsAny(category, dangerousCategories);
-
-            // "Sinema", "Dizi", "Netflix" gibi genel/şüpheli kategoriler
-            bool isSuspectCategory = ContainsAny(category, new[] { "sinema", "cinema", "dizi", "series", "vod", "film", "favori", "izle", "aksiyon", "action", "macera", "adventure", "drama", "netflix", "prime", "disney+", "hbo", "starz" });
-
-            // 3. KARAR MANTIĞI
-            if (isExplicitlyDangerous) return false;
-
-            if (isExplicitlySafe)
-            {
-                // Güvenli kategorideyse, ekstra bir kara liste kontrolüyle izin ver
-                return true; 
-            }
-
-            if (isSuspectCategory || string.IsNullOrWhiteSpace(category))
-            {
-                // Şüpheli bir kategori veya kategori yoksa: Sadece adı güvenli olanlara izin ver
-                // (Örn: Sinema kategorisindeki "Kayıp Balık Nemo" geçsin, ama "Titanic" geçmesin)
-                return ContainsAny(title, kidFriendlyTitles);
-            }
-
-            // Diğer her şey (Belirsiz): Güvenlik için reddet
-            return false;
-        }).ToList();
-        
-        System.Diagnostics.Debug.WriteLine($"[PlaylistService] Category-centric filtering: {channels.Count} -> {filtered.Count} channels retained.");
-        return filtered;
-    }
-
-    private static async Task PurgeNonCompliantSeriesAsync(AppDbContext context, int playlistId, bool isChild)
-    {
-        // YENİ: Dizi (Series) ve Bölüm (Episode) tablolarını da temizle.
-        // Kanallar silinse bile geçmişten kalan agrege edilmiş dizi meta verileri UI'da görünmeye devam edebilir.
-            
-        if (!isChild) return;
-
-        // 1. Önce çocuk filtresine uymayan tüm dizileri (Series) bul
-        var allSeries = await context.Series
-            .Where(s => s.PlaylistId == playlistId)
-            .ToListAsync();
-
-        var seriesToDelete = allSeries.Where(s => 
-        {
-            var criticalBlacklist = ChildSafetyHelper.GetCriticalBlacklist();
-            var kidFriendlyTitles = ChildSafetyHelper.GetKidFriendlyTitles();
-            var safeCategories = ChildSafetyHelper.GetSafeCategories();
-
-            // 1. KESİN RED
-            if (ContainsAny(s.Name, criticalBlacklist) || ContainsAny(s.Genre, criticalBlacklist))
-                return true;
-
-            string category = s.Genre ?? string.Empty;
-            string title = s.Name ?? string.Empty;
-
-            // 1.5. KID-FRIENDLY CHECK (Öncelik: Bariz çocuk içeriği her durumda kalsın)
-            bool isKidFriendlyByName = ContainsAny(title, kidFriendlyTitles);
-            bool isKidFriendlyByCategory = ContainsAny(category, kidFriendlyTitles);
-            
-            if (isKidFriendlyByName || isKidFriendlyByCategory)
-            {
-                return false; // Silme, bariz çocuk içeriği
-            }
-
-            // 1.6. TARİH BAZLI ENGELLEME
-            if (ChildSafetyHelper.IsOldContent(title) || ChildSafetyHelper.IsOldContent(category)) return true;
-
-            // 1.7. SERTİFİKA BAZLI FİLTRELEME
-            if (!string.IsNullOrEmpty(s.ContentRating))
-            {
-                if (!ChildSafetyHelper.IsSafeRating(s.ContentRating)) return true; // Tehlikeli -> Sil
-            }
-
-            bool isExplicitlySafe = ContainsAny(category, safeCategories);
-            bool isSuspectCategory = ContainsAny(category, new[] { "sinema", "cinema", "dizi", "series", "vod", "film", "favori", "izle", "aksiyon", "action", "macera", "adventure", "drama", "netflix", "prime", "disney+", "hbo" });
-
-            if (isExplicitlySafe) return false;
-
-            if (isSuspectCategory || string.IsNullOrWhiteSpace(category))
-            {
-                // Şüpheli kategori veya boş: İsim kurtarma listesinde yoksa sil
-                return !ContainsAny(title, kidFriendlyTitles);
-            }
-
-            return true; // Belirsiz -> Korkuluk olarak sil
-        }).ToList();
-
-        if (seriesToDelete.Any())
-        {
-            System.Diagnostics.Debug.WriteLine($"[PlaylistService] Purging {seriesToDelete.Count} non-compliant SERIES from child profile.");
-            
-            // ExecuteDeleteAsync mixed with tracking often causes conflicts or FK errors
-            // if the full chain (Series -> Season -> Episode -> Progress) is not handled by raw SQL.
-            // RemoveRange handles tracking and cascades safely through EF Core.
-            context.Series.RemoveRange(seriesToDelete);
-            await context.SaveChangesAsync();
-        }
-        
-        // 2. Öksüz kalmış (hiç bölümü olmayan veya uygunsuz görünen) Bölümleri de temizle 
-        // Not: ExecuteDeleteAsync Cascade silmeyi tetiklemeyebilir, o yüzden Series silindiğinde
-        // Season ve Episode'lar da veri tabanı yapılandırmasına göre silinmeli. 
-        // AppDbContext'te OnDelete(DeleteBehavior.Cascade) olduğu için Series silinince Season ve Episode'lar da silinecektir.
-    }
-
-
-    private static async Task EnsureChildProfileCleanedAsync(AppDbContext context, Playlist playlist)
-    {
-        // 1. Kanalları Filtrele
-        var currentChannels = playlist.Channels.ToList();
-        var existingToKeep = ApplyChildFilter(currentChannels);
-        var keptIds = new HashSet<int>(existingToKeep.Select(c => c.Id));
-        
-        var toDelete = playlist.Channels
-            .Where(c => !keptIds.Contains(c.Id))
-            .ToList();
-
-        if (toDelete.Any())
-        {
-            System.Diagnostics.Debug.WriteLine($"[PlaylistService] Purging {toDelete.Count} non-compliant channels from child profile.");
-            
-            // CRITICAL: DO NOT use ExecuteDeleteAsync here as these entities are tracked.
-            // RemoveRange handles tracking and sync safely.
-            context.Channels.RemoveRange(toDelete);
-            await context.SaveChangesAsync();
-        }
-
-        // 2. Dizi meta verilerini temizle
-        await PurgeNonCompliantSeriesAsync(context, playlist.Id, true);
     }
 
     private static string NormalizeStreamIdentity(string? streamUrl)

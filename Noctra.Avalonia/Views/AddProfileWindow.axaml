@@ -223,13 +223,6 @@
                                        Foreground="{DynamicResource ErrorBrush}" Margin="4,2,0,0"
                                        IsVisible="{Binding ProfileNameError, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
 
-                            <CheckBox Content="{loc:Translate Profiles.Add.IsChild}" 
-                                      IsChecked="{Binding IsChild}"
-                                      IsEnabled="{Binding CanEditIsChild}"
-                                      IsVisible="{Binding IsChildVisible}"
-                                      Margin="4,16,0,0"
-                                      ToolTip.Tip="{loc:Translate Profiles.Add.IsChildTooltip}"/>
-
                             <!-- PIN Management Section -->
                             <Border Background="{DynamicResource Surface1Brush}" CornerRadius="8"
                                     Padding="20,16" Margin="0,24,0,0">

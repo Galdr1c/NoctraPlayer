@@ -867,15 +867,6 @@ public partial class AddProfileViewModel : ObservableObject
     [ObservableProperty]
     private string _selectedAvatar = "default";
 
-    [ObservableProperty]
-    private bool _isChild;
-
-    [ObservableProperty]
-    private bool _canEditIsChild = true;
-
-    [ObservableProperty]
-    private bool _isChildVisible = true;
-
     // PIN Management
     [ObservableProperty]
     private bool _hasPin;
@@ -1111,9 +1102,6 @@ public partial class AddProfileViewModel : ObservableObject
         OnPropertyChanged(nameof(HasExistingPin));
         ProfileName = profile.Name;
         SelectedAvatar = profile.Avatar ?? "default";
-        IsChild = profile.IsChild;
-        CanEditIsChild = false;
-        IsChildVisible = profile.IsChild; // Only show if it's already a child profile when editing
         HasPin = !string.IsNullOrEmpty(profile.PinHash);
         PinCode = string.Empty; // Never show existing PIN
         PinConfirm = string.Empty;
@@ -1870,7 +1858,6 @@ public partial class AddProfileViewModel : ObservableObject
             {
                 ProfileName = ProfileName,
                 Avatar = SelectedAvatar,
-                IsChild = IsChild,
                 Url = Url,
                 Username = Username,
                 EncryptedPassword = encryptedPassword,

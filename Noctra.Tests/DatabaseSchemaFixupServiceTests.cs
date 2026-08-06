@@ -1,3 +1,4 @@
+using System.Linq;
 using Microsoft.EntityFrameworkCore;
 using Noctra.Core.Services;
 using Noctra.Data;
@@ -225,7 +226,8 @@ public sealed class DatabaseSchemaFixupServiceTests
     private static async Task<Noctra.Models.Profile> SeedProfileAsync(
         AppDbContext context,
         string name,
-        string? pinHash)
+        string? pinHash,
+        bool isChild = false)
     {
         var account = new Noctra.Models.ProviderAccount
         {
@@ -241,11 +243,160 @@ public sealed class DatabaseSchemaFixupServiceTests
             Name = name,
             ProviderAccount = account,
             PinHash = pinHash,
+            IsChild = isChild,
             LastUsed = DateTime.UtcNow
         };
         context.Profiles.Add(profile);
         await context.SaveChangesAsync();
         return profile;
+    }
+
+    [Fact]
+    public async Task ResetChildModeAsync_ConvertsChildProfilesToStandard_AndIsIdempotent()
+    {
+        var databasePath = CreateTempDatabasePath();
+        try
+        {
+            await using var context = CreateContext(databasePath);
+            await context.Database.EnsureCreatedAsync();
+
+            // Eski çocuk profilleri (IsChild=true) + standart profil
+            var child1 = await SeedProfileAsync(context, "Child One", null, isChild: true);
+            var child2 = await SeedProfileAsync(context, "Child Two", null, isChild: true);
+            var standard = await SeedProfileAsync(context, "Standard", null);
+
+            // Act — çocuk profili özelliği kaldırıldı: IsChild=1 kayıtları standarta çevrilir
+            var converted = await new DatabaseSchemaFixupService()
+                .ResetChildModeAsync(context);
+
+            // Assert — yalnızca 2 çocuk profili çevrildi, standart korundu
+            Assert.Equal(2, converted);
+
+            await using var verify = CreateContext(databasePath);
+            Assert.Equal(0, await verify.Profiles.CountAsync(p => p.IsChild));
+            Assert.False((await verify.Profiles.FindAsync(child1.Id))!.IsChild);
+            Assert.False((await verify.Profiles.FindAsync(child2.Id))!.IsChild);
+            Assert.False((await verify.Profiles.FindAsync(standard.Id))!.IsChild);
+
+            // Idempotent — ikinci koşu 0 döner
+            await using var repeat = CreateContext(databasePath);
+            var secondRun = await new DatabaseSchemaFixupService()
+                .ResetChildModeAsync(repeat);
+            Assert.Equal(0, secondRun);
+        }
+        finally
+        {
+            TryDelete(databasePath);
+        }
+    }
+
+    /// <summary>
+    /// Faz 3 öncesi güvenlik testi: IsChild kolonu modelden çıkarılmadan önce,
+    /// mevcut (kolonlu) bir veritabanından kolonun ALTER TABLE DROP COLUMN ile
+    /// düşürülmesinin veri kaybı yaratmadığını doğrular. Faz 3'te bu ifade,
+    /// DatabaseSchemaFixupService içine ColumnExistsAsync guard'lı bir
+    /// DropColumnIfPresentAsync olarak taşınacaktır.
+    /// </summary>
+    [Fact]
+    public async Task DropIsChildColumn_FromExistingDatabase_PreservesAllProfileData()
+    {
+        var databasePath = CreateTempDatabasePath();
+        try
+        {
+            await using var context = CreateContext(databasePath);
+            await context.Database.EnsureCreatedAsync();
+
+            // Kolon düşürülmeden önce var olmalı (güncel şema hâlâ içeriyor).
+            Assert.True(await ColumnExistsAsync(context, "Profiles", "IsChild"));
+
+            // Çocuk bayrağı set edilmiş + PIN/deneme sayacı/kilit/avatar alanları
+            // dolu profiller — kolonun kendisi ve diğer tüm alanlar birlikte doğrulanır.
+            await SeedProfileAsync(context, "Child", null, isChild: true);
+            var pinned = await SeedProfileAsync(context, "Pinned", ProfilePinVerifier.Create("1234"));
+            pinned.FailedPinAttempts = 3;
+            pinned.PinLockedUntilUtc = DateTime.UtcNow.AddMinutes(5);
+            pinned.Avatar = "avatar_5";
+            await context.SaveChangesAsync();
+            await SeedProfileAsync(context, "Plain", null);
+
+            // Sanity — kolonda gerçek veri vardı (IsChild=1).
+            Assert.Equal(1, await ExecuteScalarIntAsync(
+                context,
+                "SELECT \"IsChild\" FROM \"Profiles\" WHERE \"Name\" = 'Child';"));
+
+            // Act — Faz 3 migration'ının çalıştıracağı ifade.
+            await context.Database.ExecuteSqlRawAsync(
+                "ALTER TABLE \"Profiles\" DROP COLUMN \"IsChild\";");
+
+            // Assert — kolon artık yok.
+            Assert.False(await ColumnExistsAsync(context, "Profiles", "IsChild"));
+
+            // Assert — tüm profiller ve diğer tüm alanlar korundu.
+            var rows = await QueryProfileRowsRawAsync(context);
+            Assert.Equal(3, rows.Count);
+
+            // Zaman alanları da korundu — tam değer eşleşmesi EF'nin TEXT
+            // serileştirmesine bağlı olup kırılgan olduğundan dolu olma yeterli.
+            foreach (var row in rows)
+            {
+                Assert.NotEmpty(row.CreatedAt);
+                Assert.NotEmpty(row.LastUsed);
+            }
+
+            var child = rows.Single(row => row.Name == "Child");
+            Assert.Equal("default", child.Avatar);
+            Assert.Null(child.PinHash);
+            Assert.Equal(0, child.FailedPinAttempts);
+            Assert.Null(child.PinLockedUntilUtc);
+
+            var pinnedRow = rows.Single(row => row.Name == "Pinned");
+            Assert.Equal("avatar_5", pinnedRow.Avatar);
+            Assert.Equal(3, pinnedRow.FailedPinAttempts);
+            Assert.NotNull(pinnedRow.PinLockedUntilUtc);
+            Assert.NotNull(pinnedRow.PinHash);
+            Assert.True(ProfilePinVerifier.Verify("1234", pinnedRow.PinHash!));
+
+            var plain = rows.Single(row => row.Name == "Plain");
+            Assert.Null(plain.PinHash);
+            Assert.Null(plain.PinLockedUntilUtc);
+
+            // İlişkili ProviderAccount tablosu da etkilenmedi.
+            Assert.Equal(3, await ExecuteScalarIntAsync(
+                context,
+                "SELECT COUNT(*) FROM \"ProviderAccounts\";"));
+        }
+        finally
+        {
+            TryDelete(databasePath);
+        }
+    }
+
+    /// <summary>
+    /// Guard gereksinimini belgeler: kolon zaten yokken ikinci kez
+    /// ALTER TABLE DROP COLUMN çalıştırmak SqliteException fırlatır. Bu yüzden
+    /// Faz 3'teki fixup, AddColumnIfMissingAsync ile aynı ColumnExistsAsync
+    /// guard'ını kullanmalıdır — aksi halde uygulama her açılışta hata alır.
+    /// </summary>
+    [Fact]
+    public async Task DropIsChildColumn_WhenAlreadyDropped_Throws_DocumentingGuardRequirement()
+    {
+        var databasePath = CreateTempDatabasePath();
+        try
+        {
+            await using var context = CreateContext(databasePath);
+            await context.Database.EnsureCreatedAsync();
+
+            await context.Database.ExecuteSqlRawAsync(
+                "ALTER TABLE \"Profiles\" DROP COLUMN \"IsChild\";");
+
+            await Assert.ThrowsAsync<Microsoft.Data.Sqlite.SqliteException>(() =>
+                context.Database.ExecuteSqlRawAsync(
+                    "ALTER TABLE \"Profiles\" DROP COLUMN \"IsChild\";"));
+        }
+        finally
+        {
+            TryDelete(databasePath);
+        }
     }
 
     [Fact]
@@ -390,6 +541,58 @@ public sealed class DatabaseSchemaFixupServiceTests
             }
         }
     }
+
+    private static async Task<List<ProfileRowSnapshot>> QueryProfileRowsRawAsync(AppDbContext context)
+    {
+        var connection = context.Database.GetDbConnection();
+        var shouldClose = connection.State != System.Data.ConnectionState.Open;
+        if (shouldClose)
+        {
+            await connection.OpenAsync();
+        }
+
+        try
+        {
+            await using var command = connection.CreateCommand();
+            command.CommandText =
+                "SELECT \"Id\", \"Name\", \"Avatar\", \"PinHash\", \"FailedPinAttempts\", " +
+                "\"PinLockedUntilUtc\", \"CreatedAt\", \"LastUsed\" FROM \"Profiles\" ORDER BY \"Id\";";
+
+            var rows = new List<ProfileRowSnapshot>();
+            await using var reader = await command.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                rows.Add(new ProfileRowSnapshot(
+                    reader.GetInt32(0),
+                    reader.GetString(1),
+                    reader.GetString(2),
+                    reader.IsDBNull(3) ? null : reader.GetString(3),
+                    reader.GetInt32(4),
+                    reader.IsDBNull(5) ? null : reader.GetString(5),
+                    reader.GetString(6),
+                    reader.GetString(7)));
+            }
+
+            return rows;
+        }
+        finally
+        {
+            if (shouldClose)
+            {
+                await connection.CloseAsync();
+            }
+        }
+    }
+
+    private sealed record ProfileRowSnapshot(
+        int Id,
+        string Name,
+        string Avatar,
+        string? PinHash,
+        int FailedPinAttempts,
+        string? PinLockedUntilUtc,
+        string CreatedAt,
+        string LastUsed);
 
     private static void TryDelete(string path)
     {

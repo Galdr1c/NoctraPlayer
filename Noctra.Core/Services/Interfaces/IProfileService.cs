@@ -105,7 +105,6 @@ public record ProfileSaveRequest
 {
     public required string ProfileName { get; init; }
     public required string Avatar { get; init; }
-    public required bool IsChild { get; init; }
     public required string Url { get; init; }
     public required string Username { get; init; }
     public required string EncryptedPassword { get; init; }

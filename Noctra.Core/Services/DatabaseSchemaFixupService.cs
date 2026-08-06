@@ -273,6 +273,29 @@ public sealed class DatabaseSchemaFixupService : IDatabaseSchemaFixupService
     }
 
     /// <summary>
+    /// Çocuk profili özelliği kaldırıldı (Faz 1) — IsChild=1 kayıtları artık
+    /// standart profil olarak çalışır. Kolon veri kaybı olmadan bir defaya
+    /// mahsus 0'a çekilir; bir defalık bildirim, dönüş değerine göre çağıran
+    /// tarafından gösterilir. Profiller tablosu yoksa güvenle 0 döner.
+    /// </summary>
+    public async Task<int> ResetChildModeAsync(
+        AppDbContext context,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+
+        if (!await TableExistsAsync(context, "Profiles", cancellationToken).ConfigureAwait(false))
+        {
+            return 0;
+        }
+
+        return await ExecuteUpdateAsync(
+            context,
+            "UPDATE Profiles SET IsChild = 0 WHERE IsChild = 1;",
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
     /// Geçersiz PIN kayıtlarını sıfırlar: eski PBKDF2/legacy SHA-256 formatları
     /// ve PIN2$ önekli fakat salt/hash'i bozuk değerler. Dönen sayı ikisinin
     /// toplamıdır — her ikisi de kullanıcı bildirimine dahil edilir. Profiller

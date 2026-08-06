@@ -217,6 +217,7 @@ public partial class MainView : UserControl
         {
             await ShowLegalConsentIfNeededAsync();
             await ShowPinSystemResetNoticeIfNeededAsync();
+            await ShowChildModeRemovedNoticeIfNeededAsync();
 
             await Dispatcher.UIThread.InvokeAsync(ShowProfileSelection);
         }
@@ -267,6 +268,40 @@ public partial class MainView : UserControl
             localizationService.GetString("Profiles.Pin.ResetNotice.Message"));
 
         settingsService.Settings.PinSystemResetNoticePending = false;
+        await settingsService.SaveAsync();
+    }
+
+    /// <summary>
+    /// Çocuk profili özelliği kaldırıldı (Faz 1) — eski çocuk profiller standart
+    /// profile çevrildiyse bir defalık bilgi gösterilir.
+    /// </summary>
+    private async Task ShowChildModeRemovedNoticeIfNeededAsync()
+    {
+        await WaitForDatabaseInitializationAsync();
+
+        if (Application.Current is not App app || app.Services is null)
+        {
+            return;
+        }
+
+        var settingsService = app.Services.GetService<ISettingsService>();
+        if (settingsService is null || !settingsService.Settings.ChildModeRemovedNoticePending)
+        {
+            return;
+        }
+
+        var dialogService = app.Services.GetService<IDialogService>();
+        var localizationService = app.Services.GetService<ILocalizationService>();
+        if (dialogService is null || localizationService is null)
+        {
+            return;
+        }
+
+        await dialogService.ShowMessageAsync(
+            localizationService.GetString("Profiles.Child.Notice.Title"),
+            localizationService.GetString("Profiles.Child.Notice.Message"));
+
+        settingsService.Settings.ChildModeRemovedNoticePending = false;
         await settingsService.SaveAsync();
     }
 
