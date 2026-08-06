@@ -80,11 +80,14 @@ namespace Noctra.Tests
             var service = new ProfileService(_contextFactory, _mockDownloadService.Object, _mockLicenseService.Object);
 
             // Çocuk profilleri 1 ve 3: aynı hesabı paylaşıyor ve ikisi de silinecek
-            // (döngü içi kontrol bunu göremez — toplu süpürme hesabı temizlemeli).
+            // (kardeş kayıtlar SaveChanges sonrası denetlendiği için hesap temizlenir).
             // Çocuk profili 2: standart profille paylaşılan hesap (hesap korunur).
+            // İlgisiz yetim hesap: hiçbir profile bağlı değil — scoped temizlik
+            // yalnızca silinen çocuk profillerinin hesap adaylarına dokunmalı.
             var childAccount = new ProviderAccount { Name = "Child Account", Url = "http://child.com", Type = ProfileType.M3U };
             var sharedAccount = new ProviderAccount { Name = "Shared Account", Url = "http://shared.com", Type = ProfileType.M3U };
-            _context.ProviderAccounts.AddRange(childAccount, sharedAccount);
+            var unrelatedOrphan = new ProviderAccount { Name = "Unrelated Orphan", Url = "http://orphan.com", Type = ProfileType.M3U };
+            _context.ProviderAccounts.AddRange(childAccount, sharedAccount, unrelatedOrphan);
             await _context.SaveChangesAsync();
 
             var child1 = new Profile { Name = "Child One", ProviderAccountId = childAccount.Id, IsChild = true, LastUsed = DateTime.UtcNow };
@@ -107,13 +110,17 @@ namespace Noctra.Tests
                 SeriesTitle = "Series",
                 LastWatchedAt = DateTime.UtcNow
             });
+            // Paylaşılan hesaptaki çocuk profilin (child2) kendi içerik verisi
+            var child2Playlist = new Playlist { Name = "Child Two Playlist", ProfileId = child2.Id, IsActive = true };
+            _context.Playlists.Add(child2Playlist);
             var standardPlaylist = new Playlist { Name = "Standard Playlist", ProfileId = standard.Id, IsActive = true };
             _context.Playlists.Add(standardPlaylist);
             await _context.SaveChangesAsync();
 
             var childChannel = new Channel { Name = "Child Ch", StreamUrl = "http://c", PlaylistId = childPlaylist.Id, TvgId = "child-tvg" };
+            var child2Channel = new Channel { Name = "Child Two Ch", StreamUrl = "http://c2", PlaylistId = child2Playlist.Id, TvgId = "child2-tvg" };
             var standardChannel = new Channel { Name = "Standard Ch", StreamUrl = "http://s", PlaylistId = standardPlaylist.Id, TvgId = "standard-tvg" };
-            _context.Channels.AddRange(childChannel, standardChannel);
+            _context.Channels.AddRange(childChannel, child2Channel, standardChannel);
             await _context.SaveChangesAsync();
 
             _context.EpgPrograms.Add(new EpgProgram
@@ -125,10 +132,45 @@ namespace Noctra.Tests
             });
             _context.EpgPrograms.Add(new EpgProgram
             {
+                ChannelId = child2Channel.TvgId,
+                Title = "Child Two EPG",
+                StartTime = DateTime.UtcNow,
+                EndTime = DateTime.UtcNow.AddHours(1)
+            });
+            _context.EpgPrograms.Add(new EpgProgram
+            {
                 ChannelId = standardChannel.TvgId,
                 Title = "Standard EPG",
                 StartTime = DateTime.UtcNow,
                 EndTime = DateTime.UtcNow.AddHours(1)
+            });
+            await _context.SaveChangesAsync();
+
+            // ImportJob kayıtlarının profil/playlist ile FK'sı yoktur — çocuk
+            // profil ve playlist kayıtları için açıkça temizlenmeli; standart korunmalı.
+            _context.ImportJobs.Add(new ImportJob
+            {
+                ProfileId = child1.Id,
+                PlaylistId = childPlaylist.Id,
+                SourceName = "Child Import",
+                Kind = ImportJobKind.M3U,
+                Status = ImportJobStatus.Completed
+            });
+            _context.ImportJobs.Add(new ImportJob
+            {
+                ProfileId = child2.Id,
+                PlaylistId = child2Playlist.Id,
+                SourceName = "Child Two Import",
+                Kind = ImportJobKind.M3U,
+                Status = ImportJobStatus.Completed
+            });
+            _context.ImportJobs.Add(new ImportJob
+            {
+                ProfileId = standard.Id,
+                PlaylistId = standardPlaylist.Id,
+                SourceName = "Standard Import",
+                Kind = ImportJobKind.M3U,
+                Status = ImportJobStatus.Completed
             });
             await _context.SaveChangesAsync();
 
@@ -157,9 +199,130 @@ namespace Noctra.Tests
             Assert.NotNull(await _context.Channels.FindAsync(standardChannel.Id));
             Assert.Single(await _context.EpgPrograms.Where(e => e.ChannelId == "standard-tvg").ToListAsync());
 
-            // Yalnızca çocuk profile ait hesap silindi; paylaşılan hesap korundu
+            // Çocuk profillerin (paylaşılan hesaptaki dahil) playlist/kanal/EPG
+            // ve import job'ları temizlendi; standart korundu
+            Assert.Empty(await _context.Playlists.Where(p => p.ProfileId == child2.Id).ToListAsync());
+            Assert.Empty(await _context.Channels.Where(c => c.PlaylistId == child2Playlist.Id).ToListAsync());
+            Assert.Empty(await _context.EpgPrograms.Where(e => e.ChannelId == "child2-tvg").ToListAsync());
+            Assert.Empty(await _context.ImportJobs.Where(j => j.ProfileId == child1.Id || j.ProfileId == child2.Id).ToListAsync());
+            Assert.Single(await _context.ImportJobs.Where(j => j.ProfileId == standard.Id).ToListAsync());
+
+            // Yalnızca çocuk profile ait hesap silindi; paylaşılan hesap ve
+            // ilgisiz yetim hesap korundu (temizlik adaylarla sınırlı)
             Assert.Null(await _context.ProviderAccounts.FindAsync(childAccount.Id));
             Assert.NotNull(await _context.ProviderAccounts.FindAsync(sharedAccount.Id));
+            Assert.NotNull(await _context.ProviderAccounts.FindAsync(unrelatedOrphan.Id));
+        }
+
+        [Fact]
+        public async Task DeleteChildProfilesAsync_IsIdempotent_SecondCallReturnsZero()
+        {
+            var service = new ProfileService(_contextFactory, _mockDownloadService.Object, _mockLicenseService.Object);
+
+            var account = new ProviderAccount { Name = "Idempotent Account", Url = "http://idem.com", Type = ProfileType.M3U };
+            _context.ProviderAccounts.Add(account);
+            await _context.SaveChangesAsync();
+
+            var child = new Profile { Name = "Child", ProviderAccountId = account.Id, IsChild = true, LastUsed = DateTime.UtcNow };
+            _context.Profiles.Add(child);
+            await _context.SaveChangesAsync();
+
+            Assert.Equal(1, await service.DeleteChildProfilesAsync());
+            _context.ChangeTracker.Clear();
+
+            // İkinci çağrı idempotent: silinecek çocuk profil kalmadı → 0 döner
+            Assert.Equal(0, await service.DeleteChildProfilesAsync());
+            Assert.Null(await _context.Profiles.FindAsync(child.Id));
+        }
+
+        [Fact]
+        public async Task DeleteChildProfilesAsync_DownloadFailure_PreservesProfileAndAccount()
+        {
+            var service = new ProfileService(_contextFactory, _mockDownloadService.Object, _mockLicenseService.Object);
+
+            var account = new ProviderAccount { Name = "DL Account", Url = "http://dl.com", Type = ProfileType.M3U };
+            _context.ProviderAccounts.Add(account);
+            await _context.SaveChangesAsync();
+
+            var child = new Profile { Name = "Child", ProviderAccountId = account.Id, IsChild = true, LastUsed = DateTime.UtcNow };
+            _context.Profiles.Add(child);
+            await _context.SaveChangesAsync();
+
+            _mockDownloadService
+                .Setup(d => d.DeleteProfileDownloadsAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+                .ThrowsAsync(new InvalidOperationException("download delete failed"));
+
+            // İndirme silme hatası atomik DB silme işlemini durdurmalı —
+            // profil ve hesap korunur, bir sonraki açılışta tekrar denenir.
+            await Assert.ThrowsAsync<InvalidOperationException>(() => service.DeleteChildProfilesAsync());
+
+            _context.ChangeTracker.Clear();
+            Assert.NotNull(await _context.Profiles.FindAsync(child.Id));
+            Assert.NotNull(await _context.ProviderAccounts.FindAsync(account.Id));
+        }
+
+        [Fact]
+        public async Task DeleteChildProfilesAsync_SettingsCleanupFailure_StillReturnsCountAndDeletes()
+        {
+            var settings = new AppSettings();
+            var settingsMock = new Mock<ISettingsService>();
+            settingsMock.SetupGet(s => s.Settings).Returns(settings);
+            settingsMock
+                .Setup(s => s.CleanOrphanedSettingsAsync(It.IsAny<IEnumerable<int>>()))
+                .ThrowsAsync(new InvalidOperationException("settings cleanup failed"));
+
+            var service = new ProfileService(
+                _contextFactory,
+                _mockDownloadService.Object,
+                _mockLicenseService.Object,
+                settingsMock.Object);
+
+            var account = new ProviderAccount { Name = "Settings Account", Url = "http://settings.com", Type = ProfileType.M3U };
+            _context.ProviderAccounts.Add(account);
+            await _context.SaveChangesAsync();
+
+            var child = new Profile { Name = "Child", ProviderAccountId = account.Id, IsChild = true, LastUsed = DateTime.UtcNow };
+            _context.Profiles.Add(child);
+            await _context.SaveChangesAsync();
+
+            // DB silme başarılı + ayar temizliği başarısız → silinen sayı yine
+            // dönmeli VE bir defalık bildirim bayrağı, silme sonucu alındığı
+            // anda servis tarafından kalıcı olarak yazılmış olmalı (temizlik
+            // hatası bildirimi kaybettirmemeli).
+            var deleted = await service.DeleteChildProfilesAsync();
+            Assert.Equal(1, deleted);
+            Assert.True(settings.ChildModeRemovedNoticePending);
+
+            _context.ChangeTracker.Clear();
+            Assert.Null(await _context.Profiles.FindAsync(child.Id));
+        }
+
+        [Fact]
+        public async Task DeleteChildProfilesAsync_DeletesChildProfileThatIsAlsoExpiredPendingDeletion()
+        {
+            var service = new ProfileService(_contextFactory, _mockDownloadService.Object, _mockLicenseService.Object);
+
+            var account = new ProviderAccount { Name = "Both Account", Url = "http://both.com", Type = ProfileType.M3U };
+            _context.ProviderAccounts.Add(account);
+            await _context.SaveChangesAsync();
+
+            // Çocuk profil aynı zamanda süresi dolmuş pending-deletion — hangi
+            // bakım adımı önce çalışırsa çalışsın çocuk geçişi onu temizler.
+            var child = new Profile
+            {
+                Name = "Child Expired",
+                ProviderAccountId = account.Id,
+                IsChild = true,
+                PendingDeletionAt = DateTime.UtcNow.AddDays(-4),
+                LastUsed = DateTime.UtcNow
+            };
+            _context.Profiles.Add(child);
+            await _context.SaveChangesAsync();
+
+            Assert.Equal(1, await service.DeleteChildProfilesAsync());
+
+            _context.ChangeTracker.Clear();
+            Assert.Null(await _context.Profiles.FindAsync(child.Id));
         }
 
         [Fact]
@@ -855,6 +1018,13 @@ namespace Noctra.Tests
                 StartTime = DateTime.UtcNow,
                 EndTime = DateTime.UtcNow.AddHours(1)
             });
+            _context.ImportJobs.Add(new ImportJob
+            {
+                ProfileId = expiredProfile.Id,
+                SourceName = "Expired Import",
+                Kind = ImportJobKind.M3U,
+                Status = ImportJobStatus.Completed
+            });
             await _context.SaveChangesAsync();
 
             var freshProfile = await SeedProfileAsync("Freshly Scheduled");
@@ -872,10 +1042,11 @@ namespace Noctra.Tests
             Assert.Null(await dbVerify.Profiles.FindAsync(expiredProfile.Id)); // Deleted
             Assert.NotNull(await dbVerify.Profiles.FindAsync(freshProfile.Id)); // Still there
 
-            // Süresi dolmuş profilin playlist/kanal/EPG verisi de temizlendi
+            // Süresi dolmuş profilin playlist/kanal/EPG/import-job verisi de temizlendi
             Assert.Empty(await dbVerify.Playlists.Where(p => p.ProfileId == expiredProfile.Id).ToListAsync());
             Assert.Empty(await dbVerify.Channels.Where(c => c.PlaylistId == expiredPlaylist.Id).ToListAsync());
             Assert.Empty(await dbVerify.EpgPrograms.Where(e => e.ChannelId == "expired-tvg").ToListAsync());
+            Assert.Empty(await dbVerify.ImportJobs.Where(j => j.ProfileId == expiredProfile.Id).ToListAsync());
             Assert.NotNull(await dbVerify.Profiles.FindAsync(normalProfile.Id)); // Still there
         }
 

@@ -272,8 +272,8 @@ public partial class MainView : UserControl
     }
 
     /// <summary>
-    /// Çocuk profili özelliği kaldırıldı (Faz 1) — eski çocuk profiller standart
-    /// profile çevrildiyse bir defalık bilgi gösterilir.
+    /// Çocuk profili özelliği kaldırıldı — eski çocuk profilleri (verileriyle
+    /// birlikte) silindiyse bir defalık bilgi gösterilir.
     /// </summary>
     private async Task ShowChildModeRemovedNoticeIfNeededAsync()
     {
