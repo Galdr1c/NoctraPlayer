@@ -94,8 +94,11 @@ namespace Noctra.Tests
             _context.Profiles.AddRange(child1, child2, child3, standard);
             await _context.SaveChangesAsync();
 
-            // İlişkili veri: playlist + izleme geçmişi + seri ilerlemesi
-            _context.Playlists.Add(new Playlist { Name = "Child Playlist", ProfileId = child1.Id, IsActive = true });
+            // İlişkili veri: playlist + izleme geçmişi + seri ilerlemesi + EPG.
+            // EpgProgram ChannelId'yi tvg-id olarak saklar ve FK'sı yoktur;
+            // profil silinirken kanallarla birlikte açıkça temizlenmelidir.
+            var childPlaylist = new Playlist { Name = "Child Playlist", ProfileId = child1.Id, IsActive = true };
+            _context.Playlists.Add(childPlaylist);
             _context.WatchHistories.Add(new WatchHistory { ProfileId = child1.Id, WatchedAt = DateTime.UtcNow });
             _context.SeriesEpisodeProgresses.Add(new SeriesEpisodeProgress
             {
@@ -104,7 +107,29 @@ namespace Noctra.Tests
                 SeriesTitle = "Series",
                 LastWatchedAt = DateTime.UtcNow
             });
-            _context.Playlists.Add(new Playlist { Name = "Standard Playlist", ProfileId = standard.Id, IsActive = true });
+            var standardPlaylist = new Playlist { Name = "Standard Playlist", ProfileId = standard.Id, IsActive = true };
+            _context.Playlists.Add(standardPlaylist);
+            await _context.SaveChangesAsync();
+
+            var childChannel = new Channel { Name = "Child Ch", StreamUrl = "http://c", PlaylistId = childPlaylist.Id, TvgId = "child-tvg" };
+            var standardChannel = new Channel { Name = "Standard Ch", StreamUrl = "http://s", PlaylistId = standardPlaylist.Id, TvgId = "standard-tvg" };
+            _context.Channels.AddRange(childChannel, standardChannel);
+            await _context.SaveChangesAsync();
+
+            _context.EpgPrograms.Add(new EpgProgram
+            {
+                ChannelId = childChannel.TvgId,
+                Title = "Child EPG",
+                StartTime = DateTime.UtcNow,
+                EndTime = DateTime.UtcNow.AddHours(1)
+            });
+            _context.EpgPrograms.Add(new EpgProgram
+            {
+                ChannelId = standardChannel.TvgId,
+                Title = "Standard EPG",
+                StartTime = DateTime.UtcNow,
+                EndTime = DateTime.UtcNow.AddHours(1)
+            });
             await _context.SaveChangesAsync();
 
             // Act — eski çocuk profilleri verileriyle birlikte silinir
@@ -125,6 +150,12 @@ namespace Noctra.Tests
             Assert.Empty(await _context.SeriesEpisodeProgresses.Where(p => p.ProfileId == child2.Id).ToListAsync());
             Assert.Empty(await _context.Playlists.Where(p => p.ProfileId == child1.Id).ToListAsync());
             Assert.Single(await _context.Playlists.Where(p => p.ProfileId == standard.Id).ToListAsync());
+
+            // Çocuk profilin kanalları + EPG kayıtları temizlendi; standart kaldı
+            Assert.Empty(await _context.Channels.Where(c => c.PlaylistId == childPlaylist.Id).ToListAsync());
+            Assert.Empty(await _context.EpgPrograms.Where(e => e.ChannelId == "child-tvg").ToListAsync());
+            Assert.NotNull(await _context.Channels.FindAsync(standardChannel.Id));
+            Assert.Single(await _context.EpgPrograms.Where(e => e.ChannelId == "standard-tvg").ToListAsync());
 
             // Yalnızca çocuk profile ait hesap silindi; paylaşılan hesap korundu
             Assert.Null(await _context.ProviderAccounts.FindAsync(childAccount.Id));
@@ -803,6 +834,29 @@ namespace Noctra.Tests
             _context.Entry(expiredProfile).State = EntityState.Modified; // Ensure saved
             await _context.SaveChangesAsync();
 
+            // Süresi dolmuş profile playlist + kanal + EPG ekle — EPG'nin FK'sı
+            // yoktur ve purge sırasında açıkça temizlenmelidir.
+            var expiredPlaylist = new Playlist { Name = "Expired Playlist", ProfileId = expiredProfile.Id, IsActive = true };
+            _context.Playlists.Add(expiredPlaylist);
+            await _context.SaveChangesAsync();
+            var expiredChannel = new Channel
+            {
+                Name = "Expired Ch",
+                StreamUrl = "http://e",
+                PlaylistId = expiredPlaylist.Id,
+                TvgId = "expired-tvg"
+            };
+            _context.Channels.Add(expiredChannel);
+            await _context.SaveChangesAsync();
+            _context.EpgPrograms.Add(new EpgProgram
+            {
+                ChannelId = expiredChannel.TvgId,
+                Title = "Expired EPG",
+                StartTime = DateTime.UtcNow,
+                EndTime = DateTime.UtcNow.AddHours(1)
+            });
+            await _context.SaveChangesAsync();
+
             var freshProfile = await SeedProfileAsync("Freshly Scheduled");
             freshProfile.PendingDeletionAt = DateTime.UtcNow; // Scheduled just now
             _context.Entry(freshProfile).State = EntityState.Modified;
@@ -817,6 +871,11 @@ namespace Noctra.Tests
             using var dbVerify = _contextFactory.CreateDbContext();
             Assert.Null(await dbVerify.Profiles.FindAsync(expiredProfile.Id)); // Deleted
             Assert.NotNull(await dbVerify.Profiles.FindAsync(freshProfile.Id)); // Still there
+
+            // Süresi dolmuş profilin playlist/kanal/EPG verisi de temizlendi
+            Assert.Empty(await dbVerify.Playlists.Where(p => p.ProfileId == expiredProfile.Id).ToListAsync());
+            Assert.Empty(await dbVerify.Channels.Where(c => c.PlaylistId == expiredPlaylist.Id).ToListAsync());
+            Assert.Empty(await dbVerify.EpgPrograms.Where(e => e.ChannelId == "expired-tvg").ToListAsync());
             Assert.NotNull(await dbVerify.Profiles.FindAsync(normalProfile.Id)); // Still there
         }
 

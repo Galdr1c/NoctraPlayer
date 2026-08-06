@@ -170,22 +170,28 @@ public class ProfileService : IProfileService
         return profile;
     }
 
-    private static async Task DeleteProfilePlaylistContentAsync(AppDbContext db, int profileId)
+    private static async Task DeleteProfilePlaylistContentAsync(
+        AppDbContext db,
+        int profileId,
+        CancellationToken cancellationToken = default)
     {
         var playlistIds = await db.Playlists
             .Where(pl => pl.ProfileId == profileId)
             .Select(pl => pl.Id)
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         if (playlistIds.Count == 0)
         {
             return;
         }
 
+        // EpgProgram'ların Channel tablosuyla FK ilişkisi yoktur (ChannelId
+        // tvg-id tabanlı bir string'dir) — kanallar cascade ile silinirken EPG
+        // kayıtları geride kalır. Profil içeriği silinirken EPG açıkça temizlenir.
         var epgChannels = await db.Channels
             .Where(c => playlistIds.Contains(c.PlaylistId))
             .Select(c => new { c.TvgId, c.TvgName, c.Name })
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         var epgChannelIds = epgChannels
             .SelectMany(c => new[] { c.TvgId, c.TvgName, c.Name })
@@ -202,13 +208,13 @@ public class ProfileService : IProfileService
                 var batch = epgChannelIds.Skip(i).Take(batchSize).ToList();
                 await db.EpgPrograms
                     .Where(e => batch.Contains(e.ChannelId))
-                    .ExecuteDeleteAsync();
+                    .ExecuteDeleteAsync(cancellationToken);
             }
         }
 
         await db.Series
             .Where(s => playlistIds.Contains(s.PlaylistId))
-            .ExecuteDeleteAsync();
+            .ExecuteDeleteAsync(cancellationToken);
     }
 
     public async Task DeleteProfileAsync(int profileId, int providerAccountId, ProfileAccessGrant grant)
@@ -314,13 +320,7 @@ public class ProfileService : IProfileService
             var hasOtherProfiles = await db.Profiles
                 .AnyAsync(p => p.ProviderAccountId == profile.ProviderAccountId && p.Id != profile.Id);
 
-            await db.WatchHistories
-                .Where(h => h.ProfileId == profile.Id)
-                .ExecuteDeleteAsync();
-
-            await db.SeriesEpisodeProgresses
-                .Where(p => p.ProfileId == profile.Id)
-                .ExecuteDeleteAsync();
+            await DeleteProfilePlaylistContentAsync(db, profile.Id);
 
             await db.Playlists
                 .Where(p => p.ProfileId == profile.Id)
@@ -380,13 +380,7 @@ public class ProfileService : IProfileService
             var hasOtherProfiles = await db.Profiles
                 .AnyAsync(p => p.ProviderAccountId == profile.ProviderAccountId && p.Id != profile.Id, cancellationToken);
 
-            await db.WatchHistories
-                .Where(h => h.ProfileId == profile.Id)
-                .ExecuteDeleteAsync(cancellationToken);
-
-            await db.SeriesEpisodeProgresses
-                .Where(p => p.ProfileId == profile.Id)
-                .ExecuteDeleteAsync(cancellationToken);
+            await DeleteProfilePlaylistContentAsync(db, profile.Id, cancellationToken);
 
             await db.Playlists
                 .Where(p => p.ProfileId == profile.Id)

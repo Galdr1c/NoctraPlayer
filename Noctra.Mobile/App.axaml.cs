@@ -147,19 +147,6 @@ public partial class App : Application
             };
         }
 
-        // ── Purge expired profiles (fire-and-forget) ─────────────────────────
-        if (Services.GetService(typeof(IProfileService)) is IProfileService profileService)
-        {
-            _ = Task.Run(async () =>
-            {
-                try { await profileService.PurgeExpiredProfilesAsync(); }
-                catch (Exception ex)
-                {
-                    System.Diagnostics.Debug.WriteLine($"[Mobile.App] Failed to purge expired profiles: {ex.Message}");
-                }
-            });
-        }
-
         return Services;
     }
 
@@ -196,11 +183,28 @@ public partial class App : Application
 
                 }
 
-                // Çocuk profili özelliği kaldırıldı — eski çocuk profilleri
-                // (verileriyle birlikte) silinir; sahibine bir defalık bilgi
-                // gösterilir.
+                // Bakım işlemleri burada TEK zincirde sıralı çalışır — ayrı bir
+                // fire-and-forget purge yoktur; eşzamanlı iki silme işleminin
+                // aynı profile dokunması (SQLite locked / yarış) engellenir.
                 if (profileService is not null)
                 {
+                    // 1) Üç günlük silme süresi dolmuş bekleyen profilleri temizle.
+                    // Kendi try/catch'i: geçici bir hata çocuk profili migration'ını
+                    // engellememeli (bir sonraki açılışta purge tekrar denenir).
+                    try
+                    {
+                        await profileService
+                            .PurgeExpiredProfilesAsync()
+                            .ConfigureAwait(false);
+                    }
+                    catch (Exception purgeEx)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[Mobile.App] Failed to purge expired profiles: {purgeEx.Message}");
+                    }
+
+                    // 2) Çocuk profili özelliği kaldırıldı — eski çocuk profilleri
+                    // (verileriyle birlikte) silinir; sahibine bir defalık bilgi
+                    // gösterilir.
                     var deletedChildProfiles = await profileService
                         .DeleteChildProfilesAsync()
                         .ConfigureAwait(false);
