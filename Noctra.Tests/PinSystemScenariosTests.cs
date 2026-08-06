@@ -75,6 +75,63 @@ namespace Noctra.Tests
         }
 
         [Fact]
+        public async Task DeleteChildProfilesAsync_DeletesChildProfilesAndRelatedData_KeepsStandardProfiles()
+        {
+            var service = new ProfileService(_contextFactory, _mockDownloadService.Object, _mockLicenseService.Object);
+
+            // Çocuk profilleri 1 ve 3: aynı hesabı paylaşıyor ve ikisi de silinecek
+            // (döngü içi kontrol bunu göremez — toplu süpürme hesabı temizlemeli).
+            // Çocuk profili 2: standart profille paylaşılan hesap (hesap korunur).
+            var childAccount = new ProviderAccount { Name = "Child Account", Url = "http://child.com", Type = ProfileType.M3U };
+            var sharedAccount = new ProviderAccount { Name = "Shared Account", Url = "http://shared.com", Type = ProfileType.M3U };
+            _context.ProviderAccounts.AddRange(childAccount, sharedAccount);
+            await _context.SaveChangesAsync();
+
+            var child1 = new Profile { Name = "Child One", ProviderAccountId = childAccount.Id, IsChild = true, LastUsed = DateTime.UtcNow };
+            var child2 = new Profile { Name = "Child Two", ProviderAccountId = sharedAccount.Id, IsChild = true, LastUsed = DateTime.UtcNow };
+            var child3 = new Profile { Name = "Child Three", ProviderAccountId = childAccount.Id, IsChild = true, LastUsed = DateTime.UtcNow };
+            var standard = new Profile { Name = "Standard", ProviderAccountId = sharedAccount.Id, IsChild = false, LastUsed = DateTime.UtcNow };
+            _context.Profiles.AddRange(child1, child2, child3, standard);
+            await _context.SaveChangesAsync();
+
+            // İlişkili veri: playlist + izleme geçmişi + seri ilerlemesi
+            _context.Playlists.Add(new Playlist { Name = "Child Playlist", ProfileId = child1.Id, IsActive = true });
+            _context.WatchHistories.Add(new WatchHistory { ProfileId = child1.Id, WatchedAt = DateTime.UtcNow });
+            _context.SeriesEpisodeProgresses.Add(new SeriesEpisodeProgress
+            {
+                ProfileId = child2.Id,
+                SeriesKey = "s1",
+                SeriesTitle = "Series",
+                LastWatchedAt = DateTime.UtcNow
+            });
+            _context.Playlists.Add(new Playlist { Name = "Standard Playlist", ProfileId = standard.Id, IsActive = true });
+            await _context.SaveChangesAsync();
+
+            // Act — eski çocuk profilleri verileriyle birlikte silinir
+            var deleted = await service.DeleteChildProfilesAsync();
+
+            // Servis başka bir context örneği kullandığından izleme önbelleğini temizle.
+            _context.ChangeTracker.Clear();
+
+            // Assert — 3 çocuk profili silindi, standart korundu
+            Assert.Equal(3, deleted);
+            Assert.Null(await _context.Profiles.FindAsync(child1.Id));
+            Assert.Null(await _context.Profiles.FindAsync(child2.Id));
+            Assert.Null(await _context.Profiles.FindAsync(child3.Id));
+            Assert.NotNull(await _context.Profiles.FindAsync(standard.Id));
+
+            // İlişkili veriler temizlendi; standart profilin verisi korundu
+            Assert.Empty(await _context.WatchHistories.Where(h => h.ProfileId == child1.Id).ToListAsync());
+            Assert.Empty(await _context.SeriesEpisodeProgresses.Where(p => p.ProfileId == child2.Id).ToListAsync());
+            Assert.Empty(await _context.Playlists.Where(p => p.ProfileId == child1.Id).ToListAsync());
+            Assert.Single(await _context.Playlists.Where(p => p.ProfileId == standard.Id).ToListAsync());
+
+            // Yalnızca çocuk profile ait hesap silindi; paylaşılan hesap korundu
+            Assert.Null(await _context.ProviderAccounts.FindAsync(childAccount.Id));
+            Assert.NotNull(await _context.ProviderAccounts.FindAsync(sharedAccount.Id));
+        }
+
+        [Fact]
         public async Task PinCreation_SavesCorrectHash_WhenValid()
         {
             // Arrange

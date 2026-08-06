@@ -140,17 +140,6 @@ public partial class App : Application
                                 StartupLogger.Log($"Step 2a: {resetPinCount} invalid profile PIN(s) reset");
                             }
 
-                            // Çocuk profili özelliği kaldırıldı — eski çocuk profilleri
-                            // standart profile çevrilir (profil verisi korunur); sahibine
-                            // bir defalık bilgi gösterilir.
-                            var childResetCount = await schemaFixups.ResetChildModeAsync(db);
-                            if (childResetCount > 0)
-                            {
-                                settingsService.Settings.ChildModeRemovedNoticePending = true;
-                                await settingsService.SaveAsync();
-                                StartupLogger.Log($"Step 2a: {childResetCount} child profile(s) converted to standard profiles");
-                            }
-
                             StartupLogger.Log("Step 2b: Checking profiles table...");
                             await db.Profiles.AnyAsync();
                             StartupLogger.Log("Step 2: ✅ EF Core ready");
@@ -162,6 +151,18 @@ public partial class App : Application
                         {
                             var profileService = Services.GetRequiredService<IProfileService>();
                             await profileService.PurgeExpiredProfilesAsync();
+
+                            // Çocuk profili özelliği kaldırıldı — eski çocuk profilleri
+                            // (verileriyle birlikte) silinir; sahibine bir defalık bilgi
+                            // gösterilir.
+                            var deletedChildProfiles = await profileService.DeleteChildProfilesAsync();
+                            if (deletedChildProfiles > 0)
+                            {
+                                settingsService.Settings.ChildModeRemovedNoticePending = true;
+                                await settingsService.SaveAsync();
+                                StartupLogger.Log($"Step 3: {deletedChildProfiles} child profile(s) deleted");
+                            }
+
                             StartupLogger.Log("Step 3: ✅ Profiles purged");
                         }
                         catch (Exception ex)

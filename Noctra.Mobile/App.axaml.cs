@@ -100,7 +100,8 @@ public partial class App : Application
             _databaseInitializationTask = InitializeDatabaseAsync(
                 dbContextFactory,
                 schemaFixups,
-                Services.GetService(typeof(ISettingsService)) as ISettingsService);
+                Services.GetService(typeof(ISettingsService)) as ISettingsService,
+                Services.GetService(typeof(IProfileService)) as IProfileService);
         }
 
         // ── Localization ─────────────────────────────────────────────────────
@@ -165,7 +166,8 @@ public partial class App : Application
     private static Task InitializeDatabaseAsync(
         IDbContextFactory<AppDbContext> dbContextFactory,
         IDatabaseSchemaFixupService? schemaFixups,
-        ISettingsService? settingsService)
+        ISettingsService? settingsService,
+        IProfileService? profileService = null)
     {
         return Task.Run(async () =>
         {
@@ -192,14 +194,18 @@ public partial class App : Application
                         await settingsService.SaveAsync().ConfigureAwait(false);
                     }
 
-                    // Çocuk profili özelliği kaldırıldı — eski çocuk profilleri
-                    // standart profile çevrilir (profil verisi korunur); sahibine
-                    // bir defalık bilgi gösterilir.
-                    var childResetCount = await schemaFixups
-                        .ResetChildModeAsync(db)
+                }
+
+                // Çocuk profili özelliği kaldırıldı — eski çocuk profilleri
+                // (verileriyle birlikte) silinir; sahibine bir defalık bilgi
+                // gösterilir.
+                if (profileService is not null)
+                {
+                    var deletedChildProfiles = await profileService
+                        .DeleteChildProfilesAsync()
                         .ConfigureAwait(false);
 
-                    if (childResetCount > 0 && settingsService is not null)
+                    if (deletedChildProfiles > 0 && settingsService is not null)
                     {
                         settingsService.Settings.ChildModeRemovedNoticePending = true;
                         await settingsService.SaveAsync().ConfigureAwait(false);

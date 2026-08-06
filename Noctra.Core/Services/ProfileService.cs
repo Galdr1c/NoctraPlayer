@@ -359,6 +359,61 @@ public class ProfileService : IProfileService
         await _settingsService.CleanOrphanedSettingsAsync(activeProfileIds);
     }
 
+    public async Task<int> DeleteChildProfilesAsync(CancellationToken cancellationToken = default)
+    {
+        await using var db = await _contextFactory.CreateDbContextAsync(cancellationToken);
+
+        var childProfiles = await db.Profiles
+            .Include(p => p.ProviderAccount)
+            .Where(p => p.IsChild)
+            .ToListAsync(cancellationToken);
+
+        if (childProfiles.Count == 0)
+        {
+            return 0;
+        }
+
+        foreach (var profile in childProfiles)
+        {
+            await _contentDownloadService.DeleteProfileDownloadsAsync(profile.Id);
+
+            var hasOtherProfiles = await db.Profiles
+                .AnyAsync(p => p.ProviderAccountId == profile.ProviderAccountId && p.Id != profile.Id, cancellationToken);
+
+            await db.WatchHistories
+                .Where(h => h.ProfileId == profile.Id)
+                .ExecuteDeleteAsync(cancellationToken);
+
+            await db.SeriesEpisodeProgresses
+                .Where(p => p.ProfileId == profile.Id)
+                .ExecuteDeleteAsync(cancellationToken);
+
+            await db.Playlists
+                .Where(p => p.ProfileId == profile.Id)
+                .ExecuteDeleteAsync(cancellationToken);
+
+            db.Profiles.Remove(profile);
+
+            if (!hasOtherProfiles && profile.ProviderAccount != null)
+            {
+                db.ProviderAccounts.Remove(profile.ProviderAccount);
+            }
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
+
+        // Birden çok çocuk profili aynı hesabı paylaşıyorsa döngü içindeki
+        // AnyAsync kontrolü, henüz SaveChanges ile silinmemiş kardeş kayıtları
+        // görür ve hesabı "kullanımda" sanır — hesap yalnız kalabilir. Burada
+        // hiçbir profilin referans vermediği hesaplar topluca temizlenir.
+        await db.ProviderAccounts
+            .Where(account => !db.Profiles.Any(p => p.ProviderAccountId == account.Id))
+            .ExecuteDeleteAsync(cancellationToken);
+
+        await CleanDeletedProfileSettingsAsync();
+        return childProfiles.Count;
+    }
+
     public async Task<PinVerificationState> GetPinVerificationStateAsync(int profileId)
     {
         var semaphore = GetProfilePinSemaphore(profileId);

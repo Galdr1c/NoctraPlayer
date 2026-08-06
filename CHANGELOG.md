@@ -17,7 +17,7 @@ Detailed historical engineering notes are archived in [`docs/history/legacy-chan
 
 ### Removed
 
-- **Child Mode removed**: The "Child Profile" option is gone from profile creation and editing on desktop and mobile. Provider metadata, category names, and ratings are not reliable enough to guarantee age-appropriate content, so Noctra no longer claims to filter content for children. Existing child profiles now behave as standard profiles — history, favorites, downloads, playlist data, and PIN are preserved — and affected users see a one-time notice explaining the change. The filtering code (`ChildSafetyHelper`, `ApplyChildFilter`, `PurgeNonCompliantSeriesAsync`, related translations, and tests) was fully removed.
+- **Child Mode removed**: The "Child Profile" option is gone from profile creation and editing on desktop and mobile. Provider metadata, category names, and ratings are not reliable enough to guarantee age-appropriate content, so Noctra no longer claims to filter content for children. Since the app has not reached a wide audience yet, existing child profiles are **deleted together with their data** — history, favorites, downloads, playlists, and the provider account when no other profile uses it — during the first launch after this update, and affected users see a one-time notice. The filtering code (`ChildSafetyHelper`, `ApplyChildFilter`, `PurgeNonCompliantSeriesAsync`, related translations, and tests) was fully removed.
 
 ## [1.1.0] - 2026-07-08
 

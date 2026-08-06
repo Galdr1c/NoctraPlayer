@@ -44,6 +44,15 @@ public interface IProfileService
     Task PurgeExpiredProfilesAsync();
 
     /// <summary>
+    /// Çocuk profili özelliği kaldırıldı — eski çocuk profillerini izleme geçmişi,
+    /// ilerlemeler, playlistler, indirmeler ve yalnızca o profile ait sağlayıcı
+    /// hesabıyla birlikte kalıcı olarak siler. Dönen sayı: silinen profil sayısı
+    /// (0 = çocuk profili yok). Uygulama açılışında çağrılır; bir defalık
+    /// bildirim dönüş değerine göre gösterilir.
+    /// </summary>
+    Task<int> DeleteChildProfilesAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// PIN doğrulama durumunu döndürür (kalıcı deneme sayacı ve kilit).
     /// Süresi dolmuş kilit temizlenir ve sayaç sıfırlanır.
     /// </summary>

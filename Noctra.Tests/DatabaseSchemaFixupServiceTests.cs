@@ -251,45 +251,6 @@ public sealed class DatabaseSchemaFixupServiceTests
         return profile;
     }
 
-    [Fact]
-    public async Task ResetChildModeAsync_ConvertsChildProfilesToStandard_AndIsIdempotent()
-    {
-        var databasePath = CreateTempDatabasePath();
-        try
-        {
-            await using var context = CreateContext(databasePath);
-            await context.Database.EnsureCreatedAsync();
-
-            // Eski çocuk profilleri (IsChild=true) + standart profil
-            var child1 = await SeedProfileAsync(context, "Child One", null, isChild: true);
-            var child2 = await SeedProfileAsync(context, "Child Two", null, isChild: true);
-            var standard = await SeedProfileAsync(context, "Standard", null);
-
-            // Act — çocuk profili özelliği kaldırıldı: IsChild=1 kayıtları standarta çevrilir
-            var converted = await new DatabaseSchemaFixupService()
-                .ResetChildModeAsync(context);
-
-            // Assert — yalnızca 2 çocuk profili çevrildi, standart korundu
-            Assert.Equal(2, converted);
-
-            await using var verify = CreateContext(databasePath);
-            Assert.Equal(0, await verify.Profiles.CountAsync(p => p.IsChild));
-            Assert.False((await verify.Profiles.FindAsync(child1.Id))!.IsChild);
-            Assert.False((await verify.Profiles.FindAsync(child2.Id))!.IsChild);
-            Assert.False((await verify.Profiles.FindAsync(standard.Id))!.IsChild);
-
-            // Idempotent — ikinci koşu 0 döner
-            await using var repeat = CreateContext(databasePath);
-            var secondRun = await new DatabaseSchemaFixupService()
-                .ResetChildModeAsync(repeat);
-            Assert.Equal(0, secondRun);
-        }
-        finally
-        {
-            TryDelete(databasePath);
-        }
-    }
-
     /// <summary>
     /// Faz 3 öncesi güvenlik testi: IsChild kolonu modelden çıkarılmadan önce,
     /// mevcut (kolonlu) bir veritabanından kolonun ALTER TABLE DROP COLUMN ile
