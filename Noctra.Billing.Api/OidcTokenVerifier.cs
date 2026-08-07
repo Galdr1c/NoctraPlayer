@@ -25,16 +25,19 @@ public sealed class OidcTokenVerifier
 
     private readonly HttpClient _http;
     private readonly string _expectedAudience;
+    private readonly string _expectedServiceAccountEmail;
 
     private readonly object _cacheGate = new();
     private List<Jwk>? _keys;
     private DateTime _keysFetchedAtUtc = DateTime.MinValue;
     private DateTime _lastRefetchUtc = DateTime.MinValue;
 
-    public OidcTokenVerifier(HttpClient http, string expectedAudience)
+    public OidcTokenVerifier(HttpClient http, string expectedAudience, string expectedServiceAccountEmail)
     {
         _http = http ?? throw new ArgumentNullException(nameof(http));
-        _expectedAudience = expectedAudience;
+        _expectedAudience = expectedAudience ?? throw new ArgumentNullException(nameof(expectedAudience));
+        _expectedServiceAccountEmail = expectedServiceAccountEmail ??
+            throw new ArgumentNullException(nameof(expectedServiceAccountEmail));
     }
 
     public async Task<bool> VerifyAsync(string? authorizationHeader, CancellationToken cancellationToken = default)
@@ -75,7 +78,7 @@ public sealed class OidcTokenVerifier
             return false;
         }
 
-        // Payload: aud / iss / exp.
+        // Payload: aud / iss / exp / email / email_verified.
         try
         {
             using var payloadJson = JsonDocument.Parse(Base64UrlDecode(parts[1]));
@@ -85,6 +88,9 @@ public sealed class OidcTokenVerifier
             var exp = root.TryGetProperty("exp", out var e) && e.ValueKind == JsonValueKind.Number
                 ? e.GetInt64()
                 : 0;
+            var email = root.TryGetProperty("email", out var em) ? em.GetString() : null;
+            var emailVerified = root.TryGetProperty("email_verified", out var ev) &&
+                                ev.ValueKind == JsonValueKind.True;
 
             if (!string.Equals(aud, _expectedAudience, StringComparison.Ordinal))
             {
@@ -97,6 +103,14 @@ public sealed class OidcTokenVerifier
             }
 
             if (exp <= DateTimeOffset.UtcNow.ToUnixTimeSeconds())
+            {
+                return false;
+            }
+
+            // Push token'ı beklenen service account imzalamış olmalı ve Google
+            // e-postayı doğrulamış olmalı — hangi hesabın gönderdiği kontrolü.
+            if (!emailVerified ||
+                !string.Equals(email, _expectedServiceAccountEmail, StringComparison.OrdinalIgnoreCase))
             {
                 return false;
             }

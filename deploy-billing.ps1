@@ -30,6 +30,39 @@ if ([string]::IsNullOrWhiteSpace($ApiKey) -and (Test-Path ".env")) {
     if ($ApiLine) { $ApiKey = $ApiLine.Substring("NOCTRA_BILLING_API_KEY=".Length).Trim() }
 }
 
+# ---------- 0b) RTDN OIDC (.env'den) ----------
+# Pub/Sub push aboneliği için audience + service account e-postası. Backend
+# bunlar eksikse fail-fast ile başlamaz; RTDN kullanılmayacaksa DISABLED=1.
+$RtdnAudience = $env:NOCTRA_RTDN_AUDIENCE
+$RtdnServiceAccountEmail = $env:NOCTRA_RTDN_SERVICE_ACCOUNT_EMAIL
+$RtdnDisabled = $env:NOCTRA_RTDN_DISABLED
+if (Test-Path ".env") {
+    if ([string]::IsNullOrWhiteSpace($RtdnAudience)) {
+        $Line = Get-Content ".env" | Where-Object { $_ -match "^NOCTRA_RTDN_AUDIENCE=" } | Select-Object -First 1
+        if ($Line) { $RtdnAudience = $Line.Substring("NOCTRA_RTDN_AUDIENCE=".Length).Trim() }
+    }
+    if ([string]::IsNullOrWhiteSpace($RtdnServiceAccountEmail)) {
+        $Line = Get-Content ".env" | Where-Object { $_ -match "^NOCTRA_RTDN_SERVICE_ACCOUNT_EMAIL=" } | Select-Object -First 1
+        if ($Line) { $RtdnServiceAccountEmail = $Line.Substring("NOCTRA_RTDN_SERVICE_ACCOUNT_EMAIL=".Length).Trim() }
+    }
+    if ([string]::IsNullOrWhiteSpace($RtdnDisabled)) {
+        $Line = Get-Content ".env" | Where-Object { $_ -match "^NOCTRA_RTDN_DISABLED=" } | Select-Object -First 1
+        if ($Line) { $RtdnDisabled = $Line.Substring("NOCTRA_RTDN_DISABLED=".Length).Trim() }
+    }
+}
+
+if ($RtdnDisabled -ne "1") {
+    if ([string]::IsNullOrWhiteSpace($RtdnAudience) -or [string]::IsNullOrWhiteSpace($RtdnServiceAccountEmail)) {
+        Write-Host "`n❌ RTDN yapılandırması eksik (backend fail-fast ile başlamaz)." -ForegroundColor Red
+        Write-Host "   .env dosyasına ekleyin:"
+        Write-Host "   NOCTRA_RTDN_AUDIENCE=https://pubsub.example.com/push"
+        Write-Host "   NOCTRA_RTDN_SERVICE_ACCOUNT_EMAIL=push-sa@PROJECT.iam.gserviceaccount.com"
+        Write-Host "   (Pub/Sub push subscription 'Authentication' ayarındaki değerler.)"
+        Write-Host "   RTDN kullanmayacaksanız:  NOCTRA_RTDN_DISABLED=1`n"
+        exit 1
+    }
+}
+
 # ---------- 1) gcloud kontrol ----------
 if (-not (Get-Command gcloud -ErrorAction SilentlyContinue)) {
     Write-Host "`n❌ gcloud CLI bulunamadı. Kurulum:" -ForegroundColor Red
@@ -89,6 +122,12 @@ Write-Host "`n🚀 Deploy ediliyor ($Region)..." -ForegroundColor Cyan
 $EnvArgs = "NOCTRA_PACKAGE_NAME=$PackageName,NOCTRA_SUBSCRIPTION_PRODUCT_IDS=$SubscriptionIds,NOCTRA_LIFETIME_PRODUCT_IDS=$LifetimeIds"
 if (-not [string]::IsNullOrWhiteSpace($ApiKey)) {
     $EnvArgs += ",NOCTRA_BILLING_API_KEY=$ApiKey"
+}
+if ($RtdnDisabled -eq "1") {
+    $EnvArgs += ",NOCTRA_RTDN_DISABLED=1"
+}
+else {
+    $EnvArgs += ",NOCTRA_RTDN_AUDIENCE=$RtdnAudience,NOCTRA_RTDN_SERVICE_ACCOUNT_EMAIL=$RtdnServiceAccountEmail"
 }
 
 Invoke-Gcloud run deploy $ServiceName `

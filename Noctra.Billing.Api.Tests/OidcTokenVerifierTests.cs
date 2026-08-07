@@ -13,6 +13,7 @@ namespace Noctra.Billing.Api.Tests;
 public sealed class OidcTokenVerifierTests
 {
     private const string Audience = "https://pubsub.example.com/noctra-rtdn";
+    private const string ServiceAccountEmail = "push-sa@test-project.iam.gserviceaccount.com";
     private const string Kid = "test-jwks-key";
 
     [Fact]
@@ -20,7 +21,7 @@ public sealed class OidcTokenVerifierTests
     {
         using var rsa = RSA.Create(2048);
         var http = HttpWithJwks(rsa);
-        var verifier = new OidcTokenVerifier(http, Audience);
+        var verifier = CreateVerifier(http);
 
         var token = CreateToken(rsa, aud: Audience, exp: DateTimeOffset.UtcNow.AddMinutes(5));
 
@@ -32,7 +33,7 @@ public sealed class OidcTokenVerifierTests
     {
         using var rsa = RSA.Create(2048);
         var http = HttpWithJwks(rsa);
-        var verifier = new OidcTokenVerifier(http, Audience);
+        var verifier = CreateVerifier(http);
 
         var token = CreateToken(rsa, aud: Audience, exp: DateTimeOffset.UtcNow.AddMinutes(5));
         var parts = token.Split('.');
@@ -46,7 +47,7 @@ public sealed class OidcTokenVerifierTests
     {
         using var rsa = RSA.Create(2048);
         var http = HttpWithJwks(rsa);
-        var verifier = new OidcTokenVerifier(http, Audience);
+        var verifier = CreateVerifier(http);
 
         var token = CreateToken(rsa, aud: "some-other-audience", exp: DateTimeOffset.UtcNow.AddMinutes(5));
 
@@ -58,9 +59,57 @@ public sealed class OidcTokenVerifierTests
     {
         using var rsa = RSA.Create(2048);
         var http = HttpWithJwks(rsa);
-        var verifier = new OidcTokenVerifier(http, Audience);
+        var verifier = CreateVerifier(http);
 
         var token = CreateToken(rsa, aud: Audience, exp: DateTimeOffset.UtcNow.AddMinutes(-5));
+
+        Assert.False(verifier.VerifyAsync($"Bearer {token}").GetAwaiter().GetResult());
+    }
+
+    [Fact]
+    public void WrongServiceAccountEmail_IsRejected()
+    {
+        using var rsa = RSA.Create(2048);
+        var http = HttpWithJwks(rsa);
+        var verifier = CreateVerifier(http);
+
+        var token = CreateToken(
+            rsa,
+            aud: Audience,
+            exp: DateTimeOffset.UtcNow.AddMinutes(5),
+            email: "attacker@evil.example.com");
+
+        Assert.False(verifier.VerifyAsync($"Bearer {token}").GetAwaiter().GetResult());
+    }
+
+    [Fact]
+    public void UnverifiedEmail_IsRejected()
+    {
+        using var rsa = RSA.Create(2048);
+        var http = HttpWithJwks(rsa);
+        var verifier = CreateVerifier(http);
+
+        var token = CreateToken(
+            rsa,
+            aud: Audience,
+            exp: DateTimeOffset.UtcNow.AddMinutes(5),
+            emailVerified: false);
+
+        Assert.False(verifier.VerifyAsync($"Bearer {token}").GetAwaiter().GetResult());
+    }
+
+    [Fact]
+    public void MissingEmailClaim_IsRejected()
+    {
+        using var rsa = RSA.Create(2048);
+        var http = HttpWithJwks(rsa);
+        var verifier = CreateVerifier(http);
+
+        var token = CreateToken(
+            rsa,
+            aud: Audience,
+            exp: DateTimeOffset.UtcNow.AddMinutes(5),
+            includeEmail: false);
 
         Assert.False(verifier.VerifyAsync($"Bearer {token}").GetAwaiter().GetResult());
     }
@@ -70,7 +119,7 @@ public sealed class OidcTokenVerifierTests
     {
         using var rsa = RSA.Create(2048);
         var http = HttpWithJwks(rsa);
-        var verifier = new OidcTokenVerifier(http, Audience);
+        var verifier = CreateVerifier(http);
 
         var token = CreateToken(rsa, aud: Audience, exp: DateTimeOffset.UtcNow.AddMinutes(5));
 
@@ -84,7 +133,7 @@ public sealed class OidcTokenVerifierTests
     {
         using var rsa = RSA.Create(2048);
         var http = HttpWithJwks(rsa);
-        var verifier = new OidcTokenVerifier(http, Audience);
+        var verifier = CreateVerifier(http);
 
         var token = CreateToken(rsa, aud: Audience, exp: DateTimeOffset.UtcNow.AddMinutes(5));
         var parts = token.Split('.');
@@ -101,7 +150,7 @@ public sealed class OidcTokenVerifierTests
     {
         using var rsa = RSA.Create(2048);
         var http = HttpWithJwks(rsa);
-        var verifier = new OidcTokenVerifier(http, Audience);
+        var verifier = CreateVerifier(http);
 
         var huge = new string('a', 200 * 1024);
 
@@ -126,7 +175,7 @@ public sealed class OidcTokenVerifierTests
             return Task.FromResult(JsonKeys(new[] { (Kid, rsa) }));
         });
 
-        var verifier = new OidcTokenVerifier(new HttpClient(handler), Audience);
+        var verifier = CreateVerifier(new HttpClient(handler));
         var token = CreateToken(rsa, aud: Audience, exp: DateTimeOffset.UtcNow.AddMinutes(5));
 
         // İlk çağrı: cache boş → ilk çekim other-kid → kid eşleşmez → red.
@@ -143,13 +192,16 @@ public sealed class OidcTokenVerifierTests
         var handler = new ScriptedHttpMessageHandler(_ =>
             Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)));
 
-        var verifier = new OidcTokenVerifier(new HttpClient(handler), Audience);
+        var verifier = CreateVerifier(new HttpClient(handler));
         var token = CreateToken(rsa, aud: Audience, exp: DateTimeOffset.UtcNow.AddMinutes(5));
 
         Assert.False(verifier.VerifyAsync($"Bearer {token}").GetAwaiter().GetResult());
     }
 
     // ===== Yardımcılar =====
+
+    private static OidcTokenVerifier CreateVerifier(HttpClient http) =>
+        new(http, Audience, ServiceAccountEmail);
 
     private static HttpClient HttpWithJwks(RSA rsa)
     {
@@ -175,16 +227,29 @@ public sealed class OidcTokenVerifierTests
     }
 
     /// <summary>Gerçek RS256 imzalı JWT üretir (header + payload + signature).</summary>
-    private static string CreateToken(RSA rsa, string aud, DateTimeOffset exp)
+    private static string CreateToken(
+        RSA rsa,
+        string aud,
+        DateTimeOffset exp,
+        string email = ServiceAccountEmail,
+        bool emailVerified = true,
+        bool includeEmail = true)
     {
         var header = JsonSerializer.Serialize(new { alg = "RS256", kid = Kid, typ = "JWT" });
-        var payload = JsonSerializer.Serialize(new
+        var payloadClaims = new Dictionary<string, object>
         {
-            aud,
-            iss = "accounts.google.com",
-            exp = exp.ToUnixTimeSeconds(),
-            iat = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
-        });
+            ["aud"] = aud,
+            ["iss"] = "accounts.google.com",
+            ["exp"] = exp.ToUnixTimeSeconds(),
+            ["iat"] = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
+        };
+        if (includeEmail)
+        {
+            payloadClaims["email"] = email;
+            payloadClaims["email_verified"] = emailVerified;
+        }
+
+        var payload = JsonSerializer.Serialize(payloadClaims);
 
         var headerB64 = Base64UrlEncode(Encoding.UTF8.GetBytes(header));
         var payloadB64 = Base64UrlEncode(Encoding.UTF8.GetBytes(payload));

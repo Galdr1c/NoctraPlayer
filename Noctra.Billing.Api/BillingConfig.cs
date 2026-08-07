@@ -22,10 +22,20 @@ public sealed class BillingConfig
 
     /// <summary>
     /// Pub/Sub push aboneliği için yapılandırılan OIDC audience. RTDN endpoint'i
-    /// yalnızca bu değer tanımlıysa push token doğrulaması yapar; tanımlı
-    /// değilse yerel geliştirme için açık kalır (üretimde tanımlanmalıdır).
+    /// bu değeri zorunlu tutar — production'da sessizce doğrulamasız kalmaması
+    /// için eksikse başlangıçta hata verilir (fail-fast).
     /// </summary>
-    public string? RtdnAudience { get; private init; }
+    public string RtdnAudience { get; private init; } = string.Empty;
+
+    /// <summary>
+    /// Pub/Sub push aboneliğini imzalayan Google service account e-postası
+    /// (OIDC token'ın email + email_verified claim'leriyle eşleştirilir).
+    /// Audience gibi zorunludur.
+    /// </summary>
+    public string RtdnServiceAccountEmail { get; private init; } = string.Empty;
+
+    /// <summary>RTDN hiç kullanılmayacaksa açıkça kapatma (NOCTRA_RTDN_DISABLED=1).</summary>
+    public bool RtdnDisabled { get; private init; }
 
     public string? GoogleCredentialsJson { get; private init; }
     public string? GoogleCredentialsPath { get; private init; }
@@ -42,6 +52,35 @@ public sealed class BillingConfig
                 "NOCTRA_SUBSCRIPTION_PRODUCT_IDS ve NOCTRA_LIFETIME_PRODUCT_IDS boş olamaz.");
         }
 
+        // RTDN auth fail-fast: audience/email eksikse backend doğrulamasız
+        // çalışmaz — üretimde "RTDN authentication KAPALI" uyarısıyla sessizce
+        // kalmaktan iyidir. RTDN hiç kullanılmayacaksa NOCTRA_RTDN_DISABLED=1.
+        var rtdnDisabled = string.Equals(
+            Environment.GetEnvironmentVariable("NOCTRA_RTDN_DISABLED"), "1", StringComparison.Ordinal) ||
+            string.Equals(
+                Environment.GetEnvironmentVariable("NOCTRA_RTDN_DISABLED"), "true", StringComparison.OrdinalIgnoreCase);
+        var rtdnAudience = Environment.GetEnvironmentVariable("NOCTRA_RTDN_AUDIENCE") ?? string.Empty;
+        var rtdnEmail = Environment.GetEnvironmentVariable("NOCTRA_RTDN_SERVICE_ACCOUNT_EMAIL") ?? string.Empty;
+
+        if (!rtdnDisabled)
+        {
+            if (string.IsNullOrWhiteSpace(rtdnAudience))
+            {
+                throw new InvalidOperationException(
+                    "NOCTRA_RTDN_AUDIENCE eksik: RTDN push doğrulaması olmadan backend başlatılmaz. " +
+                    "Pub/Sub push aboneliğinde ayarladığınız audience değerini verin veya RTDN " +
+                    "kullanmayacaksanız NOCTRA_RTDN_DISABLED=1 ile açıkça kapatın.");
+            }
+
+            if (string.IsNullOrWhiteSpace(rtdnEmail))
+            {
+                throw new InvalidOperationException(
+                    "NOCTRA_RTDN_SERVICE_ACCOUNT_EMAIL eksik: push aboneliğini imzalayan service " +
+                    "account e-postasını verin (OIDC token email claim'i ile eşleşir) veya RTDN " +
+                    "kullanmayacaksanız NOCTRA_RTDN_DISABLED=1 ile açıkça kapatın.");
+            }
+        }
+
         return new BillingConfig
         {
             PackageName = packageName,
@@ -49,7 +88,9 @@ public sealed class BillingConfig
             LifetimeProductIds = lifetime,
             ApiKey = Environment.GetEnvironmentVariable("NOCTRA_BILLING_API_KEY"),
             DatabasePath = Environment.GetEnvironmentVariable("NOCTRA_BILLING_DB_PATH") ?? "noctra-billing.db",
-            RtdnAudience = Environment.GetEnvironmentVariable("NOCTRA_RTDN_AUDIENCE"),
+            RtdnAudience = rtdnAudience,
+            RtdnServiceAccountEmail = rtdnEmail,
+            RtdnDisabled = rtdnDisabled,
             GoogleCredentialsJson = Environment.GetEnvironmentVariable("NOCTRA_GOOGLE_CREDENTIALS_JSON"),
             GoogleCredentialsPath = Environment.GetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS")
         };

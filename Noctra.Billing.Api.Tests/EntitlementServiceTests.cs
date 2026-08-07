@@ -110,7 +110,20 @@ public sealed class EntitlementServiceTests : IDisposable
     {
         var service = CreateService();
 
-        var handled = await service.ReverifyByTokenAsync("never-seen-token", "noctra_premium_monthly");
+        // productId yok: ürün kimliği store kayıtlarından türetilir.
+        var handled = await service.ReverifyByTokenAsync("never-seen-token");
+
+        Assert.False(handled);
+        _api.Verify(a => a.VerifyAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task ReverifyByToken_EmptyToken_DoesNotCallGoogle()
+    {
+        var service = CreateService();
+
+        var handled = await service.ReverifyByTokenAsync(string.Empty);
 
         Assert.False(handled);
         _api.Verify(a => a.VerifyAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
@@ -145,13 +158,114 @@ public sealed class EntitlementServiceTests : IDisposable
 
         var service = CreateService();
 
-        var handled = await service.ReverifyByTokenAsync("token-1", "noctra_premium_monthly");
+        var handled = await service.ReverifyByTokenAsync("token-1");
 
         Assert.True(handled);
         var rows = await _store.GetAllByPurchaseTokenHashAsync(EntitlementService.HashToken("token-1"));
         var stored = Assert.Single(rows);
         Assert.False(stored.IsActive);
         Assert.Equal("SUBSCRIPTION_STATE_EXPIRED", stored.State);
+    }
+
+    [Fact]
+    public async Task ReverifyByToken_MultiProduct_DerivesProductIdsFromStoreRows()
+    {
+        // Google'ın RTDN'sinde subscriptionId/sku yok (deprecated) — ürün
+        // kimliği store'daki kayıtlardan türetilir. Aynı token farklı ürünlere
+        // bağlanamaz ama güvenli tarafta kalınarak her ürün ayrı doğrulanır ve
+        // yalnızca o ürünün satırları güncellenir.
+        var tokenHash = EntitlementService.HashToken("token-1");
+        await _store.UpsertAsync(new StoredEntitlementRow
+        {
+            InstallationId = "install-1",
+            ProductId = "noctra_premium_monthly",
+            PurchaseTokenHash = tokenHash,
+            EntitlementType = "Subscription",
+            IsActive = true,
+            ExpiresAtUtc = new DateTime(2099, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+            AutoRenewEnabled = true,
+            State = "SUBSCRIPTION_STATE_ACTIVE",
+            LastVerifiedAtUtc = DateTime.UtcNow
+        });
+        await _store.UpsertAsync(new StoredEntitlementRow
+        {
+            InstallationId = "install-1",
+            ProductId = "noctra_premium_lifetime",
+            PurchaseTokenHash = tokenHash,
+            EntitlementType = "Lifetime",
+            IsActive = true,
+            ExpiresAtUtc = null,
+            AutoRenewEnabled = false,
+            State = "PRODUCT_PURCHASED",
+            LastVerifiedAtUtc = DateTime.UtcNow
+        });
+
+        _api.Setup(a => a.VerifyAsync("noctra_premium_monthly", "token-1", "studio.kynora.noctra", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PlayPurchaseVerification
+            {
+                EntitlementType = "Subscription",
+                IsActive = false,
+                ExpiresAtUtc = null,
+                AutoRenewEnabled = false,
+                State = "SUBSCRIPTION_STATE_EXPIRED"
+            });
+        _api.Setup(a => a.VerifyAsync("noctra_premium_lifetime", "token-1", "studio.kynora.noctra", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PlayPurchaseVerification
+            {
+                EntitlementType = "Lifetime",
+                IsActive = false,
+                ExpiresAtUtc = null,
+                AutoRenewEnabled = false,
+                State = "PRODUCT_CANCELED"
+            });
+
+        var service = CreateService();
+
+        var handled = await service.ReverifyByTokenAsync("token-1");
+
+        Assert.True(handled);
+        _api.Verify(a => a.VerifyAsync("noctra_premium_monthly", "token-1", "studio.kynora.noctra", It.IsAny<CancellationToken>()),
+            Times.Once);
+        _api.Verify(a => a.VerifyAsync("noctra_premium_lifetime", "token-1", "studio.kynora.noctra", It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        var rows = await _store.GetAllByPurchaseTokenHashAsync(tokenHash);
+        Assert.Equal(2, rows.Count);
+        Assert.False(rows.Single(r => r.ProductId == "noctra_premium_monthly").IsActive);
+        Assert.False(rows.Single(r => r.ProductId == "noctra_premium_lifetime").IsActive);
+        Assert.Equal("SUBSCRIPTION_STATE_EXPIRED",
+            rows.Single(r => r.ProductId == "noctra_premium_monthly").State);
+        Assert.Equal("PRODUCT_CANCELED",
+            rows.Single(r => r.ProductId == "noctra_premium_lifetime").State);
+    }
+
+    [Fact]
+    public async Task ReverifyByToken_OnlyRetiredProductRows_DoesNotCallGoogle()
+    {
+        // Store'da config'den çıkarılmış (retired) bir ürünün satırı kalmış
+        // olabilir. Bu satırlar bilinmeyen productId ile Play'e istek atmamalı
+        // (kalıcı 503 → sonsuz Pub/Sub retry); token best-effort reddedilir.
+        var tokenHash = EntitlementService.HashToken("token-retired");
+        await _store.UpsertAsync(new StoredEntitlementRow
+        {
+            InstallationId = "install-1",
+            ProductId = "noctra_retired_product",
+            PurchaseTokenHash = tokenHash,
+            EntitlementType = "Subscription",
+            IsActive = true,
+            ExpiresAtUtc = new DateTime(2099, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+            AutoRenewEnabled = true,
+            State = "SUBSCRIPTION_STATE_ACTIVE",
+            LastVerifiedAtUtc = DateTime.UtcNow
+        });
+
+        var service = CreateService();
+
+        var handled = await service.ReverifyByTokenAsync("token-retired");
+
+        Assert.False(handled);
+        _api.Verify(a => a.VerifyAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]
@@ -200,7 +314,7 @@ public sealed class EntitlementServiceTests : IDisposable
 
         var service = CreateService();
 
-        var handled = await service.ReverifyByTokenAsync("token-1", "noctra_premium_monthly");
+        var handled = await service.ReverifyByTokenAsync("token-1");
 
         Assert.True(handled);
         _api.Verify(a => a.VerifyAsync("noctra_premium_monthly", "token-1", "studio.kynora.noctra", It.IsAny<CancellationToken>()),

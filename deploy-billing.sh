@@ -38,6 +38,41 @@ if [[ -z "${API_KEY}" ]] && [[ -f ".env" ]] && grep -q "^NOCTRA_BILLING_API_KEY=
   API_KEY="$(grep "^NOCTRA_BILLING_API_KEY=" .env | head -1 | cut -d= -f2-)"
 fi
 
+# ---------- 0b) RTDN OIDC (.env'den) ----------
+# Pub/Sub push aboneliği için audience + service account e-postası. Backend
+# bunlar eksikse fail-fast ile başlamaz (RTDN auth sessizce kapanmaz). RTDN
+# kullanılmayacaksa NOCTRA_RTDN_DISABLED=1 ile açıkça kapatılabilir.
+RTDN_AUDIENCE="${NOCTRA_RTDN_AUDIENCE:-}"
+RTDN_SERVICE_ACCOUNT_EMAIL="${NOCTRA_RTDN_SERVICE_ACCOUNT_EMAIL:-}"
+RTDN_DISABLED="${NOCTRA_RTDN_DISABLED:-}"
+if [[ -f ".env" ]]; then
+  if [[ -z "${RTDN_AUDIENCE}" ]] && grep -q "^NOCTRA_RTDN_AUDIENCE=" .env; then
+    RTDN_AUDIENCE="$(grep "^NOCTRA_RTDN_AUDIENCE=" .env | head -1 | cut -d= -f2-)"
+  fi
+  if [[ -z "${RTDN_SERVICE_ACCOUNT_EMAIL}" ]] && grep -q "^NOCTRA_RTDN_SERVICE_ACCOUNT_EMAIL=" .env; then
+    RTDN_SERVICE_ACCOUNT_EMAIL="$(grep "^NOCTRA_RTDN_SERVICE_ACCOUNT_EMAIL=" .env | head -1 | cut -d= -f2-)"
+  fi
+  if [[ -z "${RTDN_DISABLED}" ]] && grep -q "^NOCTRA_RTDN_DISABLED=" .env; then
+    RTDN_DISABLED="$(grep "^NOCTRA_RTDN_DISABLED=" .env | head -1 | cut -d= -f2-)"
+  fi
+fi
+
+if [[ "${RTDN_DISABLED}" != "1" ]]; then
+  if [[ -z "${RTDN_AUDIENCE}" || -z "${RTDN_SERVICE_ACCOUNT_EMAIL}" ]]; then
+    echo ""
+    echo "❌ RTDN yapılandırması eksik (backend fail-fast ile başlamaz)."
+    echo "   Pub/Sub push aboneliği oluşturup .env dosyasına şunları ekleyin:"
+    echo ""
+    echo "   NOCTRA_RTDN_AUDIENCE=https://pubsub.example.com/push"
+    echo "   NOCTRA_RTDN_SERVICE_ACCOUNT_EMAIL=push-sa@PROJECT.iam.gserviceaccount.com"
+    echo ""
+    echo "   (Pub/Sub push subscription oluştururken 'Authentication' kısmında"
+    echo "   belirlediğiniz audience ve imzalayan service account e-postası.)"
+    echo "   RTDN kullanmayacaksanız:  NOCTRA_RTDN_DISABLED=1"
+    exit 1
+  fi
+fi
+
 # ---------- 1) gcloud kontrol ----------
 if ! command -v gcloud >/dev/null 2>&1; then
   echo "❌ gcloud CLI bulunamadı."
@@ -110,6 +145,11 @@ echo "🚀 Deploy ediliyor (${REGION})..."
 ENV_ARGS="NOCTRA_PACKAGE_NAME=${PACKAGE_NAME},NOCTRA_SUBSCRIPTION_PRODUCT_IDS=${SUBSCRIPTION_IDS},NOCTRA_LIFETIME_PRODUCT_IDS=${LIFETIME_IDS}"
 if [[ -n "${API_KEY}" ]]; then
   ENV_ARGS="${ENV_ARGS},NOCTRA_BILLING_API_KEY=${API_KEY}"
+fi
+if [[ "${RTDN_DISABLED}" == "1" ]]; then
+  ENV_ARGS="${ENV_ARGS},NOCTRA_RTDN_DISABLED=1"
+else
+  ENV_ARGS="${ENV_ARGS},NOCTRA_RTDN_AUDIENCE=${RTDN_AUDIENCE},NOCTRA_RTDN_SERVICE_ACCOUNT_EMAIL=${RTDN_SERVICE_ACCOUNT_EMAIL}"
 fi
 
 gcloud run deploy "${SERVICE_NAME}" \

@@ -25,25 +25,17 @@ builder.Services.AddSingleton(sp =>
     new EntitlementStore(ConnectionStringFor(sp.GetRequiredService<BillingConfig>())));
 builder.Services.AddSingleton<EntitlementService>();
 
-// Pub/Sub push OIDC doğrulayıcı — yalnızca audience yapılandırıldıysa
-// RTDN endpoint'i push token doğrulaması yapar (üretimde zorunlu).
-if (!string.IsNullOrWhiteSpace(config.RtdnAudience))
+// Pub/Sub push OIDC doğrulayıcı — audience/email BillingConfig tarafında
+// fail-fast ile zorunlu kılınır (RTDN açıkken backend doğrulamasız başlamaz).
+if (!config.RtdnDisabled)
 {
     builder.Services.AddSingleton(sp => new OidcTokenVerifier(
         sp.GetRequiredService<HttpClient>(),
-        config.RtdnAudience!));
+        config.RtdnAudience,
+        config.RtdnServiceAccountEmail));
 }
 
 var app = builder.Build();
-
-if (string.IsNullOrWhiteSpace(config.RtdnAudience))
-{
-    // Audience yoksa RTDN doğrulamasız çalışır — üretimde sessizce kalmasın.
-    app.Logger.LogWarning(
-        "NOCTRA_RTDN_AUDIENCE yapılandırılmadı: RTDN push token doğrulaması KAPALI " +
-        "(yalnızca yerel geliştirme için güvenlidir; üretimde Pub/Sub push " +
-        "authentication audience değerini set edin).");
-}
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 
@@ -106,12 +98,13 @@ app.MapGet("/billing/entitlement", async (
 // Google Play RTDN (Pub/Sub push) — opsiyonel
 // ==========================================
 // Güvenlik notu: Pub/Sub push mesajları, push aboneliği için üretilen OIDC
-// token'ını Authorization başlığında taşır. NOCTRA_RTDN_AUDIENCE yapılandırıldığında
-// endpoint bu token'ı Google'ın açık anahtarlarıyla (JWKS, RS256) doğrular
-// (OidcTokenVerifier) ve geçersiz istek 401 döner. Audience yapılandırılmadığı
-// sürece yerel geliştirme için doğrulama kapalıdır. Bu endpoint yalnızca mevcut
-// token'ları yeniden doğrulatır — hak asla bu yolla verilmez (fail-closed:
-// bilinmeyen token işlenmez).
+// token'ını Authorization başlığında taşır. Endpoint bu token'ı Google'ın açık
+// anahtarlarıyla (JWKS, RS256) doğrular (OidcTokenVerifier) — aud, iss, exp,
+// email ve email_verified claim'leri; geçersiz istek 401 döner. Audience ve
+// service account e-postası BillingConfig'te fail-fast ile zorunludur; RTDN
+// kullanılmayacaksa NOCTRA_RTDN_DISABLED=1 ile açıkça kapatılır. Bu endpoint
+// yalnızca mevcut token'ları yeniden doğrulatır — hak asla bu yolla verilmez
+// (fail-closed: bilinmeyen token işlenmez).
 //
 // Pub/Sub push sözleşmesi: 2xx → mesaj acknowledge edilir, 5xx → yeniden
 // iletilir. Bu nedenle yalnızca GERÇEK geçici hatalarda (Play API 503 vb.)
@@ -158,29 +151,41 @@ app.MapPost("/billing/google/rtdn", async (
             return Results.NoContent();
         }
 
-        // Abonelik bildirimi: gerçek durum her zaman subscriptionsv2.get ile
-        // yeniden sorgulanır.
-        if (payload?.SubscriptionNotification is { } subscription &&
-            !string.IsNullOrWhiteSpace(subscription.PurchaseToken) &&
-            !string.IsNullOrWhiteSpace(subscription.SubscriptionId))
+        // packageName Google'ın hangi uygulamaya ait olduğunu belirttiği
+        // alandır — başka uygulamanın bildirimi işlenmez (ack, retry yok).
+        if (!string.Equals(
+                payload?.PackageName,
+                config.PackageName,
+                StringComparison.Ordinal))
         {
-            await service.ReverifyByTokenAsync(
-                subscription.PurchaseToken,
-                subscription.SubscriptionId,
-                cancellationToken);
+            return Results.NoContent();
         }
 
-        // Tek seferlik ürün (lifetime) bildirimi: satın alma/iptal/pending
-        // olayları aynı token+sku reverify akışından geçer — hak yalnızca
-        // Play'den yeniden okunan gerçek duruma göre güncellenir.
-        if (payload?.OneTimeProductNotification is { } oneTime &&
-            !string.IsNullOrWhiteSpace(oneTime.PurchaseToken) &&
-            !string.IsNullOrWhiteSpace(oneTime.Sku))
+        // Abonelik bildirimi: gerçek durum her zaman subscriptionsv2.get ile
+        // yeniden sorgulanır. subscriptionId Google tarafından deprecated
+        // edildiği için ürün kimliği store kayıtlarından türetilir.
+        if (payload?.SubscriptionNotification is { PurchaseToken: { } subscriptionToken } &&
+            !string.IsNullOrWhiteSpace(subscriptionToken))
         {
-            await service.ReverifyByTokenAsync(
-                oneTime.PurchaseToken,
-                oneTime.Sku,
-                cancellationToken);
+            await service.ReverifyByTokenAsync(subscriptionToken, cancellationToken);
+        }
+
+        // Tek seferlik ürün (lifetime) bildirimi: satın alma/iptal olayları
+        // aynı token reverify akışından geçer — hak yalnızca Play'den yeniden
+        // okunan gerçek duruma göre güncellenir (sku deprecated: store'dan).
+        if (payload?.OneTimeProductNotification is { PurchaseToken: { } oneTimeToken } &&
+            !string.IsNullOrWhiteSpace(oneTimeToken))
+        {
+            await service.ReverifyByTokenAsync(oneTimeToken, cancellationToken);
+        }
+
+        // Voided/refund bildirimi: tamamlanmış bir satın almanın sonradan
+        // iadesi/iptali. productType (0=in-app, 1=subscription) burada karar
+        // vermek için kullanılmaz — gerçek durum Play'den yeniden okunur.
+        if (payload?.VoidedPurchaseNotification is { PurchaseToken: { } voidedToken } &&
+            !string.IsNullOrWhiteSpace(voidedToken))
+        {
+            await service.ReverifyByTokenAsync(voidedToken, cancellationToken);
         }
 
         return Results.NoContent();
@@ -224,7 +229,7 @@ static string DecodeBase64(string value)
     return Encoding.UTF8.GetString(Convert.FromBase64String(padded.Replace('-', '+').Replace('_', '/')));
 }
 
-/// <summary>RTDN zarfı — subscription ve one-time product bildirimleri.</summary>
+/// <summary>RTDN zarfı — subscription, one-time product ve voided bildirimleri.</summary>
 public sealed class RtdnPayload
 {
     [JsonPropertyName("packageName")]
@@ -235,30 +240,65 @@ public sealed class RtdnPayload
 
     [JsonPropertyName("oneTimeProductNotification")]
     public RtdnOneTimeProductNotification? OneTimeProductNotification { get; init; }
-}
 
-public sealed class RtdnSubscriptionNotification
-{
-    [JsonPropertyName("purchaseToken")]
-    public string? PurchaseToken { get; init; }
-
-    [JsonPropertyName("subscriptionId")]
-    public string? SubscriptionId { get; init; }
+    [JsonPropertyName("voidedPurchaseNotification")]
+    public RtdnVoidedPurchaseNotification? VoidedPurchaseNotification { get; init; }
 }
 
 /// <summary>
-/// Tek seferlik ürün (lifetime) bildirimi. notificationType: 1 = CANCELED,
-/// 2 = PURCHASED, 3 = ACTIVE, 4 = PENDING — yalnızca reverify tetikleyicisidir;
-/// gerçek durum her zaman Play'den yeniden okunur.
+/// Abonelik bildirimi. Google subscriptionId alanını deprecated etti ve yerine
+/// yenisini koymadı — ürün kimliği bu modelden okunmaz, store kayıtlarından
+/// türetilir (ReverifyByTokenAsync). notificationType yalnızca bilgidir;
+/// gerçek durum her zaman subscriptionsv2.get ile yeniden sorgulanır.
 /// </summary>
-public sealed class RtdnOneTimeProductNotification
+public sealed class RtdnSubscriptionNotification
 {
+    [JsonPropertyName("version")]
+    public string? Version { get; init; }
+
     [JsonPropertyName("notificationType")]
     public int NotificationType { get; init; }
 
     [JsonPropertyName("purchaseToken")]
     public string? PurchaseToken { get; init; }
+}
 
-    [JsonPropertyName("sku")]
-    public string? Sku { get; init; }
+/// <summary>
+/// Tek seferlik ürün (lifetime) bildirimi. Google notificationType tanımı:
+/// 1 = ONE_TIME_PRODUCT_PURCHASED, 2 = ONE_TIME_PRODUCT_CANCELED. sku alanı
+/// da deprecated — ürün kimliği store'dan türetilir; gerçek durum Play'den
+/// yeniden okunur (yalnızca reverify tetikleyicisidir).
+/// </summary>
+public sealed class RtdnOneTimeProductNotification
+{
+    [JsonPropertyName("version")]
+    public string? Version { get; init; }
+
+    [JsonPropertyName("notificationType")]
+    public int NotificationType { get; init; }
+
+    [JsonPropertyName("purchaseToken")]
+    public string? PurchaseToken { get; init; }
+}
+
+/// <summary>
+/// Voided purchase bildirimi — tamamlanmış bir satın almanın sonradan iadesi
+/// veya iptali (refund, chargeback, developer-initiated void). productType:
+/// 0 = in-app (lifetime), 1 = subscription; refundType: 1 = user-initiated,
+/// 2 = developer-initiated, 3 = fraudulent. Karar bu alanlarla verilmez —
+/// gerçek durum her zaman Play'den yeniden okunur.
+/// </summary>
+public sealed class RtdnVoidedPurchaseNotification
+{
+    [JsonPropertyName("purchaseToken")]
+    public string? PurchaseToken { get; init; }
+
+    [JsonPropertyName("orderId")]
+    public string? OrderId { get; init; }
+
+    [JsonPropertyName("productType")]
+    public int ProductType { get; init; }
+
+    [JsonPropertyName("refundType")]
+    public int RefundType { get; init; }
 }

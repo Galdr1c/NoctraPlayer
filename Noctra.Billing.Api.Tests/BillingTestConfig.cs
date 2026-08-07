@@ -33,6 +33,12 @@ internal sealed class BillingEnvScope : IDisposable
         Set("NOCTRA_LIFETIME_PRODUCT_IDS", "noctra_premium_lifetime");
         Set("NOCTRA_BILLING_DB_PATH", ":memory:");
         Set("NOCTRA_GOOGLE_CREDENTIALS_JSON", BuildTestServiceAccountJson());
+
+        // RTDN OIDC: BillingConfig fail-fast zorunlu kıldığı için test ortamı
+        // audience + service account e-postası verir (disable edilmez).
+        Set("NOCTRA_RTDN_AUDIENCE", "https://test-pubsub.example.com/push");
+        Set("NOCTRA_RTDN_SERVICE_ACCOUNT_EMAIL", "push-sa@test-project.iam.gserviceaccount.com");
+        Set("NOCTRA_RTDN_DISABLED", null);
     }
 
     /// <summary>Çalışma anında gerçek bir RSA anahtarıyla service account JSON'i üretir.</summary>
