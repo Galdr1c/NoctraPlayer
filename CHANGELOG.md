@@ -21,6 +21,7 @@ Detailed historical engineering notes are archived in [`docs/history/legacy-chan
 
 ### Fixed
 
+- **Child profile deletion is now atomic**: The child-profile removal migration (`DeleteChildProfilesAsync`) and the expired-profile purge (`PurgeExpiredProfilesAsync`) now run all database operations — EPG, series, import-job, playlist, profile and provider-account rows — inside a single explicit transaction with commit/rollback. Previously each `ExecuteDeleteAsync` committed on its own, so a mid-way failure could leave a half state (EPG/series/import jobs deleted while the profile still stood). File-system download cleanup stays outside the transaction (SQLite write locks) and runs first: on failure the profile is preserved and the migration retries on the next launch. The orphan-provider-account check is now computed up front so accounts shared by two deleted profiles are cleaned instead of surviving as orphans.
 - **Promo failures no longer leak technical details**: Unexpected exceptions during promo redemption are logged and surfaced as a localized generic message in both mobile and desktop settings instead of `exception.Message`.
 - **Corrupted promo grant is no longer silent**: If the stored Premium grant cannot be decrypted/deserialized, the app still fails closed to Free but the settings screen now shows a warning ("Premium entitlement could not be verified — contact support before deleting app data") on desktop and mobile.
 

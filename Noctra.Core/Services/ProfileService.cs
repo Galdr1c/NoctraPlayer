@@ -320,34 +320,71 @@ public class ProfileService : IProfileService
             .Where(p => p.PendingDeletionAt.HasValue && p.PendingDeletionAt <= cutoff)
             .ToListAsync();
 
+        if (expired.Count == 0)
+        {
+            return;
+        }
+
+        // İndirme dosyaları + indirme DB kayıtları ayrı servis/context üzerinden
+        // temizlenir — dosya sistemi DB transaction'ına alınamaz (üstelik açık bir
+        // SQLite yazma transaction'ı sırasında ikinci bir yazıcı "database is
+        // locked" üretir). Önce tamamlanır; hata olursa DB'ye hiç dokunulmaz.
+        // Not: ön-geçişin ortasında hata olursa daha önceki profillerin indirme
+        // temizliği kısmen tamamlanmış kalır (DB'ye dokunulmaz; sonraki açılışta
+        // idempotent tekrar ile tamamlanır).
         foreach (var profile in expired)
         {
             await _contentDownloadService.DeleteProfileDownloadsAsync(profile.Id);
-
-            var hasOtherProfiles = await db.Profiles
-                .AnyAsync(p => p.ProviderAccountId == profile.ProviderAccountId && p.Id != profile.Id);
-
-            await DeleteProfilePlaylistContentAsync(db, profile.Id);
-
-            await DeleteProfileImportJobsAsync(db, profile.Id);
-
-            await db.Playlists
-                .Where(p => p.ProfileId == profile.Id)
-                .ExecuteDeleteAsync();
-
-            db.Profiles.Remove(profile);
-
-            if (!hasOtherProfiles && profile.ProviderAccount != null)
-            {
-                db.ProviderAccounts.Remove(profile.ProviderAccount);
-            }
         }
 
-        if (expired.Any())
+        // Kalan (silinmeyen) profillerin hesap kimlikleri önceden hesaplanır —
+        // transaction içinde SaveChanges öncesi SQL okuma henüz silinmemiş
+        // satırları görür. Böylece aynı hesabı paylaşan iki süresi dolmuş profil
+        // de birlikte silinirken hesap yetim kalmaz (silinen kümenin dışındaki
+        // bir profil tarafından kullanılıyorsa korunur).
+        var expiredIds = expired.Select(p => p.Id).ToArray();
+        var remainingAccountIds = await db.Profiles
+            .Where(p => !expiredIds.Contains(p.Id))
+            .Select(p => p.ProviderAccountId)
+            .Distinct()
+            .ToListAsync();
+
+        // DB tarafı TEK atomik transaction: EPG, series, import job, playlist,
+        // profil ve hesap satırları birlikte işlenir. ExecuteDeleteAsync çağrıları
+        // aynı transaction'a katılır — ortadaki bir adım başarısız olursa TAMAMI
+        // geri alınır, yarım durum oluşmaz.
+        await using var transaction = await db.Database.BeginTransactionAsync();
+        try
         {
+            foreach (var profile in expired)
+            {
+                await DeleteProfilePlaylistContentAsync(db, profile.Id);
+
+                await DeleteProfileImportJobsAsync(db, profile.Id);
+
+                await db.Playlists
+                    .Where(p => p.ProfileId == profile.Id)
+                    .ExecuteDeleteAsync();
+
+                db.Profiles.Remove(profile);
+
+                if (profile.ProviderAccount is { } account
+                    && !remainingAccountIds.Contains(account.Id))
+                {
+                    db.ProviderAccounts.Remove(account);
+                }
+            }
+
             await db.SaveChangesAsync();
-            await CleanDeletedProfileSettingsAsync();
+            await transaction.CommitAsync();
         }
+        catch
+        {
+            await transaction.RollbackAsync(CancellationToken.None);
+            throw;
+        }
+
+        await CleanDeletedProfileSettingsAsync();
     }
 
     private async Task CleanDeletedProfileSettingsAsync(IEnumerable<int>? activeProfileIds = null)
@@ -382,33 +419,82 @@ public class ProfileService : IProfileService
             return 0;
         }
 
-        // 1) Veritabanı silme işlemi — tek SaveChanges ile atomik. Bu adımdaki
-        //    bir hata metodu durdurur; profil kayıtları korunur ve bir sonraki
-        //    açılışta migration tekrar denenir. Kullanıcı verisi hiçbir zaman
-        //    yarı silinmiş hâlde kalmaz.
+        // 0) İndirme dosyaları + indirme DB kayıtları ayrı servis/context
+        //    üzerinden temizlenir. Dosya sistemi DB transaction'ına alınamaz
+        //    (üstelik açık bir SQLite yazma transaction'ı sırasında ikinci bir
+        //    yazıcı "database is locked" üretir). Bu adım DB'ye dokunulmadan
+        //    ÖNCE tamamlanır; hata olursa metod çıkar, profil kayıtları korunur
+        //    ve migration bir sonraki açılışta tekrar denenir. Not: ön-geçişin
+        //    ortasında hata olursa daha önceki profillerin indirme temizliği
+        //    kısmen tamamlanmış kalabilir (DB'ye hiç dokunulmaz; sonraki açılışta
+        //    idempotent tekrar ile tamamlanır). İndirmelerin commit SONRASINA
+        //    alınması bu kısmi durumu da ortadan kaldırırdı ama o zaman indirme
+        //    hatası profilin kendisini silme pahasına best-effort kalırdı;
+        //    mevcut davranış bilinçli olarak "hata varsa profil de korunur"
+        //    garantisini korur (bkz. DeleteChildProfilesAsync_DownloadFailure_
+        //    PreservesProfileAndAccount).
         foreach (var profile in childProfiles)
         {
-            await _contentDownloadService.DeleteProfileDownloadsAsync(profile.Id);
-
-            await DeleteProfilePlaylistContentAsync(db, profile.Id, cancellationToken);
-
-            await DeleteProfileImportJobsAsync(db, profile.Id, cancellationToken);
-
-            await db.Playlists
-                .Where(p => p.ProfileId == profile.Id)
-                .ExecuteDeleteAsync(cancellationToken);
-
-            db.Profiles.Remove(profile);
+            await _contentDownloadService.DeleteProfileDownloadsAsync(profile.Id, cancellationToken);
         }
 
-        await db.SaveChangesAsync(cancellationToken);
+        // Yetim hesap denetimi, transaction içinde SaveChanges ÖNCESİ yapılamaz
+        // — SQL okuma henüz silinmemiş satırları görür. Kalan (çocuk olmayan)
+        // profillerin hesap kimlikleri önceden hesaplanır; silinen çocuk
+        // profilleri yalnızca bu kümeye düşmeyen hesapları aday yapar (global
+        // garbage collector değil, yalnız silinen çocuk profillerinin hesapları).
+        var remainingAccountIds = await db.Profiles
+            .Where(p => !p.IsChild)
+            .Select(p => p.ProviderAccountId)
+            .Distinct()
+            .ToListAsync(cancellationToken);
 
-        // Bildirim kalıcılığı: profil silme DB'ye yazılır yazılmaz bayrak
-        // KAYDEDİLİR (best-effort) — kullanıcıya söz verilen bir defalık bilgi,
-        // sonraki cleanup adımlarının hatalarına rağmen kaybolmaz. Buradaki bir
-        // hata sayının dönmesini engellememeli; çağıran taraf da ikinci bir şans
-        // olarak bayrağı tekrar yazabilir (idempotent).
-        if (_settingsService is not null && childProfiles.Count > 0)
+        // 1) DB tarafı TEK atomik transaction: EPG, series, import job, playlist,
+        //    profil ve yetim hesap satırları birlikte işlenir. ExecuteDeleteAsync
+        //    çağrıları aynı transaction'a katılır — ortadaki bir adım başarısız
+        //    olursa TAMAMI geri alınır; yarım durum (ör. EPG silinmiş ama profil
+        //    duruyor) oluşmaz. Kullanıcı verisi hiçbir zaman yarı silinmiş hâlde
+        //    kalmaz ve migration bir sonraki açılışta tekrar denenebilir.
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        try
+        {
+            foreach (var profile in childProfiles)
+            {
+                await DeleteProfilePlaylistContentAsync(db, profile.Id, cancellationToken);
+
+                await DeleteProfileImportJobsAsync(db, profile.Id, cancellationToken);
+
+                await db.Playlists
+                    .Where(p => p.ProfileId == profile.Id)
+                    .ExecuteDeleteAsync(cancellationToken);
+
+                db.Profiles.Remove(profile);
+
+                // Yalnızca başka hiçbir (kalan) profil tarafından kullanılmayan
+                // hesaplar silinir. Aynı hesabı paylaşan kardeş çocuk profiller
+                // aynı varlığı işaret ettiğinden ikinci Remove no-op'tur.
+                if (profile.ProviderAccount is { } account
+                    && !remainingAccountIds.Contains(account.Id))
+                {
+                    db.ProviderAccounts.Remove(account);
+                }
+            }
+
+            await db.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+        }
+        catch
+        {
+            await transaction.RollbackAsync(CancellationToken.None);
+            throw;
+        }
+
+        // 2) Bildirim kalıcılığı — profil silme DB'ye commit edilir edilmez bayrak
+        //    KAYDEDİLİR (best-effort). Kullanıcıya söz verilen bir defalık bilgi,
+        //    sonraki cleanup adımlarının hatalarına rağmen kaybolmaz; buradaki bir
+        //    hata sayının dönmesini engellememeli (çağıran ikinci şans olarak
+        //    bayrağı tekrar yazabilir — idempotent).
+        if (_settingsService is not null)
         {
             try
             {
@@ -422,39 +508,9 @@ public class ProfileService : IProfileService
             }
         }
 
-        // 2) Yetim hesap temizliği YALNIZCA silinen çocuk profillerinin hesap
-        //    adaylarıyla sınırlıdır (global garbage collector değil): aday hesap
-        //    hâlâ başka bir profile bağlıysa korunur. Adaylar SaveChanges sonrası
-        //    denetlendiğinden, aynı hesabı paylaşan kardeş kayıtlar yanlışlıkla
-        //    "kullanımda" görünmez ve hesap gerektiği gibi temizlenir.
-        var candidateAccountIds = childProfiles
-            .Select(p => p.ProviderAccountId)
-            .Distinct()
-            .ToArray();
-
-        try
-        {
-            if (candidateAccountIds.Length > 0)
-            {
-                await db.ProviderAccounts
-                    .Where(a => candidateAccountIds.Contains(a.Id)
-                        && !db.Profiles.Any(p => p.ProviderAccountId == a.Id))
-                    .ExecuteDeleteAsync(cancellationToken);
-            }
-        }
-        catch (Exception ex)
-        {
-            // Best-effort: yetim hesap satırları kritik değildir; buradaki bir
-            // hata bir defalık bildirimi kaybettirmemeli (silinen sayı yine döner).
-            System.Diagnostics.Debug.WriteLine(
-                $"[ProfileService] Failed to clean orphaned accounts after child profile deletion: {ex.Message}");
-        }
-
         // 3) Best-effort: ayar temizliği hatası, silinen sayının dönmesini
-        //    engellememeli — çağıran bu sayıya dayanarak bir defalık bildirimi
-        //    kaydeder (kullanıcıya söz verilen bilgi kaybolmamalı). Kalan yalnız
-        //    ayar kayıtları sonraki açılışlarda GetProfilesAsync üzerinden
-        //    tekrar temizlenir.
+        //    engellememeli — kalan yetim ayar kayıtları sonraki açılışlarda
+        //    GetProfilesAsync üzerinden tekrar temizlenir.
         try
         {
             await CleanDeletedProfileSettingsAsync();

@@ -326,6 +326,54 @@ namespace Noctra.Tests
         }
 
         [Fact]
+        public void ChildProfileDeletion_DbOperationsRunInsideExplicitTransaction()
+        {
+            // Review guard: DeleteChildProfilesAsync içindeki ExecuteDeleteAsync
+            // çağrılarının her biri ayrı autocommit işlemi çalıştırırdı — ortadaki
+            // bir adım başarısız olursa "EPG/series/import-job silinmiş ama profil
+            // duruyor" gibi yarım durum oluşabilirdi. Tüm DB işlemleri tek
+            // BeginTransactionAsync içinde olmalı; commit/rollback açık olmalı ve
+            // indirme (dosya sistemi) temizliği transaction DIŞINDA önce tamamlanmalı.
+            var source = LoadProfileServiceSource();
+
+            var childDelete = ExtractMethodBody(source, "public async Task<int> DeleteChildProfilesAsync");
+            Assert.Contains("BeginTransactionAsync", childDelete, StringComparison.Ordinal);
+            Assert.Contains("CommitAsync", childDelete, StringComparison.Ordinal);
+            Assert.Contains("RollbackAsync", childDelete, StringComparison.Ordinal);
+
+            var downloadIndex = childDelete.IndexOf("DeleteProfileDownloadsAsync", StringComparison.Ordinal);
+            var beginIndex = childDelete.IndexOf("BeginTransactionAsync", StringComparison.Ordinal);
+            var commitIndex = childDelete.IndexOf("CommitAsync", StringComparison.Ordinal);
+            var rollbackIndex = childDelete.IndexOf("RollbackAsync", StringComparison.Ordinal);
+
+            // İndirme (dosya sistemi) temizliği transaction başlamadan ÖNCE — hata
+            // olursa DB'ye hiç dokunulmaz; commit tüm silme işlemlerinden SONRA.
+            Assert.True(downloadIndex >= 0 && downloadIndex < beginIndex,
+                "Download cleanup must complete before the DB transaction starts.");
+            Assert.True(beginIndex < commitIndex,
+                "CommitAsync must come after BeginTransactionAsync.");
+            Assert.True(commitIndex < rollbackIndex,
+                "RollbackAsync must exist after CommitAsync (catch branch).");
+
+            var purge = ExtractMethodBody(source, "public async Task PurgeExpiredProfilesAsync");
+            Assert.Contains("BeginTransactionAsync", purge, StringComparison.Ordinal);
+            Assert.Contains("CommitAsync", purge, StringComparison.Ordinal);
+            Assert.Contains("RollbackAsync", purge, StringComparison.Ordinal);
+
+            var purgeDownloadIndex = purge.IndexOf("DeleteProfileDownloadsAsync", StringComparison.Ordinal);
+            var purgeBeginIndex = purge.IndexOf("BeginTransactionAsync", StringComparison.Ordinal);
+            var purgeCommitIndex = purge.IndexOf("CommitAsync", StringComparison.Ordinal);
+            var purgeRollbackIndex = purge.IndexOf("RollbackAsync", StringComparison.Ordinal);
+
+            Assert.True(purgeDownloadIndex >= 0 && purgeDownloadIndex < purgeBeginIndex,
+                "Purge: download cleanup must complete before the DB transaction starts.");
+            Assert.True(purgeBeginIndex < purgeCommitIndex,
+                "Purge: CommitAsync must come after BeginTransactionAsync.");
+            Assert.True(purgeCommitIndex < purgeRollbackIndex,
+                "Purge: RollbackAsync must exist after CommitAsync (catch branch).");
+        }
+
+        [Fact]
         public async Task PinCreation_SavesCorrectHash_WhenValid()
         {
             // Arrange
@@ -1305,6 +1353,55 @@ namespace Noctra.Tests
             var persisted = await dbVerify.Profiles.FindAsync(profile.Id);
             Assert.Equal(5, persisted!.FailedPinAttempts);
             Assert.NotNull(persisted.PinLockedUntilUtc);
+        }
+
+        private static string LoadProfileServiceSource()
+        {
+            return System.IO.File.ReadAllText(System.IO.Path.Combine(
+                FindRepositoryRoot(),
+                "Noctra.Core",
+                "Services",
+                "ProfileService.cs"));
+        }
+
+        private static string ExtractMethodBody(string contents, string signature)
+        {
+            var signatureIndex = contents.IndexOf(signature, StringComparison.Ordinal);
+            Assert.True(signatureIndex >= 0, $"Method '{signature}' was not found.");
+
+            var bodyStart = contents.IndexOf('{', signatureIndex);
+            Assert.True(bodyStart >= 0, $"Method '{signature}' has no body.");
+
+            var depth = 0;
+            for (var index = bodyStart; index < contents.Length; index++)
+            {
+                if (contents[index] == '{')
+                {
+                    depth++;
+                }
+                else if (contents[index] == '}' && --depth == 0)
+                {
+                    return contents[bodyStart..(index + 1)];
+                }
+            }
+
+            throw new InvalidOperationException($"Method '{signature}' body was not closed.");
+        }
+
+        private static string FindRepositoryRoot()
+        {
+            var directory = new System.IO.DirectoryInfo(AppContext.BaseDirectory);
+            while (directory != null)
+            {
+                if (System.IO.File.Exists(System.IO.Path.Combine(directory.FullName, "NoctraPlayer.sln")))
+                {
+                    return directory.FullName;
+                }
+
+                directory = directory.Parent;
+            }
+
+            throw new DirectoryNotFoundException("Could not locate the repository root.");
         }
 
         private AddProfileViewModel CreatePinSetupViewModel(
