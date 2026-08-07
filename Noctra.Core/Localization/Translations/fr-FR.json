@@ -1053,5 +1053,6 @@
   "Upsell.Error.PurchaseFailed": "Impossible de démarrer l'achat. Veuillez réessayer.",
   "Upsell.Plan.AlreadyOwned": "Vous possédez déjà ce forfait.",
   "Upsell.Action.Retry": "Réessayer",
-  "Settings.Store.PurchasePending": "Paiement en attente. Votre Premium s'activera automatiquement dès que le paiement sera approuvé."
+  "Settings.Store.PurchasePending": "Paiement en attente. Votre Premium s'activera automatiquement dès que le paiement sera approuvé.",
+  "Upsell.Plan.UnavailableKind": "Ce forfait n'est pas disponible pour le moment. Veuillez réessayer plus tard."
 }

@@ -93,6 +93,55 @@ public class UpsellWindowLayoutTests
         Assert.DoesNotContain("Upsell.Action.Buy.Price", source);
     }
 
+    [Fact]
+    public void MobileUpsell_MissingPlan_DoesNotFallBackToAnotherPlan()
+    {
+        // Regresyon koruması: Lifetime kartına basılıp ürün Play'den dönmezse
+        // genel StartPurchaseFlowAsync'e düşüp aylık ödeme ekranı açılmamalı.
+        // Eksik plan → "plan kullanılamıyor" gösterilir; StartPurchaseFlowAsync
+        // yalnızca mağaza desteklenmediğinde (URI akışı) çağrılır ve tek yerde
+        // bulunur.
+        var source = File.ReadAllText(FindProjectFile("Noctra.Mobile", "Views", "MobileUpsellView.axaml.cs"));
+
+        // URI fallback'i korunuyor (mağaza desteklenmeyen konak), ama yalnızca bir kez
+        // (açılı parantezli desen yorumlardaki sözü saymaz — yalnızca gerçek çağrıyı).
+        Assert.Equal(1, CountOccurrences(source, "StartPurchaseFlowAsync("));
+
+        // Eksik-plan guard'ı StartPurchaseFlowAsync dalından SONRA gelir ve
+        // LaunchPurchaseAsync'ten ÖNCE çalışır — yani eksik plan asla farklı
+        // bir planın akışına düşmez.
+        var unsupportedBranch = source.IndexOf(
+            "if (store is not { IsSupported: true })", StringComparison.Ordinal);
+        var nullGuard = source.IndexOf("if (product is null)", StringComparison.Ordinal);
+        var launch = source.IndexOf("LaunchPurchaseAsync(product)", StringComparison.Ordinal);
+        // Plan-kullanılamıyor mesajı dosyada pricing hata yolunda da geçer
+        // (Upsell.Plan.Unavailable); guard içindeki spesifik mesaj nullGuard'dan
+        // SONRA aranır.
+        var unavailableKind = source.IndexOf("Upsell.Plan.UnavailableKind", nullGuard, StringComparison.Ordinal);
+        var guardReturn = source.IndexOf("return;", nullGuard, StringComparison.Ordinal);
+
+        Assert.True(unsupportedBranch >= 0, "Store-unsupported branch must exist.");
+        Assert.True(nullGuard > unsupportedBranch, "Missing-plan guard must come after the store-unsupported branch.");
+        Assert.True(unavailableKind > nullGuard, "Missing-plan guard must show the plan-unavailable message.");
+        // Guard erken döner: launch'a asla düşmez (fall-through yok).
+        Assert.True(guardReturn > nullGuard && guardReturn < launch,
+            "Missing-plan guard must return before the product launch.");
+        Assert.True(launch > nullGuard, "Product launch must come after the missing-plan guard.");
+    }
+
+    private static int CountOccurrences(string source, string value)
+    {
+        var count = 0;
+        var index = 0;
+        while ((index = source.IndexOf(value, index, StringComparison.Ordinal)) >= 0)
+        {
+            count++;
+            index += value.Length;
+        }
+
+        return count;
+    }
+
     private static void AssertFeature(JsonElement root, string key, string expectedFragment)
     {
         var value = root.GetProperty(key).GetString();

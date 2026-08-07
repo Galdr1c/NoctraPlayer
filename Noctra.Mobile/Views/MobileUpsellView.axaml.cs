@@ -134,11 +134,16 @@ public partial class MobileUpsellView : UserControl
     }
 
     /// <summary>
-    /// Seçilen türdeki mağaza ürünü için satın alma akışını başlatır;
-    /// ürün bulunamazsa genel Premium akışına düşer. Sonuç değerlendirilir:
+    /// Seçilen türdeki mağaza ürünü için satın alma akışını başlatır.
+    /// Sonuç değerlendirilir:
     ///  - Başarılı / kullanıcı iptali → sheet kapanır (Play penceresi açıldı).
     ///  - Zaten sahip / teknik hata → sheet AÇIK kalır ve yerelleştirilmiş
     ///    mesaj gösterilir; teknik ayrıntı yalnız loglanır, retry mümkündür.
+    ///
+    /// KRİTİK: Seçilen plan Play'de yoksa (örn. lifetime henüz yayınlanmadı)
+    /// BAŞKA plana düşülmez — genel StartPurchaseFlowAsync aylık aboneliği
+    /// öncelediği için Lifetime'a basan kullanıcıya yanlışlıkla aylık ödeme
+    /// ekranı açılırdı. Eksik plan → "plan kullanılamıyor" gösterilir.
     /// </summary>
     private async Task PurchaseAsync(StoreProductKind kind)
     {
@@ -157,34 +162,11 @@ public partial class MobileUpsellView : UserControl
             }
 
             var store = app.EnsureServices()?.GetService<IStorePurchaseService>();
-            var product = _products.FirstOrDefault(p => p.Kind == kind);
 
-            if (store is { IsSupported: true } && product is not null)
+            if (store is not { IsSupported: true })
             {
-                var result = await store.LaunchPurchaseAsync(product);
-
-                if (result.Success)
-                {
-                    // Satın alma tamamlandı; hak EntitlementChanged ile yenilenir.
-                    TryClose();
-                }
-                else if (result.CancelledByUser)
-                {
-                    // Kullanıcı Play penceresinde bilinçli olarak iptal etti.
-                    TryClose();
-                }
-                else if (result.AlreadyOwned)
-                {
-                    ShowInfo(LocalizationSource.Instance["Upsell.Plan.AlreadyOwned"]);
-                }
-                else
-                {
-                    System.Diagnostics.Debug.WriteLine($"[Upsell] Purchase failed: {result.ErrorMessage}");
-                    ShowError(LocalizationSource.Instance["Upsell.Error.PurchaseFailed"]);
-                }
-            }
-            else
-            {
+                // Mağaza desteklenmiyor (ör. masaüstü barındırma): genel Premium
+                // akışı (URI) kullanılır — burada plan ayrımı yoktur.
                 var licenseService = app.EnsureServices()?.GetRequiredService<ILicenseService>();
                 if (licenseService is not null)
                 {
@@ -198,6 +180,42 @@ public partial class MobileUpsellView : UserControl
                         ShowError(LocalizationSource.Instance["Upsell.Error.PurchaseFailed"]);
                     }
                 }
+
+                return;
+            }
+
+            // Seçilen türde ürün Play'de yoksa (örn. lifetime ürünü henüz
+            // yayınlanmadı veya sorgu dönmedi) BAŞKA plana fallback YAPILMAZ;
+            // aylık ödeme ekranı açılmaz, planın kullanılamadığı gösterilir.
+            // Mesaj "ürünler yüklenemedi" DEĞİLDİR — ürünler yüklenmiş olabilir,
+            // yalnızca bu plan yoktur.
+            var product = _products.FirstOrDefault(p => p.Kind == kind);
+            if (product is null)
+            {
+                ShowError(LocalizationSource.Instance["Upsell.Plan.UnavailableKind"]);
+                return;
+            }
+
+            var result = await store.LaunchPurchaseAsync(product);
+
+            if (result.Success)
+            {
+                // Satın alma tamamlandı; hak EntitlementChanged ile yenilenir.
+                TryClose();
+            }
+            else if (result.CancelledByUser)
+            {
+                // Kullanıcı Play penceresinde bilinçli olarak iptal etti.
+                TryClose();
+            }
+            else if (result.AlreadyOwned)
+            {
+                ShowInfo(LocalizationSource.Instance["Upsell.Plan.AlreadyOwned"]);
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine($"[Upsell] Purchase failed: {result.ErrorMessage}");
+                ShowError(LocalizationSource.Instance["Upsell.Error.PurchaseFailed"]);
             }
         }
         catch (Exception ex)

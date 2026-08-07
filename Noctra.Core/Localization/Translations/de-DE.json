@@ -1053,5 +1053,6 @@
   "Upsell.Error.PurchaseFailed": "Der Kauf konnte nicht gestartet werden. Bitte versuchen Sie es erneut.",
   "Upsell.Plan.AlreadyOwned": "Sie besitzen dieses Paket bereits.",
   "Upsell.Action.Retry": "Erneut versuchen",
-  "Settings.Store.PurchasePending": "Zahlung ausstehend. Ihr Premium wird automatisch aktiviert, sobald die Zahlung bestätigt wurde."
+  "Settings.Store.PurchasePending": "Zahlung ausstehend. Ihr Premium wird automatisch aktiviert, sobald die Zahlung bestätigt wurde.",
+  "Upsell.Plan.UnavailableKind": "Dieser Plan ist derzeit nicht verfügbar. Bitte versuchen Sie es später erneut."
 }
