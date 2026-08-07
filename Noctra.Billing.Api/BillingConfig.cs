@@ -20,6 +20,13 @@ public sealed class BillingConfig
 
     public string DatabasePath { get; private init; } = "noctra-billing.db";
 
+    /// <summary>
+    /// Pub/Sub push aboneliği için yapılandırılan OIDC audience. RTDN endpoint'i
+    /// yalnızca bu değer tanımlıysa push token doğrulaması yapar; tanımlı
+    /// değilse yerel geliştirme için açık kalır (üretimde tanımlanmalıdır).
+    /// </summary>
+    public string? RtdnAudience { get; private init; }
+
     public string? GoogleCredentialsJson { get; private init; }
     public string? GoogleCredentialsPath { get; private init; }
 
@@ -42,6 +49,7 @@ public sealed class BillingConfig
             LifetimeProductIds = lifetime,
             ApiKey = Environment.GetEnvironmentVariable("NOCTRA_BILLING_API_KEY"),
             DatabasePath = Environment.GetEnvironmentVariable("NOCTRA_BILLING_DB_PATH") ?? "noctra-billing.db",
+            RtdnAudience = Environment.GetEnvironmentVariable("NOCTRA_RTDN_AUDIENCE"),
             GoogleCredentialsJson = Environment.GetEnvironmentVariable("NOCTRA_GOOGLE_CREDENTIALS_JSON"),
             GoogleCredentialsPath = Environment.GetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS")
         };

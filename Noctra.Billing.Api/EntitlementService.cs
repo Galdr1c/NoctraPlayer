@@ -103,15 +103,19 @@ public sealed class EntitlementService
         }
 
         var tokenHash = HashToken(purchaseToken);
-        var existing = await _store.GetByPurchaseTokenHashAsync(tokenHash, cancellationToken)
+        var existing = await _store.GetAllByPurchaseTokenHashAsync(tokenHash, cancellationToken)
             .ConfigureAwait(false);
-        if (existing is null)
+        if (existing.Count == 0)
         {
             // Token daha önce bu backend'de hiç görülmedi — hangi kuruluma ait
             // olduğu bilinemediği için güncellenemez (RTDN best-effort).
             return false;
         }
 
+        // Aynı satın alma birden fazla kurulumda (telefon + tablet) restore
+        // edilmiş olabilir: Google'a TEK doğrulama yapılır, sonuç token'ı
+        // paylaşan BÜTÜN kurulum satırlarına yazılır. Yalnızca bir satırı
+        // güncellemek diğer cihazı eski state'te bırakırdı.
         var verification = await _billingApi.VerifyAsync(
                 productId,
                 purchaseToken,
@@ -119,19 +123,23 @@ public sealed class EntitlementService
                 cancellationToken)
             .ConfigureAwait(false);
 
-        await _store.UpsertAsync(new StoredEntitlementRow
+        var lastVerifiedAtUtc = DateTime.UtcNow;
+        foreach (var row in existing)
         {
-            InstallationId = existing.InstallationId,
-            ProductId = productId,
-            PurchaseTokenHash = tokenHash,
-            EntitlementType = verification.EntitlementType,
-            IsActive = verification.IsActive,
-            ExpiresAtUtc = verification.ExpiresAtUtc,
-            AutoRenewEnabled = verification.AutoRenewEnabled,
-            State = verification.State,
-            IsTrialPeriod = verification.IsTrialPeriod,
-            LastVerifiedAtUtc = DateTime.UtcNow
-        }, cancellationToken).ConfigureAwait(false);
+            await _store.UpsertAsync(new StoredEntitlementRow
+            {
+                InstallationId = row.InstallationId,
+                ProductId = productId,
+                PurchaseTokenHash = tokenHash,
+                EntitlementType = verification.EntitlementType,
+                IsActive = verification.IsActive,
+                ExpiresAtUtc = verification.ExpiresAtUtc,
+                AutoRenewEnabled = verification.AutoRenewEnabled,
+                State = verification.State,
+                IsTrialPeriod = verification.IsTrialPeriod,
+                LastVerifiedAtUtc = lastVerifiedAtUtc
+            }, cancellationToken).ConfigureAwait(false);
+        }
 
         return true;
     }

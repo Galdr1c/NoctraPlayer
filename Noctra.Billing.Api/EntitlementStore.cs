@@ -141,8 +141,13 @@ public sealed class EntitlementStore
         return rows;
     }
 
-    /// <summary>RTDN güncellemeleri için token hash'inden kaydı bulur.</summary>
-    public async Task<StoredEntitlementRow?> GetByPurchaseTokenHashAsync(
+    /// <summary>
+    /// RTDN güncellemeleri için token hash'inden BÜTÜN kayıtları bulur — aynı
+    /// satın alma birden fazla kurulumda restore edilmiş olabilir (telefon +
+    /// tablet); hepsi güncellenmelidir. LIMIT 1 kullanmak diğer cihazları eski
+    /// state'te bırakırdı.
+    /// </summary>
+    public async Task<List<StoredEntitlementRow>> GetAllByPurchaseTokenHashAsync(
         string purchaseTokenHash,
         CancellationToken cancellationToken = default)
     {
@@ -155,14 +160,18 @@ public sealed class EntitlementStore
                    is_trial_period
             FROM entitlements
             WHERE purchase_token_hash = $tokenHash
-            LIMIT 1
+            ORDER BY installation_id
             """;
         command.Parameters.AddWithValue("$tokenHash", purchaseTokenHash);
 
+        var rows = new List<StoredEntitlementRow>();
         using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
-        return await reader.ReadAsync(cancellationToken).ConfigureAwait(false)
-            ? ReadRow(reader)
-            : null;
+        while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+        {
+            rows.Add(ReadRow(reader));
+        }
+
+        return rows;
     }
 
     private static StoredEntitlementRow ReadRow(SqliteDataReader reader)

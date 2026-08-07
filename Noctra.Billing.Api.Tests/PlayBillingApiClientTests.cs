@@ -5,18 +5,27 @@ namespace Noctra.Billing.Api.Tests;
 [Collection(BillingEnvCollection.Name)]
 public sealed class PlayBillingApiClientTests
 {
+    // ==========================================
+    // Subscription (subscriptionsv2.get — GERÇEK Google şeması)
+    // ==========================================
+
     [Fact]
-    public async Task VerifyAsync_ActiveSubscription_UsesPlayExpiryTime()
+    public async Task VerifyAsync_ActiveSubscription_UsesPlayExpiryAndLineItemAutoRenew()
     {
         using var env = new BillingEnvScope();
         var handler = ScriptedHttpMessageHandler.TokenPlus(request =>
             ScriptedHttpMessageHandler.Json(HttpStatusCode.OK, """
                 {
                   "subscriptionState": "SUBSCRIPTION_STATE_ACTIVE",
-                  "autoRenewing": true,
-                  "acknowledgementState": "ACKNOWLEDGEMENT_STATE_ACKED",
+                  "latestOrderId": "GPA.1234",
                   "lineItems": [
-                    { "productId": "noctra_premium_monthly", "expiryTime": "2026-09-06T15:42:10Z" }
+                    {
+                      "productId": "noctra_premium_monthly",
+                      "expiryTime": "2026-09-06T15:42:10Z",
+                      "autoRenewingPlan": { "autoRenewEnabled": true, "planId": "baseplan.monthly" },
+                      "offerDetails": { "basePlanId": "baseplan.monthly", "offerId": "base_plan_offer" },
+                      "offerPhase": { "basePrice": { "priceAmountMicros": "59990000", "priceCurrencyCode": "TRY" } }
+                    }
                   ]
                 }
                 """));
@@ -28,8 +37,10 @@ public sealed class PlayBillingApiClientTests
         Assert.Equal("Subscription", result.EntitlementType);
         Assert.True(result.IsActive);
         Assert.Equal(new DateTime(2026, 9, 6, 15, 42, 10, DateTimeKind.Utc), result.ExpiresAtUtc);
+        // autoRenewing root'ta DEĞİL, lineItems[].autoRenewingPlan.autoRenewEnabled'da.
         Assert.True(result.AutoRenewEnabled);
         Assert.Equal("SUBSCRIPTION_STATE_ACTIVE", result.State);
+        Assert.False(result.IsTrialPeriod);
     }
 
     [Fact]
@@ -40,9 +51,13 @@ public sealed class PlayBillingApiClientTests
             ScriptedHttpMessageHandler.Json(HttpStatusCode.OK, """
                 {
                   "subscriptionState": "SUBSCRIPTION_STATE_CANCELED",
-                  "autoRenewing": false,
                   "lineItems": [
-                    { "productId": "noctra_premium_monthly", "expiryTime": "2099-01-01T00:00:00Z" }
+                    {
+                      "productId": "noctra_premium_monthly",
+                      "expiryTime": "2099-01-01T00:00:00Z",
+                      "autoRenewingPlan": { "autoRenewEnabled": false },
+                      "offerPhase": { "basePrice": { "priceAmountMicros": "59990000" } }
+                    }
                   ]
                 }
                 """));
@@ -62,15 +77,20 @@ public sealed class PlayBillingApiClientTests
     {
         using var env = new BillingEnvScope();
         // İstemci premium productId ile gönderir ama token başka bir aboneliğe
-        // (lineItems[].productId farklı) aittir — subscriptionsv2.get URL'inde
-        // ürün olmadığı için yalnızca Google'ın cevabı belirleyicidir.
+        // (lineItems[].productId farklı) aittir. Farklı ürünün line item'ı
+        // istenen hakkın expiry'sine KATKIDA BULUNAMaz — hatta expiry 2099
+        // olsa bile.
         var handler = ScriptedHttpMessageHandler.TokenPlus(request =>
             ScriptedHttpMessageHandler.Json(HttpStatusCode.OK, """
                 {
                   "subscriptionState": "SUBSCRIPTION_STATE_ACTIVE",
-                  "autoRenewing": true,
                   "lineItems": [
-                    { "productId": "noctra_some_other_sub", "expiryTime": "2099-01-01T00:00:00Z" }
+                    {
+                      "productId": "noctra_some_other_sub",
+                      "expiryTime": "2099-01-01T00:00:00Z",
+                      "autoRenewingPlan": { "autoRenewEnabled": true },
+                      "offerPhase": { "basePrice": { "priceAmountMicros": "10000" } }
+                    }
                   ]
                 }
                 """));
@@ -81,6 +101,7 @@ public sealed class PlayBillingApiClientTests
 
         // Token premium ürüne ait değil → fail-closed inaktif.
         Assert.False(result.IsActive);
+        Assert.Null(result.ExpiresAtUtc);
     }
 
     [Fact]
@@ -91,9 +112,62 @@ public sealed class PlayBillingApiClientTests
             ScriptedHttpMessageHandler.Json(HttpStatusCode.OK, """
                 {
                   "subscriptionState": "SUBSCRIPTION_STATE_EXPIRED",
-                  "autoRenewing": false,
                   "lineItems": [
                     { "productId": "noctra_premium_monthly", "expiryTime": "2020-01-01T00:00:00Z" }
+                  ]
+                }
+                """));
+
+        var client = CreateClient(handler);
+
+        var result = await client.VerifyAsync("noctra_premium_monthly", "token-abc", "studio.kynora.noctra");
+
+        Assert.False(result.IsActive);
+    }
+
+    [Fact]
+    public async Task VerifyAsync_PausedSubscription_IsInactive()
+    {
+        // PAUSED: kullanıcı duraklattı — faturalama da erişim de durur.
+        using var env = new BillingEnvScope();
+        var handler = ScriptedHttpMessageHandler.TokenPlus(request =>
+            ScriptedHttpMessageHandler.Json(HttpStatusCode.OK, """
+                {
+                  "subscriptionState": "SUBSCRIPTION_STATE_PAUSED",
+                  "lineItems": [
+                    {
+                      "productId": "noctra_premium_monthly",
+                      "expiryTime": "2099-01-01T00:00:00Z",
+                      "autoRenewingPlan": { "autoRenewEnabled": false }
+                    }
+                  ]
+                }
+                """));
+
+        var client = CreateClient(handler);
+
+        var result = await client.VerifyAsync("noctra_premium_monthly", "token-abc", "studio.kynora.noctra");
+
+        Assert.False(result.IsActive);
+    }
+
+    [Fact]
+    public async Task VerifyAsync_OnHoldSubscription_IsInactive()
+    {
+        // ON_HOLD (account hold): ödeme sorunu — Google kullanıcının erişimini
+        // kaldırır. (Eski "SUBSCRIPTION_STATE_ACCOUNT_HOLD" değeri yoktur;
+        // güncel isim SUBSCRIPTION_STATE_ON_HOLD.)
+        using var env = new BillingEnvScope();
+        var handler = ScriptedHttpMessageHandler.TokenPlus(request =>
+            ScriptedHttpMessageHandler.Json(HttpStatusCode.OK, """
+                {
+                  "subscriptionState": "SUBSCRIPTION_STATE_ON_HOLD",
+                  "lineItems": [
+                    {
+                      "productId": "noctra_premium_monthly",
+                      "expiryTime": "2099-01-01T00:00:00Z",
+                      "autoRenewingPlan": { "autoRenewEnabled": false }
+                    }
                   ]
                 }
                 """));
@@ -120,13 +194,18 @@ public sealed class PlayBillingApiClientTests
         Assert.Equal("SUBSCRIPTION_STATE_EXPIRED", result.State);
     }
 
+    // ==========================================
+    // Lifetime (purchases.products.get — purchaseState: 0=Purchased, 1=Canceled, 2=Pending)
+    // ==========================================
+
     [Fact]
     public async Task VerifyAsync_LifetimePurchased_IsActiveWithoutExpiry()
     {
         using var env = new BillingEnvScope();
+        // GERÇEK şema: 0 = Purchased (BillingClient'ın 1'i değil!).
         var handler = ScriptedHttpMessageHandler.TokenPlus(request =>
             ScriptedHttpMessageHandler.Json(HttpStatusCode.OK,
-                """{"purchaseState":1,"acknowledgementState":1,"consumptionState":1,"purchaseTimeMillis":"1700000000000"}"""));
+                """{"purchaseState":0,"acknowledgementState":1,"consumptionState":1,"purchaseTimeMillis":"1700000000000"}"""));
 
         var client = CreateClient(handler);
 
@@ -135,14 +214,16 @@ public sealed class PlayBillingApiClientTests
         Assert.Equal("Lifetime", result.EntitlementType);
         Assert.True(result.IsActive);
         Assert.Null(result.ExpiresAtUtc);
+        Assert.Equal("PRODUCT_PURCHASED", result.State);
     }
 
     [Fact]
     public async Task VerifyAsync_LifetimeCanceled_IsInactive()
     {
         using var env = new BillingEnvScope();
+        // GERÇEK şema: 1 = Canceled (iptal edilmiş purchase AKTİF sayılamaz).
         var handler = ScriptedHttpMessageHandler.TokenPlus(request =>
-            ScriptedHttpMessageHandler.Json(HttpStatusCode.OK, """{"purchaseState":2,"acknowledgementState":1}"""));
+            ScriptedHttpMessageHandler.Json(HttpStatusCode.OK, """{"purchaseState":1,"acknowledgementState":1}"""));
 
         var client = CreateClient(handler);
 
@@ -151,6 +232,149 @@ public sealed class PlayBillingApiClientTests
         Assert.False(result.IsActive);
         Assert.Equal("PRODUCT_CANCELED", result.State);
     }
+
+    [Fact]
+    public async Task VerifyAsync_LifetimePending_IsInactive()
+    {
+        using var env = new BillingEnvScope();
+        // GERÇEK şema: 2 = Pending — ödeme tamamlanmadı, hak verilmez.
+        var handler = ScriptedHttpMessageHandler.TokenPlus(request =>
+            ScriptedHttpMessageHandler.Json(HttpStatusCode.OK, """{"purchaseState":2,"acknowledgementState":0}"""));
+
+        var client = CreateClient(handler);
+
+        var result = await client.VerifyAsync("noctra_premium_lifetime", "token-xyz", "studio.kynora.noctra");
+
+        Assert.False(result.IsActive);
+        Assert.Equal("PRODUCT_PENDING", result.State);
+    }
+
+    // ==========================================
+    // Trial tespiti — offerPhase.freeTrial (tek istek, Monetization çağrısı yok)
+    // ==========================================
+
+    [Fact]
+    public async Task VerifyAsync_ActiveTrialSubscription_IsTrialPeriodTrue()
+    {
+        using var env = new BillingEnvScope();
+        var nonOAuthRequests = 0;
+        var handler = new ScriptedHttpMessageHandler(async request =>
+        {
+            if (request.RequestUri!.AbsoluteUri.StartsWith("https://oauth2.googleapis.com/token", StringComparison.Ordinal))
+            {
+                return ScriptedHttpMessageHandler.Json(HttpStatusCode.OK,
+                    """{"access_token":"test-access-token","expires_in":3600,"token_type":"Bearer"}""");
+            }
+
+            Interlocked.Increment(ref nonOAuthRequests);
+            return ScriptedHttpMessageHandler.Json(HttpStatusCode.OK, """
+                {
+                  "subscriptionState": "SUBSCRIPTION_STATE_ACTIVE",
+                  "lineItems": [
+                    {
+                      "productId": "noctra_premium_monthly",
+                      "expiryTime": "2099-01-01T00:00:00Z",
+                      "autoRenewingPlan": { "autoRenewEnabled": true },
+                      "offerDetails": { "basePlanId": "baseplan.monthly", "offerId": "trial_monthly_offer" },
+                      "offerPhase": { "freeTrial": { "offerId": "trial_monthly_offer", "priceAmountMicros": "0" } }
+                    }
+                  ]
+                }
+                """);
+        });
+
+        var client = CreateClient(handler);
+
+        var result = await client.VerifyAsync("noctra_premium_monthly", "token-abc", "studio.kynora.noctra");
+
+        Assert.True(result.IsActive);
+        Assert.True(result.IsTrialPeriod);
+        // Trial tespiti tek istekle yapılır — Monetization API'ye EK istek yok.
+        Assert.Equal(1, nonOAuthRequests);
+    }
+
+    [Fact]
+    public async Task VerifyAsync_ActiveRegularSubscription_IsTrialPeriodFalse()
+    {
+        using var env = new BillingEnvScope();
+        var handler = ScriptedHttpMessageHandler.TokenPlus(request =>
+            ScriptedHttpMessageHandler.Json(HttpStatusCode.OK, """
+                {
+                  "subscriptionState": "SUBSCRIPTION_STATE_ACTIVE",
+                  "lineItems": [
+                    {
+                      "productId": "noctra_premium_monthly",
+                      "expiryTime": "2099-01-01T00:00:00Z",
+                      "autoRenewingPlan": { "autoRenewEnabled": true },
+                      "offerPhase": { "basePrice": { "priceAmountMicros": "59990000" } }
+                    }
+                  ]
+                }
+                """));
+
+        var client = CreateClient(handler);
+
+        var result = await client.VerifyAsync("noctra_premium_monthly", "token-abc", "studio.kynora.noctra");
+
+        Assert.True(result.IsActive);
+        Assert.False(result.IsTrialPeriod);
+    }
+
+    [Fact]
+    public async Task VerifyAsync_IntroPricedOffer_IsNotTrial()
+    {
+        // Ücretli tanışma (introductory) fazı freeTrial DEĞİLDİR — kullanıcı
+        // indirimli ücret ödüyor, trial'da değil.
+        using var env = new BillingEnvScope();
+        var handler = ScriptedHttpMessageHandler.TokenPlus(request =>
+            ScriptedHttpMessageHandler.Json(HttpStatusCode.OK, """
+                {
+                  "subscriptionState": "SUBSCRIPTION_STATE_ACTIVE",
+                  "lineItems": [
+                    {
+                      "productId": "noctra_premium_monthly",
+                      "expiryTime": "2099-01-01T00:00:00Z",
+                      "offerPhase": { "introductoryPrice": { "priceAmountMicros": "29990000" } }
+                    }
+                  ]
+                }
+                """));
+
+        var client = CreateClient(handler);
+
+        var result = await client.VerifyAsync("noctra_premium_monthly", "token-abc", "studio.kynora.noctra");
+
+        Assert.True(result.IsActive);
+        Assert.False(result.IsTrialPeriod);
+    }
+
+    [Fact]
+    public async Task VerifyAsync_NoOfferPhase_IsNotTrialButStillActive()
+    {
+        // offerPhase yoksa trial tespiti yapılamaz ama hak asla bu yüzden
+        // engellenmez — trial değil kabul edilir, abonelik yine aktif.
+        using var env = new BillingEnvScope();
+        var handler = ScriptedHttpMessageHandler.TokenPlus(request =>
+            ScriptedHttpMessageHandler.Json(HttpStatusCode.OK, """
+                {
+                  "subscriptionState": "SUBSCRIPTION_STATE_ACTIVE",
+                  "lineItems": [
+                    { "productId": "noctra_premium_monthly", "expiryTime": "2099-01-01T00:00:00Z" }
+                  ]
+                }
+                """));
+
+        var client = CreateClient(handler);
+
+        var result = await client.VerifyAsync("noctra_premium_monthly", "token-abc", "studio.kynora.noctra");
+
+        Assert.True(result.IsActive);
+        Assert.False(result.IsTrialPeriod);
+    }
+
+    // ==========================================
+    // OAuth
+    // ==========================================
 
     [Fact]
     public async Task VerifyAsync_OAuthToken_IsCachedAcrossCalls()
@@ -169,8 +393,14 @@ public sealed class PlayBillingApiClientTests
             return ScriptedHttpMessageHandler.Json(HttpStatusCode.OK, """
                 {
                   "subscriptionState": "SUBSCRIPTION_STATE_ACTIVE",
-                  "autoRenewing": true,
-                  "lineItems": [{ "productId": "noctra_premium_monthly", "expiryTime": "2099-01-01T00:00:00Z" }]
+                  "lineItems": [
+                    {
+                      "productId": "noctra_premium_monthly",
+                      "expiryTime": "2099-01-01T00:00:00Z",
+                      "autoRenewingPlan": { "autoRenewEnabled": true },
+                      "offerPhase": { "basePrice": { "priceAmountMicros": "59990000" } }
+                    }
+                  ]
                 }
                 """);
         });
@@ -220,207 +450,6 @@ public sealed class PlayBillingApiClientTests
         var header = System.Text.Encoding.UTF8.GetString(
             Convert.FromBase64String(PadBase64Url(parts[0])));
         Assert.Contains("RS256", header);
-    }
-
-    // ==========================================
-    // Trial tespiti (subscriptionsv2.get → offerId + monetization → recurrenceMode)
-    // ==========================================
-
-    [Fact]
-    public async Task VerifyAsync_ActiveTrialSubscription_IsTrialPeriodTrue()
-    {
-        // Kullanıcı free trial offer'ında: lineItems[].offerId = trial offer;
-        // monetization product details'te bu offer NON_RECURRING faz içerir.
-        using var env = new BillingEnvScope();
-        var handler = CreateTrialAwareHandler(
-            subscriptionJson: """
-                {
-                  "subscriptionState": "SUBSCRIPTION_STATE_ACTIVE",
-                  "autoRenewing": true,
-                  "lineItems": [
-                    { "productId": "noctra_premium_monthly", "offerId": "trial_monthly_offer", "expiryTime": "2099-01-01T00:00:00Z" }
-                  ]
-                }
-                """,
-            productDetailsJson: """
-                {
-                  "basePlans": [
-                    {
-                      "basePlanId": "baseplan.monthly",
-                      "offers": [
-                        {
-                          "offerId": "trial_monthly_offer",
-                          "pricingPhases": {
-                            "pricingPhaseList": [
-                              { "recurrenceMode": "NON_RECURRING", "priceAmountMicros": "0", "period": "P1M" },
-                              { "recurrenceMode": "RECURRING", "priceAmountMicros": "59990000", "period": "P1M" }
-                            ]
-                          }
-                        },
-                        {
-                          "offerId": "base_plan_offer",
-                          "pricingPhases": {
-                            "pricingPhaseList": [
-                              { "recurrenceMode": "RECURRING", "priceAmountMicros": "59990000", "period": "P1M" }
-                            ]
-                          }
-                        }
-                      ]
-                    }
-                  ]
-                }
-                """);
-
-        var client = CreateClient(handler);
-
-        var result = await client.VerifyAsync("noctra_premium_monthly", "token-abc", "studio.kynora.noctra");
-
-        Assert.True(result.IsActive);
-        Assert.True(result.IsTrialPeriod);
-    }
-
-    [Fact]
-    public async Task VerifyAsync_ActiveRegularSubscription_IsTrialPeriodFalse()
-    {
-        // Ücretli (trial'sız) abonelik: aktif offer yalnızca RECURRING faz içerir.
-        using var env = new BillingEnvScope();
-        var handler = CreateTrialAwareHandler(
-            subscriptionJson: """
-                {
-                  "subscriptionState": "SUBSCRIPTION_STATE_ACTIVE",
-                  "autoRenewing": true,
-                  "lineItems": [
-                    { "productId": "noctra_premium_monthly", "offerId": "base_plan_offer", "expiryTime": "2099-01-01T00:00:00Z" }
-                  ]
-                }
-                """,
-            productDetailsJson: """
-                {
-                  "basePlans": [
-                    {
-                      "basePlanId": "baseplan.monthly",
-                      "offers": [
-                        {
-                          "offerId": "base_plan_offer",
-                          "pricingPhases": {
-                            "pricingPhaseList": [
-                              { "recurrenceMode": "RECURRING", "priceAmountMicros": "59990000", "period": "P1M" }
-                            ]
-                          }
-                        }
-                      ]
-                    }
-                  ]
-                }
-                """);
-
-        var client = CreateClient(handler);
-
-        var result = await client.VerifyAsync("noctra_premium_monthly", "token-abc", "studio.kynora.noctra");
-
-        Assert.True(result.IsActive);
-        Assert.False(result.IsTrialPeriod);
-    }
-
-    [Fact]
-    public async Task VerifyAsync_IntroPricedOffer_IsNotTrial()
-    {
-        // Ücretli tanışma (introductory) offer'ı da NON_RECURRING faz içerir
-        // ama sıfır fiyatlı DEĞİLDİR — trial sayılmaz; ücretli kullanıcı
-        // asla "trial" görünmez.
-        using var env = new BillingEnvScope();
-        var handler = CreateTrialAwareHandler(
-            subscriptionJson: """
-                {
-                  "subscriptionState": "SUBSCRIPTION_STATE_ACTIVE",
-                  "autoRenewing": true,
-                  "lineItems": [
-                    { "productId": "noctra_premium_monthly", "offerId": "intro_priced_offer", "expiryTime": "2099-01-01T00:00:00Z" }
-                  ]
-                }
-                """,
-            productDetailsJson: """
-                {
-                  "basePlans": [
-                    {
-                      "basePlanId": "baseplan.monthly",
-                      "offers": [
-                        {
-                          "offerId": "intro_priced_offer",
-                          "pricingPhases": {
-                            "pricingPhaseList": [
-                              { "recurrenceMode": "NON_RECURRING", "priceAmountMicros": "29990000", "period": "P1M" },
-                              { "recurrenceMode": "RECURRING", "priceAmountMicros": "59990000", "period": "P1M" }
-                            ]
-                          }
-                        }
-                      ]
-                    }
-                  ]
-                }
-                """);
-
-        var client = CreateClient(handler);
-
-        var result = await client.VerifyAsync("noctra_premium_monthly", "token-abc", "studio.kynora.noctra");
-
-        Assert.True(result.IsActive);
-        Assert.False(result.IsTrialPeriod);
-    }
-
-    [Fact]
-    public async Task VerifyAsync_TrialOfferDetailsUnavailable_IsTrialFalseButStillActive()
-    {
-        // Ürün detayı çözülemezse (monetization 404) trial tespiti yapılamaz
-        // ama hak doğrulaması ASLA bu yüzden düşmez — trial değil kabul edilir.
-        using var env = new BillingEnvScope();
-        var handler = CreateTrialAwareHandler(
-            subscriptionJson: """
-                {
-                  "subscriptionState": "SUBSCRIPTION_STATE_ACTIVE",
-                  "autoRenewing": true,
-                  "lineItems": [
-                    { "productId": "noctra_premium_monthly", "offerId": "trial_monthly_offer", "expiryTime": "2099-01-01T00:00:00Z" }
-                  ]
-                }
-                """,
-            productDetailsJson: null);
-
-        var client = CreateClient(handler);
-
-        var result = await client.VerifyAsync("noctra_premium_monthly", "token-abc", "studio.kynora.noctra");
-
-        Assert.True(result.IsActive);
-        Assert.False(result.IsTrialPeriod);
-    }
-
-    /// <summary>
-    /// subscriptionsv2.get ve monetization uç noktalarına ayrı yanıtlar veren
-    /// handler. productDetailsJson null ise monetization 404 döner (ürün
-    /// detayı çözülemedi senaryosu).
-    /// </summary>
-    private static ScriptedHttpMessageHandler CreateTrialAwareHandler(
-        string subscriptionJson,
-        string? productDetailsJson)
-    {
-        return new ScriptedHttpMessageHandler(async request =>
-        {
-            var uri = request.RequestUri!.AbsoluteUri;
-            if (uri.StartsWith("https://oauth2.googleapis.com/token", StringComparison.Ordinal))
-            {
-                return ScriptedHttpMessageHandler.Json(HttpStatusCode.OK,
-                    """{"access_token":"test-access-token","expires_in":3600,"token_type":"Bearer"}""");
-            }
-
-            if (uri.Contains("/monetization/subscriptions/", StringComparison.Ordinal))
-            {
-                return productDetailsJson is null
-                    ? ScriptedHttpMessageHandler.Json(HttpStatusCode.NotFound, """{"error":{"message":"not found"}}""")
-                    : ScriptedHttpMessageHandler.Json(HttpStatusCode.OK, productDetailsJson);
-            }
-
-            return ScriptedHttpMessageHandler.Json(HttpStatusCode.OK, subscriptionJson);
-        });
     }
 
     private static string PadBase64Url(string value)

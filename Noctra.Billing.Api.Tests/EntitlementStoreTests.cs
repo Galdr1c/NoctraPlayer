@@ -98,11 +98,49 @@ public sealed class EntitlementStoreTests : IDisposable
             LastVerifiedAtUtc = DateTime.UtcNow
         });
 
-        var found = await store.GetByPurchaseTokenHashAsync("token-hash-abc");
-        Assert.NotNull(found);
-        Assert.Equal("install-9", found!.InstallationId);
+        var found = await store.GetAllByPurchaseTokenHashAsync("token-hash-abc");
+        var row = Assert.Single(found);
+        Assert.Equal("install-9", row.InstallationId);
 
-        Assert.Null(await store.GetByPurchaseTokenHashAsync("unknown-hash"));
+        Assert.Empty(await store.GetAllByPurchaseTokenHashAsync("unknown-hash"));
+    }
+
+    [Fact]
+    public async Task GetAllByPurchaseTokenHash_ReturnsAllInstallationsSharingToken()
+    {
+        // Aynı satın alma birden fazla kurulumda restore edilmiş olabilir
+        // (telefon + tablet) — RTDN hepsini güncelleyebilmek için token
+        // hash'inden BÜTÜN satırlar dönmelidir.
+        var store = new EntitlementStore(_connectionString);
+        await store.UpsertAsync(new StoredEntitlementRow
+        {
+            InstallationId = "install-phone",
+            ProductId = "noctra_premium_monthly",
+            PurchaseTokenHash = "shared-hash",
+            EntitlementType = "Subscription",
+            IsActive = true,
+            ExpiresAtUtc = new DateTime(2099, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+            AutoRenewEnabled = true,
+            State = "SUBSCRIPTION_STATE_ACTIVE",
+            LastVerifiedAtUtc = DateTime.UtcNow
+        });
+        await store.UpsertAsync(new StoredEntitlementRow
+        {
+            InstallationId = "install-tablet",
+            ProductId = "noctra_premium_monthly",
+            PurchaseTokenHash = "shared-hash",
+            EntitlementType = "Subscription",
+            IsActive = true,
+            ExpiresAtUtc = new DateTime(2099, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+            AutoRenewEnabled = true,
+            State = "SUBSCRIPTION_STATE_ACTIVE",
+            LastVerifiedAtUtc = DateTime.UtcNow
+        });
+
+        var rows = await store.GetAllByPurchaseTokenHashAsync("shared-hash");
+        Assert.Equal(2, rows.Count);
+        Assert.Contains(rows, r => r.InstallationId == "install-phone");
+        Assert.Contains(rows, r => r.InstallationId == "install-tablet");
     }
 
     [Fact]
@@ -142,9 +180,9 @@ public sealed class EntitlementStoreTests : IDisposable
         var store = new EntitlementStore(_connectionString);
 
         // Eski kayıt korundu ve trial varsayılan olarak false okunuyor.
-        var legacy = await store.GetByPurchaseTokenHashAsync("hash-legacy");
-        Assert.NotNull(legacy);
-        Assert.Equal("install-legacy", legacy!.InstallationId);
+        var legacyRows = await store.GetAllByPurchaseTokenHashAsync("hash-legacy");
+        var legacy = Assert.Single(legacyRows);
+        Assert.Equal("install-legacy", legacy.InstallationId);
         Assert.False(legacy.IsTrialPeriod);
 
         // Migration sonrası yeni kayıtlar trial bayrağıyla çalışır.

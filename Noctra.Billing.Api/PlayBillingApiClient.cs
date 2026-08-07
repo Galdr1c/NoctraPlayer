@@ -99,29 +99,31 @@ public sealed class PlayBillingApiClient : IPlayBillingApi
         var root = json.RootElement;
 
         var state = GetString(root, "subscriptionState") ?? string.Empty;
-        var autoRenewing = GetBool(root, "autoRenewing") ?? false;
 
-        // Gerçek bitiş: lineItems[].expiryTime (Google'ın verdiği değer).
+        // Her line item kendi expiry/auto-renew/offer faz bilgisini taşır.
+        // subscriptionsv2.get URL'inde ürün yoktur (yalnızca token); gerçek ürün
+        // yalnızca Google'ın cevabındaki lineItems[].productId'dir. İstemcinin
+        // gönderdiği productId'ye asla güvenilmez — token başka bir aboneliğe
+        // aitse (örn. daha ucuz bir ürün) hak verilmez ve o line item istenen
+        // hakkın HİÇBİR alanına katkıda bulunmaz.
         DateTime? expiry = null;
+        var autoRenewEnabled = false;
+        var isTrialPeriod = false;
         var productMatched = false;
-        string? activeOfferId = null;
         if (root.TryGetProperty("lineItems", out var lineItems) && lineItems.ValueKind == JsonValueKind.Array)
         {
             foreach (var item in lineItems.EnumerateArray())
             {
-                // subscriptionsv2.get URL'inde ürün yoktur (yalnızca token);
-                // gerçek ürün yalnızca Google'ın cevabındaki lineItems[].productId'dir.
-                // İstemcinin gönderdiği productId'ye asla güvenilmez — token başka
-                // bir aboneliğe aitse (örn. daha ucuz bir ürün) hak verilmez.
-                if (string.Equals(GetString(item, "productId"), productId, StringComparison.Ordinal))
+                if (!string.Equals(GetString(item, "productId"), productId, StringComparison.Ordinal))
                 {
-                    productMatched = true;
-                    // Kullanıcının şu an üzerinde olduğu offer (trial offer da
-                    // dahil) — trial tespiti için monetization detaylarıyla
-                    // eşleştirilir.
-                    activeOfferId = GetString(item, "offerId");
+                    // Farklı ürünün line item'ı (ek ürün, başka plan) — istenen
+                    // hakkın expiry/auto-renew/trial alanlarına katkıda bulunmaz.
+                    continue;
                 }
 
+                productMatched = true;
+
+                // Gerçek bitiş: lineItems[].expiryTime (Google'ın verdiği değer).
                 var expiryText = GetString(item, "expiryTime");
                 if (expiryText is not null &&
                     DateTime.TryParse(expiryText, null, System.Globalization.DateTimeStyles.AdjustToUniversal | System.Globalization.DateTimeStyles.AssumeUniversal, out var parsed))
@@ -131,6 +133,26 @@ public sealed class PlayBillingApiClient : IPlayBillingApi
                     {
                         expiry = candidate;
                     }
+                }
+
+                // Otomatik yenileme: lineItems[].autoRenewingPlan.autoRenewEnabled.
+                // SubscriptionPurchaseV2 ROOT'unda autoRenewing diye bir alan
+                // YOKTUR — eski okuma her zaman false döndürürdü.
+                if (item.TryGetProperty("autoRenewingPlan", out var autoRenewingPlan) &&
+                    autoRenewingPlan.TryGetProperty("autoRenewEnabled", out var autoRenewEnabledValue) &&
+                    autoRenewEnabledValue.ValueKind is JsonValueKind.True or JsonValueKind.False)
+                {
+                    autoRenewEnabled = autoRenewEnabledValue.GetBoolean();
+                }
+
+                // Trial: Google kullanıcının ŞU AN hangi fazda olduğunu offerPhase
+                // ile DOĞRUDAN söyler — Monetization API'ye ek istek gerekmez.
+                // offerPhase.freeTrial'ın VARLIĞI = kullanıcı free trial fazında;
+                // introductoryPrice ve basePrice ayrı faz tipleridir.
+                if (item.TryGetProperty("offerPhase", out var offerPhase) &&
+                    offerPhase.TryGetProperty("freeTrial", out _))
+                {
+                    isTrialPeriod = true;
                 }
             }
         }
@@ -142,134 +164,37 @@ public sealed class PlayBillingApiClient : IPlayBillingApi
                        expiry.HasValue &&
                        expiry.Value > DateTime.UtcNow;
 
-        // Trial tespiti best-effort'tur: aktif abonelik ve eşleşen offerId
-        // varsa monetization product details'ten recurrenceMode doğrulanır;
-        // ürün detayı çözülemezse (ağ/404/şema) false kalır ve hak asla
-        // bu yüzden engellenmez.
-        var isTrialPeriod = isActive &&
-                            !string.IsNullOrWhiteSpace(activeOfferId) &&
-                            await IsTrialOfferAsync(productId, activeOfferId, packageName, accessToken, cancellationToken)
-                                .ConfigureAwait(false);
-
         return new PlayPurchaseVerification
         {
             EntitlementType = "Subscription",
             IsActive = isActive,
             ExpiresAtUtc = expiry,
-            AutoRenewEnabled = autoRenewing,
+            AutoRenewEnabled = autoRenewEnabled,
             State = state,
-            IsTrialPeriod = isTrialPeriod
+            // Trial yalnızca AKTİF abonelikte anlamlıdır.
+            IsTrialPeriod = isActive && isTrialPeriod
         };
     }
 
     /// <summary>
-    /// Aktif offer'ın trial olup olmadığını monetization product details'ten
-    /// doğrular. Play Console'da free trial, faz listesinde NON_RECURRING faz
-    /// içeren bir offer'dır (standart abonelik fazları RECURRING'dir).
-    /// Kullanıcı trial'dayken lineItems[].offerId trial offer'ı gösterir;
-    /// trial bitip standart faza geçince offerId değişir, tespit kendiliğinden
-    /// false'a döner. Ürün detayı okunamazsa (ağ, 404, şema değişikliği) false
-    /// döner — trial tespiti best-effort'tur ve hak doğrulamasını asla
-    /// engellemez.
+    /// Google'ın gerçek erişim kuralları (Play Billing lifecycle):
+    ///  - ACTIVE → erişim var.
+    ///  - IN_GRACE_PERIOD → erişim devam eder (ödeme gecikti, avantaj sürer).
+    ///  - CANCELED → ödenen sürenin (expiryTime) sonuna kadar erişim devam eder.
+    ///  - PAUSED → erişim KALDIRILIR (kullanıcı duraklattı; faturalama + erişim durur).
+    ///  - ON_HOLD → erişim KALDIRILIR (hesap tutuldu, ödeme sorunu).
+    ///  - EXPIRED / PENDING / PENDING_PURCHASE_CANCELED / bilinmeyen → erişim yok.
+    /// NOT: "SUBSCRIPTION_STATE_ACCOUNT_HOLD" güncel enum'da YOKTUR; doğru isim
+    /// SUBSCRIPTION_STATE_ON_HOLD'dur (bilinmeyen değer zaten fail-closed false).
     /// </summary>
-    private async Task<bool> IsTrialOfferAsync(
-        string productId,
-        string offerId,
-        string packageName,
-        string accessToken,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            var url = $"{ApiBase}/{Uri.EscapeDataString(packageName)}/monetization/subscriptions/{Uri.EscapeDataString(productId)}";
-            var body = await GetJsonAsync(url, accessToken, cancellationToken).ConfigureAwait(false);
-            if (body is null)
-            {
-                return false;
-            }
-
-            using var json = JsonDocument.Parse(body);
-            if (!json.RootElement.TryGetProperty("basePlans", out var basePlans) ||
-                basePlans.ValueKind != JsonValueKind.Array)
-            {
-                return false;
-            }
-
-            foreach (var basePlan in basePlans.EnumerateArray())
-            {
-                if (!basePlan.TryGetProperty("offers", out var offers) ||
-                    offers.ValueKind != JsonValueKind.Array)
-                {
-                    continue;
-                }
-
-                foreach (var offer in offers.EnumerateArray())
-                {
-                    if (!string.Equals(GetString(offer, "offerId"), offerId, StringComparison.Ordinal))
-                    {
-                        continue;
-                    }
-
-                    // GERÇEK free trial: sıfır fiyatlı NON_RECURRING faz içerir.
-                    // Ücretli tanışma (introductory) offer'ı trial sayılmaz.
-                    return HasFreeTrialPhase(offer);
-                }
-            }
-
-            return false;
-        }
-        catch (OperationCanceledException)
-        {
-            // İptal, best-effort tespit hatası değil — çağıranın iptalini saygı
-            // göster ve yay (trial değil varsayımına dönüştürme).
-            throw;
-        }
-        catch (Exception ex)
-        {
-            // Ürün detayı çözülemedi — trial tespiti yapılamaz ama hak asla
-            // bu yüzden düşmez; trial değil kabul edilir.
-            System.Diagnostics.Debug.WriteLine($"[BillingApi] Trial offer lookup failed: {ex.Message}");
-            return false;
-        }
-    }
-
-    /// <summary>
-    /// Offer GERÇEK bir free trial içeriyor mu? Faz listesinde ÜCRETSİZ
-    /// (sıfır fiyat) NON_RECURRING faz olmalıdır. Ücretli tanışma (introductory)
-    /// offer'ları da NON_RECURRING'dir ama trial DEĞİLDİR — sıfır fiyat şartı
-    /// ikisini ayırır ve ücretli kullanıcı asla "trial" görünmez.
-    /// </summary>
-    private static bool HasFreeTrialPhase(JsonElement offer)
-    {
-        if (!offer.TryGetProperty("pricingPhases", out var pricingPhases) ||
-            !pricingPhases.TryGetProperty("pricingPhaseList", out var phases) ||
-            phases.ValueKind != JsonValueKind.Array)
-        {
-            return false;
-        }
-
-        foreach (var phase in phases.EnumerateArray())
-        {
-            if (string.Equals(GetString(phase, "recurrenceMode"), "NON_RECURRING", StringComparison.Ordinal) &&
-                string.Equals(GetString(phase, "priceAmountMicros"), "0", StringComparison.Ordinal))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
     private static bool IsEntitledSubscriptionState(string state) => state switch
     {
         "SUBSCRIPTION_STATE_ACTIVE" => true,
         "SUBSCRIPTION_STATE_IN_GRACE_PERIOD" => true,
-        "SUBSCRIPTION_STATE_ACCOUNT_HOLD" => true,
-        "SUBSCRIPTION_STATE_ON_HOLD" => true,
-        "SUBSCRIPTION_STATE_PAUSED" => true,
-        // İptal edilmiş (canceled) abonelik ödenen sürenin (expiryTime) sonuna
-        // kadar erişimi korur — bitiş, expiryTime'dan okunur.
+        // İptal edilmiş abonelik ödenen sürenin sonuna kadar erişimi korur.
         "SUBSCRIPTION_STATE_CANCELED" => true,
+        "SUBSCRIPTION_STATE_PAUSED" => false,
+        "SUBSCRIPTION_STATE_ON_HOLD" => false,
         "SUBSCRIPTION_STATE_EXPIRED" => false,
         "SUBSCRIPTION_STATE_PENDING" => false,
         _ => false
@@ -304,12 +229,16 @@ public sealed class PlayBillingApiClient : IPlayBillingApi
         using var json = JsonDocument.Parse(body);
         var root = json.RootElement;
 
-        // purchaseState: 0 = yayınlanmadı, 1 = satın alındı, 2 = iptal edildi/geri alındı.
+        // purchaseState (Play Developer API purchases.products — BillingClient
+        // enum'u DEĞİLDİR): 0 = Purchased, 1 = Canceled, 2 = Pending.
+        // Eski kod 1'i "satın alındı" sanıyordu (BillingClient'ın client-side
+        // enum değeri) — gerçek lifetime satın alma state=0 geldiği için ters
+        // çalışıyor, iptal edilmiş purchase state=1 iken AKTİF görünüyordu.
         var purchaseState = root.TryGetProperty("purchaseState", out var state) && state.ValueKind == JsonValueKind.Number
             ? state.GetInt32()
             : -1;
 
-        var isActive = purchaseState == 1;
+        var isActive = purchaseState == 0;
 
         return new PlayPurchaseVerification
         {
@@ -319,9 +248,10 @@ public sealed class PlayBillingApiClient : IPlayBillingApi
             AutoRenewEnabled = false,
             State = purchaseState switch
             {
-                1 => "PRODUCT_PURCHASED",
-                2 => "PRODUCT_CANCELED",
-                _ => "PRODUCT_NOT_PURCHASED"
+                0 => "PRODUCT_PURCHASED",
+                1 => "PRODUCT_CANCELED",
+                2 => "PRODUCT_PENDING",
+                _ => "PRODUCT_UNKNOWN"
             }
         };
     }
@@ -472,11 +402,6 @@ public sealed class PlayBillingApiClient : IPlayBillingApi
     private static string? GetString(JsonElement element, string name) =>
         element.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String
             ? value.GetString()
-            : null;
-
-    private static bool? GetBool(JsonElement element, string name) =>
-        element.TryGetProperty(name, out var value) && value.ValueKind is JsonValueKind.True or JsonValueKind.False
-            ? value.GetBoolean()
             : null;
 
     private static string Truncate(string value, int length) =>

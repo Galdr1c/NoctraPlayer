@@ -97,9 +97,9 @@ public sealed class EntitlementServiceTests : IDisposable
         Assert.True(result.IsTrialPeriod);
 
         // Kalıcılık: kayıt token hash'i ile bulunabilir (ham token saklanmaz).
-        var stored = await _store.GetByPurchaseTokenHashAsync(EntitlementService.HashToken("token-1"));
-        Assert.NotNull(stored);
-        Assert.Equal("install-1", stored!.InstallationId);
+        var rows = await _store.GetAllByPurchaseTokenHashAsync(EntitlementService.HashToken("token-1"));
+        var stored = Assert.Single(rows);
+        Assert.Equal("install-1", stored.InstallationId);
         Assert.Equal(expiry, stored.ExpiresAtUtc);
         Assert.True(stored.IsTrialPeriod);
         Assert.DoesNotContain("token-1", stored.PurchaseTokenHash);
@@ -148,10 +148,71 @@ public sealed class EntitlementServiceTests : IDisposable
         var handled = await service.ReverifyByTokenAsync("token-1", "noctra_premium_monthly");
 
         Assert.True(handled);
-        var stored = await _store.GetByPurchaseTokenHashAsync(EntitlementService.HashToken("token-1"));
-        Assert.NotNull(stored);
-        Assert.False(stored!.IsActive);
+        var rows = await _store.GetAllByPurchaseTokenHashAsync(EntitlementService.HashToken("token-1"));
+        var stored = Assert.Single(rows);
+        Assert.False(stored.IsActive);
         Assert.Equal("SUBSCRIPTION_STATE_EXPIRED", stored.State);
+    }
+
+    [Fact]
+    public async Task ReverifyByToken_MultiInstallation_UpdatesAllRowsSharingToken()
+    {
+        // Aynı satın alma telefon + tablette restore edilmiş (aynı token hash,
+        // iki kurulum). RTDN reverify Google'a TEK sorgu atıp token'ı paylaşan
+        // BÜTÜN kurulum satırlarını güncellemelidir — yalnızca birini güncellemek
+        // diğer cihazı eski state'te bırakırdı.
+        var tokenHash = EntitlementService.HashToken("token-1");
+        await _store.UpsertAsync(new StoredEntitlementRow
+        {
+            InstallationId = "install-phone",
+            ProductId = "noctra_premium_monthly",
+            PurchaseTokenHash = tokenHash,
+            EntitlementType = "Subscription",
+            IsActive = true,
+            ExpiresAtUtc = new DateTime(2099, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+            AutoRenewEnabled = true,
+            State = "SUBSCRIPTION_STATE_ACTIVE",
+            LastVerifiedAtUtc = DateTime.UtcNow
+        });
+        await _store.UpsertAsync(new StoredEntitlementRow
+        {
+            InstallationId = "install-tablet",
+            ProductId = "noctra_premium_monthly",
+            PurchaseTokenHash = tokenHash,
+            EntitlementType = "Subscription",
+            IsActive = true,
+            ExpiresAtUtc = new DateTime(2099, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+            AutoRenewEnabled = true,
+            State = "SUBSCRIPTION_STATE_ACTIVE",
+            LastVerifiedAtUtc = DateTime.UtcNow
+        });
+
+        // Play artık aboneliği iptal etti (expiry geçti) → her iki kurulum da güncellenmeli.
+        _api.Setup(a => a.VerifyAsync("noctra_premium_monthly", "token-1", "studio.kynora.noctra", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PlayPurchaseVerification
+            {
+                EntitlementType = "Subscription",
+                IsActive = false,
+                ExpiresAtUtc = null,
+                AutoRenewEnabled = false,
+                State = "SUBSCRIPTION_STATE_EXPIRED"
+            });
+
+        var service = CreateService();
+
+        var handled = await service.ReverifyByTokenAsync("token-1", "noctra_premium_monthly");
+
+        Assert.True(handled);
+        _api.Verify(a => a.VerifyAsync("noctra_premium_monthly", "token-1", "studio.kynora.noctra", It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        var rows = await _store.GetAllByPurchaseTokenHashAsync(tokenHash);
+        Assert.Equal(2, rows.Count);
+        Assert.All(rows, row =>
+        {
+            Assert.False(row.IsActive);
+            Assert.Equal("SUBSCRIPTION_STATE_EXPIRED", row.State);
+        });
     }
 
     private EntitlementService CreateService() =>
