@@ -99,6 +99,7 @@ public sealed class AndroidDiagnosticReportService : IDiagnosticReportService
         sb.AppendLine();
         sb.AppendLine();
         sb.AppendLine("------");
+        sb.AppendLine($"Report Generated (UTC): {DateTime.UtcNow:O}");
         sb.Append(GetSystemDiagnostics());
         return sb.ToString();
     }
@@ -137,11 +138,15 @@ public sealed class AndroidDiagnosticReportService : IDiagnosticReportService
         try
         {
             sb.AppendLine($"User ID: {GetDeterministicUserId()}");
-            sb.AppendLine($"Status: {(_licenseService.IsPremium ? "Premium" : "Free")}");
+            // Güncel lisans durumu (kaynak/bitiş/trial/pending) — masaüstüyle
+            // aynı üretilir; yalnızca "Premium/Free" değil.
+            sb.Append(DiagnosticLicenseReport.BuildStatus(_licenseService));
             sb.AppendLine($"App Version: {_appVersionService.DisplayVersion}");
+            sb.AppendLine($"App Build: {_appVersionService.BuildNumber}");
             sb.AppendLine($"Package: {_context.PackageName}");
             sb.AppendLine($"OS: Android {AndroidBuild.VERSION.Release} API {AndroidBuild.VERSION.SdkInt} ({RuntimeInformation.OSArchitecture})");
             sb.AppendLine($"Device: {AndroidBuild.Manufacturer} {AndroidBuild.Model}");
+            sb.AppendLine($"Locale: {System.Globalization.CultureInfo.CurrentUICulture.Name}");
         }
         catch (Exception ex)
         {

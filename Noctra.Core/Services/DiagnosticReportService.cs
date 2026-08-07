@@ -11,10 +11,12 @@ public class DiagnosticReportService : IDiagnosticReportService
 {
     private const string TargetEmail = "kynora.studio@gmail.com";
     private readonly ILicenseService _licenseService;
+    private readonly IAppVersionService _appVersionService;
 
-    public DiagnosticReportService(ILicenseService licenseService)
+    public DiagnosticReportService(ILicenseService licenseService, IAppVersionService appVersionService)
     {
         _licenseService = licenseService;
+        _appVersionService = appVersionService;
     }
 
     public void OpenBugReport()
@@ -57,6 +59,7 @@ public class DiagnosticReportService : IDiagnosticReportService
         sb.AppendLine();
         sb.AppendLine();
         sb.AppendLine("------");
+        sb.AppendLine($"Report Generated (UTC): {DateTime.UtcNow:O}");
         sb.Append(GetSystemDiagnostics());
         return sb.ToString();
     }
@@ -94,12 +97,16 @@ public class DiagnosticReportService : IDiagnosticReportService
         var sb = new StringBuilder();
         try
         {
-            var appVersion = GetType().Assembly.GetName().Version?.ToString() ?? "1.0.0";
-            
             sb.AppendLine($"User ID: {GetDeterministicUserId()}");
-            sb.AppendLine($"Status: {(_licenseService.IsPremium ? "Premium" : "Free")}");
-            sb.AppendLine($"App Version: {appVersion}");
+            // Güncel lisans durumu (kaynak/bitiş/trial/pending) — mobil ile
+            // aynı üretilir; yalnızca "Premium/Free" değil.
+            sb.Append(DiagnosticLicenseReport.BuildStatus(_licenseService));
+            // Görünen sürüm EntryAssembly'den (ana uygulama) okunur — Core
+            // assembly sürümü DEĞİL (eskiden Core sürümü yazılıyordu).
+            sb.AppendLine($"App Version: {_appVersionService.DisplayVersion}");
+            sb.AppendLine($"App Build: {_appVersionService.BuildNumber}");
             sb.AppendLine($"OS: {GetFriendlyOSName()} ({RuntimeInformation.OSArchitecture})");
+            sb.AppendLine($"Locale: {System.Globalization.CultureInfo.CurrentUICulture.Name}");
         }
         catch (Exception ex)
         {
