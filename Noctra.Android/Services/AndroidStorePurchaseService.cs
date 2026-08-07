@@ -188,13 +188,19 @@ public sealed class AndroidStorePurchaseService : IStorePurchaseService, IDispos
 
         var hasLifetime = false;
         DateTime? subscriptionEnd = null;
-        var verifiedAny = false;
+        // Sorgu başarılı olduğuna göre sonuç otoritatiftir: satın alım yoksa hak
+        // yoktur (IsVerified=true, boş hak). Yalnızca mevcut bir token backend'de
+        // doğrulanamazsa (ağ/sunucu hatası) IsVerified=false döner — LicenseService
+        // o zaman son bilinen doğrulanmış önbelleği korur (hak asla erken düşmez).
+        // Not (takas): iki döngüde tek bir token bile doğrulanamazsa sonucun TAMAMI
+        // doğrulanmamış sayılır ve önbelleğe dönülür; yeni cihazda boş önbellekle
+        // restore ederken başarıyla doğrulanan bir hak bu turda uygulanmayabilir —
+        // muhafazakâr yön, "hak erken düşmez" ilkesiyle uyumludur.
+        var anyVerificationFailed = false;
 
         // Her satın alma token'ı backend'de doğrulanır. Süre burada ASLA
         // hesaplanmaz — gerçek bitiş Play'den (subscriptionsv2.get →
-        // lineItems.expiryTime) backend üzerinden gelir. Doğrulanamayan token
-        // (ağ hatası) sonuca katkı vermez; yalnızca hiçbir token doğrulanamazsa
-        // IsVerified=false döner.
+        // lineItems.expiryTime) backend üzerinden gelir.
         foreach (var purchase in inappPurchases.Where(p =>
                      p.PurchaseState == PurchaseState.Purchased &&
                      p.Products.Contains(StoreProducts.LifetimePurchase, StringComparer.OrdinalIgnoreCase)))
@@ -202,10 +208,10 @@ public sealed class AndroidStorePurchaseService : IStorePurchaseService, IDispos
             var verified = await VerifyTokenAsync(purchase, packageName, installationId, cancellationToken);
             if (verified is null)
             {
+                anyVerificationFailed = true;
                 continue;
             }
 
-            verifiedAny = true;
             if (verified.IsActive && string.Equals(verified.EntitlementType, "Lifetime", StringComparison.OrdinalIgnoreCase))
             {
                 hasLifetime = true;
@@ -219,10 +225,10 @@ public sealed class AndroidStorePurchaseService : IStorePurchaseService, IDispos
             var verified = await VerifyTokenAsync(purchase, packageName, installationId, cancellationToken);
             if (verified is null)
             {
+                anyVerificationFailed = true;
                 continue;
             }
 
-            verifiedAny = true;
             if (verified.IsActive && verified.ExpiresAtUtc.HasValue &&
                 (subscriptionEnd is null || verified.ExpiresAtUtc.Value > subscriptionEnd.Value))
             {
@@ -234,7 +240,7 @@ public sealed class AndroidStorePurchaseService : IStorePurchaseService, IDispos
         {
             HasLifetimePremium = hasLifetime,
             SubscriptionExpiresAtUtc = subscriptionEnd,
-            IsVerified = verifiedAny
+            IsVerified = !anyVerificationFailed
         };
     }
 
