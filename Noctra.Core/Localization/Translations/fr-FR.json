@@ -1052,5 +1052,6 @@
   "Upsell.Plan.Unavailable": "Impossible de charger les produits. Réessayez plus tard.",
   "Upsell.Error.PurchaseFailed": "Impossible de démarrer l'achat. Veuillez réessayer.",
   "Upsell.Plan.AlreadyOwned": "Vous possédez déjà ce forfait.",
-  "Upsell.Action.Retry": "Réessayer"
+  "Upsell.Action.Retry": "Réessayer",
+  "Settings.Store.PurchasePending": "Paiement en attente. Votre Premium s'activera automatiquement dès que le paiement sera approuvé."
 }

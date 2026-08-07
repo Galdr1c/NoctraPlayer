@@ -1053,5 +1053,6 @@
   "Upsell.Plan.Unavailable": "Products could not be loaded. Please try again later.",
   "Upsell.Error.PurchaseFailed": "The purchase could not be started. Please try again.",
   "Upsell.Plan.AlreadyOwned": "You already own this package.",
-  "Upsell.Action.Retry": "Try Again"
+  "Upsell.Action.Retry": "Try Again",
+  "Settings.Store.PurchasePending": "Payment pending. Your Premium will activate automatically once the payment is approved."
 }

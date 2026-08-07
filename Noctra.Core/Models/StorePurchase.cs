@@ -56,6 +56,14 @@ public sealed class StoreEntitlement
     /// </summary>
     public bool IsVerified { get; init; } = true;
 
+    /// <summary>
+    /// Play'de onay bekleyen (PENDING) bir satın alma var mı? Örn. operatör
+    /// faturalaması / banka onayı. Pending satın alma PREMIUM VERMEZ — hak
+    /// yalnızca PURCHASED + backend doğrulamasıyla açılır; bu bayrak yalnızca
+    /// UI'ın "ödeme bekleniyor" bildirimi göstermesi içindir.
+    /// </summary>
+    public bool HasPendingPurchase { get; init; }
+
     public bool HasActivePremium =>
         HasLifetimePremium ||
         (SubscriptionExpiresAtUtc.HasValue && SubscriptionExpiresAtUtc.Value > DateTime.UtcNow);

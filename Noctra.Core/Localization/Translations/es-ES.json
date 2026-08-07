@@ -1052,5 +1052,6 @@
   "Upsell.Plan.Unavailable": "No se pudieron cargar los productos. Inténtalo de nuevo más tarde.",
   "Upsell.Error.PurchaseFailed": "No se pudo iniciar la compra. Inténtalo de nuevo.",
   "Upsell.Plan.AlreadyOwned": "Ya tienes este paquete.",
-  "Upsell.Action.Retry": "Reintentar"
+  "Upsell.Action.Retry": "Reintentar",
+  "Settings.Store.PurchasePending": "Pago pendiente. Tu Premium se activará automáticamente cuando se apruebe el pago."
 }

@@ -27,6 +27,13 @@ public interface ILicenseService
     /// </summary>
     bool IsPromoGrantCorrupted => false;
 
+    /// <summary>
+    /// Mağazada onay bekleyen (PENDING) bir satın alma var mı? Pending satın
+    /// alma Premium vermez; UI bu bayrağı görüp "ödeme bekleniyor" bildirimi
+    /// gösterir. Mağaza desteği olmayan platformlarda (masaüstü) her zaman false.
+    /// </summary>
+    bool HasPendingStorePurchase => false;
+
     Task<PromoCodeRedemptionResult> ApplyPromoCodeAsync(string promoCode) =>
         Task.FromResult(PromoCodeRedemptionResult.Fail("Promosyon kodu bu lisans servisinde desteklenmiyor."));
     void ActivatePremium();

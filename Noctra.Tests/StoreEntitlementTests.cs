@@ -412,6 +412,51 @@ namespace Noctra.Tests
         }
 
         // ==========================================
+        // Pending purchase (onay bekleyen ödeme)
+        // ==========================================
+
+        [Fact]
+        public async Task StoreEntitlement_PendingPurchase_DoesNotGrantPremium_AndExposesPendingFlag()
+        {
+            var store = CreateStoreMock(new StoreEntitlement { HasPendingPurchase = true });
+
+            var service = CreateService(CreateFreeEditionMock().Object, store: store.Object);
+            await service.RefreshSubscriptionStatusAsync();
+
+            // Pending satın alma PREMIUM VERMEZ — hak yalnızca PURCHASED +
+            // backend doğrulamasıyla açılır; bayrak yalnızca UI bildirimi içindir.
+            Assert.False(service.IsPremium);
+            Assert.Equal(SubscriptionTier.Free, service.CurrentTier);
+            Assert.Null(service.PremiumExpiresAtUtc);
+            Assert.True(service.HasPendingStorePurchase);
+        }
+
+        [Fact]
+        public async Task StoreEntitlement_PendingFlagClears_WhenPurchaseResolves()
+        {
+            var isPending = true;
+            var storeMock = new Mock<IStorePurchaseService>();
+            storeMock.Setup(m => m.IsSupported).Returns(true);
+            storeMock.Setup(m => m.GetEntitlementAsync(It.IsAny<CancellationToken>()))
+                .Returns(() => Task.FromResult(new StoreEntitlement
+                {
+                    HasPendingPurchase = Volatile.Read(ref isPending)
+                }));
+
+            var service = CreateService(CreateFreeEditionMock().Object, store: storeMock.Object);
+
+            // Constructor'ın fire-and-forget refresh'i + ilk açık refresh.
+            await WaitUntilAsync(() => service.HasPendingStorePurchase);
+
+            isPending = false;
+            await service.RefreshSubscriptionStatusAsync();
+
+            // Ödeme çözülünce bayrak temizlenir; hak yine açılmaz.
+            await WaitUntilAsync(() => !service.HasPendingStorePurchase);
+            Assert.False(service.IsPremium);
+        }
+
+        // ==========================================
         // Helpers
         // ==========================================
 

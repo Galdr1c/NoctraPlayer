@@ -1008,6 +1008,28 @@
         </StackPanel>
       </Border>
 
+      <!-- Pending purchase banner: Play'de onay bekleyen ödeme var (örn. operatör faturalaması).
+           Pending satın alma Premium vermez; ödeme çözülünce bir sonraki mağaza sorgusu bayrağı
+           temizler ve banner kaybolur. -->
+      <Border Background="{DynamicResource AccentSubtleBrush}"
+              CornerRadius="12"
+              Padding="14,10"
+              IsVisible="{Binding HasPendingStorePurchase}">
+        <StackPanel Orientation="Horizontal"
+                    Spacing="10">
+          <icons:MaterialIcon Kind="ClockOutline"
+                              Width="20"
+                              Height="20"
+                              Foreground="{DynamicResource AccentBrush}"
+                              VerticalAlignment="Center" />
+          <TextBlock Text="{loc:Translate Settings.Store.PurchasePending}"
+                     Foreground="{DynamicResource TextPrimaryBrush}"
+                     FontSize="{DynamicResource FCaption}"
+                     TextWrapping="Wrap"
+                     VerticalAlignment="Center" />
+        </StackPanel>
+      </Border>
+
       <!-- Upgrade to Premium Banner (shown when not premium, placed after Account card) -->
       <Button Background="{DynamicResource PremiumBadgeBrush}"
               Classes="UpgradeButton"

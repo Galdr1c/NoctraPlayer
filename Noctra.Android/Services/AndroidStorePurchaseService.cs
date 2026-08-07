@@ -258,10 +258,21 @@ public sealed class AndroidStorePurchaseService : IStorePurchaseService, IDispos
             }
         }
 
+        // Play'de onay bekleyen (PENDING) satın alma — örn. operatör faturalaması
+        // veya banka onayı. Pending satın alma yukarıdaki döngülerde PURCHASED
+        // filtresine takıldığı için hak VERMEZ; bu bayrak yalnızca UI'ın
+        // "ödeme bekleniyor" bildirimi göstermesi içindir. Sorgu başarılı
+        // olduğu için sonuç otoritatiftir; ödeme çözülünce bir sonraki sorgu
+        // (resume/EntitlementChanged) bayrağı temizler.
+        var hasPendingPurchase =
+            inappPurchases.Any(p => p.PurchaseState == PurchaseState.Pending) ||
+            subscriptionPurchases.Any(p => p.PurchaseState == PurchaseState.Pending);
+
         return new StoreEntitlement
         {
             HasLifetimePremium = hasLifetime,
             SubscriptionExpiresAtUtc = subscriptionEnd,
+            HasPendingPurchase = hasPendingPurchase,
             IsVerified = !anyVerificationFailed
         };
     }

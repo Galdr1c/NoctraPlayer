@@ -356,6 +356,16 @@ public class LicenseService : ObservableObject, ILicenseService, IDisposable
 
     public bool CanUpgradeToPremium => _appEditionService.IsFreeEdition;
     public bool IsEditionLockedPremium => _appEditionService.IsPremiumEdition;
+
+    /// <summary>
+    /// Play'de onay bekleyen (PENDING) bir satın alma var mı? (örn. operatör
+    /// faturalaması). Pending satın alma PREMIUM VERMEZ — hak yalnızca PURCHASED
+    /// + backend doğrulamasıyla açılır. UI bu bayrağı görüp "ödeme bekleniyor"
+    /// bildirimi gösterir; ödeme çözülünce bir sonraki mağaza sorgusu bayrağı
+    /// temizler.
+    /// </summary>
+    public bool HasPendingStorePurchase => _storeEntitlement.HasPendingPurchase;
+
     public DateTime? PromoPremiumExpiresAtUtc => ReadPromoGrant()?.ExpiresAtUtc;
 
     /// <summary>
@@ -833,6 +843,10 @@ public class LicenseService : ObservableObject, ILicenseService, IDisposable
         var oldTier = _currentSubscription.Tier;
         var oldExpiresAt = _currentSubscription.ExpiresAt;
         var oldIsTrial = _currentSubscription.IsTrialPeriod;
+        // Pending satın alma bayrağı tek başına tier'ı değiştirmez (Free kalır),
+        // ancak "ödeme bekleniyor" banner'ının açılıp kapanması için durum
+        // değişiminde bildirim gerekir.
+        var oldPendingPurchase = _storeEntitlement.HasPendingPurchase;
 
         if (_appEditionService.IsPremiumEdition)
         {
@@ -890,7 +904,10 @@ public class LicenseService : ObservableObject, ILicenseService, IDisposable
             }
         }
 
-        if (notify && (oldTier != _currentSubscription.Tier || oldExpiresAt != _currentSubscription.ExpiresAt || oldIsTrial != _currentSubscription.IsTrialPeriod))
+        if (notify && (oldTier != _currentSubscription.Tier ||
+                       oldExpiresAt != _currentSubscription.ExpiresAt ||
+                       oldIsTrial != _currentSubscription.IsTrialPeriod ||
+                       oldPendingPurchase != _storeEntitlement.HasPendingPurchase))
         {
             // Bildirim UI thread'e taşınır; state değişikliği senkron kalır.
             RaiseSubscriptionChangedSafely();
@@ -991,6 +1008,7 @@ public class LicenseService : ObservableObject, ILicenseService, IDisposable
         OnPropertyChanged(nameof(IsPremium));
         OnPropertyChanged(nameof(CurrentTier));
         OnPropertyChanged(nameof(CanUpgradeToPremium));
+        OnPropertyChanged(nameof(HasPendingStorePurchase));
         OnPropertyChanged(nameof(PromoPremiumExpiresAtUtc));
         OnPropertyChanged(nameof(PremiumExpiresAtUtc));
         OnPropertyChanged(nameof(ActivePromoCode));

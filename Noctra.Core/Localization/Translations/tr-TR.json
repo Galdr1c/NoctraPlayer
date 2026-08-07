@@ -1052,5 +1052,6 @@
   "Upsell.Plan.Unavailable": "Ürünler yüklenemedi. Lütfen daha sonra tekrar deneyin.",
   "Upsell.Error.PurchaseFailed": "Satın alma başlatılamadı. Lütfen tekrar deneyin.",
   "Upsell.Plan.AlreadyOwned": "Bu pakete zaten sahipsiniz.",
-  "Upsell.Action.Retry": "Tekrar Dene"
+  "Upsell.Action.Retry": "Tekrar Dene",
+  "Settings.Store.PurchasePending": "Ödeme bekleniyor. Ödeme onaylandığında Premium'unuz otomatik olarak etkinleşecek."
 }

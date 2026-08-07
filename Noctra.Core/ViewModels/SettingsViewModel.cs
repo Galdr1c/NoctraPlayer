@@ -673,6 +673,13 @@ public partial class SettingsViewModel : ObservableObject, IAsyncDisposable
     }
 
     /// <summary>
+    /// Play'de onay bekleyen (PENDING) bir satın alma var mı? Pending satın
+    /// alma Premium vermez; ayarlar ekranı bu bayrağı görüp "ödeme bekleniyor"
+    /// bildirimi gösterir.
+    /// </summary>
+    public bool HasPendingStorePurchase => _licenseService.HasPendingStorePurchase;
+
+    /// <summary>
     /// Kayıtlı Premium hakkı çözülemiyorsa true — ayarlar ekranı uyarı gösterir.
     /// </summary>
     public bool HasCorruptedPromoGrant => _licenseService.IsPromoGrantCorrupted;
@@ -1155,6 +1162,7 @@ public partial class SettingsViewModel : ObservableObject, IAsyncDisposable
     {
         OnPropertyChanged(nameof(IsPremium));
         OnPropertyChanged(nameof(PremiumStatusText));
+        OnPropertyChanged(nameof(HasPendingStorePurchase));
         OnPropertyChanged(nameof(HasCorruptedPromoGrant));
         OnPropertyChanged(nameof(CanUsePromoCodes));
         OnPropertyChanged(nameof(PromoApplyButtonText));
