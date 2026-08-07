@@ -160,6 +160,32 @@ public sealed class StoreEntitlementFallbackTests
         Assert.Null(cached.SubscriptionExpiresAtUtc);
     }
 
+    [Fact]
+    public void Constructor_LoadsCachedEntitlement_Synchronously_BeforeRefreshCompletes()
+    {
+        // Soğuk başlangıç: async refresh daha tamamlanmadan diskteki son
+        // doğrulanmış hak (lifetime) senkron uygulanır — kullanıcı kısa süre
+        // Free görünmez, UI sıçraması olmaz (çevrimdışı açılışta da hak
+        // refresh timeout'u boyunca kaybolmaz).
+        var settings = new TestSettingsService
+        {
+            StoreVerifiedEntitlementJson = Serialize(new StoreEntitlement { HasLifetimePremium = true })
+        };
+
+        // Refresh hiç tamamlanmasın: yalnızca senkron cache yüklemesi
+        // IsPremium üretmelidir.
+        var neverCompleting = new TaskCompletionSource<StoreEntitlement>();
+        var storeMock = new Mock<IStorePurchaseService>();
+        storeMock.Setup(m => m.IsSupported).Returns(true);
+        storeMock.Setup(m => m.GetEntitlementAsync(It.IsAny<CancellationToken>()))
+            .Returns(neverCompleting.Task);
+
+        var service = CreateService(settings, storeMock.Object);
+
+        Assert.True(service.IsPremium);
+        Assert.Null(service.PremiumExpiresAtUtc);
+    }
+
     private sealed class TestSettingsService : ISettingsService
     {
         public AppSettings Settings { get; } = new();

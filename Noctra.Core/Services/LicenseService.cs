@@ -49,6 +49,9 @@ public class LicenseService : ObservableObject, ILicenseService, IDisposable
     /// Mağazadan (Google Play) doğrulanan Premium hakları. Yalnızca mağaza
     /// desteği olan platformlarda güncellenir; başlangıçta ve haklar değişince
     /// servis tarafından itilir (LicenseService kendi başına sorgulamaz).
+    /// Constructor, son doğrulanmış hakkı diskteki önbellekten senkron yükler
+    /// (soğuk başlangıçta Free→Premium sıçraması olmasın); async refresh
+    /// tamamlanınca güncel durumla ezilir.
     /// </summary>
     private StoreEntitlement _storeEntitlement = StoreEntitlement.None;
     private bool _manualPremiumOverride;
@@ -199,6 +202,20 @@ public class LicenseService : ObservableObject, ILicenseService, IDisposable
         if (_storePurchaseService is not null)
         {
             _storePurchaseService.EntitlementChanged += OnStoreEntitlementChanged;
+
+            // Soğuk başlangıç: son doğrulanmış hak diskteki önbellekten SENKRON
+            // yüklenir. Async refresh tamamlanana kadar kullanıcının Free
+            // görünmesini (UI sıçraması) ve çevrimdışı açılışta hakkın refresh
+            // timeout'u boyunca kaybolmasını önler. Önbellek yalnızca backend'den
+            // doğrulanmış (IsVerified=true) sonucu içerir; abonelik bitişi gerçek
+            // Play expiryTime'ı olduğundan SyncSubscriptionFromSettings'in
+            // zamana duyarlı kontrolü önbellek üzerinde de doğru çalışır
+            // (süresi dolan abonelik yine Free üretir).
+            if (TryReadStoreEntitlementCache(out var cached))
+            {
+                _storeEntitlement = cached;
+            }
+
             _ = RefreshStoreEntitlementAsync();
         }
 
