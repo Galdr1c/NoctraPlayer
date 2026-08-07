@@ -113,21 +113,21 @@
 
   <!-- Aylık / Kalıcı plan seçim kartları (MobileUpsellView) -->
   <Style Selector="Button.PlanCardButton">
-    <Setter Property="CornerRadius" Value="10" />
+    <Setter Property="CornerRadius" Value="8" />
     <Setter Property="Padding" Value="12" />
-    <Setter Property="BorderThickness" Value="1.5" />
-    <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="BorderBrush" Value="{DynamicResource PremiumBadgeBrush}" />
     <Setter Property="Background" Value="{DynamicResource CardBackgroundBrush}" />
     <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
     <Setter Property="HorizontalContentAlignment" Value="Center" />
     <Setter Property="VerticalContentAlignment" Value="Center" />
   </Style>
   <Style Selector="Button.PlanCardButton:pointerover /template/ ContentPresenter">
-    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource PremiumBadgeBrush}" />
     <Setter Property="Background" Value="{DynamicResource CardHoverBackgroundBrush}" />
   </Style>
   <Style Selector="Button.PlanCardButton:pressed /template/ ContentPresenter">
-    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource PremiumBadgeBrush}" />
     <Setter Property="Background" Value="{DynamicResource CardHoverBackgroundBrush}" />
     <Setter Property="Opacity" Value="0.85" />
   </Style>

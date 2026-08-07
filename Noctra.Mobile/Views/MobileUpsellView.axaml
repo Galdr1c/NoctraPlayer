@@ -119,11 +119,11 @@
                              FontWeight="Bold"
                              TextAlignment="Center" />
                   <TextBlock Text="{loc:Translate Upsell.Plan.Monthly.Subtitle}"
-                             Foreground="{DynamicResource TextMutedBrush}"
+                             Foreground="{DynamicResource AccentBrush}"
                              FontSize="{DynamicResource FOverline}"
                              TextAlignment="Center" />
                   <TextBlock x:Name="MonthlyPriceText"
-                             Foreground="{DynamicResource AccentBrush}"
+                             Foreground="{DynamicResource PremiumBadgeBrush}"
                              FontSize="{DynamicResource FBodyL}"
                              FontWeight="Bold"
                              TextAlignment="Center"
@@ -145,7 +145,7 @@
                              FontWeight="Bold"
                              TextAlignment="Center" />
                   <TextBlock Text="{loc:Translate Upsell.Plan.Lifetime.Subtitle}"
-                             Foreground="{DynamicResource TextMutedBrush}"
+                             Foreground="{DynamicResource AccentBrush}"
                              FontSize="{DynamicResource FOverline}"
                              TextAlignment="Center" />
                   <TextBlock x:Name="LifetimePriceText"
