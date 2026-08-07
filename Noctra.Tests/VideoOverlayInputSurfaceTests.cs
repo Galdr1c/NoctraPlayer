@@ -761,7 +761,9 @@ public sealed class VideoOverlayInputSurfaceTests
             "MainView.axaml.cs");
 
         var upsellHost = ExtractStartTag(playerView, "x:Name=\"PlayerUpsellHost\"");
-        Assert.Contains("ZIndex=\"200\"", upsellHost, StringComparison.Ordinal);
+        // ZIndex sabit üzerinden tanımlıdır (MobileZIndex.PlayerUpsell = 200);
+        // üst katman garantisi sabitin değeriyle değil referansıyla sağlanır.
+        Assert.Contains("ZIndex=\"{x:Static controls:MobileZIndex.PlayerUpsell}\"", upsellHost, StringComparison.Ordinal);
         Assert.Contains("IsVisible=\"False\"", upsellHost, StringComparison.Ordinal);
 
         Assert.Contains(
@@ -785,12 +787,15 @@ public sealed class VideoOverlayInputSurfaceTests
         var panelIndex = backMethod.IndexOf(
             "ActiveMobilePanelState",
             StringComparison.Ordinal);
-        var fullScreenIndex = backMethod.IndexOf(
-            "IsFullScreen: true",
+        // Upsell/oynatıcı içi geri öncelikleri MobilePlayerContent.TryHandleBack()
+        // üzerinden, panel kapatma panel-state kontrolüyle, oynatıcıyı kapatma
+        // ise en sonda ClosePlayerCommand ile yapılır.
+        var closeIndex = backMethod.IndexOf(
+            "ClosePlayerCommand.Execute(null)",
             StringComparison.Ordinal);
 
         Assert.True(upsellIndex >= 0 && panelIndex > upsellIndex);
-        Assert.True(fullScreenIndex > panelIndex);
+        Assert.True(closeIndex > panelIndex);
     }
 
     [Fact]

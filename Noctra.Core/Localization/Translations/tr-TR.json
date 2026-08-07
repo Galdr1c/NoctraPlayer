@@ -1049,5 +1049,8 @@
   "Upsell.Plan.Monthly.Subtitle": "Dilediğin zaman iptal et",
   "Upsell.Plan.Lifetime.Title": "Kalıcı",
   "Upsell.Plan.Lifetime.Subtitle": "Tek seferlik ödeme",
-  "Upsell.Plan.Unavailable": "Ürünler yüklenemedi. Lütfen daha sonra tekrar deneyin."
+  "Upsell.Plan.Unavailable": "Ürünler yüklenemedi. Lütfen daha sonra tekrar deneyin.",
+  "Upsell.Error.PurchaseFailed": "Satın alma başlatılamadı. Lütfen tekrar deneyin.",
+  "Upsell.Plan.AlreadyOwned": "Bu pakete zaten sahipsiniz.",
+  "Upsell.Action.Retry": "Tekrar Dene"
 }

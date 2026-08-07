@@ -1049,5 +1049,8 @@
   "Upsell.Plan.Monthly.Subtitle": "Résiliable à tout moment",
   "Upsell.Plan.Lifetime.Title": "À vie",
   "Upsell.Plan.Lifetime.Subtitle": "Paiement unique",
-  "Upsell.Plan.Unavailable": "Impossible de charger les produits. Réessayez plus tard."
+  "Upsell.Plan.Unavailable": "Impossible de charger les produits. Réessayez plus tard.",
+  "Upsell.Error.PurchaseFailed": "Impossible de démarrer l'achat. Veuillez réessayer.",
+  "Upsell.Plan.AlreadyOwned": "Vous possédez déjà ce forfait.",
+  "Upsell.Action.Retry": "Réessayer"
 }

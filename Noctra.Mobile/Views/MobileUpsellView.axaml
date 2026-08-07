@@ -1,7 +1,8 @@
-﻿<UserControl xmlns="https://github.com/avaloniaui"
+  <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:loc="using:Noctra.Mobile.Localization"
              xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             xmlns:controls="using:Noctra.Mobile.Controls"
              x:Class="Noctra.Mobile.Views.MobileUpsellView"
              x:CompileBindings="False">
 
@@ -102,6 +103,7 @@
             <!-- Mağaza ürün seçimi: aylık abonelik + tek seferlik kalıcı paket -->
             <Grid ColumnDefinitions="*,12,*">
               <Button Classes="PlanCardButton"
+                      x:Name="MonthlyBuyButton"
                       MinHeight="88"
                       Grid.Column="0"
                       Padding="12,10"
@@ -127,6 +129,7 @@
               </Button>
 
               <Button Classes="PlanCardButton"
+                      x:Name="LifetimeBuyButton"
                       MinHeight="88"
                       Grid.Column="2"
                       Padding="12,10"
@@ -153,6 +156,7 @@
             </Grid>
 
             <Button Classes="UpgradeButton"
+                    x:Name="BuyButton"
                     MinHeight="52"
                     Click="Buy_Click">
               <StackPanel Orientation="Horizontal"
@@ -162,6 +166,10 @@
                 <TextBlock Text="{loc:Translate Upsell.Action.Buy}"
                            FontSize="{DynamicResource FBodyL}"
                            FontWeight="Bold" />
+                <controls:PremiumSpinner x:Name="BuySpinner"
+                                         Width="18"
+                                         Height="18"
+                                         IsVisible="False" />
               </StackPanel>
             </Button>
 
@@ -171,6 +179,34 @@
                        TextAlignment="Center"
                        TextWrapping="Wrap"
                        IsVisible="False" />
+
+            <TextBlock x:Name="PurchaseStatusText"
+                       Foreground="{DynamicResource ErrorBrush}"
+                       FontSize="{DynamicResource FCaption}"
+                       FontWeight="SemiBold"
+                       TextAlignment="Center"
+                       TextWrapping="Wrap"
+                       IsVisible="False" />
+
+            <TextBlock x:Name="PurchaseInfoText"
+                       Foreground="{DynamicResource TextMutedBrush}"
+                       FontSize="{DynamicResource FCaption}"
+                       FontWeight="SemiBold"
+                       TextAlignment="Center"
+                       TextWrapping="Wrap"
+                       IsVisible="False" />
+
+            <Button x:Name="RetryPricingButton"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    HorizontalAlignment="Center"
+                    IsVisible="False"
+                    Click="RetryPricing_Click">
+              <TextBlock Text="{loc:Translate Upsell.Action.Retry}"
+                         Foreground="{DynamicResource AccentBrush}"
+                         FontSize="{DynamicResource FCaption}"
+                         FontWeight="SemiBold" />
+            </Button>
 
             <Button Background="Transparent"
                     BorderThickness="0"

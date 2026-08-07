@@ -1049,5 +1049,8 @@
   "Upsell.Plan.Monthly.Subtitle": "Cancela cuando quieras",
   "Upsell.Plan.Lifetime.Title": "De por vida",
   "Upsell.Plan.Lifetime.Subtitle": "Pago único",
-  "Upsell.Plan.Unavailable": "No se pudieron cargar los productos. Inténtalo de nuevo más tarde."
+  "Upsell.Plan.Unavailable": "No se pudieron cargar los productos. Inténtalo de nuevo más tarde.",
+  "Upsell.Error.PurchaseFailed": "No se pudo iniciar la compra. Inténtalo de nuevo.",
+  "Upsell.Plan.AlreadyOwned": "Ya tienes este paquete.",
+  "Upsell.Action.Retry": "Reintentar"
 }

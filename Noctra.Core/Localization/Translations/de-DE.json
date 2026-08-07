@@ -1049,5 +1049,8 @@
   "Upsell.Plan.Monthly.Subtitle": "Monatlich kündbar",
   "Upsell.Plan.Lifetime.Title": "Lebenslang",
   "Upsell.Plan.Lifetime.Subtitle": "Einmalige Zahlung",
-  "Upsell.Plan.Unavailable": "Produkte konnten nicht geladen werden. Bitte später erneut versuchen."
+  "Upsell.Plan.Unavailable": "Produkte konnten nicht geladen werden. Bitte später erneut versuchen.",
+  "Upsell.Error.PurchaseFailed": "Der Kauf konnte nicht gestartet werden. Bitte versuchen Sie es erneut.",
+  "Upsell.Plan.AlreadyOwned": "Sie besitzen dieses Paket bereits.",
+  "Upsell.Action.Retry": "Erneut versuchen"
 }

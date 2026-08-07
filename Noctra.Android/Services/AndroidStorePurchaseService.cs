@@ -124,8 +124,11 @@ public sealed class AndroidStorePurchaseService : IStorePurchaseService, IDispos
             .SetProductDetails(details);
         if (product.Kind == StoreProductKind.Subscription)
         {
-            var offer = GetSubscriptionOfferDetails(details).FirstOrDefault();
-            if (offer is null || string.IsNullOrWhiteSpace(offer.OfferToken))
+            // Trial/intro içermeyen base plan offer'ı öncelikli seçilir;
+            // istenmeyen offer token'ı (trial, introductory) satın alma
+            // akışına gönderilmez.
+            var offer = SelectSubscriptionOffer(GetSubscriptionOfferDetails(details));
+            if (string.IsNullOrWhiteSpace(offer.OfferToken))
             {
                 return StorePurchaseResult.Fail("Subscription offer is not available.");
             }
@@ -463,8 +466,10 @@ public sealed class AndroidStorePurchaseService : IStorePurchaseService, IDispos
 
         if (string.Equals(details.ProductId, StoreProducts.MonthlySubscription, StringComparison.OrdinalIgnoreCase))
         {
-            var offer = GetSubscriptionOfferDetails(details).FirstOrDefault();
-            if (offer is null)
+            // Fiyat/gösterim: RECURRING fazdan okunan base plan offer'ı
+            // (trial/introductory fiyat "aylık fiyat" gibi gösterilmez).
+            var offer = SelectSubscriptionOffer(GetSubscriptionOfferDetails(details));
+            if (string.IsNullOrWhiteSpace(offer.OfferToken))
             {
                 return null;
             }
@@ -519,9 +524,12 @@ public sealed class AndroidStorePurchaseService : IStorePurchaseService, IDispos
     }
 
     private sealed record SubscriptionOfferInfo(
+        string? OfferId,
+        IReadOnlyList<string> OfferTags,
         string? OfferToken,
         string? FormattedPrice,
-        string? BillingPeriod);
+        string? BillingPeriod,
+        bool HasTrialOrIntro);
 
     /// <summary>
     /// Play Billing v9 binding'i ProductDetails üzerinde
@@ -587,25 +595,45 @@ public sealed class AndroidStorePurchaseService : IStorePurchaseService, IDispos
 
     /// <summary>
     /// SubscriptionOfferDetails (binding'de tür olarak açığa çıkmadığı için)
-    /// JNI ile okunur: offerToken + ilk pricing phase'in fiyat/dönemi.
+    /// JNI ile okunur: offerId + offer tag'leri + offerToken + pricing
+    /// phase'leri. Görüntülenecek fiyat her zaman RECURRING (tekrarlayan)
+    /// fazdan alınır — trial/introductory fiyat "aylık fiyat" gibi
+    /// gösterilmez. Herhangi bir faz trial/intro ise HasTrialOrIntro true olur
+    /// (bu offer'ın saf base plan değil, kampanya offer'ı olduğunu belirtir).
     /// </summary>
     private static SubscriptionOfferInfo ReadOffer(Java.Lang.Object offer)
     {
+        var offerId = CallJavaString(offer, "getOfferId", "()Ljava/lang/String;");
         var token = CallJavaString(offer, "getOfferToken", "()Ljava/lang/String;");
-        if (string.IsNullOrWhiteSpace(token))
-        {
-            return new SubscriptionOfferInfo(token, null, null);
-        }
+        var offerTags = ReadStringList(offer, "getOfferTags");
+        var (recurringPrice, recurringPeriod, hasTrialOrIntro) = ReadPricingPhases(offer);
+        return new SubscriptionOfferInfo(offerId, offerTags, token, recurringPrice, recurringPeriod, hasTrialOrIntro);
+    }
 
-        // getPricingPhases() -> PricingPhases -> getPricingPhaseList() -> List<PricingPhase>
+    /// <summary>
+    /// Offer'ın pricing phase'lerini okur: RECURRING fazın fiyatı/dönemi +
+    /// trial/intro varlığı. RECURRING faz bulunamazsa (ör. yalnızca trial)
+    /// ilk faz yedek olarak kullanılır — satın alma token'ı yine aynı offer'dan
+    /// gittiği için fiyat/token tutarsızlığı oluşmaz.
+    /// </summary>
+    private static (string? RecurringPrice, string? RecurringPeriod, bool HasTrialOrIntro) ReadPricingPhases(Java.Lang.Object offer)
+    {
+        // PricingPhase.RECURRING = 1 (Play Billing v7+). Diğer değerler
+        // (NON_RECURRING=2, FINITE_RECURRING=3) trial/intro anlamına gelir.
+        const int recurrenceModeRecurring = 1;
+
         var phasesHandle = CallJavaObject(offer, "getPricingPhases", "()Lcom/android/billingclient/api/PricingPhases;");
         if (phasesHandle == IntPtr.Zero)
         {
-            return new SubscriptionOfferInfo(token, null, null);
+            return (null, null, false);
         }
 
-        string? formattedPrice = null;
-        string? billingPeriod = null;
+        string? recurringPrice = null;
+        string? recurringPeriod = null;
+        string? fallbackPrice = null;
+        string? fallbackPeriod = null;
+        var hasTrialOrIntro = false;
+
         try
         {
             // Dikkat: phasesHandle sahipliği ALINMAZ (DoNotTransfer) — yalnızca
@@ -614,7 +642,7 @@ public sealed class AndroidStorePurchaseService : IStorePurchaseService, IDispos
                 phasesHandle, JniHandleOwnership.DoNotTransfer);
             if (phases is null)
             {
-                return new SubscriptionOfferInfo(token, null, null);
+                return (null, null, false);
             }
 
             var phaseListHandle = CallJavaObject(phases, "getPricingPhaseList", "()Ljava/util/List;");
@@ -627,18 +655,43 @@ public sealed class AndroidStorePurchaseService : IStorePurchaseService, IDispos
                     {
                         var sizeMethod = JNIEnv.GetMethodID(listClass, "size", "()I");
                         var getMethod = JNIEnv.GetMethodID(listClass, "get", "(I)Ljava/lang/Object;");
-                        if (JNIEnv.CallIntMethod(phaseListHandle, sizeMethod) > 0)
+                        var count = JNIEnv.CallIntMethod(phaseListHandle, sizeMethod);
+                        for (var i = 0; i < count; i++)
                         {
-                            var firstHandle = JNIEnv.CallObjectMethod(phaseListHandle, getMethod, new JValue(0));
-                            if (firstHandle != IntPtr.Zero)
+                            var phaseHandle = JNIEnv.CallObjectMethod(phaseListHandle, getMethod, new JValue(i));
+                            if (phaseHandle == IntPtr.Zero)
                             {
-                                using var firstPhase = Java.Lang.Object.GetObject<Java.Lang.Object>(
-                                    firstHandle, JniHandleOwnership.TransferLocalRef);
-                                if (firstPhase is not null)
+                                continue;
+                            }
+
+                            using var phase = Java.Lang.Object.GetObject<Java.Lang.Object>(
+                                phaseHandle, JniHandleOwnership.TransferLocalRef);
+                            if (phase is null)
+                            {
+                                continue;
+                            }
+
+                            var price = CallJavaString(phase, "getFormattedPrice", "()Ljava/lang/String;");
+                            var period = CallJavaString(phase, "getBillingPeriod", "()Ljava/lang/String;");
+                            var recurrenceMode = CallJavaInt(phase, "getRecurrenceMode");
+
+                            if (fallbackPrice is null && price is not null)
+                            {
+                                fallbackPrice = price;
+                                fallbackPeriod = period;
+                            }
+
+                            if (recurrenceMode == recurrenceModeRecurring)
+                            {
+                                if (recurringPrice is null && price is not null)
                                 {
-                                    formattedPrice = CallJavaString(firstPhase, "getFormattedPrice", "()Ljava/lang/String;");
-                                    billingPeriod = CallJavaString(firstPhase, "getBillingPeriod", "()Ljava/lang/String;");
+                                    recurringPrice = price;
+                                    recurringPeriod = period;
                                 }
+                            }
+                            else
+                            {
+                                hasTrialOrIntro = true;
                             }
                         }
                     }
@@ -658,7 +711,83 @@ public sealed class AndroidStorePurchaseService : IStorePurchaseService, IDispos
             JNIEnv.DeleteLocalRef(phasesHandle);
         }
 
-        return new SubscriptionOfferInfo(token, formattedPrice, billingPeriod);
+        return (recurringPrice ?? fallbackPrice, recurringPeriod ?? fallbackPeriod, hasTrialOrIntro);
+    }
+
+    /// <summary>
+    /// Java List&lt;String&gt; döndüren metodları (örn. getOfferTags) JNI ile okur.
+    /// </summary>
+    private static IReadOnlyList<string> ReadStringList(Java.Lang.Object target, string methodName)
+    {
+        var result = new List<string>();
+        var listHandle = CallJavaObject(target, methodName, "()Ljava/util/List;");
+        if (listHandle == IntPtr.Zero)
+        {
+            return result;
+        }
+
+        try
+        {
+            var listClass = JNIEnv.GetObjectClass(listHandle);
+            try
+            {
+                var sizeMethod = JNIEnv.GetMethodID(listClass, "size", "()I");
+                var getMethod = JNIEnv.GetMethodID(listClass, "get", "(I)Ljava/lang/Object;");
+                var count = JNIEnv.CallIntMethod(listHandle, sizeMethod);
+                for (var i = 0; i < count; i++)
+                {
+                    var itemHandle = JNIEnv.CallObjectMethod(listHandle, getMethod, new JValue(i));
+                    if (itemHandle == IntPtr.Zero)
+                    {
+                        continue;
+                    }
+
+                    var value = JNIEnv.GetString(itemHandle, JniHandleOwnership.TransferLocalRef);
+                    if (!string.IsNullOrWhiteSpace(value))
+                    {
+                        result.Add(value);
+                    }
+                }
+            }
+            finally
+            {
+                JNIEnv.DeleteLocalRef(listClass);
+            }
+        }
+        finally
+        {
+            JNIEnv.DeleteLocalRef(listHandle);
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Play Console'da aynı üründe birden fazla offer bulunabilir (trial,
+    /// introductory price, birden fazla base plan, farklı offer tag'leri).
+    /// Rastgele ilk offer'ı seçmek yanlış fiyatı gösterebilir veya istenmeyen
+    /// offer token'ını satın alma akışına gönderebilir. Seçim sırası:
+    ///   1) Trial/intro içermeyen, tag'siz, offerId'siz saf base plan offer'ı.
+    ///   2) Trial/intro içermeyen herhangi bir offer.
+    ///   3) Yedek: ilk offer (fiyat yine recurring fazdan okunur).
+    /// </summary>
+    private static SubscriptionOfferInfo SelectSubscriptionOffer(IReadOnlyList<SubscriptionOfferInfo> offers)
+    {
+        var basePlan = offers.FirstOrDefault(o =>
+            !o.HasTrialOrIntro && o.OfferTags.Count == 0 && string.IsNullOrEmpty(o.OfferId));
+        if (basePlan is not null)
+        {
+            return basePlan;
+        }
+
+        var noTrial = offers.FirstOrDefault(o => !o.HasTrialOrIntro);
+        if (noTrial is not null)
+        {
+            return noTrial;
+        }
+
+        return offers.FirstOrDefault()
+               ?? new SubscriptionOfferInfo(null, Array.Empty<string>(), null, null, null, false);
     }
 
     /// <summary>
@@ -673,6 +802,21 @@ public sealed class AndroidStorePurchaseService : IStorePurchaseService, IDispos
         {
             var methodId = JNIEnv.GetMethodID(classRef, methodName, signature);
             return JNIEnv.CallObjectMethod(target.Handle, methodId);
+        }
+        finally
+        {
+            JNIEnv.DeleteLocalRef(classRef);
+        }
+    }
+
+    /// <summary>Java int döndüren metodları (örn. getRecurrenceMode) JNI ile okur.</summary>
+    private static int CallJavaInt(Java.Lang.Object target, string methodName)
+    {
+        var classRef = JNIEnv.GetObjectClass(target.Handle);
+        try
+        {
+            var methodId = JNIEnv.GetMethodID(classRef, methodName, "()I");
+            return JNIEnv.CallIntMethod(target.Handle, methodId);
         }
         finally
         {

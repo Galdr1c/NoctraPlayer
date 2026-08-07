@@ -15,6 +15,7 @@ namespace Noctra.Mobile.Views;
 public partial class MobileUpsellView : UserControl
 {
     private IReadOnlyList<StoreProduct> _products = Array.Empty<StoreProduct>();
+    private bool _isPurchasing;
 
     public MobileUpsellView()
     {
@@ -24,6 +25,8 @@ public partial class MobileUpsellView : UserControl
     public void Show()
     {
         IsVisible = true;
+        HideStatusMessages();
+        RetryPricingButton.IsVisible = false;
         _ = RefreshProductPricingAsync();
     }
 
@@ -41,13 +44,37 @@ public partial class MobileUpsellView : UserControl
         TryClose();
     }
 
+    private void HideStatusMessages()
+    {
+        PlanStatusText.IsVisible = false;
+        PurchaseStatusText.IsVisible = false;
+        PurchaseInfoText.IsVisible = false;
+    }
+
+    /// <summary>
+    /// İşlem sırasında tüm satın alma butonlarını devre dışı bırakır ve
+    /// ana butonda spinner gösterir — çift tıklama / eşzamanlı akış olmaz.
+    /// </summary>
+    private void SetPurchasing(bool purchasing)
+    {
+        _isPurchasing = purchasing;
+        BuyButton.IsEnabled = !purchasing;
+        MonthlyBuyButton.IsEnabled = !purchasing;
+        LifetimeBuyButton.IsEnabled = !purchasing;
+        BuySpinner.IsVisible = purchasing;
+    }
+
     /// <summary>
     /// Mağaza ürün fiyatlarını yükleyip plan kartlarına yazar. Mağaza
     /// desteklenmiyorsa (masaüstü) kartlar fiyatsız kalır ve tek "Buy"
-    /// butonu mevcut akışı (URI) kullanır.
+    /// butonu mevcut akışı (URI) kullanır. Yükleme başarısız olursa fiyatlar
+    /// "—" ile gösterilir ve yeniden deneme butonu görünür.
     /// </summary>
     private async Task RefreshProductPricingAsync()
     {
+        HideStatusMessages();
+        RetryPricingButton.IsVisible = false;
+
         try
         {
             if (Application.Current is not App app)
@@ -66,34 +93,34 @@ public partial class MobileUpsellView : UserControl
             var monthly = _products.FirstOrDefault(p => p.Kind == StoreProductKind.Subscription);
             var lifetime = _products.FirstOrDefault(p => p.Kind == StoreProductKind.Lifetime);
 
-            if (monthly is not null && !string.IsNullOrWhiteSpace(monthly.Price))
-            {
-                MonthlyPriceText.Text = monthly.Price;
-            }
-            else
-            {
-                MonthlyPriceText.Text = "—";
-            }
+            MonthlyPriceText.Text = monthly is not null && !string.IsNullOrWhiteSpace(monthly.Price)
+                ? monthly.Price
+                : "—";
 
-            if (lifetime is not null && !string.IsNullOrWhiteSpace(lifetime.Price))
-            {
-                LifetimePriceText.Text = lifetime.Price;
-            }
-            else
-            {
-                LifetimePriceText.Text = "—";
-            }
+            LifetimePriceText.Text = lifetime is not null && !string.IsNullOrWhiteSpace(lifetime.Price)
+                ? lifetime.Price
+                : "—";
 
-            PlanStatusText.IsVisible = _products.Count == 0;
             if (_products.Count == 0)
             {
                 PlanStatusText.Text = LocalizationSource.Instance["Upsell.Plan.Unavailable"];
+                PlanStatusText.IsVisible = true;
             }
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[Upsell] Product pricing refresh failed: {ex.Message}");
+            MonthlyPriceText.Text = "—";
+            LifetimePriceText.Text = "—";
+            PlanStatusText.Text = LocalizationSource.Instance["Upsell.Plan.Unavailable"];
+            PlanStatusText.IsVisible = true;
+            RetryPricingButton.IsVisible = true;
         }
+    }
+
+    private async void RetryPricing_Click(object? sender, RoutedEventArgs e)
+    {
+        await RefreshProductPricingAsync();
     }
 
     private async void MonthlyBuy_Click(object? sender, RoutedEventArgs e)
@@ -108,10 +135,20 @@ public partial class MobileUpsellView : UserControl
 
     /// <summary>
     /// Seçilen türdeki mağaza ürünü için satın alma akışını başlatır;
-    /// ürün bulunamazsa genel Premium akışına düşer.
+    /// ürün bulunamazsa genel Premium akışına düşer. Sonuç değerlendirilir:
+    ///  - Başarılı / kullanıcı iptali → sheet kapanır (Play penceresi açıldı).
+    ///  - Zaten sahip / teknik hata → sheet AÇIK kalır ve yerelleştirilmiş
+    ///    mesaj gösterilir; teknik ayrıntı yalnız loglanır, retry mümkündür.
     /// </summary>
     private async Task PurchaseAsync(StoreProductKind kind)
     {
+        if (_isPurchasing)
+        {
+            return;
+        }
+
+        HideStatusMessages();
+        SetPurchasing(true);
         try
         {
             if (Application.Current is not App app)
@@ -124,43 +161,72 @@ public partial class MobileUpsellView : UserControl
 
             if (store is { IsSupported: true } && product is not null)
             {
-                await store.LaunchPurchaseAsync(product);
+                var result = await store.LaunchPurchaseAsync(product);
+
+                if (result.Success)
+                {
+                    // Satın alma tamamlandı; hak EntitlementChanged ile yenilenir.
+                    TryClose();
+                }
+                else if (result.CancelledByUser)
+                {
+                    // Kullanıcı Play penceresinde bilinçli olarak iptal etti.
+                    TryClose();
+                }
+                else if (result.AlreadyOwned)
+                {
+                    ShowInfo(LocalizationSource.Instance["Upsell.Plan.AlreadyOwned"]);
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine($"[Upsell] Purchase failed: {result.ErrorMessage}");
+                    ShowError(LocalizationSource.Instance["Upsell.Error.PurchaseFailed"]);
+                }
             }
             else
             {
                 var licenseService = app.EnsureServices()?.GetRequiredService<ILicenseService>();
                 if (licenseService is not null)
                 {
-                    await licenseService.StartPurchaseFlowAsync(SubscriptionTier.Premium);
+                    var started = await licenseService.StartPurchaseFlowAsync(SubscriptionTier.Premium);
+                    if (started)
+                    {
+                        TryClose();
+                    }
+                    else
+                    {
+                        ShowError(LocalizationSource.Instance["Upsell.Error.PurchaseFailed"]);
+                    }
                 }
             }
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[Upsell] Purchase failed: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"[Upsell] Purchase failed: {ex}");
+            ShowError(LocalizationSource.Instance["Upsell.Error.PurchaseFailed"]);
         }
         finally
         {
-            TryClose();
+            SetPurchasing(false);
         }
+    }
+
+    private void ShowError(string message)
+    {
+        PurchaseStatusText.Text = message;
+        PurchaseStatusText.IsVisible = true;
+    }
+
+    private void ShowInfo(string message)
+    {
+        PurchaseInfoText.Text = message;
+        PurchaseInfoText.IsVisible = true;
     }
 
     private async void Buy_Click(object? sender, RoutedEventArgs e)
     {
-        try
-        {
-            if (Application.Current is App app)
-            {
-                var licenseService = app.EnsureServices()?.GetRequiredService<ILicenseService>();
-                if (licenseService is not null)
-                {
-                    await licenseService.StartPurchaseFlowAsync(SubscriptionTier.Premium);
-                }
-            }
-        }
-        finally
-        {
-            TryClose();
-        }
+        // Ana CTA: mağaza destekliyorsa aylık aboneliği başlatır; değilse
+        // genel Premium akışına (URI) düşer.
+        await PurchaseAsync(StoreProductKind.Subscription);
     }
 }

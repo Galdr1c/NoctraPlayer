@@ -1050,5 +1050,8 @@
   "Upsell.Plan.Monthly.Subtitle": "Cancel anytime",
   "Upsell.Plan.Lifetime.Title": "Lifetime",
   "Upsell.Plan.Lifetime.Subtitle": "One-time payment",
-  "Upsell.Plan.Unavailable": "Products could not be loaded. Please try again later."
+  "Upsell.Plan.Unavailable": "Products could not be loaded. Please try again later.",
+  "Upsell.Error.PurchaseFailed": "The purchase could not be started. Please try again.",
+  "Upsell.Plan.AlreadyOwned": "You already own this package.",
+  "Upsell.Action.Retry": "Try Again"
 }
