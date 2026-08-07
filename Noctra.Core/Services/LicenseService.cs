@@ -37,6 +37,7 @@ public class LicenseService : ObservableObject, ILicenseService, IDisposable
     /// </summary>
     private Timer? _expiryTimer;
     private readonly object _expiryTimerGate = new();
+    private bool _disposed;
 
     /// <summary>
     /// Timer'ın hedeflediği bitiş anı. Aynı değer için tekrar planlama yapılmaz
@@ -225,6 +226,11 @@ public class LicenseService : ObservableObject, ILicenseService, IDisposable
 
     private void OnStoreEntitlementChanged(object? sender, EventArgs e)
     {
+        if (_disposed)
+        {
+            return;
+        }
+
         _ = RefreshStoreEntitlementAsync();
     }
 
@@ -236,7 +242,7 @@ public class LicenseService : ObservableObject, ILicenseService, IDisposable
     /// </summary>
     private async Task RefreshStoreEntitlementAsync(CancellationToken cancellationToken = default)
     {
-        if (_storePurchaseService is null)
+        if (_storePurchaseService is null || _disposed)
         {
             return;
         }
@@ -417,6 +423,13 @@ public class LicenseService : ObservableObject, ILicenseService, IDisposable
     // ==========================================
     public async Task<PromoCodeRedemptionResult> ApplyPromoCodeAsync(string promoCode)
     {
+        if (_disposed)
+        {
+            return PromoCodeRedemptionResult.Fail(
+                Localize("GlobalSettings.Promo.Error.Generic", "Promosyon kodu uygulanamadı. Lütfen daha sonra tekrar deneyin."),
+                PromoCodeResultKind.Unknown);
+        }
+
         await _redemptionLock.WaitAsync();
         try
         {
@@ -807,6 +820,11 @@ public class LicenseService : ObservableObject, ILicenseService, IDisposable
 
     private void OnSettingsChanged()
     {
+        if (_disposed)
+        {
+            return;
+        }
+
         SyncSubscriptionFromSettings(notify: true);
     }
 
@@ -890,6 +908,14 @@ public class LicenseService : ObservableObject, ILicenseService, IDisposable
     /// </summary>
     private void ScheduleExpiryCheck()
     {
+        if (_disposed)
+        {
+            // Getter'lar (IsPremium, CurrentTier vb.) SyncSubscriptionFromSettings
+            // üzerinden buraya ulaşabilir; Dispose sonrası yeni timer yaratılırsa
+            // bitiş anında SubscriptionChanged tekrar ateşlenebilir.
+            return;
+        }
+
         lock (_expiryTimerGate)
         {
             var expiresAt = _currentSubscription.Tier == SubscriptionTier.Premium
@@ -1191,7 +1217,7 @@ public class LicenseService : ObservableObject, ILicenseService, IDisposable
 
     public async Task<bool> StartPurchaseFlowAsync(SubscriptionTier targetTier)
     {
-        if (targetTier != SubscriptionTier.Premium || _appEditionService.IsPremiumEdition)
+        if (_disposed || targetTier != SubscriptionTier.Premium || _appEditionService.IsPremiumEdition)
         {
             return false;
         }
@@ -1259,6 +1285,11 @@ public class LicenseService : ObservableObject, ILicenseService, IDisposable
 
     public async Task RefreshSubscriptionStatusAsync()
     {
+        if (_disposed)
+        {
+            return;
+        }
+
         // Resume/focus ve açık sync'lerde mağaza (Play) hakları yeniden sorgulanır:
         // başka cihazda yapılan satın alma, refund, iptal, account hold veya grace
         // period değişikliği uygulama arka plandayken olduysa burada yakalanır.
@@ -1270,11 +1301,32 @@ public class LicenseService : ObservableObject, ILicenseService, IDisposable
     }
 
     /// <summary>
-    /// Expiry timer'ı kapatır. Uygulama kapanışında DI container singleton
-    /// servisi dispose ettiğinde çağrılır; timer arka planda kalmaz.
+    /// Servis kaynaklarını temizler. Uygulama kapanışında DI container
+    /// singleton'ı dispose ettiğinde çağrılır:
+    ///  - Event abonelikleri kaldırılır — Dispose sonrası callback gelmesin ve
+    ///    nesne event source tarafından tutulmasın (test sızıntısı).
+    ///  - Expiry timer kapatılır.
+    /// Semaphore'lar bilinçli olarak dispose EDİLMEZ: in-flight bir refresh
+    /// (OnResume fire-and-forget) kilidi elinde tutarken Dispose çağrılırsa
+    /// WaitAsync/Release ObjectDisposedException üretebilir; semaphore'lar
+    /// yalnızca küçük bir wait handle tutar ve GC tarafından temizlenir.
     /// </summary>
     public void Dispose()
     {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+
+        if (_storePurchaseService is not null)
+        {
+            _storePurchaseService.EntitlementChanged -= OnStoreEntitlementChanged;
+        }
+
+        _settingsService.SettingsChanged -= OnSettingsChanged;
+
         lock (_expiryTimerGate)
         {
             _expiryTimer?.Dispose();

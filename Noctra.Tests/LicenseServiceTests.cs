@@ -714,6 +714,102 @@ namespace Noctra.Tests
             Assert.Contains("kullanılmış", retryB.Message);
         }
 
+        [Fact]
+        public void Dispose_UnsubscribesSettingsChanged_AndIsIdempotent()
+        {
+            var settings = new TestSettingsService();
+            settings.Settings.ActivePromoCode = "PROMO-DISPOSE-TEST";
+            settings.Settings.PromoPremiumExpiresAtUtc = DateTime.UtcNow.AddDays(7);
+            var service = CreateLicenseService(settings);
+
+            // Kuruluşta legacy promo içe aktarılır → Premium.
+            Assert.True(service.IsPremium);
+
+            var subscriptionChanged = 0;
+            service.SubscriptionChanged += () => subscriptionChanged++;
+
+            // Abone iken settings değişikliği (promo kaldırma) event üretir.
+            settings.Settings.PromoGrant = null;
+            settings.Settings.ActivePromoCode = null;
+            settings.Settings.PromoPremiumExpiresAtUtc = null;
+            settings.NotifySettingsChanged();
+            Assert.False(service.IsPremium);
+            Assert.True(subscriptionChanged > 0);
+
+            service.Dispose();
+
+            // Dispose sonrası settings değişikliği servise ulaşmaz
+            // (OnSettingsChanged aboneliği kaldırıldı).
+            var countAfterDispose = subscriptionChanged;
+            settings.Settings.ActivePromoCode = "PROMO-DISPOSE-TEST-2";
+            settings.Settings.PromoPremiumExpiresAtUtc = DateTime.UtcNow.AddDays(7);
+            settings.NotifySettingsChanged();
+            settings.NotifySettingsChanged();
+            Assert.Equal(countAfterDispose, subscriptionChanged);
+
+            // Çift Dispose güvenli (idempotent).
+            service.Dispose();
+        }
+
+        [Fact]
+        public void Dispose_StoreEntitlementChanged_NoLongerTriggersStoreQuery()
+        {
+            var storeMock = new Mock<IStorePurchaseService>();
+            storeMock.Setup(m => m.IsSupported).Returns(true);
+            storeMock.Setup(m => m.GetEntitlementAsync(It.IsAny<CancellationToken>()))
+                .Returns(Task.FromResult(StoreEntitlement.None));
+            var editionMock = new Mock<IAppEditionService>();
+            editionMock.Setup(m => m.IsFreeEdition).Returns(true);
+
+            var service = new LicenseService(
+                editionMock.Object,
+                new TestSettingsService(),
+                new HttpClient(),
+                securityService: new SecurityService(),
+                storePurchaseService: storeMock.Object);
+
+            // Abone iken EntitlementChanged yeniden sorgu tetikler
+            // (constructor'ın fire-and-forget'ı + bu çağrı = en az 2).
+            storeMock.Raise(m => m.EntitlementChanged += null, null, EventArgs.Empty);
+
+            service.Dispose();
+
+            var callsBefore = storeMock.Invocations.Count(
+                i => i.Method.Name == nameof(IStorePurchaseService.GetEntitlementAsync));
+            storeMock.Raise(m => m.EntitlementChanged += null, null, EventArgs.Empty);
+
+            // Dispose sonrası event ulaşmaz — çağrı sayısı artmaz.
+            Assert.Equal(
+                callsBefore,
+                storeMock.Invocations.Count(
+                    i => i.Method.Name == nameof(IStorePurchaseService.GetEntitlementAsync)));
+        }
+
+        [Fact]
+        public async Task Dispose_GetterAfterDispose_DoesNotResurrectExpiryTimer()
+        {
+            // Getter'lar SyncSubscriptionFromSettings → ScheduleExpiryCheck
+            // çağırır; Dispose sonrası çağrılırsa yeni timer yaratılmamalı ve
+            // bitiş anında SubscriptionChanged tekrar ateşlenmemeli.
+            var settings = new TestSettingsService();
+            settings.Settings.ActivePromoCode = "PROMO-DISPOSE-TIMER";
+            settings.Settings.PromoPremiumExpiresAtUtc = DateTime.UtcNow.AddSeconds(1);
+            var service = CreateLicenseService(settings);
+            Assert.True(service.IsPremium);
+
+            service.Dispose();
+
+            var subscriptionChanged = 0;
+            service.SubscriptionChanged += () => subscriptionChanged++;
+
+            // Dispose sonrası getter okuması timer'ı diriltmemeli.
+            _ = service.IsPremium;
+
+            await Task.Delay(2500);
+
+            Assert.Equal(0, subscriptionChanged);
+        }
+
         private static LicenseService CreateLicenseService(
             TestSettingsService? settings = null,
             HttpClient? httpClient = null,

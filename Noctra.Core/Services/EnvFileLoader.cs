@@ -20,9 +20,13 @@ internal static class EnvFileLoader
         try
         {
             var root = AppContext.BaseDirectory;
+            // Kök tespiti: repository'deki gerçek solution adı NoctraPlayer.sln.
+            // (Yanlış ad kullanmak döngünün yalnızca .env varlığına güvenmesine
+            // yol açar; .env repo kökünde değilse üst dizinlerde yanlış bir .env
+            // yüklenebilirdi.)
             while (!string.IsNullOrEmpty(root) &&
                    !File.Exists(Path.Combine(root, ".env")) &&
-                   !File.Exists(Path.Combine(root, "Noctra.sln")))
+                   !File.Exists(Path.Combine(root, "NoctraPlayer.sln")))
             {
                 root = Path.GetDirectoryName(root);
             }
