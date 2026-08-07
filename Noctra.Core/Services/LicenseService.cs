@@ -70,6 +70,16 @@ public class LicenseService : ObservableObject, ILicenseService, IDisposable
     /// </summary>
     private readonly SemaphoreSlim _redemptionLock = new(1, 1);
 
+    /// <summary>
+    /// Mağaza haklarını yeniden doğrulayan akışları serileştirir. Aynı anda
+    /// üç kaynak tetiklenebilir — kuruluşta fire-and-forget, satın alma
+    /// değişince EntitlementChanged ve OnResume/Activated'de
+    /// RefreshSubscriptionStatusAsync. Eşzamanlı GetEntitlementAsync çağrıları
+    /// hem gereksiz Play/backend yükü hem de önbelleğe yazma yarışı üretir;
+    /// bu kilit tek seferde yalnızca bir refresh çalıştırır (sonuncusu bekler).
+    /// </summary>
+    private readonly SemaphoreSlim _storeRefreshLock = new(1, 1);
+
 #if DEBUG
     private const bool AllowsManualPremiumOverride = true;
 #else
@@ -204,18 +214,32 @@ public class LicenseService : ObservableObject, ILicenseService, IDisposable
     /// <summary>
     /// Mağaza haklarını yeniden doğrular ve abonelik durumunu günceller.
     /// Sorgu başarısız olursa son bilinen hak korunur (fail-open değil,
-    /// mevcut önbellek değeri geçerli kalır).
+    /// mevcut önbellek değeri geçerli kalır). Aynı anda yalnızca bir refresh
+    /// çalışır; ikinci çağrı ilkinin bitmesini bekler.
     /// </summary>
-    private async Task RefreshStoreEntitlementAsync()
+    private async Task RefreshStoreEntitlementAsync(CancellationToken cancellationToken = default)
     {
         if (_storePurchaseService is null)
         {
             return;
         }
 
+        await _storeRefreshLock.WaitAsync(cancellationToken);
         try
         {
-            var entitlement = await _storePurchaseService.GetEntitlementAsync();
+            await RefreshStoreEntitlementCoreAsync(cancellationToken);
+        }
+        finally
+        {
+            _storeRefreshLock.Release();
+        }
+    }
+
+    private async Task RefreshStoreEntitlementCoreAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            var entitlement = await _storePurchaseService.GetEntitlementAsync(cancellationToken);
             if (entitlement.IsVerified)
             {
                 // Backend doğrulaması geçti: hem kullan hem önbelleğe yaz.
@@ -833,7 +857,8 @@ public class LicenseService : ObservableObject, ILicenseService, IDisposable
 
         if (notify && (oldTier != _currentSubscription.Tier || oldExpiresAt != _currentSubscription.ExpiresAt || oldIsTrial != _currentSubscription.IsTrialPeriod))
         {
-            RaiseSubscriptionChanged();
+            // Bildirim UI thread'e taşınır; state değişikliği senkron kalır.
+            RaiseSubscriptionChangedSafely();
         }
 
         ScheduleExpiryCheck();
@@ -898,45 +923,23 @@ public class LicenseService : ObservableObject, ILicenseService, IDisposable
 
     private void OnExpiryCheckElapsed(object? state)
     {
-        // Timer thread pool üzerinde çalışır; SubscriptionChanged aboneleri
-        // (ViewModel'ler) UI thread'de PropertyChanged bekler. Dispatcher varsa
-        // sync UI thread'de yapılır, yoksa doğrudan (test ortamı).
-        // Önce hedefi temizle: SyncSubscriptionFromSettings içindeki
-        // ScheduleExpiryCheck 24 saatlik dilim için yeniden planlayabilsin.
+        // Timer thread pool üzerinde çalışır; state güncellemesi burada yapılır.
+        // SubscriptionChanged bildirimi SyncSubscriptionFromSettings içinden
+        // RaiseSubscriptionChangedSafely ile UI thread'e taşınır.
+        // Önce hedefi temizle: ScheduleExpiryCheck 24 saatlik dilim için
+        // yeniden planlayabilsin.
         lock (_expiryTimerGate)
         {
             _scheduledExpiryUtc = null;
         }
 
-        void DoSync()
+        try
         {
-            try
-            {
-                SyncSubscriptionFromSettings(notify: true);
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"[LicenseService] Expiry check failed: {ex.Message}");
-            }
+            SyncSubscriptionFromSettings(notify: true);
         }
-
-        if (_dispatcherService is not null)
+        catch (Exception ex)
         {
-            try
-            {
-                _dispatcherService.BeginInvoke(DoSync);
-            }
-            catch (Exception ex)
-            {
-                // Dispatcher kapanış aşamasındaysa (uygulama sonu) marshal başarısız
-                // olabilir; sync o zaman burada, thread pool üzerinde yapılır.
-                System.Diagnostics.Debug.WriteLine($"[LicenseService] Expiry marshal failed: {ex.Message}");
-                DoSync();
-            }
-        }
-        else
-        {
-            DoSync();
+            System.Diagnostics.Debug.WriteLine($"[LicenseService] Expiry check failed: {ex.Message}");
         }
     }
 
@@ -949,6 +952,35 @@ public class LicenseService : ObservableObject, ILicenseService, IDisposable
         OnPropertyChanged(nameof(PremiumExpiresAtUtc));
         OnPropertyChanged(nameof(ActivePromoCode));
         SubscriptionChanged?.Invoke();
+    }
+
+    /// <summary>
+    /// SubscriptionChanged bildirimini UI thread'e taşır. Mağaza sorgusu
+    /// (GetEntitlementAsync) thread pool üzerinde tamamlanabilir ve
+    /// SyncSubscriptionFromSettings o anda hangi thread'deyse orada çalışır;
+    /// ViewModel'lerin PropertyChanged'i UI thread'de bekler. Dispatcher varsa
+    /// bildirim UI thread'de yapılır (state güncellemesi yine çağıran thread'de
+    /// senkron kalır — awaiter'lar güncel değeri görür), yoksa doğrudan
+    /// (test ortamı).
+    /// </summary>
+    private void RaiseSubscriptionChangedSafely()
+    {
+        if (_dispatcherService is not null)
+        {
+            try
+            {
+                _dispatcherService.BeginInvoke(RaiseSubscriptionChanged);
+                return;
+            }
+            catch (Exception ex)
+            {
+                // Dispatcher kapanış aşamasındaysa marshal başarısız olabilir;
+                // bildirim o zaman burada, çağıran thread üzerinde yapılır.
+                System.Diagnostics.Debug.WriteLine($"[LicenseService] Subscription change marshal failed: {ex.Message}");
+            }
+        }
+
+        RaiseSubscriptionChanged();
     }
 
     private PromoGrant? ReadPromoGrant()
@@ -1210,8 +1242,14 @@ public class LicenseService : ObservableObject, ILicenseService, IDisposable
 
     public async Task RefreshSubscriptionStatusAsync()
     {
+        // Resume/focus ve açık sync'lerde mağaza (Play) hakları yeniden sorgulanır:
+        // başka cihazda yapılan satın alma, refund, iptal, account hold veya grace
+        // period değişikliği uygulama arka plandayken olduysa burada yakalanır.
+        // Store servisi yoksa (masaüstü) anında döner. Mağaza sorgusu
+        // _storeRefreshLock ile serileştirilir; yalnızca doğrulanmış sonuç
+        // önbelleği değiştirir — geçici hatada hak asla erken düşmez.
+        await RefreshStoreEntitlementAsync();
         SyncSubscriptionFromSettings(notify: true);
-        await Task.CompletedTask;
     }
 
     /// <summary>

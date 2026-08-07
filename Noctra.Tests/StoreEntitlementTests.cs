@@ -263,6 +263,33 @@ namespace Noctra.Tests
         }
 
         [Fact]
+        public async Task RefreshSubscriptionStatusAsync_ReQueriesStoreOnEachCall()
+        {
+            // İnceleme #8: Resume/focus'da çağrılan RefreshSubscriptionStatusAsync
+            // yalnızca settings senkronlamamalı; gerçek mağaza sorgusu yapmalı.
+            // Arka planda tamamlanan satın alma / refund / iptal bu çağrıda
+            // yakalanır (constructor'daki ilk sorguya güvenilmez).
+            var storeMock = CreateStoreMock(StoreEntitlement.None);
+            var service = CreateService(CreateFreeEditionMock().Object, store: storeMock.Object);
+            await service.RefreshSubscriptionStatusAsync();
+            Assert.False(service.IsPremium);
+
+            // Store sonucu değişti (ör. başka cihazda satın alma tamamlandı).
+            storeMock.Setup(m => m.GetEntitlementAsync(It.IsAny<System.Threading.CancellationToken>()))
+                .Returns(Task.FromResult(new StoreEntitlement { HasLifetimePremium = true }));
+
+            await service.RefreshSubscriptionStatusAsync();
+
+            Assert.True(service.IsPremium);
+            Assert.Null(service.PremiumExpiresAtUtc);
+            // İkinci çağrı da mağazayı yeniden sorguladı (settings sync değil).
+            // Sayım: constructor fire-and-forget (1) + ilk çağrı (1) + ikinci çağrı (1).
+            storeMock.Verify(
+                m => m.GetEntitlementAsync(It.IsAny<System.Threading.CancellationToken>()),
+                Times.AtLeast(3));
+        }
+
+        [Fact]
         public async Task StoreEntitlement_EntitlementChangedEvent_RefreshesSubscription()
         {
             var storeMock = CreateStoreMock(StoreEntitlement.None);
