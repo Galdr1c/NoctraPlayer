@@ -13,6 +13,10 @@ secrets.json
 *.pem
 *.pfx
 *.key
+
+# Play Console service account (asla commit edilmemeli)
+service-account.json
+noctra-service-account.json
 *.crt
 *.cer
 Noctra.Mobile/Services/MobileAppConfig.cs

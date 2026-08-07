@@ -77,22 +77,46 @@ Doğrulama cevabı (client'ın uyguladığı tek şey):
 
 ### 2. Backend'i dağıt
 
-**Ücretsiz barındırma önerisi: Google Cloud Run ücretsiz katmanı**
-(C#/.NET için en doğal; düşük trafikte maliyeti $0, ileride RTDN/Pub/Sub ile
-doğal bütünleşir):
+**Öneri: Google Cloud Run ücretsiz (Always Free) katmanı** — .NET için en
+doğal, düşük trafikte maliyeti **$0** (ayda 2 milyon istek + 180K vCPU-sn +
+360K GiB-sn ücretsiz; arka planda idle kalınca 0 örnek). İleride RTDN/Pub/Sub
+ile doğal bütünleşir.
+
+⚠️ **Bölge önemli**: ücretsiz katman yalnızca `us-central1`, `us-east1` ve
+`us-west1` bölgelerinde uygulanır. `europe-west1` gibi başka bölgede
+dağıtırsanız ücretsiz hak uygulanmaz ve ücret başlar. Bu yüzden aşağıda
+`us-central1` kullanılır.
 
 ```bash
 # Service account JSON'unu Secret Manager'a koy, sonra:
 gcloud run deploy noctra-billing-api \
   --source . \
-  --region europe-west1 \
+  --region us-central1 \
   --allow-unauthenticated \
   --set-env-vars="NOCTRA_PACKAGE_NAME=studio.kynora.noctra,NOCTRA_SUBSCRIPTION_PRODUCT_IDS=noctra_premium_monthly,NOCTRA_LIFETIME_PRODUCT_IDS=noctra_premium_lifetime"
 ```
 
-Alternatifler: **Render ücretsiz katmanı** (billing kartı istemez; cold start
-var, uykuya dalar), Oracle Cloud Always Free VPS, veya ~5$/ay bir VPS
-(Hetzner/Contabo). Vercel/Netlify ASP.NET Core backend için **uygun değildir**.
+Alternatifler: **Render ücretsiz katmanı** (billing kartı istemez; .NET 8
+destekler; 15 dk hareketsizlikte uykuya dalar → ilk istekte cold start),
+**Oracle Cloud Always Free** VPS, veya ~5$/ay bir VPS (Hetzner/Contabo).
+
+### Neden Firebase / Supabase / Upstash değil?
+
+Mevcut backend **ASP.NET Core (.NET 8)** ile yazıldı ve çalışır durumda.
+Aşağıdaki platformlar bu kodu doğrudan çalıştıramaz — hepsi için backend'in
+başka bir dilde yeniden yazılması gerekir (gereksiz iş + bakım maliyeti):
+
+| Platform | Runtime | .NET backend? |
+|---|---|---|
+| Firebase Cloud Functions | Node.js / Python / Go | ❌ |
+| Supabase Edge Functions | Deno (TypeScript) | ❌ |
+| Upstash | Compute değil — yalnızca Redis/Vector/QStash gibi veri servisleri | ❌ |
+| Vercel / Netlify | Frontend + serverless; backend-only .NET için uygun değil | ❌ |
+| **Google Cloud Run** | **Docker / .NET buildpack** | ✅ |
+
+Upstash ayrıca **barındırma platformu değildir**: kod çalıştırmaz, yalnızca
+Redis/Vector/QStash gibi veri hizmetleri sunar. Backend zaten dosya tabanlı
+SQLite kullandığı için ek bir veri servisine ihtiyaç yoktur.
 
 ### 3. Ortam değişkenleri (backend)
 

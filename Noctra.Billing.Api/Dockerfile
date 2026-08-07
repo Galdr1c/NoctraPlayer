@@ -1,6 +1,8 @@
 # Google Cloud Run / herhangi bir Linux konteyner için çok aşamalı build.
 # Build:  docker build -t noctra-billing-api -f Noctra.Billing.Api/Dockerfile .
-# Deploy: gcloud run deploy noctra-billing-api --source . --region europe-west1 --allow-unauthenticated
+# Deploy: gcloud run deploy noctra-billing-api --source . --region us-central1 --allow-unauthenticated
+# Not: Always Free katmani yalnizca us-central1/us-east1/us-west1'de uygulanir.
+# Tek komutlu deploy icin: bash deploy-billing.sh (Windows: .\deploy-billing.ps1)
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 COPY Noctra.Billing.Api/Noctra.Billing.Api.csproj Noctra.Billing.Api/
