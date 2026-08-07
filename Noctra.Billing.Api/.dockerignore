@@ -1,0 +1,9 @@
+**/bin/
+**/obj/
+**/out/
+**/TestResults/
+.vs/
+.git/
+.gitignore
+*.user
+*.suo

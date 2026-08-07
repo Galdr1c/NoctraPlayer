@@ -396,6 +396,28 @@ public sealed class PlayBillingApiClientTests
         Assert.Equal("Bearer test-access-token", authorization);
     }
 
+    [Theory]
+    [InlineData(HttpStatusCode.Unauthorized)]       // 401: credential/permission hatası
+    [InlineData(HttpStatusCode.Forbidden)]          // 403: Play Console permission hatası
+    [InlineData(HttpStatusCode.TooManyRequests)]    // 429: quota davranışı
+    [InlineData(HttpStatusCode.InternalServerError)] // 500: Play geçici/sürekli hatası
+    [InlineData(HttpStatusCode.BadGateway)]         // 503 benzeri gateway hatası
+    public async Task VerifyAsync_PlayApiError_ThrowsInvalidOperation(HttpStatusCode status)
+    {
+        // Play API hatası (401/403/429/500/503) 404 DEĞİLDİR — token geçersiz
+        // demek değildir. GetJsonAsync hata fırlatır; endpoint 502'ye çevirir ve
+        // client son bilinen doğrulanmış önbelleği kullanmaya devam eder
+        // (hak asla bu hatalarda erken düşmez). 404 ise fail-closed inaktif döner.
+        using var env = new BillingEnvScope();
+        var handler = ScriptedHttpMessageHandler.PlayApi(request =>
+            ScriptedHttpMessageHandler.Json(status, """{"error":{"message":"upstream"}}"""));
+
+        var client = CreateClient(handler);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            client.VerifyAsync("noctra_premium_monthly", "token-abc", "studio.kynora.noctra"));
+    }
+
     [Fact]
     public async Task VerifyAsync_UnknownProduct_ThrowsBeforeCallingPlay()
     {

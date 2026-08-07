@@ -49,8 +49,7 @@ public static class AndroidServiceCollectionExtensions
             new AndroidStorePurchaseService(
                 serviceProvider.GetRequiredService<Context>(),
                 serviceProvider.GetRequiredService<AndroidActivityProvider>(),
-                serviceProvider.GetRequiredService<IBillingVerificationClient>(),
-                serviceProvider.GetRequiredService<ISettingsService>()));
+                serviceProvider.GetRequiredService<IBillingVerificationClient>()));
         services.AddSingleton<IStorageInfoService>(serviceProvider =>
             new AndroidStorageInfoService(serviceProvider.GetRequiredService<Context>()));
         services.AddSingleton<IThemeService, AndroidThemeService>();

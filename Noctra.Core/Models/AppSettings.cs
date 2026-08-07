@@ -357,14 +357,6 @@ public class AppSettings
     // ============ Play Billing Doğrulama (backend) ============
 
     /// <summary>
-    /// Anonim kurulum kimliği. Play satın alma token'ları backend doğrulamasına
-    /// bu kimlikle bağlanır; kullanıcı hesabı gerekmez. İlk satın alma
-    /// doğrulamasından önce bir kez üretilir.
-    /// </summary>
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? InstallationId { get; set; }
-
-    /// <summary>
     /// Son başarılı backend doğrulamasından gelen hakkın önbelleği (JSON).
     /// Doğrulama hizmetine ulaşılamadığında (çevrimdışı/sunucu hatası) son
     /// bilinen doğrulanmış değer buradan okunur — fail-safe davranış.

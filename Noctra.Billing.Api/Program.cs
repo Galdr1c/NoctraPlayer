@@ -1,5 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.RateLimiting;
 using Noctra.Billing.Api;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -19,7 +21,31 @@ builder.Services.AddSingleton<IAccessTokenProvider, GoogleAdcTokenProvider>();
 builder.Services.AddSingleton<IPlayBillingApi, PlayBillingApiClient>();
 builder.Services.AddSingleton<EntitlementService>();
 
+// Abuse/cost koruması: her IP için 30 istek/dakika. Bu bir yetkilendirme
+// mekanizması DEĞİLDİR (gerçek güvenlik Play token doğrulamasıdır) — yalnızca
+// rastgele bot taramasının Cloud Run quota/cost tüketmesini sınırlar.
+// Bölüm anahtarı X-Forwarded-For'daki gerçek istemci IP'sidir; RemoteIpAddress
+// Cloud Run'da proxy'ye ait olduğu için ona bakılsaydı limit global olurdu.
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy("verify-per-ip", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: ClientIpResolver.GetClientIp(
+                httpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault(),
+                httpContext.Connection.RemoteIpAddress?.ToString()),
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 30,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+                AutoReplenishment = true
+            }));
+});
+
 var app = builder.Build();
+
+app.UseRateLimiter();
 
 // ADC'yi başlangıçta doğrula: Cloud Run service identity / yerel gcloud ADC
 // yoksa yanlış yapılandırma ilk /verify isteğinde (her istekte 502) değil,
@@ -68,7 +94,7 @@ app.MapPost("/billing/google/verify", async (
             new { error = "Doğrulama hizmeti şu anda kullanılamıyor." },
             statusCode: StatusCodes.Status502BadGateway);
     }
-});
+}).RequireRateLimiting("verify-per-ip");
 
 app.Run();
 

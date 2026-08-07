@@ -29,7 +29,6 @@ public sealed class BillingVerificationClientTests
 
     private static BillingVerifyRequest CreateRequest() => new()
     {
-        InstallationId = "install-1",
         PurchaseToken = "token-abc",
         ProductId = "noctra_premium_monthly",
         PackageName = "studio.kynora.noctra"
@@ -129,7 +128,8 @@ public sealed class BillingVerificationClientTests
         using var json = JsonDocument.Parse(body!);
         Assert.Equal("token-abc", json.RootElement.GetProperty("PurchaseToken").GetString());
         Assert.Equal("studio.kynora.noctra", json.RootElement.GetProperty("PackageName").GetString());
-        Assert.Equal("install-1", json.RootElement.GetProperty("InstallationId").GetString());
         Assert.Equal("noctra_premium_monthly", json.RootElement.GetProperty("ProductId").GetString());
+        // Stateless: istekte installation kimliği taşınmaz.
+        Assert.False(json.RootElement.TryGetProperty("InstallationId", out _));
     }
 }

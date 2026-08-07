@@ -66,7 +66,9 @@ if ([string]::IsNullOrWhiteSpace($Project)) {
     Invoke-Gcloud config set project $Project
 }
 Write-Host "✅ Proje: $Project" -ForegroundColor Green
-Invoke-Gcloud services enable run.googleapis.com cloudbuild.googleapis.com | Out-Null
+# Source deployment Cloud Build + Artifact Registry altyapısını kullanır;
+# Artifact Registry API'si ilk deploy'da istendiği için önceden etkinleştirilir.
+Invoke-Gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com | Out-Null
 
 # ---------- 4) Service account (service identity) ----------
 # Cloud Run'a bağlanacak service account — private key YOK, ADC ile
@@ -86,16 +88,17 @@ Write-Host ""
 
 # ---------- 5) Deploy ----------
 Write-Host "`n🚀 Deploy ediliyor ($Region)..." -ForegroundColor Cyan
-# --dockerfile: Dockerfile Noctra.Billing.Api/ alt klasöründe; repo kökünde
-# birden çok .csproj olduğu için buildpack kök Dockerfile olmadan başarısız olur.
+# Source deployment: Dockerfile, --source dizininde aranır. Dockerfile,
+# Noctra.Billing.Api klasörünü build context kabul edecek şekilde yazılmıştır
+# (repo kökünde birden çok .csproj olduğu için source-root buildpack
+# kullanılamaz — gcloud run deploy'da --dockerfile argümanı yoktur).
 $EnvArgs = "NOCTRA_PACKAGE_NAME=$PackageName,NOCTRA_SUBSCRIPTION_PRODUCT_IDS=$SubscriptionIds,NOCTRA_LIFETIME_PRODUCT_IDS=$LifetimeIds"
 if (-not [string]::IsNullOrWhiteSpace($ApiKey)) {
     $EnvArgs += ",NOCTRA_BILLING_API_KEY=$ApiKey"
 }
 
 Invoke-Gcloud run deploy $ServiceName `
-    --source . `
-    --dockerfile Noctra.Billing.Api/Dockerfile `
+    --source Noctra.Billing.Api `
     --region $Region `
     --allow-unauthenticated `
     --service-account $SaEmail `

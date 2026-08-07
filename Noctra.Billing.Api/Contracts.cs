@@ -5,11 +5,11 @@ namespace Noctra.Billing.Api;
 /// <summary>
 /// Client'ın (Android) purchase token'ını doğrulamak için backend'e
 /// gönderdiği istek. packageName/productId değerlerine istemci gönderdi diye
-/// güvenilmez — sunucu kendi sabit yapılandırmasıyla doğrular.
+/// güvenilmez — sunucu kendi sabit yapılandırmasıyla doğrular. Backend
+/// stateless'tir: installation kimliği taşınmaz.
 /// </summary>
 public sealed class BillingVerifyRequest
 {
-    public string InstallationId { get; init; } = string.Empty;
     public string PurchaseToken { get; init; } = string.Empty;
     public string ProductId { get; init; } = string.Empty;
     public string PackageName { get; init; } = string.Empty;
@@ -29,11 +29,10 @@ public sealed class VerifiedEntitlementResponse
     public string State { get; init; } = string.Empty;
 
     /// <summary>
-    /// Aktif abonelik bir trial offer'da mı? Play'den (subscriptionsv2.get →
-    /// lineItems[].offerId + monetization product details → recurrenceMode)
-    /// doğrulanır; client tarafında asla tahmin edilmez. Yalnızca gerçek
-    /// trial/tanışma fazı (NON_RECURRING) kullanılırken true — ücretli aylık
-    /// kullanıcı "trial" gibi görünmez.
+    /// True when Google Play reports the active subscription line item in a
+    /// free-trial phase via `lineItems[].offerPhase.freeTrial` — tek istekle
+    /// okunur, ek Monetization API çağrısı yoktur. Client bu bayrağı tahmin
+    /// etmez; ücretli aylık kullanıcı asla trial gibi görünmez.
     /// </summary>
     public bool IsTrialPeriod { get; init; }
     public DateTime VerifiedAtUtc { get; init; }
@@ -52,10 +51,10 @@ public sealed class PlayPurchaseVerification
     public string State { get; init; } = string.Empty;
 
     /// <summary>
-    /// Aktif abonelik bir trial offer'da mı? subscriptionsv2.get →
-    /// lineItems[].offerId ile monetization product details eşleştirilerek
-    /// belirlenir (best-effort: ürün detayı okunamazsa false kalır ve hak
-    /// doğrulaması asla engellenmez).
+    /// True when Google Play reports the active subscription line item in a
+    /// free-trial phase via `lineItems[].offerPhase.freeTrial` — tek istekle
+    /// okunur, ek Monetization API çağrısı yoktur. offerPhase yoksa false
+    /// kalır ve hak doğrulaması asla engellenmez (best-effort).
     /// </summary>
     public bool IsTrialPeriod { get; init; }
 }

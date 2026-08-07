@@ -33,7 +33,6 @@ public sealed class AndroidStorePurchaseService : IStorePurchaseService, IDispos
     private readonly Context _context;
     private readonly AndroidActivityProvider _activityProvider;
     private readonly IBillingVerificationClient? _billingVerifier;
-    private readonly ISettingsService? _settingsService;
     private readonly SemaphoreSlim _billingGate = new(1, 1);
     private readonly ConcurrentDictionary<string, string> _billingPeriodCache = new();
 
@@ -43,13 +42,11 @@ public sealed class AndroidStorePurchaseService : IStorePurchaseService, IDispos
     public AndroidStorePurchaseService(
         Context context,
         AndroidActivityProvider activityProvider,
-        IBillingVerificationClient? billingVerifier = null,
-        ISettingsService? settingsService = null)
+        IBillingVerificationClient? billingVerifier = null)
     {
         ArgumentNullException.ThrowIfNull(context);
         _activityProvider = activityProvider ?? throw new ArgumentNullException(nameof(activityProvider));
         _billingVerifier = billingVerifier;
-        _settingsService = settingsService;
         _context = context.ApplicationContext ?? context;
     }
 
@@ -205,7 +202,6 @@ public sealed class AndroidStorePurchaseService : IStorePurchaseService, IDispos
             return new StoreEntitlement { IsVerified = false };
         }
 
-        var installationId = await EnsureInstallationIdAsync();
         var packageName = _context.PackageName ?? string.Empty;
 
         var hasLifetime = false;
@@ -231,7 +227,7 @@ public sealed class AndroidStorePurchaseService : IStorePurchaseService, IDispos
                      p.PurchaseState == PurchaseState.Purchased &&
                      p.Products.Contains(StoreProducts.LifetimePurchase, StringComparer.OrdinalIgnoreCase)))
         {
-            var verified = await VerifyTokenAsync(purchase, packageName, installationId, cancellationToken);
+            var verified = await VerifyTokenAsync(purchase, packageName, cancellationToken);
             if (verified is null)
             {
                 anyVerificationFailed = true;
@@ -248,7 +244,7 @@ public sealed class AndroidStorePurchaseService : IStorePurchaseService, IDispos
                      p.PurchaseState == PurchaseState.Purchased &&
                      p.Products.Contains(StoreProducts.MonthlySubscription, StringComparer.OrdinalIgnoreCase)))
         {
-            var verified = await VerifyTokenAsync(purchase, packageName, installationId, cancellationToken);
+            var verified = await VerifyTokenAsync(purchase, packageName, cancellationToken);
             if (verified is null)
             {
                 anyVerificationFailed = true;
@@ -286,7 +282,6 @@ public sealed class AndroidStorePurchaseService : IStorePurchaseService, IDispos
     private async Task<BillingVerifiedEntitlement?> VerifyTokenAsync(
         Purchase purchase,
         string packageName,
-        string installationId,
         CancellationToken cancellationToken)
     {
         var productId = purchase.Products.FirstOrDefault() ?? string.Empty;
@@ -299,42 +294,10 @@ public sealed class AndroidStorePurchaseService : IStorePurchaseService, IDispos
 
         return await _billingVerifier.VerifyAsync(new BillingVerifyRequest
         {
-            InstallationId = installationId,
             PurchaseToken = purchase.PurchaseToken,
             ProductId = productId,
             PackageName = packageName
         }, cancellationToken).ConfigureAwait(false);
-    }
-
-    /// <summary>
-    /// Anonim kurulum kimliği: ilk kullanımda üretilip global ayarlara yazılır.
-    /// Purchase token'ları backend doğrulamasına bu kimlikle bağlanır.
-    /// </summary>
-    private async Task<string> EnsureInstallationIdAsync()
-    {
-        if (_settingsService is null)
-        {
-            return Guid.NewGuid().ToString("N");
-        }
-
-        var existing = _settingsService.Settings.InstallationId;
-        if (!string.IsNullOrWhiteSpace(existing))
-        {
-            return existing;
-        }
-
-        var id = Guid.NewGuid().ToString("N");
-        _settingsService.Settings.InstallationId = id;
-        try
-        {
-            await _settingsService.SaveAsync();
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"[StorePurchase] Failed to persist installation id: {ex.Message}");
-        }
-
-        return id;
     }
 
     public async Task RestorePurchasesAsync(CancellationToken cancellationToken = default)
@@ -876,33 +839,39 @@ public sealed class AndroidStorePurchaseService : IStorePurchaseService, IDispos
         {
             try
             {
-                var client = await EnsureBillingClientAsync(CancellationToken.None).ConfigureAwait(false);
-                var @params = AcknowledgePurchaseParams.NewBuilder()
-                    .SetPurchaseToken(token)
-                    .Build();
-                var result = await RunOnUiThreadTaskAsync(
-                    () => client.AcknowledgePurchaseAsync(@params),
-                    CancellationToken.None).ConfigureAwait(false);
-
-                if (result.ResponseCode != BillingResponseCode.Ok)
+                // Transient hatada kısa bir retry: kullanıcı uygulamayı uzun süre
+                // açmazsa tek deneme 3 günlük otomatik iade riskini taşırdı.
+                const int attemptCount = 2;
+                for (var attempt = 1; attempt <= attemptCount; attempt++)
                 {
-                    // API exception fırlatmadan non-OK dönebilir (SERVICE_UNAVAILABLE,
-                    // NETWORK_ERROR vb.). Geçici hatalar ile diğer hatalar ayrı
-                    // loglanır ki başarısız acknowledge görünmez kalmasın; her iki
-                    // durumda da sonraki sorgu (IsAcknowledged false) yeniden dener.
-                    // ERROR (6) Play'in genel durumu olup çoğunlukla geçicidir;
-                    // kalıcı sayılabilecek hatalar (DEVELOPER_ERROR, ITEM_NOT_OWNED)
-                    // yeniden denense bile zararsızdır — başarısız onaylama 3 günlük
-                    // otomatik iade riskini taşır, vazgeçmek daha tehlikelidir.
-                    var transient = result.ResponseCode is
+                    var result = await AcknowledgeOnceAsync(token).ConfigureAwait(false);
+                    if (result is null or BillingResponseCode.Ok)
+                    {
+                        break;
+                    }
+
+                    var transient = result is
                         BillingResponseCode.ServiceUnavailable or
                         BillingResponseCode.NetworkError or
                         BillingResponseCode.BillingUnavailable or
                         BillingResponseCode.Error;
 
+                    if (attempt < attemptCount && transient)
+                    {
+                        // 1-2 saniyelik kısa bekleme — geçici ağ/servis hatası için.
+                        await Task.Delay(TimeSpan.FromSeconds(1.5)).ConfigureAwait(false);
+                        continue;
+                    }
+
+                    // Geçici hatalar ile diğer hatalar ayrı loglanır ki başarısız
+                    // acknowledge görünmez kalmasın; her iki durumda da sonraki
+                    // sorgu (IsAcknowledged false) yeniden dener. Kalıcı sayılabilecek
+                    // hatalar (DEVELOPER_ERROR, ITEM_NOT_OWNED) yeniden denense bile
+                    // zararsızdır — başarısız onaylama 3 günlük otomatik iade riskini
+                    // taşır, vazgeçmek daha tehlikelidir.
                     System.Diagnostics.Debug.WriteLine(transient
-                        ? $"[StorePurchase] Acknowledge geçici hata — sonraki sorguda yeniden denenecek: {result.ResponseCode} {result.DebugMessage}"
-                        : $"[StorePurchase] Acknowledge diğer hata — sonraki sorguda yeniden denenecek: {result.ResponseCode} {result.DebugMessage}");
+                        ? $"[StorePurchase] Acknowledge geçici hata — sonraki sorguda yeniden denenecek: {result} {attempt}"
+                        : $"[StorePurchase] Acknowledge diğer hata — sonraki sorguda yeniden denenecek: {result} {attempt}");
                 }
             }
             catch (Exception ex)
@@ -912,6 +881,27 @@ public sealed class AndroidStorePurchaseService : IStorePurchaseService, IDispos
                 System.Diagnostics.Debug.WriteLine($"[StorePurchase] Acknowledge failed: {ex.Message}");
             }
         });
+    }
+
+    /// <summary>Tek acknowledge denemesi; hata durumunda BillingResponseCode döner, exception'da null.</summary>
+    private async Task<BillingResponseCode?> AcknowledgeOnceAsync(string token)
+    {
+        try
+        {
+            var client = await EnsureBillingClientAsync(CancellationToken.None).ConfigureAwait(false);
+            var @params = AcknowledgePurchaseParams.NewBuilder()
+                .SetPurchaseToken(token)
+                .Build();
+            var result = await RunOnUiThreadTaskAsync(
+                () => client.AcknowledgePurchaseAsync(@params),
+                CancellationToken.None).ConfigureAwait(false);
+            return result.ResponseCode;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[StorePurchase] Acknowledge attempt failed: {ex.Message}");
+            return null;
+        }
     }
 
     // ==========================================

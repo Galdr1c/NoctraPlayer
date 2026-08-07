@@ -34,6 +34,18 @@ public sealed class BillingConfig
                 "NOCTRA_SUBSCRIPTION_PRODUCT_IDS ve NOCTRA_LIFETIME_PRODUCT_IDS boş olamaz.");
         }
 
+        // Aynı ürün hem abonelik hem lifetime listesinde olamaz — aksi hâlde
+        // ResolveEntitlementType subscription'ı sessizce kazanırdı. Ödeme
+        // backend'inde config hatası startup'ta öldürülür (fail-fast).
+        var overlaps = subscriptions
+            .Intersect(lifetime, StringComparer.Ordinal)
+            .ToArray();
+        if (overlaps.Length > 0)
+        {
+            throw new InvalidOperationException(
+                $"Store product IDs cannot be both subscription and lifetime: {string.Join(", ", overlaps)}");
+        }
+
         return new BillingConfig
         {
             PackageName = packageName,

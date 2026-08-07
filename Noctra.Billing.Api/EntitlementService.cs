@@ -36,9 +36,11 @@ public sealed class EntitlementService
             throw new BillingRequestException("purchaseToken boş.");
         }
 
-        if (string.IsNullOrWhiteSpace(request.InstallationId))
+        // Abuse/cost koruması: Play purchase token'ları ~100-400 karakterdir;
+        // aşırı uzun değerler (bot taraması, dev payload) doğrudan reddedilir.
+        if (request.PurchaseToken.Length is < 10 or > 4096)
         {
-            throw new BillingRequestException("installationId boş.");
+            throw new BillingRequestException("purchaseToken geçersiz uzunlukta.");
         }
 
         if (!string.Equals(request.PackageName, _config.PackageName, StringComparison.Ordinal))

@@ -61,10 +61,10 @@ echo "[2] Sahte token verify isteği"
 HTTP_CODE="$(curl -s -o /tmp/billing_noauth.json -w '%{http_code}' --max-time 15 \
   -X POST "${URL}/billing/google/verify" \
   -H 'Content-Type: application/json' "${AUTH_HEADERS[@]}" \
-  -d '{"installationId":"test","purchaseToken":"test","productId":"noctra_premium_monthly","packageName":"studio.kynora.noctra"}')"
-# 400 = sunucu doğrulama aşamasına gitmeden reddetti; 200 = Play'e gidip fail-closed
-# inaktif döndü (dummy token 404); 401 = API key gerekli; 502 = Play'e ulaşılamadı.
-# Hepsi sunucunun çalıştığını gösterir.
+  -d '{"purchaseToken":"test","productId":"noctra_premium_monthly","packageName":"studio.kynora.noctra"}')"
+# 400 = sunucu doğrulama aşamasına gitmeden reddetti (çok kısa token/paket);
+# 200 = Play'e gidip fail-closed inaktif döndü; 401 = API key gerekli;
+# 502 = Play'e ulaşılamadı. Hepsi sunucunun çalıştığını gösterir.
 if [[ "${HTTP_CODE}" == "200" || "${HTTP_CODE}" == "400" || "${HTTP_CODE}" == "401" || "${HTTP_CODE}" == "502" ]]; then
   check "verify isteği işlendi (${HTTP_CODE})" PASS
 else
@@ -76,7 +76,7 @@ echo "[3] Bilinmeyen ürün doğrulama (BillingRequestException)"
 HTTP_CODE="$(curl -s -o /tmp/billing_badproduct.json -w '%{http_code}' --max-time 15 \
   -X POST "${URL}/billing/google/verify" \
   -H 'Content-Type: application/json' "${AUTH_HEADERS[@]}" \
-  -d '{"installationId":"test","purchaseToken":"test","productId":"noctra_unknown","packageName":"studio.kynora.noctra"}')"
+  -d '{"purchaseToken":"test","productId":"noctra_unknown","packageName":"studio.kynora.noctra"}')"
 if [[ "${HTTP_CODE}" == "400" ]]; then
   check "400 (productId sunucuda yok)" PASS
 else
@@ -88,7 +88,7 @@ echo "[4] Yanlış packageName"
 HTTP_CODE="$(curl -s -o /tmp/billing_wrongpkg.json -w '%{http_code}' --max-time 15 \
   -X POST "${URL}/billing/google/verify" \
   -H 'Content-Type: application/json' "${AUTH_HEADERS[@]}" \
-  -d '{"installationId":"test","purchaseToken":"test","productId":"noctra_premium_monthly","packageName":"com.evil.other"}')"
+  -d '{"purchaseToken":"test","productId":"noctra_premium_monthly","packageName":"com.evil.other"}')"
 if [[ "${HTTP_CODE}" == "400" ]]; then
   check "400 (packageName uyuşmuyor)" PASS
 else
@@ -100,7 +100,7 @@ echo "[5] Gerçek token doğrulama (service account eksikse 502)"
 HTTP_CODE="$(curl -s -o /tmp/billing_real.json -w '%{http_code}' --max-time 20 \
   -X POST "${URL}/billing/google/verify" \
   -H 'Content-Type: application/json' "${AUTH_HEADERS[@]}" \
-  -d '{"installationId":"test","purchaseToken":"dummy-token","productId":"noctra_premium_monthly","packageName":"studio.kynora.noctra"}')"
+  -d '{"purchaseToken":"dummy-token","productId":"noctra_premium_monthly","packageName":"studio.kynora.noctra"}')"
 # 200 = Play doğrulaması gerçekten çalışıyor; diğer kodlar da sunucunun ayakta olduğunu gösterir.
 if [[ "${HTTP_CODE}" == "200" ]]; then
   check "200 (Play doğrulaması çalışıyor)" PASS

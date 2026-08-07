@@ -26,8 +26,7 @@ public sealed class EntitlementServiceTests : IDisposable
         var exception = await Assert.ThrowsAsync<BillingRequestException>(() =>
             service.VerifyAsync(new BillingVerifyRequest
             {
-                InstallationId = "install-1",
-                PurchaseToken = "token-1",
+                PurchaseToken = "token-1234567890",
                 ProductId = "noctra_premium_monthly",
                 PackageName = "com.evil.other"
             }));
@@ -45,8 +44,7 @@ public sealed class EntitlementServiceTests : IDisposable
         var exception = await Assert.ThrowsAsync<BillingRequestException>(() =>
             service.VerifyAsync(new BillingVerifyRequest
             {
-                InstallationId = "install-1",
-                PurchaseToken = "token-1",
+                PurchaseToken = "token-1234567890",
                 ProductId = "noctra_unknown",
                 PackageName = "studio.kynora.noctra"
             }));
@@ -57,29 +55,47 @@ public sealed class EntitlementServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task Verify_MissingTokenOrInstallation_Rejects()
+    public async Task Verify_MissingToken_Rejects()
     {
         var service = CreateService();
 
         var noToken = await Assert.ThrowsAsync<BillingRequestException>(() =>
             service.VerifyAsync(new BillingVerifyRequest
             {
-                InstallationId = "install-1",
                 PurchaseToken = string.Empty,
                 ProductId = "noctra_premium_monthly",
                 PackageName = "studio.kynora.noctra"
             }));
         Assert.Contains("purchaseToken", noToken.Message);
 
-        var noInstall = await Assert.ThrowsAsync<BillingRequestException>(() =>
+        _api.Verify(a => a.VerifyAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task Verify_TooShortOrTooLongToken_Rejects()
+    {
+        // Abuse/cost koruması: Play token'ları ~100-400 karakterdir; 10'un
+        // altı veya 4096'nın üzeri reddedilir (bot taraması, dev payload).
+        var service = CreateService();
+
+        var tooShort = await Assert.ThrowsAsync<BillingRequestException>(() =>
             service.VerifyAsync(new BillingVerifyRequest
             {
-                InstallationId = string.Empty,
-                PurchaseToken = "token-1",
+                PurchaseToken = "short",
                 ProductId = "noctra_premium_monthly",
                 PackageName = "studio.kynora.noctra"
             }));
-        Assert.Contains("installationId", noInstall.Message);
+        Assert.Contains("purchaseToken", tooShort.Message);
+
+        var tooLong = await Assert.ThrowsAsync<BillingRequestException>(() =>
+            service.VerifyAsync(new BillingVerifyRequest
+            {
+                PurchaseToken = new string('x', 5000),
+                ProductId = "noctra_premium_monthly",
+                PackageName = "studio.kynora.noctra"
+            }));
+        Assert.Contains("purchaseToken", tooLong.Message);
 
         _api.Verify(a => a.VerifyAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never);
@@ -89,7 +105,7 @@ public sealed class EntitlementServiceTests : IDisposable
     public async Task Verify_ActiveSubscription_ReturnsPlayExpiry()
     {
         var expiry = new DateTime(2026, 9, 6, 15, 42, 10, DateTimeKind.Utc);
-        _api.Setup(a => a.VerifyAsync("noctra_premium_monthly", "token-1", "studio.kynora.noctra", It.IsAny<CancellationToken>()))
+        _api.Setup(a => a.VerifyAsync("noctra_premium_monthly", "token-1234567890", "studio.kynora.noctra", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new PlayPurchaseVerification
             {
                 EntitlementType = "Subscription",
@@ -105,8 +121,7 @@ public sealed class EntitlementServiceTests : IDisposable
 
         var result = await service.VerifyAsync(new BillingVerifyRequest
         {
-            InstallationId = "install-1",
-            PurchaseToken = "token-1",
+            PurchaseToken = "token-1234567890",
             ProductId = "noctra_premium_monthly",
             PackageName = "studio.kynora.noctra"
         });
@@ -121,7 +136,7 @@ public sealed class EntitlementServiceTests : IDisposable
     [Fact]
     public async Task Verify_LifetimeInactive_ReturnsStateWithoutExpiry()
     {
-        _api.Setup(a => a.VerifyAsync("noctra_premium_lifetime", "token-1", "studio.kynora.noctra", It.IsAny<CancellationToken>()))
+        _api.Setup(a => a.VerifyAsync("noctra_premium_lifetime", "token-1234567890", "studio.kynora.noctra", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new PlayPurchaseVerification
             {
                 EntitlementType = "Lifetime",
@@ -135,8 +150,7 @@ public sealed class EntitlementServiceTests : IDisposable
 
         var result = await service.VerifyAsync(new BillingVerifyRequest
         {
-            InstallationId = "install-1",
-            PurchaseToken = "token-1",
+            PurchaseToken = "token-1234567890",
             ProductId = "noctra_premium_lifetime",
             PackageName = "studio.kynora.noctra"
         });
