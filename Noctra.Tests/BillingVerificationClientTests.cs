@@ -46,6 +46,7 @@ public sealed class BillingVerificationClientTests
                   "expiresAtUtc": "2026-09-06T15:42:10Z",
                   "autoRenewEnabled": true,
                   "state": "SUBSCRIPTION_STATE_ACTIVE",
+                  "isTrialPeriod": true,
                   "verifiedAtUtc": "2026-08-06T17:05:00Z"
                 }
                 """)));
@@ -59,6 +60,8 @@ public sealed class BillingVerificationClientTests
         Assert.Equal("Subscription", result.EntitlementType);
         Assert.Equal(new DateTime(2026, 9, 6, 15, 42, 10, DateTimeKind.Utc), result.ExpiresAtUtc);
         Assert.True(result.AutoRenewEnabled);
+        // Backend'den gelen gerçek trial bayrağı uçtan uca taşınır.
+        Assert.True(result.IsTrialPeriod);
     }
 
     [Fact]

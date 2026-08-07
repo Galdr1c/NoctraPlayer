@@ -24,6 +24,14 @@ public sealed class BillingVerifiedEntitlement
     public DateTime? ExpiresAtUtc { get; init; }
     public bool AutoRenewEnabled { get; init; }
     public string State { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Aktif abonelik gerçek bir trial offer'da mı? Backend (subscriptionsv2.get
+    /// → lineItems[].offerId + monetization product details → recurrenceMode)
+    /// tarafından doğrulanır; client bu bayrağı tahmin etmez. Ücretli aylık
+    /// kullanıcı asla trial gibi görünmez.
+    /// </summary>
+    public bool IsTrialPeriod { get; init; }
     public DateTime VerifiedAtUtc { get; init; }
 }
 

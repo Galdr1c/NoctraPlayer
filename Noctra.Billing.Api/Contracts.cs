@@ -27,6 +27,15 @@ public sealed class VerifiedEntitlementResponse
     public DateTime? ExpiresAtUtc { get; init; }
     public bool AutoRenewEnabled { get; init; }
     public string State { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Aktif abonelik bir trial offer'da mı? Play'den (subscriptionsv2.get →
+    /// lineItems[].offerId + monetization product details → recurrenceMode)
+    /// doğrulanır; client tarafında asla tahmin edilmez. Yalnızca gerçek
+    /// trial/tanışma fazı (NON_RECURRING) kullanılırken true — ücretli aylık
+    /// kullanıcı "trial" gibi görünmez.
+    /// </summary>
+    public bool IsTrialPeriod { get; init; }
     public DateTime VerifiedAtUtc { get; init; }
 }
 
@@ -44,6 +53,7 @@ public sealed class StoredEntitlementRow
     public DateTime? ExpiresAtUtc { get; init; }
     public bool AutoRenewEnabled { get; init; }
     public string State { get; init; } = string.Empty;
+    public bool IsTrialPeriod { get; init; }
     public DateTime LastVerifiedAtUtc { get; init; }
 }
 
@@ -58,6 +68,14 @@ public sealed class PlayPurchaseVerification
     public DateTime? ExpiresAtUtc { get; init; }
     public bool AutoRenewEnabled { get; init; }
     public string State { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Aktif abonelik bir trial offer'da mı? subscriptionsv2.get →
+    /// lineItems[].offerId ile monetization product details eşleştirilerek
+    /// belirlenir (best-effort: ürün detayı okunamazsa false kalır ve hak
+    /// doğrulaması asla engellenmez).
+    /// </summary>
+    public bool IsTrialPeriod { get; init; }
 }
 
 /// <summary>Pub/Sub RTDN push mesajı zarfı (veri Base64'lü).</summary>

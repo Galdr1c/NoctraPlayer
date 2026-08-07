@@ -210,6 +210,10 @@ public sealed class AndroidStorePurchaseService : IStorePurchaseService, IDispos
 
         var hasLifetime = false;
         DateTime? subscriptionEnd = null;
+        // Aktif aboneliğin gerçek trial offer'da olup olmadığı backend'den
+        // gelir (client tahmin etmez). Kazanan (en geç bitişli) doğrulamanın
+        // bayrağı taşınır; ücretli aylık kullanıcı asla trial görünmez.
+        var isTrialPeriod = false;
         // Sorgu başarılı olduğuna göre sonuç otoritatiftir: satın alım yoksa hak
         // yoktur (IsVerified=true, boş hak). Yalnızca mevcut bir token backend'de
         // doğrulanamazsa (ağ/sunucu hatası) IsVerified=false döner — LicenseService
@@ -255,6 +259,7 @@ public sealed class AndroidStorePurchaseService : IStorePurchaseService, IDispos
                 (subscriptionEnd is null || verified.ExpiresAtUtc.Value > subscriptionEnd.Value))
             {
                 subscriptionEnd = verified.ExpiresAtUtc;
+                isTrialPeriod = verified.IsTrialPeriod;
             }
         }
 
@@ -272,6 +277,7 @@ public sealed class AndroidStorePurchaseService : IStorePurchaseService, IDispos
         {
             HasLifetimePremium = hasLifetime,
             SubscriptionExpiresAtUtc = subscriptionEnd,
+            IsTrialPeriod = isTrialPeriod,
             HasPendingPurchase = hasPendingPurchase,
             IsVerified = !anyVerificationFailed
         };

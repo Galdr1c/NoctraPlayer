@@ -26,6 +26,7 @@ public sealed class EntitlementStoreTests : IDisposable
             ExpiresAtUtc = new DateTime(2026, 9, 6, 15, 42, 10, DateTimeKind.Utc),
             AutoRenewEnabled = true,
             State = "SUBSCRIPTION_STATE_ACTIVE",
+            IsTrialPeriod = true,
             LastVerifiedAtUtc = DateTime.UtcNow
         };
 
@@ -38,6 +39,7 @@ public sealed class EntitlementStoreTests : IDisposable
         Assert.True(stored.IsActive);
         Assert.Equal(row.ExpiresAtUtc, stored.ExpiresAtUtc);
         Assert.True(stored.AutoRenewEnabled);
+        Assert.True(stored.IsTrialPeriod);
 
         // Başka kurulum kaydı görmez.
         Assert.Empty(await store.GetAllAsync("install-other"));
@@ -101,5 +103,67 @@ public sealed class EntitlementStoreTests : IDisposable
         Assert.Equal("install-9", found!.InstallationId);
 
         Assert.Null(await store.GetByPurchaseTokenHashAsync("unknown-hash"));
+    }
+
+    [Fact]
+    public async Task Initialize_MigratesLegacyTableWithoutTrialColumn()
+    {
+        // Eski sürümde oluşturulmuş tabloyu (is_trial_period kolonu YOK) simüle
+        // eder — EntitlementStore açılışı kolonu eklemeli ve mevcut veriyi
+        // korumalıdır (CREATE TABLE IF NOT EXISTS yeni kolonu eklemez).
+        using (var connection = new SqliteConnection(_connectionString))
+        {
+            connection.Open();
+            using var command = connection.CreateCommand();
+            command.CommandText =
+                """
+                CREATE TABLE entitlements (
+                    installation_id      TEXT NOT NULL,
+                    product_id           TEXT NOT NULL,
+                    purchase_token_hash  TEXT NOT NULL,
+                    entitlement_type     TEXT NOT NULL,
+                    is_active            INTEGER NOT NULL,
+                    expires_at_utc       TEXT,
+                    auto_renew_enabled   INTEGER NOT NULL,
+                    state                TEXT NOT NULL,
+                    last_verified_at_utc TEXT NOT NULL,
+                    PRIMARY KEY (installation_id, product_id)
+                );
+                INSERT INTO entitlements (installation_id, product_id, purchase_token_hash,
+                    entitlement_type, is_active, expires_at_utc, auto_renew_enabled,
+                    state, last_verified_at_utc)
+                VALUES ('install-legacy', 'noctra_premium_monthly', 'hash-legacy',
+                    'Subscription', 1, '2099-01-01T00:00:00Z', 1,
+                    'SUBSCRIPTION_STATE_ACTIVE', '2026-08-06T00:00:00Z');
+                """;
+            command.ExecuteNonQuery();
+        }
+
+        var store = new EntitlementStore(_connectionString);
+
+        // Eski kayıt korundu ve trial varsayılan olarak false okunuyor.
+        var legacy = await store.GetByPurchaseTokenHashAsync("hash-legacy");
+        Assert.NotNull(legacy);
+        Assert.Equal("install-legacy", legacy!.InstallationId);
+        Assert.False(legacy.IsTrialPeriod);
+
+        // Migration sonrası yeni kayıtlar trial bayrağıyla çalışır.
+        await store.UpsertAsync(new StoredEntitlementRow
+        {
+            InstallationId = "install-new",
+            ProductId = "noctra_premium_monthly",
+            PurchaseTokenHash = "hash-new",
+            EntitlementType = "Subscription",
+            IsActive = true,
+            ExpiresAtUtc = new DateTime(2099, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+            AutoRenewEnabled = true,
+            State = "SUBSCRIPTION_STATE_ACTIVE",
+            IsTrialPeriod = true,
+            LastVerifiedAtUtc = DateTime.UtcNow
+        });
+
+        var stored = await store.GetAllAsync("install-new");
+        var row = Assert.Single(stored);
+        Assert.True(row.IsTrialPeriod);
     }
 }

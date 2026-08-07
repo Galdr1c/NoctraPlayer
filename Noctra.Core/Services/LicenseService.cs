@@ -937,7 +937,12 @@ public class LicenseService : ObservableObject, ILicenseService, IDisposable
                 {
                     _currentSubscription.Tier = SubscriptionTier.Premium;
                     _currentSubscription.ExpiresAt = endsAt;
-                    _currentSubscription.IsTrialPeriod = false;
+                    // IsTrialPeriod yalnızca GERÇEK trial offer aktifken true
+                    // olur — backend (subscriptionsv2.get → offerId +
+                    // monetization → recurrenceMode) doğrular; ücretli aylık
+                    // kullanıcı asla trial gibi görünmez.
+                    _currentSubscription.IsTrialPeriod =
+                        source == PremiumSource.GooglePlaySubscription && store.IsTrialPeriod;
                     _currentSubscription.Source = source;
                 }
                 else

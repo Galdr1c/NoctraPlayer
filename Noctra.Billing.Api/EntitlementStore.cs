@@ -48,12 +48,43 @@ public sealed class EntitlementStore
                 auto_renew_enabled   INTEGER NOT NULL,
                 state                TEXT NOT NULL,
                 last_verified_at_utc TEXT NOT NULL,
+                is_trial_period      INTEGER NOT NULL DEFAULT 0,
                 PRIMARY KEY (installation_id, product_id)
             );
             CREATE INDEX IF NOT EXISTS idx_entitlements_token_hash
                 ON entitlements (purchase_token_hash);
             """;
         command.ExecuteNonQuery();
+
+        MigrateSchema(connection);
+    }
+
+    /// <summary>
+    /// Eski sürümden kalma tabloları günceller (CREATE TABLE IF NOT EXISTS yeni
+    /// kolonları mevcut tabloya eklemez). is_trial_period öncesi oluşturulmuş
+    /// veritabanlarında kolon yoksa varsayılan 0 (trial değil) ile eklenir.
+    /// </summary>
+    private static void MigrateSchema(SqliteConnection connection)
+    {
+        var columns = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        using (var pragma = connection.CreateCommand())
+        {
+            pragma.CommandText = "PRAGMA table_info(entitlements);";
+            using var reader = pragma.ExecuteReader();
+            while (reader.Read())
+            {
+                columns.Add(reader.GetString(1));
+            }
+        }
+
+        if (columns.Contains("is_trial_period"))
+        {
+            return;
+        }
+
+        using var alter = connection.CreateCommand();
+        alter.CommandText = "ALTER TABLE entitlements ADD COLUMN is_trial_period INTEGER NOT NULL DEFAULT 0;";
+        alter.ExecuteNonQuery();
     }
 
     public async Task UpsertAsync(StoredEntitlementRow row, CancellationToken cancellationToken = default)
@@ -64,9 +95,11 @@ public sealed class EntitlementStore
             """
             INSERT OR REPLACE INTO entitlements (
                 installation_id, product_id, purchase_token_hash, entitlement_type,
-                is_active, expires_at_utc, auto_renew_enabled, state, last_verified_at_utc)
+                is_active, expires_at_utc, auto_renew_enabled, state, last_verified_at_utc,
+                is_trial_period)
             VALUES ($installationId, $productId, $tokenHash, $entitlementType,
-                $isActive, $expiresAtUtc, $autoRenewEnabled, $state, $lastVerifiedAtUtc)
+                $isActive, $expiresAtUtc, $autoRenewEnabled, $state, $lastVerifiedAtUtc,
+                $isTrialPeriod)
             """;
         command.Parameters.AddWithValue("$installationId", row.InstallationId);
         command.Parameters.AddWithValue("$productId", row.ProductId);
@@ -77,6 +110,7 @@ public sealed class EntitlementStore
         command.Parameters.AddWithValue("$autoRenewEnabled", row.AutoRenewEnabled ? 1 : 0);
         command.Parameters.AddWithValue("$state", row.State);
         command.Parameters.AddWithValue("$lastVerifiedAtUtc", row.LastVerifiedAtUtc.ToString("O"));
+        command.Parameters.AddWithValue("$isTrialPeriod", row.IsTrialPeriod ? 1 : 0);
         await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
     }
 
@@ -89,7 +123,8 @@ public sealed class EntitlementStore
         command.CommandText =
             """
             SELECT installation_id, product_id, purchase_token_hash, entitlement_type,
-                   is_active, expires_at_utc, auto_renew_enabled, state, last_verified_at_utc
+                   is_active, expires_at_utc, auto_renew_enabled, state, last_verified_at_utc,
+                   is_trial_period
             FROM entitlements
             WHERE installation_id = $installationId
             ORDER BY product_id
@@ -116,7 +151,8 @@ public sealed class EntitlementStore
         command.CommandText =
             """
             SELECT installation_id, product_id, purchase_token_hash, entitlement_type,
-                   is_active, expires_at_utc, auto_renew_enabled, state, last_verified_at_utc
+                   is_active, expires_at_utc, auto_renew_enabled, state, last_verified_at_utc,
+                   is_trial_period
             FROM entitlements
             WHERE purchase_token_hash = $tokenHash
             LIMIT 1
@@ -148,7 +184,8 @@ public sealed class EntitlementStore
             ExpiresAtUtc = expiresAtUtc,
             AutoRenewEnabled = reader.GetInt32(6) == 1,
             State = reader.GetString(7),
-            LastVerifiedAtUtc = DateTime.Parse(reader.GetString(8), null, System.Globalization.DateTimeStyles.AdjustToUniversal).ToUniversalTime()
+            LastVerifiedAtUtc = DateTime.Parse(reader.GetString(8), null, System.Globalization.DateTimeStyles.AdjustToUniversal).ToUniversalTime(),
+            IsTrialPeriod = reader.GetInt32(9) == 1
         };
     }
 

@@ -64,6 +64,15 @@ public sealed class StoreEntitlement
     /// </summary>
     public bool HasPendingPurchase { get; init; }
 
+    /// <summary>
+    /// Aktif abonelik gerçek bir trial offer'da mı? Backend tarafından
+    /// doğrulanır (subscriptionsv2.get → lineItems[].offerId + monetization
+    /// recurrenceMode) — client tarafında asla tahmin edilmez. Ücretli aylık
+    /// kullanıcı bu bayrakla "trial" gibi GÖSTERİLMEZ; LicenseService
+    /// IsTrialPeriod'u yalnızca bu bayrak true ise açar.
+    /// </summary>
+    public bool IsTrialPeriod { get; init; }
+
     public bool HasActivePremium =>
         HasLifetimePremium ||
         (SubscriptionExpiresAtUtc.HasValue && SubscriptionExpiresAtUtc.Value > DateTime.UtcNow);

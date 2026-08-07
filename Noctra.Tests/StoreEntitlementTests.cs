@@ -228,6 +228,50 @@ namespace Noctra.Tests
         }
 
         [Fact]
+        public async Task StoreEntitlement_ActiveTrialSubscription_IsMarkedAsTrial()
+        {
+            // Gerçek trial tespiti backend'den gelir (StoreEntitlement.IsTrialPeriod)
+            // — ücretli kullanıcı trial gibi görünmez, gerçek trial görünür.
+            var expires = DateTime.UtcNow.AddDays(14);
+            var store = CreateStoreMock(new StoreEntitlement
+            {
+                SubscriptionExpiresAtUtc = expires,
+                IsTrialPeriod = true
+            });
+
+            var service = CreateService(CreateFreeEditionMock().Object, store: store.Object);
+            await service.RefreshSubscriptionStatusAsync();
+
+            Assert.True(service.IsPremium);
+            Assert.Equal(PremiumSource.GooglePlaySubscription, service.CurrentPremiumSource);
+            Assert.True(service.GetCurrentSubscription().IsTrialPeriod);
+        }
+
+        [Fact]
+        public async Task StoreEntitlement_PromoWinsOverTrialSubscription_NotMarkedAsTrial()
+        {
+            // Kazanan kaynak promosyon olduğunda trial bayrağı taşınmaz —
+            // IsTrialPeriod yalnızca gerçek trial'ı açıklar.
+            var settings = new TestSettingsService
+            {
+                PromoPremiumExpiresAtUtc = DateTime.UtcNow.AddDays(20),
+                ActivePromoCode = "PROMO20D"
+            };
+            var store = CreateStoreMock(new StoreEntitlement
+            {
+                SubscriptionExpiresAtUtc = DateTime.UtcNow.AddDays(5),
+                IsTrialPeriod = true
+            });
+
+            var service = CreateService(CreateFreeEditionMock().Object, settings: settings, store: store.Object);
+            await service.RefreshSubscriptionStatusAsync();
+
+            Assert.True(service.IsPremium);
+            Assert.Equal(PremiumSource.Promo, service.CurrentPremiumSource);
+            Assert.False(service.GetCurrentSubscription().IsTrialPeriod);
+        }
+
+        [Fact]
         public async Task StoreEntitlement_PromoOnly_SourceIsPromo()
         {
             var settings = new TestSettingsService

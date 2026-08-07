@@ -74,6 +74,7 @@ public sealed class EntitlementService
             ExpiresAtUtc = verification.ExpiresAtUtc,
             AutoRenewEnabled = verification.AutoRenewEnabled,
             State = verification.State,
+            IsTrialPeriod = verification.IsTrialPeriod,
             LastVerifiedAtUtc = verifiedAt
         }, cancellationToken).ConfigureAwait(false);
 
@@ -85,6 +86,7 @@ public sealed class EntitlementService
             ExpiresAtUtc = verification.ExpiresAtUtc,
             AutoRenewEnabled = verification.AutoRenewEnabled,
             State = verification.State,
+            IsTrialPeriod = verification.IsTrialPeriod,
             VerifiedAtUtc = verifiedAt
         };
     }
@@ -127,6 +129,7 @@ public sealed class EntitlementService
             ExpiresAtUtc = verification.ExpiresAtUtc,
             AutoRenewEnabled = verification.AutoRenewEnabled,
             State = verification.State,
+            IsTrialPeriod = verification.IsTrialPeriod,
             LastVerifiedAtUtc = DateTime.UtcNow
         }, cancellationToken).ConfigureAwait(false);
 

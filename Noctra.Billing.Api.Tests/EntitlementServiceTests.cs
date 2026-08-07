@@ -76,7 +76,9 @@ public sealed class EntitlementServiceTests : IDisposable
                 IsActive = true,
                 ExpiresAtUtc = expiry,
                 AutoRenewEnabled = true,
-                State = "SUBSCRIPTION_STATE_ACTIVE"
+                State = "SUBSCRIPTION_STATE_ACTIVE",
+                // Gerçek trial tespiti backend'den gelir ve uçtan uca taşınır.
+                IsTrialPeriod = true
             });
 
         var service = CreateService();
@@ -92,12 +94,14 @@ public sealed class EntitlementServiceTests : IDisposable
         Assert.True(result.IsActive);
         Assert.Equal(expiry, result.ExpiresAtUtc);
         Assert.Equal("Subscription", result.EntitlementType);
+        Assert.True(result.IsTrialPeriod);
 
         // Kalıcılık: kayıt token hash'i ile bulunabilir (ham token saklanmaz).
         var stored = await _store.GetByPurchaseTokenHashAsync(EntitlementService.HashToken("token-1"));
         Assert.NotNull(stored);
         Assert.Equal("install-1", stored!.InstallationId);
         Assert.Equal(expiry, stored.ExpiresAtUtc);
+        Assert.True(stored.IsTrialPeriod);
         Assert.DoesNotContain("token-1", stored.PurchaseTokenHash);
     }
 

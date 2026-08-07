@@ -104,6 +104,7 @@ public sealed class PlayBillingApiClient : IPlayBillingApi
         // Gerçek bitiş: lineItems[].expiryTime (Google'ın verdiği değer).
         DateTime? expiry = null;
         var productMatched = false;
+        string? activeOfferId = null;
         if (root.TryGetProperty("lineItems", out var lineItems) && lineItems.ValueKind == JsonValueKind.Array)
         {
             foreach (var item in lineItems.EnumerateArray())
@@ -115,6 +116,10 @@ public sealed class PlayBillingApiClient : IPlayBillingApi
                 if (string.Equals(GetString(item, "productId"), productId, StringComparison.Ordinal))
                 {
                     productMatched = true;
+                    // Kullanıcının şu an üzerinde olduğu offer (trial offer da
+                    // dahil) — trial tespiti için monetization detaylarıyla
+                    // eşleştirilir.
+                    activeOfferId = GetString(item, "offerId");
                 }
 
                 var expiryText = GetString(item, "expiryTime");
@@ -137,14 +142,122 @@ public sealed class PlayBillingApiClient : IPlayBillingApi
                        expiry.HasValue &&
                        expiry.Value > DateTime.UtcNow;
 
+        // Trial tespiti best-effort'tur: aktif abonelik ve eşleşen offerId
+        // varsa monetization product details'ten recurrenceMode doğrulanır;
+        // ürün detayı çözülemezse (ağ/404/şema) false kalır ve hak asla
+        // bu yüzden engellenmez.
+        var isTrialPeriod = isActive &&
+                            !string.IsNullOrWhiteSpace(activeOfferId) &&
+                            await IsTrialOfferAsync(productId, activeOfferId, packageName, accessToken, cancellationToken)
+                                .ConfigureAwait(false);
+
         return new PlayPurchaseVerification
         {
             EntitlementType = "Subscription",
             IsActive = isActive,
             ExpiresAtUtc = expiry,
             AutoRenewEnabled = autoRenewing,
-            State = state
+            State = state,
+            IsTrialPeriod = isTrialPeriod
         };
+    }
+
+    /// <summary>
+    /// Aktif offer'ın trial olup olmadığını monetization product details'ten
+    /// doğrular. Play Console'da free trial, faz listesinde NON_RECURRING faz
+    /// içeren bir offer'dır (standart abonelik fazları RECURRING'dir).
+    /// Kullanıcı trial'dayken lineItems[].offerId trial offer'ı gösterir;
+    /// trial bitip standart faza geçince offerId değişir, tespit kendiliğinden
+    /// false'a döner. Ürün detayı okunamazsa (ağ, 404, şema değişikliği) false
+    /// döner — trial tespiti best-effort'tur ve hak doğrulamasını asla
+    /// engellemez.
+    /// </summary>
+    private async Task<bool> IsTrialOfferAsync(
+        string productId,
+        string offerId,
+        string packageName,
+        string accessToken,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var url = $"{ApiBase}/{Uri.EscapeDataString(packageName)}/monetization/subscriptions/{Uri.EscapeDataString(productId)}";
+            var body = await GetJsonAsync(url, accessToken, cancellationToken).ConfigureAwait(false);
+            if (body is null)
+            {
+                return false;
+            }
+
+            using var json = JsonDocument.Parse(body);
+            if (!json.RootElement.TryGetProperty("basePlans", out var basePlans) ||
+                basePlans.ValueKind != JsonValueKind.Array)
+            {
+                return false;
+            }
+
+            foreach (var basePlan in basePlans.EnumerateArray())
+            {
+                if (!basePlan.TryGetProperty("offers", out var offers) ||
+                    offers.ValueKind != JsonValueKind.Array)
+                {
+                    continue;
+                }
+
+                foreach (var offer in offers.EnumerateArray())
+                {
+                    if (!string.Equals(GetString(offer, "offerId"), offerId, StringComparison.Ordinal))
+                    {
+                        continue;
+                    }
+
+                    // GERÇEK free trial: sıfır fiyatlı NON_RECURRING faz içerir.
+                    // Ücretli tanışma (introductory) offer'ı trial sayılmaz.
+                    return HasFreeTrialPhase(offer);
+                }
+            }
+
+            return false;
+        }
+        catch (OperationCanceledException)
+        {
+            // İptal, best-effort tespit hatası değil — çağıranın iptalini saygı
+            // göster ve yay (trial değil varsayımına dönüştürme).
+            throw;
+        }
+        catch (Exception ex)
+        {
+            // Ürün detayı çözülemedi — trial tespiti yapılamaz ama hak asla
+            // bu yüzden düşmez; trial değil kabul edilir.
+            System.Diagnostics.Debug.WriteLine($"[BillingApi] Trial offer lookup failed: {ex.Message}");
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Offer GERÇEK bir free trial içeriyor mu? Faz listesinde ÜCRETSİZ
+    /// (sıfır fiyat) NON_RECURRING faz olmalıdır. Ücretli tanışma (introductory)
+    /// offer'ları da NON_RECURRING'dir ama trial DEĞİLDİR — sıfır fiyat şartı
+    /// ikisini ayırır ve ücretli kullanıcı asla "trial" görünmez.
+    /// </summary>
+    private static bool HasFreeTrialPhase(JsonElement offer)
+    {
+        if (!offer.TryGetProperty("pricingPhases", out var pricingPhases) ||
+            !pricingPhases.TryGetProperty("pricingPhaseList", out var phases) ||
+            phases.ValueKind != JsonValueKind.Array)
+        {
+            return false;
+        }
+
+        foreach (var phase in phases.EnumerateArray())
+        {
+            if (string.Equals(GetString(phase, "recurrenceMode"), "NON_RECURRING", StringComparison.Ordinal) &&
+                string.Equals(GetString(phase, "priceAmountMicros"), "0", StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static bool IsEntitledSubscriptionState(string state) => state switch
