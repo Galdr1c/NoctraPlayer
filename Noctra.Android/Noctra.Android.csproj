@@ -30,6 +30,18 @@
     <PackageReference Include="HotAvalonia" Version="3.*" PrivateAssets="All" Publish="True" />
   </ItemGroup>
 
+  <!--
+    Geliştirme (.env) dosyası yalnızca DEBUG APK'larına paketlenir; uygulama
+    açılışında (Application.OnCreate) yalnızca NOCTRA_* endpoint değişkenleri
+    süreç ortamına aktarılır (bkz. Application.cs). Masaüstünde .env runtime'da
+    çalışma dizininden okunur; Android'de dosya sistemi olmadığı için asset
+    olarak gömülür. Release'de URL'ler build-time AssemblyMetadata ile gömülür,
+    bu yüzden bu asset yalnızca DEBUG içindir.
+  -->
+  <ItemGroup Condition="'$(Configuration)' == 'Debug' and Exists('$(MSBuildThisFileDirectory)..\.env')">
+    <AndroidAsset Include="..\.env" Link="env/noctra-dev.env" />
+  </ItemGroup>
+
   <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
     <HotAvalonia>true</HotAvalonia>
     <HotAvaloniaAutoEnable>true</HotAvaloniaAutoEnable>
