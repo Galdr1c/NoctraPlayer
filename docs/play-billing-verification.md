@@ -140,7 +140,9 @@ gcloud run deploy noctra-billing-api \
   --region us-central1 \
   --allow-unauthenticated \
   --service-account noctra-billing-runtime@PROJECT.iam.gserviceaccount.com \
-  --set-env-vars="NOCTRA_PACKAGE_NAME=studio.kynora.noctra,NOCTRA_SUBSCRIPTION_PRODUCT_IDS=noctra_premium_monthly,NOCTRA_LIFETIME_PRODUCT_IDS=noctra_premium_lifetime" \
+  --set-env-vars="NOCTRA_PACKAGE_NAME=studio.kynora.noctra" \
+  --set-env-vars="NOCTRA_SUBSCRIPTION_PRODUCT_IDS=noctra_premium_monthly" \
+  --set-env-vars="NOCTRA_LIFETIME_PRODUCT_IDS=noctra_premium_lifetime" \
   --min-instances 0 --max-instances 2 --memory 256Mi --cpu 1
 ```
 

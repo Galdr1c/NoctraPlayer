@@ -107,9 +107,16 @@ echo "🚀 Deploy ediliyor (${REGION})..."
 # Noctra.Billing.Api klasörünü build context kabul edecek şekilde yazılmıştır
 # (repo kökünde birden çok .csproj olduğu için source-root buildpack
 # kullanılamaz — gcloud run deploy'da --dockerfile argümanı yoktur).
-ENV_ARGS="NOCTRA_PACKAGE_NAME=${PACKAGE_NAME},NOCTRA_SUBSCRIPTION_PRODUCT_IDS=${SUBSCRIPTION_IDS},NOCTRA_LIFETIME_PRODUCT_IDS=${LIFETIME_IDS}"
+# Her KEY=VALUE ayrı --set-env-vars bayrağıyla verilir: değerler virgül
+# içerebilir (örn. çoklu ürün: NOCTRA_SUBSCRIPTION_PRODUCT_IDS=a,b,c) —
+# tek virgüllü string'de gcloud virgülü env ayrımı sanıp deploy'u kırardı.
+ENV_FLAGS=(
+  "--set-env-vars=NOCTRA_PACKAGE_NAME=${PACKAGE_NAME}"
+  "--set-env-vars=NOCTRA_SUBSCRIPTION_PRODUCT_IDS=${SUBSCRIPTION_IDS}"
+  "--set-env-vars=NOCTRA_LIFETIME_PRODUCT_IDS=${LIFETIME_IDS}"
+)
 if [[ -n "${API_KEY}" ]]; then
-  ENV_ARGS="${ENV_ARGS},NOCTRA_BILLING_API_KEY=${API_KEY}"
+  ENV_FLAGS+=( "--set-env-vars=NOCTRA_BILLING_API_KEY=${API_KEY}" )
 fi
 
 gcloud run deploy "${SERVICE_NAME}" \
@@ -117,7 +124,7 @@ gcloud run deploy "${SERVICE_NAME}" \
   --region "${REGION}" \
   --allow-unauthenticated \
   --service-account "${SA_EMAIL}" \
-  --set-env-vars="${ENV_ARGS}" \
+  "${ENV_FLAGS[@]}" \
   --min-instances 0 \
   --max-instances 2 \
   --memory 256Mi \

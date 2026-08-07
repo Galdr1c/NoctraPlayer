@@ -92,22 +92,34 @@ Write-Host "`n🚀 Deploy ediliyor ($Region)..." -ForegroundColor Cyan
 # Noctra.Billing.Api klasörünü build context kabul edecek şekilde yazılmıştır
 # (repo kökünde birden çok .csproj olduğu için source-root buildpack
 # kullanılamaz — gcloud run deploy'da --dockerfile argümanı yoktur).
-$EnvArgs = "NOCTRA_PACKAGE_NAME=$PackageName,NOCTRA_SUBSCRIPTION_PRODUCT_IDS=$SubscriptionIds,NOCTRA_LIFETIME_PRODUCT_IDS=$LifetimeIds"
+# Her KEY=VALUE ayrı --set-env-vars bayrağıyla verilir: değerler virgül
+# içerebilir (örn. çoklu ürün: NOCTRA_SUBSCRIPTION_PRODUCT_IDS=a,b,c) —
+# tek virgüllü string'de gcloud virgülü env ayrımı sanıp deploy'u kırardı.
+$EnvArgs = @(
+    "NOCTRA_PACKAGE_NAME=$PackageName",
+    "NOCTRA_SUBSCRIPTION_PRODUCT_IDS=$SubscriptionIds",
+    "NOCTRA_LIFETIME_PRODUCT_IDS=$LifetimeIds"
+)
 if (-not [string]::IsNullOrWhiteSpace($ApiKey)) {
-    $EnvArgs += ",NOCTRA_BILLING_API_KEY=$ApiKey"
+    $EnvArgs += "NOCTRA_BILLING_API_KEY=$ApiKey"
 }
 
-Invoke-Gcloud run deploy $ServiceName `
-    --source Noctra.Billing.Api `
-    --region $Region `
-    --allow-unauthenticated `
-    --service-account $SaEmail `
-    --set-env-vars="$EnvArgs" `
-    --min-instances 0 `
-    --max-instances 2 `
-    --memory 256Mi `
-    --cpu 1 `
-    --project=$Project
+$DeployArgs = @(
+    "run", "deploy", $ServiceName,
+    "--source", "Noctra.Billing.Api",
+    "--region", $Region,
+    "--allow-unauthenticated",
+    "--service-account", $SaEmail,
+    "--min-instances", "0",
+    "--max-instances", "2",
+    "--memory", "256Mi",
+    "--cpu", "1",
+    "--project=$Project"
+)
+foreach ($EnvVar in $EnvArgs) {
+    $DeployArgs += "--set-env-vars=$EnvVar"
+}
+Invoke-Gcloud @DeployArgs
 
 # ---------- 6) URL'yi .env'e yaz ----------
 $Url = gcloud run services describe $ServiceName --region=$Region --project=$Project --format="value(status.url)" 2>$null
