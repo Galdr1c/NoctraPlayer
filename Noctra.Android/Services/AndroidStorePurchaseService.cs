@@ -690,6 +690,19 @@ public sealed class AndroidStorePurchaseService : IStorePurchaseService, IDispos
     // Entitlement computation
     // ==========================================
 
+    /// <summary>
+    /// Satın almayı Play tarafından acknowledge eder (non-consumable kayıtlar
+    /// 3 gün içinde onaylanmazsa otomatik iade edilir). Fire-and-forget:
+    /// beklemek GetEntitlementAsync'i geciktirir; başarısız onaylama
+    /// IsAcknowledged hâlâ false olduğu için bir sonraki sorguda otomatik
+    /// yeniden denenir.
+    ///
+    /// Not (hak akışı): hak, acknowledge'a DEĞİL backend doğrulamasına
+    /// bağlıdır — acknowledge başarısız olsa bile doğrulanmış satın alma
+    /// entitlement verir. Acknowledge yalnızca Play'in 3 günlük otomatik
+    /// iadesini önlemek içindir; iade gerçekleşirse backend doğrulaması
+    /// inaktif döner ve hak zaten düşer.
+    /// </summary>
     private void AcknowledgeIfNeeded(Purchase purchase)
     {
         if (purchase.PurchaseState != PurchaseState.Purchased || purchase.IsAcknowledged)
@@ -706,14 +719,35 @@ public sealed class AndroidStorePurchaseService : IStorePurchaseService, IDispos
                 var @params = AcknowledgePurchaseParams.NewBuilder()
                     .SetPurchaseToken(token)
                     .Build();
-                await RunOnUiThreadTaskAsync(
+                var result = await RunOnUiThreadTaskAsync(
                     () => client.AcknowledgePurchaseAsync(@params),
                     CancellationToken.None).ConfigureAwait(false);
+
+                if (result.ResponseCode != BillingResponseCode.Ok)
+                {
+                    // API exception fırlatmadan non-OK dönebilir (SERVICE_UNAVAILABLE,
+                    // NETWORK_ERROR vb.). Geçici hatalar ile diğer hatalar ayrı
+                    // loglanır ki başarısız acknowledge görünmez kalmasın; her iki
+                    // durumda da sonraki sorgu (IsAcknowledged false) yeniden dener.
+                    // ERROR (6) Play'in genel durumu olup çoğunlukla geçicidir;
+                    // kalıcı sayılabilecek hatalar (DEVELOPER_ERROR, ITEM_NOT_OWNED)
+                    // yeniden denense bile zararsızdır — başarısız onaylama 3 günlük
+                    // otomatik iade riskini taşır, vazgeçmek daha tehlikelidir.
+                    var transient = result.ResponseCode is
+                        BillingResponseCode.ServiceUnavailable or
+                        BillingResponseCode.NetworkError or
+                        BillingResponseCode.BillingUnavailable or
+                        BillingResponseCode.Error;
+
+                    System.Diagnostics.Debug.WriteLine(transient
+                        ? $"[StorePurchase] Acknowledge geçici hata — sonraki sorguda yeniden denenecek: {result.ResponseCode} {result.DebugMessage}"
+                        : $"[StorePurchase] Acknowledge diğer hata — sonraki sorguda yeniden denenecek: {result.ResponseCode} {result.DebugMessage}");
+                }
             }
             catch (Exception ex)
             {
-                // Onaylanmamış satın alım 3 gün içinde otomatik iade edilir;
-                // bir sonraki sorguda tekrar deneneceği için burada sadece log.
+                // Exception ile sonuçlanan onaylama (örn. billing client bağlantısı
+                // yok) — bir sonraki sorguda tekrar deneneceği için log yeterli.
                 System.Diagnostics.Debug.WriteLine($"[StorePurchase] Acknowledge failed: {ex.Message}");
             }
         });
