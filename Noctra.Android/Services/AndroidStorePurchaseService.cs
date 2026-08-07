@@ -170,17 +170,36 @@ public sealed class AndroidStorePurchaseService : IStorePurchaseService, IDispos
         var subscriptionPurchases = await QueryPurchasesAsync(client, BillingClient.ProductType.Subs, cancellationToken)
             .ConfigureAwait(false);
 
+        // Onaylama (acknowledge) sorgu sonucundan ve doğrulama istemcisinden
+        // BAĞIMSIZDIR: liste geldiyse abonelik dahil her PURCHASED kayıt
+        // (kalıcı paket dahil) tek tek acknowledge edilir. Google Play,
+        // onaylanmayan non-consumable satın alımları 3 gün içinde otomatik
+        // iade eder; callback kaçırıldığında (yarım kalan satın alma, uygulama
+        // kapanması, başka cihazda yapılan satın alma, restore) bu döngü
+        // acknowledge'ı telafi eder. Sorgu başarısızsa liste null gelir ve
+        // döngü zaten çalışmaz.
+        if (inappPurchases is not null)
+        {
+            foreach (var purchase in inappPurchases)
+            {
+                AcknowledgeIfNeeded(purchase);
+            }
+        }
+
+        if (subscriptionPurchases is not null)
+        {
+            foreach (var purchase in subscriptionPurchases)
+            {
+                AcknowledgeIfNeeded(purchase);
+            }
+        }
+
         // Play sorgusu başarısız olduysa veya doğrulama istemcisi yoksa hak
         // doğrulanamadı (IsVerified=false) — LicenseService son bilinen
         // doğrulanmış önbelleği kullanır (fail-safe; hak asla erken düşmez).
         if (inappPurchases is null || subscriptionPurchases is null || _billingVerifier is null)
         {
             return new StoreEntitlement { IsVerified = false };
-        }
-
-        foreach (var purchase in inappPurchases.Concat(subscriptionPurchases))
-        {
-            AcknowledgeIfNeeded(purchase);
         }
 
         var installationId = await EnsureInstallationIdAsync();
