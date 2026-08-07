@@ -155,23 +155,14 @@
               </Button>
             </Grid>
 
-            <Button Classes="UpgradeButton"
-                    x:Name="BuyButton"
-                    MinHeight="52"
-                    Click="Buy_Click">
-              <StackPanel Orientation="Horizontal"
-                          HorizontalAlignment="Center"
-                          Spacing="8">
-                <icons:MaterialIcon Kind="Crown" Width="18" Height="18"/>
-                <TextBlock Text="{loc:Translate Upsell.Action.Buy}"
-                           FontSize="{DynamicResource FBodyL}"
-                           FontWeight="Bold" />
-                <controls:PremiumSpinner x:Name="BuySpinner"
-                                         Width="18"
-                                         Height="18"
-                                         IsVisible="False" />
-              </StackPanel>
-            </Button>
+            <!-- İşlem sırasında gösterilen spinner — plan kartları CTA'dır;
+                 genel bir "Satın Al" butonu yoktur (hangi planın satın alınacağı
+                 kart üzerinden açıkça seçilir). -->
+            <controls:PremiumSpinner x:Name="BuySpinner"
+                                     Width="26"
+                                     Height="26"
+                                     HorizontalAlignment="Center"
+                                     IsVisible="False" />
 
             <TextBlock x:Name="PlanStatusText"
                        Foreground="{DynamicResource TextMutedBrush}"

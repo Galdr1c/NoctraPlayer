@@ -16,6 +16,8 @@ public partial class MobileUpsellView : UserControl
 {
     private IReadOnlyList<StoreProduct> _products = Array.Empty<StoreProduct>();
     private bool _isPurchasing;
+    private ILicenseService? _licenseService;
+    private bool _licenseSubscribed;
 
     public MobileUpsellView()
     {
@@ -27,6 +29,9 @@ public partial class MobileUpsellView : UserControl
         IsVisible = true;
         HideStatusMessages();
         RetryPricingButton.IsVisible = false;
+
+        EnsureLicenseSubscription();
+
         _ = RefreshProductPricingAsync();
     }
 
@@ -36,7 +41,65 @@ public partial class MobileUpsellView : UserControl
             return false;
 
         IsVisible = false;
+        UnsubscribeLicense();
         return true;
+    }
+
+    /// <summary>
+    /// Satın alma akışının GERÇEK sonucu için lisansa abone olur. Play penceresi
+    /// açıldıktan sonra sheet AÇIK kalır (kapanmaz); ödeme gerçekten tamamlanınca
+    /// (SubscriptionChanged → Premium) kapanır, pending ise "ödeme bekleniyor"
+    /// bildirimi gösterilir, iptalde kullanıcı zaten sheet'e döner. Tekrar
+    /// abone olmayı önler.
+    /// </summary>
+    private void EnsureLicenseSubscription()
+    {
+        if (_licenseSubscribed)
+        {
+            return;
+        }
+
+        if (Application.Current is App app)
+        {
+            _licenseService = app.EnsureServices()?.GetService<ILicenseService>();
+        }
+
+        if (_licenseService is not null)
+        {
+            _licenseService.SubscriptionChanged += OnLicenseSubscriptionChanged;
+            _licenseSubscribed = true;
+        }
+    }
+
+    private void UnsubscribeLicense()
+    {
+        if (!_licenseSubscribed || _licenseService is null)
+        {
+            return;
+        }
+
+        _licenseService.SubscriptionChanged -= OnLicenseSubscriptionChanged;
+        _licenseService = null;
+        _licenseSubscribed = false;
+    }
+
+    private void OnLicenseSubscriptionChanged()
+    {
+        if (!IsVisible || _licenseService is null)
+        {
+            return;
+        }
+
+        if (_licenseService.IsPremium)
+        {
+            // Ödeme tamamlandı — sheet kapanır.
+            TryClose();
+        }
+        else if (_licenseService.HasPendingStorePurchase)
+        {
+            // Ödeme onay bekliyor (operatör faturalaması vb.).
+            ShowInfo(LocalizationSource.Instance["Settings.Store.PurchasePending"]);
+        }
     }
 
     private void Close_Click(object? sender, RoutedEventArgs e)
@@ -52,13 +115,12 @@ public partial class MobileUpsellView : UserControl
     }
 
     /// <summary>
-    /// İşlem sırasında tüm satın alma butonlarını devre dışı bırakır ve
-    /// ana butonda spinner gösterir — çift tıklama / eşzamanlı akış olmaz.
+    /// İşlem sırasında plan kartlarını devre dışı bırakır ve spinner'ı
+    /// gösterir — çift tıklama / eşzamanlı akış olmaz.
     /// </summary>
     private void SetPurchasing(bool purchasing)
     {
         _isPurchasing = purchasing;
-        BuyButton.IsEnabled = !purchasing;
         MonthlyBuyButton.IsEnabled = !purchasing;
         LifetimeBuyButton.IsEnabled = !purchasing;
         BuySpinner.IsVisible = purchasing;
@@ -66,9 +128,8 @@ public partial class MobileUpsellView : UserControl
 
     /// <summary>
     /// Mağaza ürün fiyatlarını yükleyip plan kartlarına yazar. Mağaza
-    /// desteklenmiyorsa (masaüstü) kartlar fiyatsız kalır ve tek "Buy"
-    /// butonu mevcut akışı (URI) kullanır. Yükleme başarısız olursa fiyatlar
-    /// "—" ile gösterilir ve yeniden deneme butonu görünür.
+    /// desteklenmiyorsa (masaüstü) kartlar fiyatsız kalır. Yükleme başarısız
+    /// olursa fiyatlar "—" ile gösterilir ve yeniden deneme butonu görünür.
     /// </summary>
     private async Task RefreshProductPricingAsync()
     {
@@ -135,10 +196,11 @@ public partial class MobileUpsellView : UserControl
 
     /// <summary>
     /// Seçilen türdeki mağaza ürünü için satın alma akışını başlatır.
-    /// Sonuç değerlendirilir:
-    ///  - Başarılı / kullanıcı iptali → sheet kapanır (Play penceresi açıldı).
-    ///  - Zaten sahip / teknik hata → sheet AÇIK kalır ve yerelleştirilmiş
-    ///    mesaj gösterilir; teknik ayrıntı yalnız loglanır, retry mümkündür.
+    /// Sheet YALNIZCA gerçek satın alma tamamlandığında kapanır
+    /// (OnPurchasesUpdated → EntitlementChanged → SubscriptionChanged →
+    /// Premium). Play penceresinin açılması (Success) kapatmak için yeterli
+    /// DEĞİLDİR: iptalde kullanıcı sheet'e döner, pending'de bildirim görür,
+    /// teknik hatada hata gösterilir — hiçbirinde sheet erken kapanmaz.
     ///
     /// KRİTİK: Seçilen plan Play'de yoksa (örn. lifetime henüz yayınlanmadı)
     /// BAŞKA plana düşülmez — genel StartPurchaseFlowAsync aylık aboneliği
@@ -200,23 +262,26 @@ public partial class MobileUpsellView : UserControl
 
             if (result.Success)
             {
-                // Satın alma tamamlandı; hak EntitlementChanged ile yenilenir.
-                TryClose();
+                // Play penceresi açıldı — sheet KAPANMAZ. Gerçek sonuç
+                // OnPurchasesUpdated → EntitlementChanged → SubscriptionChanged
+                // ile gelir: ödeme tamamlanınca sheet kapanır (OnLicenseSubscriptionChanged),
+                // iptal edilirse kullanıcı sheet'e döner, pending ise bildirim görür.
+                return;
             }
-            else if (result.CancelledByUser)
+            if (result.CancelledByUser)
             {
-                // Kullanıcı Play penceresinde bilinçli olarak iptal etti.
-                TryClose();
+                // Play penceresi başlatılmadan iptal — sheet açık kalır,
+                // kullanıcı başka plan seçebilir veya yeniden deneyebilir.
+                return;
             }
-            else if (result.AlreadyOwned)
+            if (result.AlreadyOwned)
             {
                 ShowInfo(LocalizationSource.Instance["Upsell.Plan.AlreadyOwned"]);
+                return;
             }
-            else
-            {
-                System.Diagnostics.Debug.WriteLine($"[Upsell] Purchase failed: {result.ErrorMessage}");
-                ShowError(LocalizationSource.Instance["Upsell.Error.PurchaseFailed"]);
-            }
+
+            System.Diagnostics.Debug.WriteLine($"[Upsell] Purchase failed: {result.ErrorMessage}");
+            ShowError(LocalizationSource.Instance["Upsell.Error.PurchaseFailed"]);
         }
         catch (Exception ex)
         {
@@ -241,10 +306,4 @@ public partial class MobileUpsellView : UserControl
         PurchaseInfoText.IsVisible = true;
     }
 
-    private async void Buy_Click(object? sender, RoutedEventArgs e)
-    {
-        // Ana CTA: mağaza destekliyorsa aylık aboneliği başlatır; değilse
-        // genel Premium akışına (URI) düşer.
-        await PurchaseAsync(StoreProductKind.Subscription);
-    }
 }
