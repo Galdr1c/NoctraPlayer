@@ -1199,7 +1199,6 @@
                      VerticalContentAlignment="Center"
                      LetterSpacing="1"
                      MaxLength="24"
-                     IsTextPredictionEnabled="False"
                      IsEnabled="{Binding !IsApplyingPromoCode}"
                      KeyDown="PromoCodeTextBox_KeyDown"
                      AutomationProperties.Name="{loc:Translate GlobalSettings.Promo.Title}" />
@@ -1209,7 +1208,7 @@
                 <icons:MaterialIcon Kind="AutoAwesome" Width="18" Height="18" Foreground="{DynamicResource PlayerOverlayTextBrush}"
                                     IsVisible="{Binding !IsApplyingPromoCode}" />
                 <icons:MaterialIcon Kind="Refresh" Width="18" Height="18" Foreground="{DynamicResource PlayerOverlayTextBrush}"
-                                    Classes="Rotating"
+                                    Animation="Spin"
                                     IsVisible="{Binding IsApplyingPromoCode}" />
                 <TextBlock Text="{Binding PromoApplyButtonText}" Foreground="{DynamicResource PlayerOverlayTextBrush}" FontWeight="SemiBold" />
               </StackPanel>

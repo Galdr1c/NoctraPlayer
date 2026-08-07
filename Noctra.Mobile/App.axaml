@@ -208,19 +208,5 @@
             <Setter Property="IsReadOnly" Value="True" />
             <Setter Property="Background" Value="{DynamicResource Surface0Brush}" />
         </Style>
-
-        <!-- Rotating Icon Animation (madde 18: islem sirasinda donen loading ikonu) -->
-        <Style Selector="materialIcons|MaterialIcon.Rotating">
-            <Style.Animations>
-                <Animation Duration="0:0:1" IterationCount="Infinite">
-                    <KeyFrame Cue="0%">
-                        <Setter Property="RotateTransform.Angle" Value="0"/>
-                    </KeyFrame>
-                    <KeyFrame Cue="100%">
-                        <Setter Property="RotateTransform.Angle" Value="360"/>
-                    </KeyFrame>
-                </Animation>
-            </Style.Animations>
-        </Style>
     </Application.Styles>
 </Application>

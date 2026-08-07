@@ -103,19 +103,9 @@
             <Setter Property="Opacity" Value="0.8"/>
         </Style>
 
-        <!-- Rotating Icon Animation -->
-        <Style Selector="materialIcons|MaterialIcon.Rotating">
-            <Style.Animations>
-                <Animation Duration="0:0:1" IterationCount="Infinite">
-                    <KeyFrame Cue="0%">
-                        <Setter Property="RotateTransform.Angle" Value="0"/>
-                    </KeyFrame>
-                    <KeyFrame Cue="100%">
-                        <Setter Property="RotateTransform.Angle" Value="360"/>
-                    </KeyFrame>
-                </Animation>
-            </Style.Animations>
-        </Style>
+        <!-- Dönen ikon için özel global stil YOK — Material.Icons.Avalonia'nın
+             yerleşik Animation="Spin" özelliği kullanılır (RenderTransform'suz
+             RotateTransform.Angle animasyonu runtime XAML hatası üretebilir). -->
     </Window.Styles>
 
     <Border CornerRadius="8"
@@ -627,7 +617,7 @@
                                                         VerticalAlignment="Stretch">
                                                     <StackPanel Orientation="Horizontal" Spacing="8">
                                                         <materialIcons:MaterialIcon Kind="AutoAwesome" Width="18" Height="18" IsVisible="{Binding !IsApplyingPromoCode}"/>
-                                                        <materialIcons:MaterialIcon Kind="Refresh" Width="18" Height="18" Classes="Rotating" IsVisible="{Binding IsApplyingPromoCode}"/>
+                                                        <materialIcons:MaterialIcon Kind="Refresh" Width="18" Height="18" Animation="Spin" IsVisible="{Binding IsApplyingPromoCode}"/>
                                                         <TextBlock Text="{Binding PromoApplyButtonText}" FontWeight="Bold" VerticalAlignment="Center"/>
                                                     </StackPanel>
                                                 </Button>

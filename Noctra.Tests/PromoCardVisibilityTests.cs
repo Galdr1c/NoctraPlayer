@@ -50,11 +50,14 @@ public class PromoCardVisibilityTests
         var view = ReadProjectFile("Noctra.Mobile", "Views", "MobileSettingsView.axaml");
         var codeBehind = ReadProjectFile("Noctra.Mobile", "Views", "MobileSettingsView.axaml.cs");
 
-        // Madde 20: mobil klavye yapılandırması (max uzunluk, otomatik düzeltme kapalı,
-        // erişilebilirlik adı) + paste sonrası normalize davranışı zaten VM'de.
+        // Madde 20: mobil klavye yapılandırması (max uzunluk, erişilebilirlik adı)
+        // + paste sonrası normalize davranışı zaten VM'de.
+        // NOT: IsTextPredictionEnabled bu projenin Avalonia 12.1.0 sürümünde
+        // TextBox üzerinde YOKTUR (AVLN2000 XAML derleme hatası — mobil uygulama
+        // bu yüzden derlenemiyordu); 32a1758 ile eklenmişti ve kaldırıldı.
         Assert.Contains("x:Name=\"PromoCodeTextBox\"", view, StringComparison.Ordinal);
         Assert.Contains("MaxLength=\"24\"", view, StringComparison.Ordinal);
-        Assert.Contains("IsTextPredictionEnabled=\"False\"", view, StringComparison.Ordinal);
+        Assert.DoesNotContain("IsTextPredictionEnabled", view, StringComparison.Ordinal);
         Assert.Contains("IsEnabled=\"{Binding !IsApplyingPromoCode}\"", view, StringComparison.Ordinal);
         Assert.Contains("KeyDown=\"PromoCodeTextBox_KeyDown\"", view, StringComparison.Ordinal);
         Assert.Contains("AutomationProperties.Name=\"{loc:Translate GlobalSettings.Promo.Title}\"", view, StringComparison.Ordinal);
@@ -63,8 +66,11 @@ public class PromoCardVisibilityTests
         Assert.Contains("PromoCodeTextBox_KeyDown", codeBehind, StringComparison.Ordinal);
         Assert.Contains("ApplyPromoCodeCommand.Execute", codeBehind, StringComparison.Ordinal);
 
-        // Madde 18: dönen loading ikonu (Rotating animasyon stili artık mobilde de var).
-        Assert.Contains("Classes=\"Rotating\"", view, StringComparison.Ordinal);
+        // Madde 18: dönen loading ikonu — Material.Icons.Avalonia'nın yerleşik
+        // Animation="Spin" özelliği kullanılır; özel global Rotating stili yoktur
+        // (o stil App.axaml'de başlangıçta yükleniyordu ve açılışı kırabilirdi).
+        Assert.Contains("Animation=\"Spin\"", view, StringComparison.Ordinal);
+        Assert.DoesNotContain("Classes=\"Rotating\"", view, StringComparison.Ordinal);
 
         // Madde 19: sonuç yalnız renkle değil, ikonlarla da ifade ediliyor.
         Assert.Contains("Kind=\"CheckCircle\"", view, StringComparison.Ordinal);
@@ -75,12 +81,16 @@ public class PromoCardVisibilityTests
     }
 
     [Fact]
-    public void MobileApp_HasRotatingIconAnimationStyle()
+    public void MobileApp_DoesNotContainGlobalRotatingStyle()
     {
+        // App.axaml başlangıçta (splash öncesi) yüklenir; buraya giren global
+        // animasyon stili runtime XAML çözümlemesini kırabilir (uygulama açılmaz).
+        // Stil kaldırıldı — dosyada MaterialIcon.Rotating / RotateTransform.Angle
+        // animasyonu OLMAMALI. Dönen ikon yerleşik Animation="Spin" kullanır.
         var app = ReadProjectFile("Noctra.Mobile", "App.axaml");
 
-        Assert.Contains("materialIcons|MaterialIcon.Rotating", app, StringComparison.Ordinal);
-        Assert.Contains("RotateTransform.Angle", app, StringComparison.Ordinal);
+        Assert.DoesNotContain("materialIcons|MaterialIcon.Rotating", app, StringComparison.Ordinal);
+        Assert.DoesNotContain("RotateTransform.Angle", app, StringComparison.Ordinal);
     }
 
     [Fact]
