@@ -98,6 +98,23 @@ namespace Noctra.Tests
             Assert.Null(service.PremiumExpiresAtUtc);
         }
 
+        [Fact]
+        public async Task StoreEntitlement_LifetimePackage_RejectsPromoCode()
+        {
+            // Lifetime her zaman kazanır; eklenen süre hiç kullanılmaz, bu yüzden
+            // kod reddedilmeli — config URL'ine bile gerek kalmadan (guard erken).
+            var store = CreateStoreMock(new StoreEntitlement { HasLifetimePremium = true });
+
+            var service = CreateService(CreateFreeEditionMock().Object, store: store.Object);
+            await service.RefreshSubscriptionStatusAsync();
+
+            var result = await service.ApplyPromoCodeAsync("PROMO-EXAMPLE-7D");
+
+            Assert.False(result.Success);
+            Assert.Equal(PromoCodeResultKind.Unknown, result.Kind);
+            Assert.Contains("promosyon kodları gerekmez", result.Message);
+        }
+
         // ==========================================
         // Subscription
         // ==========================================

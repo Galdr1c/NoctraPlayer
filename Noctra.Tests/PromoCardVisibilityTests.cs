@@ -27,7 +27,10 @@ public class PromoCardVisibilityTests
         Assert.Contains("IsVisible=\"{Binding CanUsePromoCodes}\"", view, StringComparison.Ordinal);
         Assert.Contains("Text=\"{Binding PromoApplyButtonText}\"", view, StringComparison.Ordinal);
 
-        Assert.Contains("public bool CanUsePromoCodes => !_licenseService.IsEditionLockedPremium;", vm, StringComparison.Ordinal);
+        // Kalıcı Premium'da gizleme: edition-locked VEYA Play lifetime paket.
+        Assert.Contains("public bool CanUsePromoCodes =>", vm, StringComparison.Ordinal);
+        Assert.Contains("!_licenseService.IsEditionLockedPremium", vm, StringComparison.Ordinal);
+        Assert.Contains("!_licenseService.HasLifetimePremium", vm, StringComparison.Ordinal);
         Assert.Contains("_licenseService.IsPremium && _licenseService.PromoPremiumExpiresAtUtc.HasValue", vm, StringComparison.Ordinal);
     }
 
@@ -40,7 +43,10 @@ public class PromoCardVisibilityTests
         Assert.Contains("IsVisible=\"{Binding CanUsePromoCodes}\"", view, StringComparison.Ordinal);
         Assert.Contains("Text=\"{Binding PromoApplyButtonText}\"", view, StringComparison.Ordinal);
 
-        Assert.Contains("public bool CanUsePromoCodes => !_licenseService.IsEditionLockedPremium;", vm, StringComparison.Ordinal);
+        // Kalıcı Premium'da gizleme: edition-locked VEYA Play lifetime paket.
+        Assert.Contains("public bool CanUsePromoCodes =>", vm, StringComparison.Ordinal);
+        Assert.Contains("!_licenseService.IsEditionLockedPremium", vm, StringComparison.Ordinal);
+        Assert.Contains("!_licenseService.HasLifetimePremium", vm, StringComparison.Ordinal);
         Assert.Contains("_licenseService.IsPremium && _licenseService.PromoPremiumExpiresAtUtc.HasValue", vm, StringComparison.Ordinal);
     }
 
@@ -123,9 +129,27 @@ public class PromoCardVisibilityTests
     }
 
     [Fact]
+    public void CanUsePromoCodes_WhenLifetimePremium_ShouldBeFalse()
+    {
+        // Play lifetime paket sahibi: kalıcı Premium, kod girilemez (mobil + masaüstü).
+        var vm = CreateViewModel(lockedPremium: false, hasLifetime: true);
+
+        Assert.False(vm.CanUsePromoCodes);
+    }
+
+    [Fact]
     public void CanUsePromoCodes_WhenFreeEdition_ShouldBeTrue_EvenIfTimedPromoActive()
     {
         var vm = CreateViewModel(lockedPremium: false, isPremium: true, hasExpiry: true);
+
+        Assert.True(vm.CanUsePromoCodes);
+    }
+
+    [Fact]
+    public void CanUsePromoCodes_WhenTimedStoreSubscriptionActive_ShouldBeTrue()
+    {
+        // Süreli (abonelik) Premium: kart kalmalı — sistem süre eklemeyi destekler.
+        var vm = CreateViewModel(lockedPremium: false, isPremium: true);
 
         Assert.True(vm.CanUsePromoCodes);
     }
@@ -262,10 +286,12 @@ public class PromoCardVisibilityTests
         bool isPremium = false,
         bool hasExpiry = false,
         Mock<ILocalizationService>? localization = null,
-        Mock<ILicenseService>? license = null)
+        Mock<ILicenseService>? license = null,
+        bool hasLifetime = false)
     {
         license ??= new Mock<ILicenseService>();
         license.SetupGet(l => l.IsEditionLockedPremium).Returns(lockedPremium);
+        license.SetupGet(l => l.HasLifetimePremium).Returns(hasLifetime);
         license.SetupGet(l => l.IsPremium).Returns(isPremium);
         license.SetupGet(l => l.PromoPremiumExpiresAtUtc)
             .Returns(hasExpiry ? DateTime.UtcNow.AddDays(7) : null);

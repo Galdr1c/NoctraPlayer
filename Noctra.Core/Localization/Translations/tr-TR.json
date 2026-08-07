@@ -964,6 +964,7 @@
   "GlobalSettings.Promo.Success.DaysAddedFormat": "✓ {0} gün Premium eklendi",
   "GlobalSettings.Promo.Success.NewExpiryFormat": "Yeni bitiş tarihi: {0}",
   "GlobalSettings.Promo.Error.PremiumEdition": "Bu paket zaten kalıcı Premium sürüm.",
+  "GlobalSettings.Promo.Error.LifetimePremium": "Kalıcı Premium paket sahibisiniz; promosyon kodları gerekmez.",
   "GlobalSettings.Promo.Error.EmptyCode": "Lütfen promosyon kodunu girin.",
   "GlobalSettings.Promo.Error.InvalidCode": "Promosyon kodu bulunamadı veya geçersiz.",
   "GlobalSettings.Promo.Error.Inactive": "Bu promosyon kodu aktif değil.",

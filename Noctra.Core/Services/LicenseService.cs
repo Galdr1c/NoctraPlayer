@@ -492,6 +492,15 @@ public class LicenseService : ObservableObject, ILicenseService, IDisposable
                 return PromoCodeRedemptionResult.Fail(Localize("GlobalSettings.Promo.Error.PremiumEdition", "Bu paket zaten kalıcı Premium sürüm."), PromoCodeResultKind.Unknown);
             }
 
+            if (_storeEntitlement.HasLifetimePremium)
+            {
+                // Lifetime her zaman kazanır: eklenen süre hiç kullanılmaz, bu
+                // yüzden kod girip "Süre Ekle" görmek kullanıcıyı yanıltır.
+                return PromoCodeRedemptionResult.Fail(
+                    Localize("GlobalSettings.Promo.Error.LifetimePremium", "Kalıcı Premium paket sahibisiniz; promosyon kodları gerekmez."),
+                    PromoCodeResultKind.Unknown);
+            }
+
             var normalizedCode = NormalizePromoCode(promoCode);
             if (string.IsNullOrWhiteSpace(normalizedCode))
             {

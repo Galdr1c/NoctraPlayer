@@ -964,6 +964,7 @@
   "GlobalSettings.Promo.Success.DaysAddedFormat": "✓ {0} jours de Premium ajoutés",
   "GlobalSettings.Promo.Success.NewExpiryFormat": "Nouvelle date d'expiration : {0}",
   "GlobalSettings.Promo.Error.PremiumEdition": "Ce package est déjà l'édition Premium permanente.",
+  "GlobalSettings.Promo.Error.LifetimePremium": "Vous possédez déjà le pack Premium à vie ; les codes promo ne sont pas nécessaires.",
   "GlobalSettings.Promo.Error.EmptyCode": "Veuillez saisir un code promo.",
   "GlobalSettings.Promo.Error.InvalidCode": "Le code promo est introuvable ou non valide.",
   "GlobalSettings.Promo.Error.Inactive": "Ce code promo n'est pas actif.",

@@ -607,10 +607,14 @@ public partial class SettingsViewModel : ObservableObject, IAsyncDisposable
     }
 
     /// <summary>
-    /// Kalıcı Premium edition'da promo kartı gizlenir (kod zaten anlamsız);
-    /// süreli promo Premium aktifse kart kalır çünkü sistem süre eklemeyi destekler.
+    /// Kalıcı Premium'da (edition-locked veya Play lifetime paket) promo kartı
+    /// gizlenir — kod zaten anlamsız (lifetime her zaman kazanır, eklenen süre
+    /// hiç kullanılmaz); süreli promo Premium aktifse kart kalır çünkü sistem
+    /// süre eklemeyi destekler.
     /// </summary>
-    public bool CanUsePromoCodes => !_licenseService.IsEditionLockedPremium;
+    public bool CanUsePromoCodes =>
+        !_licenseService.IsEditionLockedPremium &&
+        !_licenseService.HasLifetimePremium;
 
     /// <summary>
     /// Süreli (promo) Premium aktifken buton "Süre Ekle" der; aksi halde "Kodu Kullan".
