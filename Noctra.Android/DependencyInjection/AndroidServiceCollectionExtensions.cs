@@ -43,7 +43,14 @@ public static class AndroidServiceCollectionExtensions
         services.AddSingleton<GooglePlayUpdateService>();
         services.AddSingleton<IAppUpdateService>(sp => sp.GetRequiredService<GooglePlayUpdateService>());
         services.AddSingleton<IPlatformActionService, AndroidPlatformActionService>();
-        services.AddSingleton<IStorePurchaseService, AndroidStorePurchaseService>();
+        services.AddSingleton<IBillingVerificationClient>(serviceProvider =>
+            new HttpBillingVerificationClient(serviceProvider.GetRequiredService<HttpClient>()));
+        services.AddSingleton<IStorePurchaseService>(serviceProvider =>
+            new AndroidStorePurchaseService(
+                serviceProvider.GetRequiredService<Context>(),
+                serviceProvider.GetRequiredService<AndroidActivityProvider>(),
+                serviceProvider.GetRequiredService<IBillingVerificationClient>(),
+                serviceProvider.GetRequiredService<ISettingsService>()));
         services.AddSingleton<IStorageInfoService>(serviceProvider =>
             new AndroidStorageInfoService(serviceProvider.GetRequiredService<Context>()));
         services.AddSingleton<IThemeService, AndroidThemeService>();

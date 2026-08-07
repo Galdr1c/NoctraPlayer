@@ -2,7 +2,6 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Android.App;
@@ -11,6 +10,7 @@ using Android.Content;
 using Android.Runtime;
 using Noctra.Models;
 using Noctra.Services;
+using Noctra.Services.Interfaces;
 
 namespace Noctra.Android.Services;
 
@@ -20,7 +20,11 @@ namespace Noctra.Android.Services;
 ///
 /// BillingClient yalnızca ana iş parçacığında oluşturulabilir ve kullanılabilir;
 /// bu yüzden tüm çağrılar mevcut Activity üzerinden RunOnUiThread ile yapılır.
-/// Haklar her açılışta ve satın alma güncellenince Play'den yeniden doğrulanır.
+/// Haklar her açılışta ve satın alma güncellenince doğrulama BACKEND'inde
+/// (Noctra.Billing.Api) yeniden doğrulanır — gerçek bitiş Play Developer
+/// API'den (subscriptionsv2.get → lineItems.expiryTime) gelir; burada süre
+/// hesaplanmaz. Doğrulama hizmetine ulaşılamazsa LicenseService son bilinen
+/// doğrulanmış önbelleği kullanır.
 /// </summary>
 public sealed class AndroidStorePurchaseService : IStorePurchaseService, IDisposable
 {
@@ -28,16 +32,24 @@ public sealed class AndroidStorePurchaseService : IStorePurchaseService, IDispos
 
     private readonly Context _context;
     private readonly AndroidActivityProvider _activityProvider;
+    private readonly IBillingVerificationClient? _billingVerifier;
+    private readonly ISettingsService? _settingsService;
     private readonly SemaphoreSlim _billingGate = new(1, 1);
     private readonly ConcurrentDictionary<string, string> _billingPeriodCache = new();
 
     private BillingClient? _billingClient;
     private bool _disposed;
 
-    public AndroidStorePurchaseService(Context context, AndroidActivityProvider activityProvider)
+    public AndroidStorePurchaseService(
+        Context context,
+        AndroidActivityProvider activityProvider,
+        IBillingVerificationClient? billingVerifier = null,
+        ISettingsService? settingsService = null)
     {
         ArgumentNullException.ThrowIfNull(context);
         _activityProvider = activityProvider ?? throw new ArgumentNullException(nameof(activityProvider));
+        _billingVerifier = billingVerifier;
+        _settingsService = settingsService;
         _context = context.ApplicationContext ?? context;
     }
 
@@ -158,29 +170,126 @@ public sealed class AndroidStorePurchaseService : IStorePurchaseService, IDispos
         var subscriptionPurchases = await QueryPurchasesAsync(client, BillingClient.ProductType.Subs, cancellationToken)
             .ConfigureAwait(false);
 
-        var hasLifetime = inappPurchases.Any(p =>
-            p.PurchaseState == PurchaseState.Purchased &&
-            p.Products.Contains(StoreProducts.LifetimePurchase, StringComparer.OrdinalIgnoreCase));
+        // Play sorgusu başarısız olduysa veya doğrulama istemcisi yoksa hak
+        // doğrulanamadı (IsVerified=false) — LicenseService son bilinen
+        // doğrulanmış önbelleği kullanır (fail-safe; hak asla erken düşmez).
+        if (inappPurchases is null || subscriptionPurchases is null || _billingVerifier is null)
+        {
+            return new StoreEntitlement { IsVerified = false };
+        }
 
+        foreach (var purchase in inappPurchases.Concat(subscriptionPurchases))
+        {
+            AcknowledgeIfNeeded(purchase);
+        }
+
+        var installationId = await EnsureInstallationIdAsync();
+        var packageName = _context.PackageName ?? string.Empty;
+
+        var hasLifetime = false;
         DateTime? subscriptionEnd = null;
+        var verifiedAny = false;
+
+        // Her satın alma token'ı backend'de doğrulanır. Süre burada ASLA
+        // hesaplanmaz — gerçek bitiş Play'den (subscriptionsv2.get →
+        // lineItems.expiryTime) backend üzerinden gelir. Doğrulanamayan token
+        // (ağ hatası) sonuca katkı vermez; yalnızca hiçbir token doğrulanamazsa
+        // IsVerified=false döner.
+        foreach (var purchase in inappPurchases.Where(p =>
+                     p.PurchaseState == PurchaseState.Purchased &&
+                     p.Products.Contains(StoreProducts.LifetimePurchase, StringComparer.OrdinalIgnoreCase)))
+        {
+            var verified = await VerifyTokenAsync(purchase, packageName, installationId, cancellationToken);
+            if (verified is null)
+            {
+                continue;
+            }
+
+            verifiedAny = true;
+            if (verified.IsActive && string.Equals(verified.EntitlementType, "Lifetime", StringComparison.OrdinalIgnoreCase))
+            {
+                hasLifetime = true;
+            }
+        }
+
         foreach (var purchase in subscriptionPurchases.Where(p =>
                      p.PurchaseState == PurchaseState.Purchased &&
                      p.Products.Contains(StoreProducts.MonthlySubscription, StringComparer.OrdinalIgnoreCase)))
         {
-            AcknowledgeIfNeeded(purchase);
-
-            var end = ComputeSubscriptionEnd(purchase);
-            if (subscriptionEnd is null || end > subscriptionEnd)
+            var verified = await VerifyTokenAsync(purchase, packageName, installationId, cancellationToken);
+            if (verified is null)
             {
-                subscriptionEnd = end;
+                continue;
+            }
+
+            verifiedAny = true;
+            if (verified.IsActive && verified.ExpiresAtUtc.HasValue &&
+                (subscriptionEnd is null || verified.ExpiresAtUtc.Value > subscriptionEnd.Value))
+            {
+                subscriptionEnd = verified.ExpiresAtUtc;
             }
         }
 
         return new StoreEntitlement
         {
             HasLifetimePremium = hasLifetime,
-            SubscriptionExpiresAtUtc = subscriptionEnd
+            SubscriptionExpiresAtUtc = subscriptionEnd,
+            IsVerified = verifiedAny
         };
+    }
+
+    private async Task<BillingVerifiedEntitlement?> VerifyTokenAsync(
+        Purchase purchase,
+        string packageName,
+        string installationId,
+        CancellationToken cancellationToken)
+    {
+        var productId = purchase.Products.FirstOrDefault() ?? string.Empty;
+        if (_billingVerifier is null ||
+            string.IsNullOrWhiteSpace(productId) ||
+            string.IsNullOrWhiteSpace(purchase.PurchaseToken))
+        {
+            return null;
+        }
+
+        return await _billingVerifier.VerifyAsync(new BillingVerifyRequest
+        {
+            InstallationId = installationId,
+            PurchaseToken = purchase.PurchaseToken,
+            ProductId = productId,
+            PackageName = packageName
+        }, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Anonim kurulum kimliği: ilk kullanımda üretilip global ayarlara yazılır.
+    /// Purchase token'ları backend doğrulamasına bu kimlikle bağlanır.
+    /// </summary>
+    private async Task<string> EnsureInstallationIdAsync()
+    {
+        if (_settingsService is null)
+        {
+            return Guid.NewGuid().ToString("N");
+        }
+
+        var existing = _settingsService.Settings.InstallationId;
+        if (!string.IsNullOrWhiteSpace(existing))
+        {
+            return existing;
+        }
+
+        var id = Guid.NewGuid().ToString("N");
+        _settingsService.Settings.InstallationId = id;
+        try
+        {
+            await _settingsService.SaveAsync();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[StorePurchase] Failed to persist installation id: {ex.Message}");
+        }
+
+        return id;
     }
 
     public async Task RestorePurchasesAsync(CancellationToken cancellationToken = default)
@@ -351,7 +460,7 @@ public sealed class AndroidStorePurchaseService : IStorePurchaseService, IDispos
         return null;
     }
 
-    private async Task<IList<Purchase>> QueryPurchasesAsync(
+    private async Task<IList<Purchase>?> QueryPurchasesAsync(
         BillingClient client,
         string productType,
         CancellationToken cancellationToken)
@@ -364,9 +473,12 @@ public sealed class AndroidStorePurchaseService : IStorePurchaseService, IDispos
             () => client.QueryPurchasesAsync(@params),
             cancellationToken).ConfigureAwait(false);
 
+        // Başarısız sorgu boş liste gibi davranmamalı — yoksa hak yanlışlıkla
+        // "satın alma yok" sayılıp düşürülebilir. Null, çağıranın önbelleğe
+        // dönmesini sağlar.
         return result.Result.ResponseCode == BillingResponseCode.Ok
             ? result.Purchases
-            : new List<Purchase>();
+            : null;
     }
 
     /// <summary>
@@ -580,45 +692,6 @@ public sealed class AndroidStorePurchaseService : IStorePurchaseService, IDispos
                 System.Diagnostics.Debug.WriteLine($"[StorePurchase] Acknowledge failed: {ex.Message}");
             }
         });
-    }
-
-    private DateTime ComputeSubscriptionEnd(Purchase purchase)
-    {
-        var purchaseTime = DateTimeOffset.FromUnixTimeMilliseconds(purchase.PurchaseTime).UtcDateTime;
-        var period = _billingPeriodCache.TryGetValue(StoreProducts.MonthlySubscription, out var cached)
-            ? cached
-            : "P1M";
-        var computedEnd = AddBillingPeriod(purchaseTime, period);
-
-        // Otomatik yenilenen abonelikte Play, purchaseTime'i ilk satın alma anında
-        // tutar; yenilenen süreler client tarafında görünmez. Bu yüzden yenilenen
-        // abonelik için hak en az bir dönem daha ileriye taşınır — Play her
-        // sorguda güncel durumu döndürdüğü için değer açılışlarda tazelenir.
-        if (purchase.IsAutoRenewing)
-        {
-            var atLeastOneMorePeriod = AddBillingPeriod(DateTime.UtcNow, period);
-            return computedEnd > atLeastOneMorePeriod ? computedEnd : atLeastOneMorePeriod;
-        }
-
-        return computedEnd;
-    }
-
-    private static DateTime AddBillingPeriod(DateTime start, string? period)
-    {
-        if (!string.IsNullOrWhiteSpace(period))
-        {
-            var match = Regex.Match(period, "^P(?:(\\d+)Y)?(?:(\\d+)M)?(?:(\\d+)W)?(?:(\\d+)D)?$");
-            if (match.Success)
-            {
-                var years = int.TryParse(match.Groups[1].Value, out var y) ? y : 0;
-                var months = int.TryParse(match.Groups[2].Value, out var m) ? m : 0;
-                var weeks = int.TryParse(match.Groups[3].Value, out var w) ? w : 0;
-                var days = int.TryParse(match.Groups[4].Value, out var d) ? d : 0;
-                return start.AddYears(years).AddMonths(months).AddDays((weeks * 7) + days);
-            }
-        }
-
-        return start.AddMonths(1);
     }
 
     // ==========================================

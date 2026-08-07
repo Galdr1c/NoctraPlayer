@@ -42,9 +42,19 @@ public sealed class StoreEntitlement
     /// <summary>Tek seferlik kalıcı paket satın alındıysa true.</summary>
     public bool HasLifetimePremium { get; init; }
 
-    /// <summary>Abonelik bitiş zamanı (UTC). Otomatik yenilenen aboneliklerde
-    /// tahmini değerdir; uygulama her açılışta Play'den yeniden doğrulanır.</summary>
+    /// <summary>
+    /// Abonelik bitiş zamanı (UTC). Yalnızca backend doğrulamasından gelir
+    /// (subscriptionsv2.get → lineItems.expiryTime) — client tarafında süre
+    /// asla hesaplanmaz/uzatılmaz.
+    /// </summary>
     public DateTime? SubscriptionExpiresAtUtc { get; init; }
+
+    /// <summary>
+    /// Bu turda haklar backend doğrulamasından geçti mi? False, doğrulama
+    /// hizmetine ulaşılamadığı anlamına gelir (ağ/sunucu hatası) — çağıran
+    /// son bilinen doğrulanmış değeri (önbellek) kullanmalıdır.
+    /// </summary>
+    public bool IsVerified { get; init; } = true;
 
     public bool HasActivePremium =>
         HasLifetimePremium ||

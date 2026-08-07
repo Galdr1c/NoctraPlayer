@@ -21,6 +21,8 @@
 
   <ItemGroup>
     <AssemblyMetadata Include="Noctra.PromoEndpoint" Value="$(NOCTRA_PROMO_CODES_URL)" Condition="'$(NOCTRA_PROMO_CODES_URL)' != ''" />
+    <AssemblyMetadata Include="Noctra.BillingVerifyUrl" Value="$(NOCTRA_BILLING_VERIFY_URL)" Condition="'$(NOCTRA_BILLING_VERIFY_URL)' != ''" />
+    <AssemblyMetadata Include="Noctra.BillingApiKey" Value="$(NOCTRA_BILLING_API_KEY)" Condition="'$(NOCTRA_BILLING_API_KEY)' != ''" />
   </ItemGroup>
 
   <Target Name="LoadPromoEndpointFromDotEnv" BeforeTargets="GetAssemblyAttributes" Condition="'$(Configuration)' == 'Release' and '$(NOCTRA_PROMO_CODES_URL)' == '' and Exists('$(MSBuildThisFileDirectory)..\.env')">
@@ -32,6 +34,24 @@
                          Condition="$([System.String]::Copy('%(_PromoEnvLine.Identity)').StartsWith('NOCTRA_PROMO_CODES_URL='))">
         <_Parameter1>Noctra.PromoEndpoint</_Parameter1>
         <_Parameter2>$([System.String]::Copy('%(_PromoEnvLine.Identity)').Remove(0, 23).Trim())</_Parameter2>
+      </AssemblyAttribute>
+    </ItemGroup>
+  </Target>
+
+  <Target Name="LoadBillingEndpointFromDotEnv" BeforeTargets="GetAssemblyAttributes" Condition="'$(Configuration)' == 'Release' and '$(NOCTRA_BILLING_VERIFY_URL)' == '' and Exists('$(MSBuildThisFileDirectory)..\.env')">
+    <ReadLinesFromFile File="$(MSBuildThisFileDirectory)..\.env">
+      <Output TaskParameter="Lines" ItemName="_BillingEnvLine" />
+    </ReadLinesFromFile>
+    <ItemGroup>
+      <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute"
+                         Condition="$([System.String]::Copy('%(_BillingEnvLine.Identity)').StartsWith('NOCTRA_BILLING_VERIFY_URL='))">
+        <_Parameter1>Noctra.BillingVerifyUrl</_Parameter1>
+        <_Parameter2>$([System.String]::Copy('%(_BillingEnvLine.Identity)').Remove(0, 24).Trim())</_Parameter2>
+      </AssemblyAttribute>
+      <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute"
+                         Condition="$([System.String]::Copy('%(_BillingEnvLine.Identity)').StartsWith('NOCTRA_BILLING_API_KEY='))">
+        <_Parameter1>Noctra.BillingApiKey</_Parameter1>
+        <_Parameter2>$([System.String]::Copy('%(_BillingEnvLine.Identity)').Remove(0, 22).Trim())</_Parameter2>
       </AssemblyAttribute>
     </ItemGroup>
   </Target>

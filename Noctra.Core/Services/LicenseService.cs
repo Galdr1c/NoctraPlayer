@@ -16,41 +16,7 @@ public class LicenseService : ObservableObject, ILicenseService, IDisposable
 {
     static LicenseService()
     {
-        LoadDotEnv();
-    }
-
-    private static void LoadDotEnv()
-    {
-        try
-        {
-            var root = AppContext.BaseDirectory;
-            while (!string.IsNullOrEmpty(root) && !File.Exists(Path.Combine(root, ".env")) && !File.Exists(Path.Combine(root, "Noctra.sln")))
-            {
-                root = Path.GetDirectoryName(root);
-            }
-
-            var envPath = Path.Combine(root ?? string.Empty, ".env");
-            if (File.Exists(envPath))
-            {
-                foreach (var line in File.ReadAllLines(envPath))
-                {
-                    var parts = line.Split('=', 2, StringSplitOptions.RemoveEmptyEntries);
-                    if (parts.Length == 2)
-                    {
-                        var key = parts[0].Trim();
-                        var value = parts[1].Trim();
-                        if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable(key)))
-                        {
-                            Environment.SetEnvironmentVariable(key, value);
-                        }
-                    }
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"Failed to load .env file: {ex.Message}");
-        }
+        EnvFileLoader.Load();
     }
 
     private SubscriptionInfo _currentSubscription = new();
@@ -250,12 +216,82 @@ public class LicenseService : ObservableObject, ILicenseService, IDisposable
         try
         {
             var entitlement = await _storePurchaseService.GetEntitlementAsync();
-            _storeEntitlement = entitlement;
+            if (entitlement.IsVerified)
+            {
+                // Backend doğrulaması geçti: hem kullan hem önbelleğe yaz.
+                _storeEntitlement = entitlement;
+                await PersistStoreEntitlementCacheAsync(entitlement);
+            }
+            else if (TryReadStoreEntitlementCache(out var cached))
+            {
+                // Doğrulama hizmetine ulaşılamadı (ağ/sunucu): fail-safe olarak
+                // son bilinen doğrulanmış hak kullanılır — hak asla düşürülmez.
+                _storeEntitlement = cached;
+            }
+            else
+            {
+                _storeEntitlement = StoreEntitlement.None;
+            }
+
             SyncSubscriptionFromSettings(notify: true);
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[LicenseService] Store entitlement refresh failed: {ex}");
+        }
+    }
+
+    /// <summary>
+    /// Son doğrulanmış hakkı ayarlara önbellekler — doğrulama hizmeti
+    /// çevrimdışıyken fail-safe değer olarak kullanılır. Best-effort: kayıt
+    /// hatası hakkın bellekte kullanılmasını engellemez.
+    /// </summary>
+    private async Task PersistStoreEntitlementCacheAsync(StoreEntitlement entitlement)
+    {
+        try
+        {
+            var json = JsonSerializer.Serialize(entitlement);
+            if (!string.Equals(
+                    _settingsService.Settings.StoreVerifiedEntitlementJson,
+                    json,
+                    StringComparison.Ordinal))
+            {
+                _settingsService.Settings.StoreVerifiedEntitlementJson = json;
+                await _settingsService.SaveAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine(
+                $"[LicenseService] Failed to persist store entitlement cache: {ex.Message}");
+        }
+    }
+
+    private bool TryReadStoreEntitlementCache(out StoreEntitlement entitlement)
+    {
+        entitlement = StoreEntitlement.None;
+        var json = _settingsService.Settings.StoreVerifiedEntitlementJson;
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return false;
+        }
+
+        try
+        {
+            var parsed = JsonSerializer.Deserialize<StoreEntitlement>(json);
+            if (parsed is null)
+            {
+                return false;
+            }
+
+            entitlement = parsed;
+            return true;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine(
+                $"[LicenseService] Failed to read store entitlement cache: {ex.Message}");
+            return false;
         }
     }
 

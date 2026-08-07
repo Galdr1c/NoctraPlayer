@@ -138,6 +138,8 @@ public class SettingsService : ISettingsService
         target.AutoSelectLastProfile = source.AutoSelectLastProfile;
         target.PromoCodeConfigUrl = source.PromoCodeConfigUrl;
         target.PromoGrant = source.PromoGrant;
+        target.InstallationId = source.InstallationId;
+        target.StoreVerifiedEntitlementJson = source.StoreVerifiedEntitlementJson;
         target.LegalConsentAccepted = source.LegalConsentAccepted;
         target.LegalConsentVersion = source.LegalConsentVersion;
         target.LegalConsentAcceptedAtUtc = source.LegalConsentAcceptedAtUtc;
@@ -442,6 +444,8 @@ public class SettingsService : ISettingsService
             copy.ActivePromoCode = null;
             copy.PromoPremiumExpiresAtUtc = null;
             copy.RedeemedPromoCodes.Clear();
+            copy.InstallationId = null;
+            copy.StoreVerifiedEntitlementJson = null;
             copy.LegalConsentAccepted = false;
             copy.LegalConsentVersion = null;
             copy.LegalConsentAcceptedAtUtc = null;
@@ -505,6 +509,8 @@ public class SettingsService : ISettingsService
                 "activePromoCode",
                 "promoPremiumExpiresAtUtc",
                 "redeemedPromoCodes",
+                "installationId",
+                "storeVerifiedEntitlementJson",
                 "legalConsentAccepted",
                 "legalConsentVersion",
                 "legalConsentAcceptedAtUtc",
@@ -599,6 +605,8 @@ public class SettingsService : ISettingsService
 
             PromoGrant = Settings.PromoGrant,
             PromoCodeConfigUrl = Settings.PromoCodeConfigUrl,
+            InstallationId = Settings.InstallationId,
+            StoreVerifiedEntitlementJson = Settings.StoreVerifiedEntitlementJson,
 
             LegalConsentAccepted = Settings.LegalConsentAccepted,
             LegalConsentVersion = Settings.LegalConsentVersion,
