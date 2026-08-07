@@ -9,7 +9,6 @@ public partial class PinEntryViewModel : ObservableObject, IDisposable
     private readonly IProfileService _profileService;
     private readonly IDispatcherService _dispatcherService;
     private readonly int _profileId;
-    private readonly string _pinVerifier;
     private readonly ILocalizationService _localizationService;
     private readonly CancellationTokenSource _lockoutCts = new();
     private bool _disposed;
@@ -106,7 +105,6 @@ public partial class PinEntryViewModel : ObservableObject, IDisposable
         IProfileService profileService,
         IDispatcherService dispatcherService,
         int profileId,
-        string pinVerifier,
         string profileName,
         string profileAvatar,
         string purpose,
@@ -117,7 +115,6 @@ public partial class PinEntryViewModel : ObservableObject, IDisposable
         _profileService = profileService;
         _dispatcherService = dispatcherService;
         _profileId = profileId;
-        _pinVerifier = pinVerifier;
         ProfileName = profileName;
         ProfileAvatar = profileAvatar;
         Purpose = purpose;
@@ -170,10 +167,11 @@ public partial class PinEntryViewModel : ObservableObject, IDisposable
         IsVerifying = true;
         try
         {
+            // Verifier servis tarafından veritabanından okunur (profile.PinHash) —
+            // VM doğrulama sonucunu kendi verifier'ıyla etkileyemez.
             var result = await _profileService.VerifyAttemptAsync(
                 _profileId,
-                EnteredPin,
-                _pinVerifier);
+                EnteredPin);
 
             if (_disposed) return;
 

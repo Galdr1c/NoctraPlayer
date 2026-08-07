@@ -63,9 +63,15 @@ public interface IProfileService
     /// yapar. Servis profil bazında serileştirir (per-profile semaphore); art arda
     /// veya eşzamanlı denemeler veritabanındaki sayacı kaybettirmez (race yok).
     ///
+    /// Verifier çağırandan alınmaz — doğrulama yetkisi servistedir: güncel
+    /// verifier (profile.PinHash) doğrudan veritabanından okunur. Böylece eski
+    /// bir PIN ekranı (değiştirilmiş PIN'li) veya kendi verifier'ını üreten bir
+    /// çağıran doğrulama sonucunu etkileyemez.
+    ///
     /// - Doğru PIN: sayaç sıfırlanır, kilit temizlenir.
     /// - Yanlış PIN: sayaç artırılır; eşiğe ulaşılırsa kalıcı kilit yazılır.
     /// - Profil zaten kilitliyse doğrulamaya girilmez, güncel kilit durumu döner.
+    /// - PIN'siz (boş PinHash) profil: sayaç kirletilmeden reddedilir.
     ///
     /// Çağıran (PinEntryViewModel) keypad'i bu çağrı süresince devre dışı
     /// bırakmalıdır — böylece her deneme kalıcı state'e işlenmeden bir sonraki
@@ -73,8 +79,7 @@ public interface IProfileService
     /// </summary>
     Task<ProfilePinAttemptResult> VerifyAttemptAsync(
         int profileId,
-        string pin,
-        string verifier);
+        string pin);
 
     /// <summary>
     /// Art arda başarısız PIN denemesini kaydeder; eşiğe ulaşıldığında

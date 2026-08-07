@@ -583,7 +583,6 @@ namespace Noctra.Tests
                 new Mock<IProfileService>().Object,
                 new Mock<IDispatcherService>().Object,
                 1, // profileId
-                _pinService.CreateVerifier("1234"),
                 "Test",
                 string.Empty,
                 "Login",
@@ -616,7 +615,6 @@ namespace Noctra.Tests
                 new Mock<IProfileService>().Object,
                 new Mock<IDispatcherService>().Object,
                 1, // profileId
-                _pinService.CreateVerifier("1234"),
                 "Test",
                 string.Empty,
                 "Login",
@@ -655,7 +653,6 @@ namespace Noctra.Tests
                 new Mock<IProfileService>().Object,
                 new Mock<IDispatcherService>().Object,
                 1, // profileId
-                _pinService.CreateVerifier("1234"),
                 "Test",
                 string.Empty,
                 "Login",
@@ -688,7 +685,6 @@ namespace Noctra.Tests
                 new Mock<IProfileService>().Object,
                 dispatcher.Object,
                 1, // profileId
-                _pinService.CreateVerifier("1234"),
                 "Test",
                 string.Empty,
                 "Login",
@@ -722,7 +718,6 @@ namespace Noctra.Tests
                 new Mock<IProfileService>().Object,
                 dispatcher.Object,
                 1, // profileId
-                _pinService.CreateVerifier("1234"),
                 "Test",
                 string.Empty,
                 "Login",
@@ -766,7 +761,6 @@ namespace Noctra.Tests
                 service,
                 new Mock<IDispatcherService>().Object,
                 profile.Id,
-                verifier,
                 "Test",
                 string.Empty,
                 "Login",
@@ -805,14 +799,13 @@ namespace Noctra.Tests
             // Arrange — servis doğru PIN için atomik başarı döndürür (sayaç sıfırlanır)
             var profileService = new Mock<IProfileService>();
             profileService
-                .Setup(s => s.VerifyAttemptAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>()))
+                .Setup(s => s.VerifyAttemptAsync(It.IsAny<int>(), It.IsAny<string>()))
                 .ReturnsAsync(new ProfilePinAttemptResult(true, new PinVerificationState(0, null, false, null)));
 
             var vm = new PinEntryViewModel(
                 profileService.Object,
                 new Mock<IDispatcherService>().Object,
                 1, // profileId
-                _pinService.CreateVerifier("1234"),
                 "Test",
                 string.Empty,
                 "Login",
@@ -853,7 +846,6 @@ namespace Noctra.Tests
                 service,
                 new Mock<IDispatcherService>().Object,
                 profile.Id,
-                legacyHashFor1234,
                 "Test",
                 string.Empty,
                 "Login",
@@ -1271,8 +1263,9 @@ namespace Noctra.Tests
             var service = new ProfileService(_contextFactory, _mockDownloadService.Object, _mockLicenseService.Object);
 
             // Act — hepsi aynı anda başlar; servis profil bazında serileştirir.
+            // Verifier çağırandan geçirilmez; servis PinHash'i DB'den okur.
             var tasks = Enumerable.Range(0, 5)
-                .Select(_ => service.VerifyAttemptAsync(profile.Id, "9999", verifier))
+                .Select(_ => service.VerifyAttemptAsync(profile.Id, "9999"))
                 .ToArray();
             var results = await Task.WhenAll(tasks);
 
@@ -1297,11 +1290,11 @@ namespace Noctra.Tests
 
             for (var i = 0; i < 5; i++)
             {
-                await service.VerifyAttemptAsync(profile.Id, "9999", verifier);
+                await service.VerifyAttemptAsync(profile.Id, "9999");
             }
 
             // Act — kilit sırasında DOĞRU PIN bile kabul edilmez; sayaç sıfırlanmaz
-            var result = await service.VerifyAttemptAsync(profile.Id, "1234", verifier);
+            var result = await service.VerifyAttemptAsync(profile.Id, "1234");
 
             // Assert — doğrulama reddedilir, kilit sürer
             Assert.False(result.IsValid);

@@ -109,11 +109,11 @@ public partial class ProfilesWindow : Window
         // yapılır (VerifyAttemptAsync) — ViewModel keypad'i doğrulama boyunca
         // kilitler, bu pencere ayrıca persist etmez. Art arda hatalı PIN'ler
         // veritabanındaki sayacı kaybettiremez, gecikmiş yazma kilidi bozamaz.
+        // Verifier çağırandan geçirilmez; servis güncel PinHash'i DB'den okur.
         var pinVm = new PinEntryViewModel(
             _profileService,
             _dispatcherService,
             profile.Id,
-            profile.PinHash,
             profile.Name,
             profile.Avatar,
             _localizationService.GetString(purposeKey),

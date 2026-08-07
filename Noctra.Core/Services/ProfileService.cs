@@ -521,8 +521,7 @@ public class ProfileService : IProfileService
     /// <inheritdoc />
     public async Task<ProfilePinAttemptResult> VerifyAttemptAsync(
         int profileId,
-        string pin,
-        string verifier)
+        string pin)
     {
         var semaphore = GetProfilePinSemaphore(profileId);
         await semaphore.WaitAsync();
@@ -554,17 +553,23 @@ public class ProfileService : IProfileService
                     ToPinVerificationState(profile, now));
             }
 
-            // Savunma: PIN'siz (boş verifier) profil için sayaç kirletilmez —
+            // Doğrulama yetkisi servistedir: güncel verifier çağırandan değil,
+            // veritabanındaki profile.PinHash'ten okunur. Böylece PIN ekranı
+            // açıkken PIN değiştirilse bile eski verifier doğrulamayı etkilemez;
+            // iç çağıranlar kendi verifier'ını üreterek sonucu değiştiremez.
+            var storedVerifier = profile.PinHash;
+
+            // Savunma: PIN'siz (boş PinHash) profil için sayaç kirletilmez —
             // UI bu profillerde kapıyı hiç açmaz; servis yalnızca bağımsız
             // olarak da güvenli davranır (sayacı artırmadan reddeder).
-            if (string.IsNullOrWhiteSpace(verifier))
+            if (string.IsNullOrWhiteSpace(storedVerifier))
             {
                 return new ProfilePinAttemptResult(
                     false,
                     ToPinVerificationState(profile, now));
             }
 
-            if (_pinService.Verify(pin, verifier))
+            if (_pinService.Verify(pin, storedVerifier))
             {
                 profile.FailedPinAttempts = 0;
                 profile.PinLockedUntilUtc = null;

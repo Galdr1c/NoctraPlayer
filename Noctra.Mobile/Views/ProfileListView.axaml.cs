@@ -213,12 +213,12 @@ public partial class ProfileListView : UserControl
         // Doğrulama + sayaç/kilit güncellemesi tek atomik servis çağrısında
         // yapılır (VerifyAttemptAsync) — ViewModel keypad'i doğrulama boyunca
         // kilitler, UI ayrıca persist etmez. Böylece art arda girilen hatalı
-        // PIN'ler veritabanındaki sayacı kaybettiremez.
+        // PIN'ler veritabanındaki sayacı kaybettiremez. Verifier çağırandan
+        // geçirilmez; servis güncel PinHash'i DB'den okur.
         var pinViewModel = new PinEntryViewModel(
             app.Services.GetRequiredService<IProfileService>(),
             app.Services.GetRequiredService<IDispatcherService>(),
             profile.Id,
-            profile.PinHash,
             profile.Name,
             profile.Avatar,
             localizationService.GetString(purposeKey),
