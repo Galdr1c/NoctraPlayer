@@ -1049,10 +1049,14 @@
   "Upsell.Plan.Monthly.Subtitle": "Dilediğin zaman iptal et",
   "Upsell.Plan.Lifetime.Title": "Kalıcı",
   "Upsell.Plan.Lifetime.Subtitle": "Tek seferlik ödeme",
+  "Upsell.Plan.Lifetime.ConfirmTitle": "Ömür Boyu Satın Alma",
+  "Upsell.Plan.Lifetime.ConfirmMessage": "Aylık aboneliğiniz etkin. Ömür boyu paketi satın alırsanız aylık aboneliğiniz Google Play’de otomatik iptal olmaz; yenilenmeye devam eder. Devam etmek istiyor musunuz?",
+  "Upsell.Plan.Lifetime.CancelMonthlyReminder": "Ömür boyu Premium’unuz aktif. Aylık aboneliğiniz Google Play’de yenilenmeye devam ediyor — iptal etmek için abonelik yönetimini açın.",
   "Upsell.Plan.Unavailable": "Ürünler yüklenemedi. Lütfen daha sonra tekrar deneyin.",
   "Upsell.Error.PurchaseFailed": "Satın alma başlatılamadı. Lütfen tekrar deneyin.",
   "Upsell.Plan.AlreadyOwned": "Bu pakete zaten sahipsiniz.",
   "Upsell.Action.Retry": "Tekrar Dene",
+  "Upsell.Action.ManageSubscription": "Aboneliği Yönet",
   "Settings.Store.PurchasePending": "Ödeme bekleniyor. Ödeme onaylandığında Premium'unuz otomatik olarak etkinleşecek.",
   "Upsell.Plan.UnavailableKind": "Bu plan şu anda kullanılamıyor. Lütfen daha sonra tekrar deneyin."
 }

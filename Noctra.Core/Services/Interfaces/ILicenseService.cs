@@ -34,6 +34,24 @@ public interface ILicenseService
     /// </summary>
     bool HasPendingStorePurchase => false;
 
+    /// <summary>
+    /// Kalıcı (tek seferlik) Premium paketi sahibi mi? Kalıcı paket sahibine
+    /// aylık satın alma sunulmaz. Mağaza desteği olmayan platformlarda false.
+    /// </summary>
+    bool HasLifetimePremium => false;
+
+    /// <summary>
+    /// Google Play'de AKTİF bir süreli abonelik var mı (kalıcı paketten
+    /// bağımsız)? Kalıcı paket alındıktan sonra aylık abonelik yenilenmeye
+    /// devam edebilir; UI kullanıcıyı aboneliği iptal etmeye yönlendirir.
+    /// </summary>
+    bool HasActiveStoreSubscription => false;
+
+    /// <summary>
+    /// Etkin Premium'un kaynağı (kalıcı paket / abonelik / promosyon / edisyon).
+    /// </summary>
+    PremiumSource CurrentPremiumSource => PremiumSource.None;
+
     Task<PromoCodeRedemptionResult> ApplyPromoCodeAsync(string promoCode) =>
         Task.FromResult(PromoCodeRedemptionResult.Fail("Promosyon kodu bu lisans servisinde desteklenmiyor."));
     void ActivatePremium();

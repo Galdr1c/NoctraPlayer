@@ -172,6 +172,79 @@ namespace Noctra.Tests
         }
 
         // ==========================================
+        // Premium source (kalıcı / abonelik / promosyon ayrımı)
+        // ==========================================
+
+        [Fact]
+        public async Task StoreEntitlement_ActiveSubscription_SourceIsSubscriptionAndNotTrial()
+        {
+            var expires = DateTime.UtcNow.AddDays(20);
+            var store = CreateStoreMock(new StoreEntitlement { SubscriptionExpiresAtUtc = expires });
+
+            var service = CreateService(CreateFreeEditionMock().Object, store: store.Object);
+            await service.RefreshSubscriptionStatusAsync();
+
+            Assert.True(service.IsPremium);
+            Assert.False(service.HasLifetimePremium);
+            Assert.True(service.HasActiveStoreSubscription);
+            Assert.Equal(PremiumSource.GooglePlaySubscription, service.CurrentPremiumSource);
+            // Ücretli aylık abonelik "trial" gibi gösterilmemeli.
+            Assert.False(service.GetCurrentSubscription().IsTrialPeriod);
+        }
+
+        [Fact]
+        public async Task StoreEntitlement_LifetimePackage_SourceIsLifetime()
+        {
+            var store = CreateStoreMock(new StoreEntitlement { HasLifetimePremium = true });
+
+            var service = CreateService(CreateFreeEditionMock().Object, store: store.Object);
+            await service.RefreshSubscriptionStatusAsync();
+
+            Assert.True(service.IsPremium);
+            Assert.True(service.HasLifetimePremium);
+            Assert.False(service.HasActiveStoreSubscription);
+            Assert.Equal(PremiumSource.GooglePlayLifetime, service.CurrentPremiumSource);
+        }
+
+        [Fact]
+        public async Task StoreEntitlement_LifetimePlusActiveSubscription_BothFlagsActive()
+        {
+            // Kalıcı paket alındıktan sonra aylık abonelik Google Play'de
+            // yenilenmeye devam edebilir — iki hakkın varlığı da raporlanmalı
+            // (upsell bu durumda iptal hatırlatması gösterir).
+            var store = CreateStoreMock(new StoreEntitlement
+            {
+                HasLifetimePremium = true,
+                SubscriptionExpiresAtUtc = DateTime.UtcNow.AddDays(10)
+            });
+
+            var service = CreateService(CreateFreeEditionMock().Object, store: store.Object);
+            await service.RefreshSubscriptionStatusAsync();
+
+            Assert.True(service.IsPremium);
+            Assert.True(service.HasLifetimePremium);
+            Assert.True(service.HasActiveStoreSubscription);
+            Assert.Equal(PremiumSource.GooglePlayLifetime, service.CurrentPremiumSource);
+        }
+
+        [Fact]
+        public async Task StoreEntitlement_PromoOnly_SourceIsPromo()
+        {
+            var settings = new TestSettingsService
+            {
+                PromoPremiumExpiresAtUtc = DateTime.UtcNow.AddDays(7),
+                ActivePromoCode = "PROMO7D"
+            };
+
+            var service = CreateService(CreateFreeEditionMock().Object, settings: settings);
+            await service.RefreshSubscriptionStatusAsync();
+
+            Assert.True(service.IsPremium);
+            Assert.Equal(PremiumSource.Promo, service.CurrentPremiumSource);
+            Assert.False(service.GetCurrentSubscription().IsTrialPeriod);
+        }
+
+        // ==========================================
         // Expiry timer (UI otomatik güncelleme)
         // ==========================================
 

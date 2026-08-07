@@ -9,6 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Noctra.Mobile.Localization;
 using Noctra.Models;
 using Noctra.Services;
+using Noctra.Services.Interfaces;
 
 namespace Noctra.Mobile.Views;
 
@@ -29,8 +30,10 @@ public partial class MobileUpsellView : UserControl
         IsVisible = true;
         HideStatusMessages();
         RetryPricingButton.IsVisible = false;
+        ManageSubscriptionButton.IsVisible = false;
 
         EnsureLicenseSubscription();
+        UpdatePlanCardVisibility();
 
         _ = RefreshProductPricingAsync();
     }
@@ -92,6 +95,17 @@ public partial class MobileUpsellView : UserControl
 
         if (_licenseService.IsPremium)
         {
+            // Kalıcı paket + aktif aylık abonelik birlikte: aylık abonelik
+            // Google Play'de otomatik iptal olmaz, yenilenmeye devam eder.
+            // Sheet kapanmaz; kullanıcıya iptal hatırlatması + abonelik
+            // yönetimi eylemi gösterilir.
+            if (_licenseService.HasLifetimePremium && _licenseService.HasActiveStoreSubscription)
+            {
+                ShowInfo(LocalizationSource.Instance["Upsell.Plan.Lifetime.CancelMonthlyReminder"]);
+                ManageSubscriptionButton.IsVisible = true;
+                return;
+            }
+
             // Ödeme tamamlandı — sheet kapanır.
             TryClose();
         }
@@ -100,6 +114,17 @@ public partial class MobileUpsellView : UserControl
             // Ödeme onay bekliyor (operatör faturalaması vb.).
             ShowInfo(LocalizationSource.Instance["Settings.Store.PurchasePending"]);
         }
+    }
+
+    /// <summary>
+    /// Kalıcı Premium paketi sahibine aylık satın alma sunulmaz — plan kartları
+    /// gizlenir. (Sheet normalde yalnızca Free kullanıcıya gösterilir; bu
+    /// savunmacı kontrol, doğrulama gecikmesi/önbellek tutarsızlığında yanlış
+    /// kart gösterimini önler.)
+    /// </summary>
+    private void UpdatePlanCardVisibility()
+    {
+        PlanGrid.IsVisible = _licenseService?.HasLifetimePremium != true;
     }
 
     private void Close_Click(object? sender, RoutedEventArgs e)
@@ -191,7 +216,41 @@ public partial class MobileUpsellView : UserControl
 
     private async void LifetimeBuy_Click(object? sender, RoutedEventArgs e)
     {
-        await PurchaseAsync(StoreProductKind.Lifetime);
+        // Aktif aylık abonelik varken kalıcı paket alınırsa abonelik Google
+        // Play'de otomatik iptal olmaz — kullanıcıya açık uyarı gösterilir.
+        if (await ConfirmLifetimeWhileMonthlyActiveAsync())
+        {
+            await PurchaseAsync(StoreProductKind.Lifetime);
+        }
+    }
+
+    /// <summary>
+    /// Aktif aylık abonelik varken kalıcı paket satın alma onayı ister.
+    /// Uygulama aboneliği asla otomatik "iptal edildi" varsaymaz; yalnızca
+    /// kullanıcının Google Play'de iptal etmesi için açık uyarı gösterilir.
+    /// Aylık abonelik yoksa (veya onay servisi yoksa) doğrudan onaylanır.
+    /// </summary>
+    private async Task<bool> ConfirmLifetimeWhileMonthlyActiveAsync()
+    {
+        if (_licenseService?.HasActiveStoreSubscription != true)
+        {
+            return true;
+        }
+
+        if (Application.Current is not App app)
+        {
+            return true;
+        }
+
+        var dialog = app.EnsureServices()?.GetService<IDialogService>();
+        if (dialog is null)
+        {
+            return true;
+        }
+
+        return await dialog.ShowConfirmationAsync(
+            LocalizationSource.Instance["Upsell.Plan.Lifetime.ConfirmTitle"],
+            LocalizationSource.Instance["Upsell.Plan.Lifetime.ConfirmMessage"]);
     }
 
     /// <summary>
@@ -291,6 +350,35 @@ public partial class MobileUpsellView : UserControl
         finally
         {
             SetPurchasing(false);
+        }
+    }
+
+    private async void ManageSubscription_Click(object? sender, RoutedEventArgs e)
+    {
+        // Google Play abonelik yönetimi — aktif aylık plan buradan iptal edilir.
+        const string subscriptionsUrl = "https://play.google.com/store/account/subscriptions";
+
+        try
+        {
+            if (Application.Current is App app)
+            {
+                var platformActions = app.EnsureServices()?.GetService<IPlatformActionService>();
+                if (platformActions is not null)
+                {
+                    await platformActions.OpenUrlAsync(subscriptionsUrl);
+                    return;
+                }
+            }
+
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = subscriptionsUrl,
+                UseShellExecute = true
+            });
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[Upsell] Open subscriptions failed: {ex}");
         }
     }
 

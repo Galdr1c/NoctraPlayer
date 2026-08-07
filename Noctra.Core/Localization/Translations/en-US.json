@@ -1050,10 +1050,14 @@
   "Upsell.Plan.Monthly.Subtitle": "Cancel anytime",
   "Upsell.Plan.Lifetime.Title": "Lifetime",
   "Upsell.Plan.Lifetime.Subtitle": "One-time payment",
+  "Upsell.Plan.Lifetime.ConfirmTitle": "Lifetime Purchase",
+  "Upsell.Plan.Lifetime.ConfirmMessage": "Your monthly subscription is active. Buying the lifetime package will not automatically cancel it — it will continue to renew on Google Play. Do you want to continue?",
+  "Upsell.Plan.Lifetime.CancelMonthlyReminder": "Your lifetime Premium is active. Your monthly subscription is still renewing on Google Play — open subscription management to cancel it.",
   "Upsell.Plan.Unavailable": "Products could not be loaded. Please try again later.",
   "Upsell.Error.PurchaseFailed": "The purchase could not be started. Please try again.",
   "Upsell.Plan.AlreadyOwned": "You already own this package.",
   "Upsell.Action.Retry": "Try Again",
+  "Upsell.Action.ManageSubscription": "Manage Subscription",
   "Settings.Store.PurchasePending": "Payment pending. Your Premium will activate automatically once the payment is approved.",
   "Upsell.Plan.UnavailableKind": "This plan is currently unavailable. Please try again later."
 }

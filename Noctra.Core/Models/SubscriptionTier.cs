@@ -10,6 +10,23 @@ public enum SubscriptionTier
 }
 
 /// <summary>
+/// Etkin Premium hakkının kaynağı. Ücretli abonelik ile promosyon süresi
+/// artık tek bir "trial" gibi işaretlenmez; UI (ör. upsell) kaynağa göre
+/// davranır:
+///  - Kalıcı paket sahibine aylık satın alma sunulmaz.
+///  - Kalıcı paket alındıktan sonra aylık abonelik Google Play'de yenilenmeye
+///    devam edebilir — kullanıcıya iptal hatırlatması gösterilir.
+/// </summary>
+public enum PremiumSource
+{
+    None = 0,
+    GooglePlaySubscription = 1,
+    GooglePlayLifetime = 2,
+    Promo = 3,
+    PremiumEdition = 4
+}
+
+/// <summary>
 /// Contains limits and features for each subscription tier
 /// </summary>
 public static class TierLimits
@@ -48,10 +65,22 @@ public class SubscriptionInfo
 {
     public SubscriptionTier Tier { get; set; } = SubscriptionTier.Free;
     public DateTime? ExpiresAt { get; set; }
+
+    /// <summary>
+    /// Yalnızca gerçek bir trial offer kullanıldığında true olmalıdır.
+    /// Süreli mağaza aboneliği veya promosyon "trial" DEĞİLDİR — ücretli
+    /// aylık kullanıcı trial gibi görünmemelidir. Mevcut sistemde trial
+    /// tespiti bulunmadığından her zaman false kalır.
+    /// </summary>
     public bool IsTrialPeriod { get; set; }
     public int TrialDaysRemaining => IsTrialPeriod && ExpiresAt.HasValue 
         ? Math.Max(0, (ExpiresAt.Value - DateTime.UtcNow).Days) 
         : 0;
+
+    /// <summary>
+    /// Etkin Premium'un kaynağı (kalıcı paket / abonelik / promosyon / edisyon).
+    /// </summary>
+    public PremiumSource Source { get; set; } = PremiumSource.None;
     
     public bool IsPremiumOrHigher => Tier >= SubscriptionTier.Premium;
     public bool IsExpired => ExpiresAt.HasValue && ExpiresAt.Value < DateTime.UtcNow;

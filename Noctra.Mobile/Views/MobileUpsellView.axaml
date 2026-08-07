@@ -100,8 +100,11 @@
               </StackPanel>
             </Border>
 
-            <!-- Mağaza ürün seçimi: aylık abonelik + tek seferlik kalıcı paket -->
-            <Grid ColumnDefinitions="*,12,*">
+            <!-- Mağaza ürün seçimi: aylık abonelik + tek seferlik kalıcı paket.
+                 Kalıcı paket sahibine aylık satın alma sunulmaz — PlanGrid
+                 kod-behind'den gizlenir (UpdatePlanCardVisibility). -->
+            <Grid x:Name="PlanGrid"
+                  ColumnDefinitions="*,12,*">
               <Button Classes="PlanCardButton"
                       x:Name="MonthlyBuyButton"
                       MinHeight="88"
@@ -186,6 +189,21 @@
                        TextAlignment="Center"
                        TextWrapping="Wrap"
                        IsVisible="False" />
+
+            <!-- Kalıcı paket + aktif aylık abonelik birlikteyken gösterilen
+                 eylem: kullanıcıyı Google Play abonelik yönetimine götürür
+                 (aylık plan otomatik iptal olmaz). -->
+            <Button x:Name="ManageSubscriptionButton"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    HorizontalAlignment="Center"
+                    IsVisible="False"
+                    Click="ManageSubscription_Click">
+              <TextBlock Text="{loc:Translate Upsell.Action.ManageSubscription}"
+                         Foreground="{DynamicResource AccentBrush}"
+                         FontSize="{DynamicResource FCaption}"
+                         FontWeight="SemiBold" />
+            </Button>
 
             <Button x:Name="RetryPricingButton"
                     Background="Transparent"

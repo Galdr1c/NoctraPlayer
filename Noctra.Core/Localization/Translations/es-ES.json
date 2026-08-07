@@ -1049,10 +1049,14 @@
   "Upsell.Plan.Monthly.Subtitle": "Cancela cuando quieras",
   "Upsell.Plan.Lifetime.Title": "De por vida",
   "Upsell.Plan.Lifetime.Subtitle": "Pago único",
+  "Upsell.Plan.Lifetime.ConfirmTitle": "Compra de por vida",
+  "Upsell.Plan.Lifetime.ConfirmMessage": "Su suscripción mensual está activa. Comprar el paquete de por vida no la cancelará automáticamente: seguirá renovándose en Google Play. ¿Desea continuar?",
+  "Upsell.Plan.Lifetime.CancelMonthlyReminder": "Su Premium de por vida está activo. Su suscripción mensual sigue renovándose en Google Play: abra la gestión de suscripciones para cancelarla.",
   "Upsell.Plan.Unavailable": "No se pudieron cargar los productos. Inténtalo de nuevo más tarde.",
   "Upsell.Error.PurchaseFailed": "No se pudo iniciar la compra. Inténtalo de nuevo.",
   "Upsell.Plan.AlreadyOwned": "Ya tienes este paquete.",
   "Upsell.Action.Retry": "Reintentar",
+  "Upsell.Action.ManageSubscription": "Gestionar suscripción",
   "Settings.Store.PurchasePending": "Pago pendiente. Tu Premium se activará automáticamente cuando se apruebe el pago.",
   "Upsell.Plan.UnavailableKind": "Este plan no está disponible actualmente. Inténtalo de nuevo más tarde."
 }

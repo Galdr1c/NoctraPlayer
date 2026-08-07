@@ -129,6 +129,42 @@ public class UpsellWindowLayoutTests
         Assert.True(launch > nullGuard, "Product launch must come after the missing-plan guard.");
     }
 
+    [Fact]
+    public void MobileUpsell_LifetimeMonthlyCoexistence_GuardsPresent()
+    {
+        // Kalıcı paket ile aylık aboneliğin aynı kullanıcıda birlikte
+        // var olabilmesi (aylık abonelik Play'de otomatik iptal olmaz):
+        //  (1) Kalıcı paket sahibine aylık satın alma sunulmaz.
+        //  (2) Aktif aylık abonelik varken kalıcı paket seçimi açık onay ister.
+        //  (3) Kalıcı paket tamamlanınca iptal hatırlatması + abonelik yönetimi
+        //      eylemi gösterilir; sheet hatırlatmayla açık kalır.
+        var source = File.ReadAllText(FindProjectFile("Noctra.Mobile", "Views", "MobileUpsellView.axaml.cs"));
+        var xaml = File.ReadAllText(FindProjectFile("Noctra.Mobile", "Views", "MobileUpsellView.axaml"));
+
+        // (1) Lifetime sahibi: plan kartları gizlenir (aylık kart asla sunulmaz).
+        Assert.Contains("UpdatePlanCardVisibility", source);
+        Assert.Contains("HasLifetimePremium", source);
+
+        // (2) Aylık aktifken kalıcı paket satın alma onay ister ve onay akışı
+        //     aktif abonelik bayrağını okur.
+        Assert.Contains("ConfirmLifetimeWhileMonthlyActiveAsync", source);
+        Assert.Contains("HasActiveStoreSubscription", source);
+        Assert.Contains("Upsell.Plan.Lifetime.ConfirmMessage", source);
+
+        // (3) Tamamlanma sonrası: iptal hatırlatması + Google Play abonelik
+        //     yönetimi eylemi (aylık plan buradan iptal edilir). Hatırlatma
+        //     dalı TryClose'tan ÖNCE gelir — sheet hatırlatmayı göstermek
+        //     yerine yanlışlıkla kapanamaz.
+        var reminder = source.IndexOf("Upsell.Plan.Lifetime.CancelMonthlyReminder", StringComparison.Ordinal);
+        var close = source.IndexOf("TryClose()", reminder, StringComparison.Ordinal);
+        Assert.True(reminder >= 0 && close > reminder,
+            "Cancel-monthly reminder must be shown before the sheet closes.");
+        Assert.Contains("https://play.google.com/store/account/subscriptions", source);
+        Assert.Contains("ManageSubscriptionButton", source);
+        Assert.Contains("ManageSubscriptionButton", xaml);
+        Assert.Contains("Upsell.Action.ManageSubscription", xaml);
+    }
+
     private static int CountOccurrences(string source, string value)
     {
         var count = 0;

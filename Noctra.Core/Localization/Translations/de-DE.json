@@ -1049,10 +1049,14 @@
   "Upsell.Plan.Monthly.Subtitle": "Monatlich kündbar",
   "Upsell.Plan.Lifetime.Title": "Lebenslang",
   "Upsell.Plan.Lifetime.Subtitle": "Einmalige Zahlung",
+  "Upsell.Plan.Lifetime.ConfirmTitle": "Lebenslanger Kauf",
+  "Upsell.Plan.Lifetime.ConfirmMessage": "Ihr Monatsabonnement ist aktiv. Beim Kauf des lebenslangen Pakets wird es nicht automatisch gekündigt – es wird bei Google Play weiter verlängert. Möchten Sie fortfahren?",
+  "Upsell.Plan.Lifetime.CancelMonthlyReminder": "Ihr lebenslanges Premium ist aktiv. Ihr Monatsabonnement wird bei Google Play weiterhin verlängert – öffnen Sie die Abonnementverwaltung, um es zu kündigen.",
   "Upsell.Plan.Unavailable": "Produkte konnten nicht geladen werden. Bitte später erneut versuchen.",
   "Upsell.Error.PurchaseFailed": "Der Kauf konnte nicht gestartet werden. Bitte versuchen Sie es erneut.",
   "Upsell.Plan.AlreadyOwned": "Sie besitzen dieses Paket bereits.",
   "Upsell.Action.Retry": "Erneut versuchen",
+  "Upsell.Action.ManageSubscription": "Abonnement verwalten",
   "Settings.Store.PurchasePending": "Zahlung ausstehend. Ihr Premium wird automatisch aktiviert, sobald die Zahlung bestätigt wurde.",
   "Upsell.Plan.UnavailableKind": "Dieser Plan ist derzeit nicht verfügbar. Bitte versuchen Sie es später erneut."
 }

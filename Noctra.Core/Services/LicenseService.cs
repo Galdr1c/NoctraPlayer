@@ -366,6 +366,35 @@ public class LicenseService : ObservableObject, ILicenseService, IDisposable
     /// </summary>
     public bool HasPendingStorePurchase => _storeEntitlement.HasPendingPurchase;
 
+    /// <summary>
+    /// Kalıcı (tek seferlik) Premium paketi sahibi mi? Upsell UX'i için —
+    /// kalıcı paket sahibine aylık satın alma sunulmaz.
+    /// </summary>
+    public bool HasLifetimePremium => _storeEntitlement.HasLifetimePremium;
+
+    /// <summary>
+    /// Google Play'de AKTİF bir süreli abonelik var mı (kalıcı paketten
+    /// bağımsız)? Kalıcı paket alındıktan sonra bile aylık abonelik Google
+    /// Play'de yenilenmeye devam edebilir; upsell bu bayrağı görüp kullanıcıyı
+    /// aboneliği iptal etmesi için abonelik yönetimine yönlendirir.
+    /// Uygulama aboneliği ASLA otomatik "iptal edildi" varsaymaz.
+    /// </summary>
+    public bool HasActiveStoreSubscription =>
+        _storeEntitlement.SubscriptionExpiresAtUtc.HasValue &&
+        _storeEntitlement.SubscriptionExpiresAtUtc.Value > DateTime.UtcNow;
+
+    /// <summary>
+    /// Etkin Premium'un kaynağı (kalıcı paket / abonelik / promosyon / edisyon).
+    /// </summary>
+    public PremiumSource CurrentPremiumSource
+    {
+        get
+        {
+            SyncSubscriptionFromSettings(notify: false);
+            return _currentSubscription.Source;
+        }
+    }
+
     public DateTime? PromoPremiumExpiresAtUtc => ReadPromoGrant()?.ExpiresAtUtc;
 
     /// <summary>
@@ -410,6 +439,8 @@ public class LicenseService : ObservableObject, ILicenseService, IDisposable
         _currentSubscription.Tier = SubscriptionTier.Premium;
         _currentSubscription.ExpiresAt = null;
         _currentSubscription.IsTrialPeriod = false;
+        // Debug/test amaçlı manuel override kalıcı Premium gibi davranır.
+        _currentSubscription.Source = PremiumSource.PremiumEdition;
         RaiseSubscriptionChanged();
     }
 
@@ -425,6 +456,7 @@ public class LicenseService : ObservableObject, ILicenseService, IDisposable
         _currentSubscription.Tier = SubscriptionTier.Free;
         _currentSubscription.ExpiresAt = null;
         _currentSubscription.IsTrialPeriod = false;
+        _currentSubscription.Source = PremiumSource.None;
         RaiseSubscriptionChanged();
     }
 
@@ -843,6 +875,7 @@ public class LicenseService : ObservableObject, ILicenseService, IDisposable
         var oldTier = _currentSubscription.Tier;
         var oldExpiresAt = _currentSubscription.ExpiresAt;
         var oldIsTrial = _currentSubscription.IsTrialPeriod;
+        var oldSource = _currentSubscription.Source;
         // Pending satın alma bayrağı tek başına tier'ı değiştirmez (Free kalır),
         // ancak "ödeme bekleniyor" banner'ının açılıp kapanması için durum
         // değişiminde bildirim gerekir.
@@ -853,12 +886,15 @@ public class LicenseService : ObservableObject, ILicenseService, IDisposable
             _currentSubscription.Tier = SubscriptionTier.Premium;
             _currentSubscription.ExpiresAt = null;
             _currentSubscription.IsTrialPeriod = false;
+            _currentSubscription.Source = PremiumSource.PremiumEdition;
         }
         else if (_manualPremiumOverride)
         {
             _currentSubscription.Tier = SubscriptionTier.Premium;
             _currentSubscription.ExpiresAt = null;
             _currentSubscription.IsTrialPeriod = false;
+            // Debug/test amaçlı manuel override kalıcı Premium gibi davranır.
+            _currentSubscription.Source = PremiumSource.PremiumEdition;
         }
         else
         {
@@ -874,32 +910,42 @@ public class LicenseService : ObservableObject, ILicenseService, IDisposable
                 _currentSubscription.Tier = SubscriptionTier.Premium;
                 _currentSubscription.ExpiresAt = null;
                 _currentSubscription.IsTrialPeriod = false;
+                _currentSubscription.Source = PremiumSource.GooglePlayLifetime;
             }
             else
             {
+                // Kaynak ayrımı: süreli Premium'un nereden geldiği kaydedilir
+                // (abonelik mi, promosyon mu). Kaynak, bitişi belirleyen
+                // (en geç olan) süredir. IsTrialPeriod burada ASLA true
+                // yapılmaz — ücretli abonelik/promosyon trial değildir.
                 DateTime? endsAt = null;
+                var source = PremiumSource.None;
                 if (store.HasActivePremium && store.SubscriptionExpiresAtUtc.HasValue)
                 {
                     endsAt = store.SubscriptionExpiresAtUtc;
+                    source = PremiumSource.GooglePlaySubscription;
                 }
                 if (promoExpiresAt.HasValue &&
                     promoExpiresAt.Value > DateTime.UtcNow &&
                     (!endsAt.HasValue || promoExpiresAt.Value > endsAt.Value))
                 {
                     endsAt = promoExpiresAt;
+                    source = PremiumSource.Promo;
                 }
 
                 if (endsAt.HasValue && endsAt.Value > DateTime.UtcNow)
                 {
                     _currentSubscription.Tier = SubscriptionTier.Premium;
                     _currentSubscription.ExpiresAt = endsAt;
-                    _currentSubscription.IsTrialPeriod = true;
+                    _currentSubscription.IsTrialPeriod = false;
+                    _currentSubscription.Source = source;
                 }
                 else
                 {
                     _currentSubscription.Tier = SubscriptionTier.Free;
                     _currentSubscription.ExpiresAt = null;
                     _currentSubscription.IsTrialPeriod = false;
+                    _currentSubscription.Source = PremiumSource.None;
                 }
             }
         }
@@ -907,6 +953,7 @@ public class LicenseService : ObservableObject, ILicenseService, IDisposable
         if (notify && (oldTier != _currentSubscription.Tier ||
                        oldExpiresAt != _currentSubscription.ExpiresAt ||
                        oldIsTrial != _currentSubscription.IsTrialPeriod ||
+                       oldSource != _currentSubscription.Source ||
                        oldPendingPurchase != _storeEntitlement.HasPendingPurchase))
         {
             // Bildirim UI thread'e taşınır; state değişikliği senkron kalır.
@@ -1012,6 +1059,9 @@ public class LicenseService : ObservableObject, ILicenseService, IDisposable
         OnPropertyChanged(nameof(PromoPremiumExpiresAtUtc));
         OnPropertyChanged(nameof(PremiumExpiresAtUtc));
         OnPropertyChanged(nameof(ActivePromoCode));
+        OnPropertyChanged(nameof(HasLifetimePremium));
+        OnPropertyChanged(nameof(HasActiveStoreSubscription));
+        OnPropertyChanged(nameof(CurrentPremiumSource));
         SubscriptionChanged?.Invoke();
     }
 
@@ -1367,6 +1417,9 @@ public class LicenseService : ObservableObject, ILicenseService, IDisposable
         _currentSubscription.Tier = tier;
         _currentSubscription.ExpiresAt = null;
         _currentSubscription.IsTrialPeriod = false;
+        _currentSubscription.Source = tier == SubscriptionTier.Premium
+            ? PremiumSource.PremiumEdition
+            : PremiumSource.None;
         OnPropertyChanged(nameof(IsPremium));
         OnPropertyChanged(nameof(CurrentTier));
         OnPropertyChanged(nameof(CanUpgradeToPremium));
