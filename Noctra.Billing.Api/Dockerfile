@@ -14,6 +14,7 @@ FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
 WORKDIR /app
 COPY --from=build /app/publish .
 ENV ASPNETCORE_URLS=http://0.0.0.0:8080
-ENV NOCTRA_BILLING_DB_PATH=/app/data/noctra-billing.db
+# Backend stateless: SQLite/Firestore yok. Play erişimi Cloud Run service
+# identity (ADC) üzerinden metadata'dan token alır — private key env'de yok.
 EXPOSE 8080
 ENTRYPOINT ["dotnet", "Noctra.Billing.Api.dll"]

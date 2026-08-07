@@ -2,75 +2,43 @@
 # ============================================================
 # Noctra.Billing.Api → Google Cloud Run tek komut deploy
 #
+# Backend STATELESS'tir: entitlement verisi saklanmaz, RTDN yoktur,
+# SQLite/Firestore yoktur. Tek işi: purchase token'ı Google Play
+# Developer API'de doğrulamak.
+#
+# Kimlik doğrulama: Secret Manager'da private key YOK. Cloud Run'a
+# bağlanan service account (service identity) metadata üzerinden
+# otomatik token verir (ADC). Bu service account'a Play Console'da
+# gerekli izinler verilir.
+#
 # Ücretsiz katman (Always Free) yalnızca şu bölgelerde uygulanır:
 #   us-central1, us-east1, us-west1  → bu yüzden us-central1 kullanılır.
-#
-# Bu script sizin yerinize şunları yapar:
-#   1) gcloud CLI kurulu mu kontrol eder (yoksa kurulum talimatı verir)
-#   2) gcloud kimlik doğrulaması kontrol eder (auth login gerekiyorsa yönlendirir)
-#   3) GCP projesi seçer / oluşturmanızı ister
-#   4) Service account JSON'unu Secret Manager'a yükler
-#   5) Cloud Run'a deploy eder (env değişkenleriyle)
-#   6) Çıkan URL'yi .env dosyasına yazar (client build için hazır)
 #
 # Kullanım:  bash deploy-billing.sh
 #
 # Ön koşullar (sizin tarafınızda, tarayıcıda 1 kez):
-#   - Google Cloud hesabı (kart istenir ama ücretsiz katman dahilinde ücret
-#     çekilmez; $300 deneme kredisi verilir)
-#   - Play Console'da ürünler + service account JSON (docs/play-console-setup-checklist.md)
+#   - Google Cloud hesabı
+#   - Play Console'da ürünler (docs/play-console-setup-checklist.md)
+#   - Play Console → Setup → API access: aşağıdaki service account
+#     e-postasına gerekli izinler verilmiş
 # ============================================================
 set -euo pipefail
 
 # ---------- Yapılandırma ----------
 REGION="us-central1"
 SERVICE_NAME="noctra-billing-api"
+# Cloud Run service identity — Play API'ye erişecek service account.
+# Tam e-posta adresi proje seçildikten sonra SA_EMAIL olarak hesaplanır.
+SERVICE_ACCOUNT_NAME="noctra-billing-runtime"
 PACKAGE_NAME="${NOCTRA_PACKAGE_NAME:-studio.kynora.noctra}"
 SUBSCRIPTION_IDS="${NOCTRA_SUBSCRIPTION_PRODUCT_IDS:-noctra_premium_monthly}"
 LIFETIME_IDS="${NOCTRA_LIFETIME_PRODUCT_IDS:-noctra_premium_lifetime}"
-SECRET_NAME="noctra-billing-service-account"
-CREDENTIALS_JSON="${NOCTRA_GOOGLE_CREDENTIALS_JSON:-}"
 
 # ---------- 0) API key (.env'den) ----------
 # Client build-time'da ayni anahtari gomer; backend de ayni degeri almali.
 API_KEY="${NOCTRA_BILLING_API_KEY:-}"
 if [[ -z "${API_KEY}" ]] && [[ -f ".env" ]] && grep -q "^NOCTRA_BILLING_API_KEY=" .env; then
   API_KEY="$(grep "^NOCTRA_BILLING_API_KEY=" .env | head -1 | cut -d= -f2-)"
-fi
-
-# ---------- 0b) RTDN OIDC (.env'den) ----------
-# Pub/Sub push aboneliği için audience + service account e-postası. Backend
-# bunlar eksikse fail-fast ile başlamaz (RTDN auth sessizce kapanmaz). RTDN
-# kullanılmayacaksa NOCTRA_RTDN_DISABLED=1 ile açıkça kapatılabilir.
-RTDN_AUDIENCE="${NOCTRA_RTDN_AUDIENCE:-}"
-RTDN_SERVICE_ACCOUNT_EMAIL="${NOCTRA_RTDN_SERVICE_ACCOUNT_EMAIL:-}"
-RTDN_DISABLED="${NOCTRA_RTDN_DISABLED:-}"
-if [[ -f ".env" ]]; then
-  if [[ -z "${RTDN_AUDIENCE}" ]] && grep -q "^NOCTRA_RTDN_AUDIENCE=" .env; then
-    RTDN_AUDIENCE="$(grep "^NOCTRA_RTDN_AUDIENCE=" .env | head -1 | cut -d= -f2-)"
-  fi
-  if [[ -z "${RTDN_SERVICE_ACCOUNT_EMAIL}" ]] && grep -q "^NOCTRA_RTDN_SERVICE_ACCOUNT_EMAIL=" .env; then
-    RTDN_SERVICE_ACCOUNT_EMAIL="$(grep "^NOCTRA_RTDN_SERVICE_ACCOUNT_EMAIL=" .env | head -1 | cut -d= -f2-)"
-  fi
-  if [[ -z "${RTDN_DISABLED}" ]] && grep -q "^NOCTRA_RTDN_DISABLED=" .env; then
-    RTDN_DISABLED="$(grep "^NOCTRA_RTDN_DISABLED=" .env | head -1 | cut -d= -f2-)"
-  fi
-fi
-
-if [[ "${RTDN_DISABLED}" != "1" ]]; then
-  if [[ -z "${RTDN_AUDIENCE}" || -z "${RTDN_SERVICE_ACCOUNT_EMAIL}" ]]; then
-    echo ""
-    echo "❌ RTDN yapılandırması eksik (backend fail-fast ile başlamaz)."
-    echo "   Pub/Sub push aboneliği oluşturup .env dosyasına şunları ekleyin:"
-    echo ""
-    echo "   NOCTRA_RTDN_AUDIENCE=https://pubsub.example.com/push"
-    echo "   NOCTRA_RTDN_SERVICE_ACCOUNT_EMAIL=push-sa@PROJECT.iam.gserviceaccount.com"
-    echo ""
-    echo "   (Pub/Sub push subscription oluştururken 'Authentication' kısmında"
-    echo "   belirlediğiniz audience ve imzalayan service account e-postası.)"
-    echo "   RTDN kullanmayacaksanız:  NOCTRA_RTDN_DISABLED=1"
-    exit 1
-  fi
 fi
 
 # ---------- 1) gcloud kontrol ----------
@@ -113,30 +81,23 @@ if [[ -z "${PROJECT}" ]]; then
   gcloud config set project "${PROJECT}"
 fi
 echo "✅ Proje: $PROJECT"
-gcloud services enable run.googleapis.com cloudbuild.googleapis.com secretmanager.googleapis.com
+gcloud services enable run.googleapis.com cloudbuild.googleapis.com
 
-# ---------- 4) Service account secret ----------
-if [[ -z "${CREDENTIALS_JSON}" ]]; then
-  if [[ -f "service-account.json" ]]; then
-    CREDENTIALS_JSON="$(cat service-account.json)"
-    echo "📄 service-account.json dosyasından okundu."
-  elif [[ -f "noctra-service-account.json" ]]; then
-    CREDENTIALS_JSON="$(cat noctra-service-account.json)"
-    echo "📄 noctra-service-account.json dosyasından okundu."
-  else
-    echo ""
-    echo "⚠️  Service account JSON bulunamadı."
-    echo "   Play Console → Setup → API access → service account JSON'unu indirin,"
-    echo "   dosyayı bu klasöre 'service-account.json' adıyla koyun ve tekrar çalıştırın."
-    exit 1
-  fi
+# ---------- 4) Service account (service identity) ----------
+# Cloud Run'a bağlanacak service account — private key YOK, ADC ile
+# metadata üzerinden token alır. Yalnızca oluşturulmamışsa oluşturulur.
+SA_EMAIL="${SERVICE_ACCOUNT_NAME}@${PROJECT}.iam.gserviceaccount.com"
+if ! gcloud iam service-accounts describe "${SA_EMAIL}" --project="${PROJECT}" >/dev/null 2>&1; then
+  echo "🔐 Service account oluşturuluyor: ${SA_EMAIL}"
+  gcloud iam service-accounts create "${SERVICE_ACCOUNT_NAME}" \
+    --display-name="Noctra Billing Runtime" --project="${PROJECT}"
 fi
 
-if ! gcloud secrets describe "${SECRET_NAME}" --project="${PROJECT}" >/dev/null 2>&1; then
-  echo "${CREDENTIALS_JSON}" | gcloud secrets create "${SECRET_NAME}" \
-    --data-file=- --project="${PROJECT}"
-  echo "🔐 Secret oluşturuldu: ${SECRET_NAME}"
-fi
+echo ""
+echo "ℹ️  Play Console → Setup → API access → bu e-postaya izin verin:"
+echo "      ${SA_EMAIL}"
+echo "   (proje izinleri docs/play-console-setup-checklist.md'de anlatılıyor.)"
+echo ""
 
 # ---------- 5) Deploy ----------
 echo "🚀 Deploy ediliyor (${REGION})..."
@@ -146,23 +107,21 @@ ENV_ARGS="NOCTRA_PACKAGE_NAME=${PACKAGE_NAME},NOCTRA_SUBSCRIPTION_PRODUCT_IDS=${
 if [[ -n "${API_KEY}" ]]; then
   ENV_ARGS="${ENV_ARGS},NOCTRA_BILLING_API_KEY=${API_KEY}"
 fi
-if [[ "${RTDN_DISABLED}" == "1" ]]; then
-  ENV_ARGS="${ENV_ARGS},NOCTRA_RTDN_DISABLED=1"
-else
-  ENV_ARGS="${ENV_ARGS},NOCTRA_RTDN_AUDIENCE=${RTDN_AUDIENCE},NOCTRA_RTDN_SERVICE_ACCOUNT_EMAIL=${RTDN_SERVICE_ACCOUNT_EMAIL}"
-fi
 
 gcloud run deploy "${SERVICE_NAME}" \
   --source . \
   --dockerfile Noctra.Billing.Api/Dockerfile \
   --region "${REGION}" \
   --allow-unauthenticated \
-  --set-secrets="NOCTRA_GOOGLE_CREDENTIALS_JSON=${SECRET_NAME}:latest" \
+  --service-account "${SA_EMAIL}" \
   --set-env-vars="${ENV_ARGS}" \
+  --min-instances 0 \
+  --max-instances 2 \
+  --memory 256Mi \
+  --cpu 1 \
   --project="${PROJECT}"
 
 # ---------- 6) URL'yi .env'e yaz ----------
-# status.url tam URL döndürür (örn. https://noctra-billing-api-xxxx-uc.a.run.app)
 URL="$(gcloud run services describe "${SERVICE_NAME}" --region="${REGION}" --project="${PROJECT}" --format='value(status.url)' 2>/dev/null)"
 if [[ -z "${URL}" ]]; then
   echo "⚠️  URL otomatik alınamadı — Cloud Console'dan kopyalayın."

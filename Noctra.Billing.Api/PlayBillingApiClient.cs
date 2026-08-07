@@ -1,6 +1,4 @@
 using System.Net.Http.Headers;
-using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
 
 namespace Noctra.Billing.Api;
@@ -16,33 +14,29 @@ public interface IPlayBillingApi
 }
 
 /// <summary>
-/// Play Developer API'ye service account (OAuth2 JWT) ile bağlanan istemci.
+/// Play Developer API'ye ADC (Application Default Credentials) ile bağlanan
+/// istemci — Cloud Run'da service identity kullanılır, private key yoktur.
 ///
 /// - Aylık abonelik: purchases.subscriptionsv2.get → lineItems.expiryTime
 ///   (gerçek bitiş — client tarafında asla hesaplanmaz).
 /// - Tek seferlik paket: purchases.products.get (ProductPurchase).
-///
-/// Service account JSON'i hiçbir zaman istemciye/APK'ya konmaz; yalnızca
-/// sunucu ortamında (env secret) tutulur.
 /// </summary>
 public sealed class PlayBillingApiClient : IPlayBillingApi
 {
-    private const string AndroidPublisherScope = "https://www.googleapis.com/auth/androidpublisher";
-    private const string DefaultTokenUri = "https://oauth2.googleapis.com/token";
     private const string ApiBase = "https://androidpublisher.googleapis.com/androidpublisher/v3/applications";
 
     private readonly HttpClient _http;
     private readonly BillingConfig _config;
-    private readonly SemaphoreSlim _tokenGate = new(1, 1);
+    private readonly IAccessTokenProvider _tokenProvider;
 
-    private ServiceAccountCredentials? _credentials;
-    private string? _cachedAccessToken;
-    private DateTime _accessTokenExpiresAtUtc = DateTime.MinValue;
-
-    public PlayBillingApiClient(HttpClient http, BillingConfig config)
+    public PlayBillingApiClient(
+        HttpClient http,
+        BillingConfig config,
+        IAccessTokenProvider tokenProvider)
     {
         _http = http ?? throw new ArgumentNullException(nameof(http));
         _config = config ?? throw new ArgumentNullException(nameof(config));
+        _tokenProvider = tokenProvider ?? throw new ArgumentNullException(nameof(tokenProvider));
     }
 
     public async Task<PlayPurchaseVerification> VerifyAsync(
@@ -56,7 +50,8 @@ public sealed class PlayBillingApiClient : IPlayBillingApi
             throw new InvalidOperationException($"Bilinmeyen ürün: {productId}");
         }
 
-        var accessToken = await GetAccessTokenAsync(cancellationToken).ConfigureAwait(false);
+        var accessToken = await _tokenProvider.GetAccessTokenAsync(cancellationToken)
+            .ConfigureAwait(false);
         var entitlementType = _config.ResolveEntitlementType(productId);
 
         if (entitlementType == "Lifetime")
@@ -257,119 +252,6 @@ public sealed class PlayBillingApiClient : IPlayBillingApi
     }
 
     // ==========================================
-    // OAuth2 service account (RS256 JWT)
-    // ==========================================
-
-    private async Task<string> GetAccessTokenAsync(CancellationToken cancellationToken)
-    {
-        if (_cachedAccessToken is not null && DateTime.UtcNow < _accessTokenExpiresAtUtc)
-        {
-            return _cachedAccessToken;
-        }
-
-        await _tokenGate.WaitAsync(cancellationToken).ConfigureAwait(false);
-        try
-        {
-            if (_cachedAccessToken is not null && DateTime.UtcNow < _accessTokenExpiresAtUtc)
-            {
-                return _cachedAccessToken;
-            }
-
-            var credentials = LoadCredentials();
-            var now = DateTimeOffset.UtcNow;
-            var header = Base64Url(JsonSerializer.SerializeToUtf8Bytes(new { alg = "RS256", typ = "JWT" }));
-            var claimSet = Base64Url(JsonSerializer.SerializeToUtf8Bytes(new
-            {
-                iss = credentials.ClientEmail,
-                scope = AndroidPublisherScope,
-                aud = credentials.TokenUri,
-                iat = now.ToUnixTimeSeconds(),
-                exp = now.AddSeconds(3600).ToUnixTimeSeconds()
-            }));
-            var unsigned = $"{header}.{claimSet}";
-            var signature = SignAssertion(credentials.PrivateKeyPem, Encoding.ASCII.GetBytes(unsigned));
-            var assertion = $"{unsigned}.{Base64Url(signature)}";
-
-            using var request = new HttpRequestMessage(HttpMethod.Post, credentials.TokenUri)
-            {
-                Content = new FormUrlEncodedContent(new Dictionary<string, string>
-                {
-                    ["grant_type"] = "urn:ietf:params:oauth:grant-type:jwt-bearer",
-                    ["assertion"] = assertion
-                })
-            };
-            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-
-            using var response = await _http.SendAsync(request, cancellationToken).ConfigureAwait(false);
-            var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-            if (!response.IsSuccessStatusCode)
-            {
-                throw new InvalidOperationException(
-                    $"OAuth token isteği başarısız: {(int)response.StatusCode} {Truncate(body, 200)}");
-            }
-
-            using var json = JsonDocument.Parse(body);
-            var token = GetString(json.RootElement, "access_token")
-                        ?? throw new InvalidOperationException("OAuth yanıtında access_token yok.");
-            var expiresIn = json.RootElement.TryGetProperty("expires_in", out var exp) && exp.ValueKind == JsonValueKind.Number
-                ? exp.GetInt32()
-                : 3600;
-
-            _cachedAccessToken = token;
-            _accessTokenExpiresAtUtc = DateTime.UtcNow.AddSeconds(Math.Max(expiresIn - 60, 60));
-            return token;
-        }
-        finally
-        {
-            _tokenGate.Release();
-        }
-    }
-
-    private ServiceAccountCredentials LoadCredentials()
-    {
-        if (_credentials is not null)
-        {
-            return _credentials;
-        }
-
-        string? json;
-        if (!string.IsNullOrWhiteSpace(_config.GoogleCredentialsJson))
-        {
-            json = _config.GoogleCredentialsJson;
-        }
-        else if (!string.IsNullOrWhiteSpace(_config.GoogleCredentialsPath) && File.Exists(_config.GoogleCredentialsPath))
-        {
-            json = File.ReadAllText(_config.GoogleCredentialsPath);
-        }
-        else
-        {
-            throw new InvalidOperationException(
-                "Google service account kimliği yapılandırılmadı. NOCTRA_GOOGLE_CREDENTIALS_JSON veya GOOGLE_APPLICATION_CREDENTIALS ayarlayın.");
-        }
-
-        using var document = JsonDocument.Parse(json);
-        var root = document.RootElement;
-        var clientEmail = GetString(root, "client_email")
-                          ?? throw new InvalidOperationException("Service account JSON'inde client_email yok.");
-        var privateKey = GetString(root, "private_key")
-                         ?? throw new InvalidOperationException("Service account JSON'inde private_key yok.");
-        var tokenUri = GetString(root, "token_uri") ?? DefaultTokenUri;
-
-        _credentials = new ServiceAccountCredentials(clientEmail, privateKey, tokenUri);
-        return _credentials;
-    }
-
-    private static byte[] SignAssertion(string privateKeyPem, byte[] data)
-    {
-        using var rsa = RSA.Create();
-        rsa.ImportFromPem(privateKeyPem);
-        return rsa.SignData(data, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
-    }
-
-    private static string Base64Url(byte[] bytes) =>
-        Convert.ToBase64String(bytes).TrimEnd('=').Replace('+', '-').Replace('/', '_');
-
-    // ==========================================
     // HTTP helpers
     // ==========================================
 
@@ -406,6 +288,4 @@ public sealed class PlayBillingApiClient : IPlayBillingApi
 
     private static string Truncate(string value, int length) =>
         value.Length <= length ? value : value[..length];
-
-    private sealed record ServiceAccountCredentials(string ClientEmail, string PrivateKeyPem, string TokenUri);
 }

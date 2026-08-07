@@ -39,24 +39,6 @@ public sealed class VerifiedEntitlementResponse
     public DateTime VerifiedAtUtc { get; init; }
 }
 
-/// <summary>Entitlement veritabanı satırı (GET /billing/entitlement).</summary>
-public sealed class StoredEntitlementRow
-{
-    public string InstallationId { get; init; } = string.Empty;
-    public string ProductId { get; init; } = string.Empty;
-
-    /// <summary>Satın alma token'ının SHA-256 özeti (ham token saklanmaz).</summary>
-    public string PurchaseTokenHash { get; init; } = string.Empty;
-
-    public string EntitlementType { get; init; } = string.Empty;
-    public bool IsActive { get; init; }
-    public DateTime? ExpiresAtUtc { get; init; }
-    public bool AutoRenewEnabled { get; init; }
-    public string State { get; init; } = string.Empty;
-    public bool IsTrialPeriod { get; init; }
-    public DateTime LastVerifiedAtUtc { get; init; }
-}
-
 /// <summary>
 /// Play Developer API'den normalize edilmiş doğrulama sonucu.
 /// İmplementasyon ayrıntısı (v1/v2 uç noktaları) çağıranlardan gizlenir.
@@ -76,20 +58,4 @@ public sealed class PlayPurchaseVerification
     /// doğrulaması asla engellenmez).
     /// </summary>
     public bool IsTrialPeriod { get; init; }
-}
-
-/// <summary>Pub/Sub RTDN push mesajı zarfı (veri Base64'lü).</summary>
-public sealed class PubSubPushEnvelope
-{
-    [JsonPropertyName("message")]
-    public PubSubMessage? Message { get; init; }
-}
-
-public sealed class PubSubMessage
-{
-    [JsonPropertyName("data")]
-    public string? Data { get; init; }
-
-    [JsonPropertyName("messageId")]
-    public string? MessageId { get; init; }
 }

@@ -31,31 +31,6 @@ internal sealed class BillingEnvScope : IDisposable
         Set("NOCTRA_PACKAGE_NAME", "studio.kynora.noctra");
         Set("NOCTRA_SUBSCRIPTION_PRODUCT_IDS", "noctra_premium_monthly");
         Set("NOCTRA_LIFETIME_PRODUCT_IDS", "noctra_premium_lifetime");
-        Set("NOCTRA_BILLING_DB_PATH", ":memory:");
-        Set("NOCTRA_GOOGLE_CREDENTIALS_JSON", BuildTestServiceAccountJson());
-
-        // RTDN OIDC: BillingConfig fail-fast zorunlu kıldığı için test ortamı
-        // audience + service account e-postası verir (disable edilmez).
-        Set("NOCTRA_RTDN_AUDIENCE", "https://test-pubsub.example.com/push");
-        Set("NOCTRA_RTDN_SERVICE_ACCOUNT_EMAIL", "push-sa@test-project.iam.gserviceaccount.com");
-        Set("NOCTRA_RTDN_DISABLED", null);
-    }
-
-    /// <summary>Çalışma anında gerçek bir RSA anahtarıyla service account JSON'i üretir.</summary>
-    private static string BuildTestServiceAccountJson()
-    {
-        using var rsa = System.Security.Cryptography.RSA.Create(2048);
-        return System.Text.Json.JsonSerializer.Serialize(new
-        {
-            type = "service_account",
-            project_id = "test-project",
-            private_key_id = "key-id",
-            private_key = rsa.ExportPkcs8PrivateKeyPem(),
-            client_email = "billing@test-project.iam.gserviceaccount.com",
-            client_id = "12345",
-            auth_uri = "https://accounts.google.com/o/oauth2/auth",
-            token_uri = "https://oauth2.googleapis.com/token"
-        });
     }
 
     private void Set(string name, string? value)
@@ -97,17 +72,10 @@ internal sealed class ScriptedHttpMessageHandler : HttpMessageHandler
         _responder = responder;
     }
 
-    public static ScriptedHttpMessageHandler TokenPlus(
+    /// <summary>Yalnızca Play API isteklerine yanıt verir (token üretimi fake'lenir).</summary>
+    public static ScriptedHttpMessageHandler PlayApi(
         Func<HttpRequestMessage, HttpResponseMessage> responder) =>
-        new(async request =>
-        {
-            if (request.RequestUri!.AbsoluteUri.StartsWith("https://oauth2.googleapis.com/token", StringComparison.Ordinal))
-            {
-                return Json(HttpStatusCode.OK, """{"access_token":"test-access-token","expires_in":3600,"token_type":"Bearer"}""");
-            }
-
-            return responder(request);
-        });
+        new(request => Task.FromResult(responder(request)));
 
     public static HttpResponseMessage Json(HttpStatusCode status, string json) =>
         new(status) { Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json") };
@@ -116,4 +84,18 @@ internal sealed class ScriptedHttpMessageHandler : HttpMessageHandler
         HttpRequestMessage request,
         CancellationToken cancellationToken) =>
         _responder(request);
+}
+
+/// <summary>ADC yerine sabit token dönen fake — token üretimi network gerektirmez.</summary>
+internal sealed class FixedAccessTokenProvider : IAccessTokenProvider
+{
+    private readonly string _token;
+
+    public FixedAccessTokenProvider(string token = "test-access-token")
+    {
+        _token = token;
+    }
+
+    public Task<string> GetAccessTokenAsync(CancellationToken cancellationToken = default) =>
+        Task.FromResult(_token);
 }

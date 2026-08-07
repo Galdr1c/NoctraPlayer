@@ -1,8 +1,16 @@
 # ============================================================
 # Noctra.Billing.Api → Google Cloud Run tek komut deploy (Windows)
 #
-# Ücretsiz katman (Always Free) yalnızca şu bölgelerde uygulanır:
-#   us-central1, us-east1, us-west1  → bu yüzden us-central1 kullanılır.
+# Backend STATELESS'tir: entitlement verisi saklanmaz, RTDN yoktur,
+# SQLite/Firestore yoktur. Tek işi: purchase token'ı Google Play
+# Developer API'de doğrulamak.
+#
+# Kimlik doğrulama: Secret Manager'da private key YOK. Cloud Run'a
+# bağlanan service account (service identity) metadata üzerinden
+# otomatik token verir (ADC). Bu service account'a Play Console'da
+# gerekli izinler verilir.
+#
+# Ücretsiz katman: us-central1/us-east1/us-west1 → us-central1 kullanılır.
 #
 # Kullanım:  .\deploy-billing.ps1
 # Ön koşul:  gcloud CLI kurulu (winget install Google.CloudSDK) + gcloud auth login
@@ -11,6 +19,7 @@ $ErrorActionPreference = "Stop"
 
 $Region = "us-central1"
 $ServiceName = "noctra-billing-api"
+$ServiceAccountName = "noctra-billing-runtime"
 
 # gcloud hatalarinda script durur (native komutlar $ErrorActionPreference'a takilmaz)
 function Invoke-Gcloud {
@@ -21,46 +30,12 @@ function Invoke-Gcloud {
 $PackageName = if ($env:NOCTRA_PACKAGE_NAME) { $env:NOCTRA_PACKAGE_NAME } else { "studio.kynora.noctra" }
 $SubscriptionIds = if ($env:NOCTRA_SUBSCRIPTION_PRODUCT_IDS) { $env:NOCTRA_SUBSCRIPTION_PRODUCT_IDS } else { "noctra_premium_monthly" }
 $LifetimeIds = if ($env:NOCTRA_LIFETIME_PRODUCT_IDS) { $env:NOCTRA_LIFETIME_PRODUCT_IDS } else { "noctra_premium_lifetime" }
-$SecretName = "noctra-billing-service-account"
 
 # Client build-time'da ayni anahtari gomer; backend de ayni degeri almali.
 $ApiKey = $env:NOCTRA_BILLING_API_KEY
 if ([string]::IsNullOrWhiteSpace($ApiKey) -and (Test-Path ".env")) {
     $ApiLine = Get-Content ".env" | Where-Object { $_ -match "^NOCTRA_BILLING_API_KEY=" } | Select-Object -First 1
     if ($ApiLine) { $ApiKey = $ApiLine.Substring("NOCTRA_BILLING_API_KEY=".Length).Trim() }
-}
-
-# ---------- 0b) RTDN OIDC (.env'den) ----------
-# Pub/Sub push aboneliği için audience + service account e-postası. Backend
-# bunlar eksikse fail-fast ile başlamaz; RTDN kullanılmayacaksa DISABLED=1.
-$RtdnAudience = $env:NOCTRA_RTDN_AUDIENCE
-$RtdnServiceAccountEmail = $env:NOCTRA_RTDN_SERVICE_ACCOUNT_EMAIL
-$RtdnDisabled = $env:NOCTRA_RTDN_DISABLED
-if (Test-Path ".env") {
-    if ([string]::IsNullOrWhiteSpace($RtdnAudience)) {
-        $Line = Get-Content ".env" | Where-Object { $_ -match "^NOCTRA_RTDN_AUDIENCE=" } | Select-Object -First 1
-        if ($Line) { $RtdnAudience = $Line.Substring("NOCTRA_RTDN_AUDIENCE=".Length).Trim() }
-    }
-    if ([string]::IsNullOrWhiteSpace($RtdnServiceAccountEmail)) {
-        $Line = Get-Content ".env" | Where-Object { $_ -match "^NOCTRA_RTDN_SERVICE_ACCOUNT_EMAIL=" } | Select-Object -First 1
-        if ($Line) { $RtdnServiceAccountEmail = $Line.Substring("NOCTRA_RTDN_SERVICE_ACCOUNT_EMAIL=".Length).Trim() }
-    }
-    if ([string]::IsNullOrWhiteSpace($RtdnDisabled)) {
-        $Line = Get-Content ".env" | Where-Object { $_ -match "^NOCTRA_RTDN_DISABLED=" } | Select-Object -First 1
-        if ($Line) { $RtdnDisabled = $Line.Substring("NOCTRA_RTDN_DISABLED=".Length).Trim() }
-    }
-}
-
-if ($RtdnDisabled -ne "1") {
-    if ([string]::IsNullOrWhiteSpace($RtdnAudience) -or [string]::IsNullOrWhiteSpace($RtdnServiceAccountEmail)) {
-        Write-Host "`n❌ RTDN yapılandırması eksik (backend fail-fast ile başlamaz)." -ForegroundColor Red
-        Write-Host "   .env dosyasına ekleyin:"
-        Write-Host "   NOCTRA_RTDN_AUDIENCE=https://pubsub.example.com/push"
-        Write-Host "   NOCTRA_RTDN_SERVICE_ACCOUNT_EMAIL=push-sa@PROJECT.iam.gserviceaccount.com"
-        Write-Host "   (Pub/Sub push subscription 'Authentication' ayarındaki değerler.)"
-        Write-Host "   RTDN kullanmayacaksanız:  NOCTRA_RTDN_DISABLED=1`n"
-        exit 1
-    }
 }
 
 # ---------- 1) gcloud kontrol ----------
@@ -91,29 +66,23 @@ if ([string]::IsNullOrWhiteSpace($Project)) {
     Invoke-Gcloud config set project $Project
 }
 Write-Host "✅ Proje: $Project" -ForegroundColor Green
-Invoke-Gcloud services enable run.googleapis.com cloudbuild.googleapis.com secretmanager.googleapis.com | Out-Null
+Invoke-Gcloud services enable run.googleapis.com cloudbuild.googleapis.com | Out-Null
 
-# ---------- 4) Service account secret ----------
-$CredentialsJson = $env:NOCTRA_GOOGLE_CREDENTIALS_JSON
-if ([string]::IsNullOrWhiteSpace($CredentialsJson)) {
-    $Candidate = @("service-account.json", "noctra-service-account.json") | Where-Object { Test-Path $_ } | Select-Object -First 1
-    if ($Candidate) {
-        $CredentialsJson = Get-Content $Candidate -Raw
-        Write-Host "📄 $Candidate dosyasından okundu." -ForegroundColor Cyan
-    }
-    else {
-        Write-Host "`n⚠️  Service account JSON bulunamadı." -ForegroundColor Yellow
-        Write-Host "   Play Console → Setup → API access → JSON indirin, bu klasöre"
-        Write-Host "   'service-account.json' adıyla koyun ve tekrar çalıştırın.`n"
-        exit 1
-    }
+# ---------- 4) Service account (service identity) ----------
+# Cloud Run'a bağlanacak service account — private key YOK, ADC ile
+# metadata üzerinden token alır. Yalnızca oluşturulmamışsa oluşturulur.
+$SaEmail = "$ServiceAccountName@$Project.iam.gserviceaccount.com"
+$SaExists = gcloud iam service-accounts describe $SaEmail --project=$Project 2>$null
+if (-not $SaExists) {
+    Write-Host "🔐 Service account oluşturuluyor: $SaEmail" -ForegroundColor Cyan
+    Invoke-Gcloud iam service-accounts create $ServiceAccountName --display-name="Noctra Billing Runtime" --project=$Project
 }
 
-$SecretExists = gcloud secrets describe $SecretName --project=$Project 2>$null
-if (-not $SecretExists) {
-    $CredentialsJson | Invoke-Gcloud secrets create $SecretName --data-file=- --project=$Project
-    Write-Host "🔐 Secret oluşturuldu: $SecretName" -ForegroundColor Cyan
-}
+Write-Host ""
+Write-Host "ℹ️  Play Console → Setup → API access → bu e-postaya izin verin:" -ForegroundColor Yellow
+Write-Host "      $SaEmail"
+Write-Host "   (proje izinleri docs/play-console-setup-checklist.md'de anlatılıyor.)"
+Write-Host ""
 
 # ---------- 5) Deploy ----------
 Write-Host "`n🚀 Deploy ediliyor ($Region)..." -ForegroundColor Cyan
@@ -123,20 +92,18 @@ $EnvArgs = "NOCTRA_PACKAGE_NAME=$PackageName,NOCTRA_SUBSCRIPTION_PRODUCT_IDS=$Su
 if (-not [string]::IsNullOrWhiteSpace($ApiKey)) {
     $EnvArgs += ",NOCTRA_BILLING_API_KEY=$ApiKey"
 }
-if ($RtdnDisabled -eq "1") {
-    $EnvArgs += ",NOCTRA_RTDN_DISABLED=1"
-}
-else {
-    $EnvArgs += ",NOCTRA_RTDN_AUDIENCE=$RtdnAudience,NOCTRA_RTDN_SERVICE_ACCOUNT_EMAIL=$RtdnServiceAccountEmail"
-}
 
 Invoke-Gcloud run deploy $ServiceName `
     --source . `
     --dockerfile Noctra.Billing.Api/Dockerfile `
     --region $Region `
     --allow-unauthenticated `
-    --set-secrets="NOCTRA_GOOGLE_CREDENTIALS_JSON=$SecretName`:latest" `
+    --service-account $SaEmail `
     --set-env-vars="$EnvArgs" `
+    --min-instances 0 `
+    --max-instances 2 `
+    --memory 256Mi `
+    --cpu 1 `
     --project=$Project
 
 # ---------- 6) URL'yi .env'e yaz ----------
