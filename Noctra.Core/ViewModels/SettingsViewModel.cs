@@ -219,7 +219,7 @@ public partial class SettingsViewModel : ObservableObject, IAsyncDisposable
     [ObservableProperty]
     private ObservableCollection<EpgUrlItem> _customEpgUrls = new();
 
-    // ============ _localizationService.GetString("Settings.Privacy.Title") ============
+    // ============ Privacy settings ============
 
     [ObservableProperty]
     private bool _saveWatchHistory;

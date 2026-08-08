@@ -161,8 +161,6 @@ public partial class ProfilesViewModel : ObservableObject
             return;
         }
 
-        // _localizationService.GetString("Profiles.Upsell.Notice") 
-        
         if (_licenseService.CurrentTier == SubscriptionTier.Premium)
         {
             ShowAddButton = Profiles.Count < TierLimits.Premium.MaxProfiles;
