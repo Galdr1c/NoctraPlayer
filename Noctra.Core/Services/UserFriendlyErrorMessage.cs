@@ -59,7 +59,7 @@ public static class UserFriendlyErrorMessage
 
             if (http.StatusCode == HttpStatusCode.NotFound)
             {
-                return GetString("Error.Http.NotFound", "İçerik bulunamadı. Kaynak güncel olmayabilir. (404)");
+                return GetString("Error.Http.NotFound", "İçerik bulunamadı. Kaynak güncel olmayabilir.");
             }
 
             if (http.StatusCode is HttpStatusCode.BadGateway
@@ -67,7 +67,7 @@ public static class UserFriendlyErrorMessage
                 or HttpStatusCode.GatewayTimeout
                 or HttpStatusCode.InternalServerError)
             {
-                return string.Format(GetString("Error.Http.ServerUnreachableFormat", "Sunucuya şu anda ulaşılamıyor. Biraz sonra tekrar deneyin. ({0})"), (int)http.StatusCode);
+                return GetString("Error.Http.ServerUnreachable", "Sunucuya şu anda ulaşılamıyor. Biraz sonra tekrar deneyin.");
             }
 
             return GetString("Error.Network.Generic", "Ağ hatası oluştu. Bağlantınızı kontrol edip tekrar deneyin.");
@@ -85,10 +85,22 @@ public static class UserFriendlyErrorMessage
 
         if (baseException is InvalidOperationException invalidOpEx)
         {
-            if (!string.IsNullOrWhiteSpace(invalidOpEx.Message) && 
-                !invalidOpEx.Message.StartsWith("Exception of type", StringComparison.OrdinalIgnoreCase))
+            var message = invalidOpEx.Message;
+            if (!string.IsNullOrWhiteSpace(message)
+                && !message.StartsWith("Exception of type", StringComparison.OrdinalIgnoreCase)
+                && !ContainsAny(message.ToLowerInvariant(),
+                    "object reference",
+                    "sequence contains",
+                    "collection was modified",
+                    "index was out of range",
+                    "key not found",
+                    "operation is not valid",
+                    "procedure or function",
+                    "database is locked",
+                    "aggregation interrupted",
+                    "simulated"))
             {
-                return invalidOpEx.Message;
+                return message;
             }
             return GetString("Error.System.InvalidOperation", "İşlem beklendiği gibi tamamlanamadı. Kaynak veri eksik veya hatalı olabilir.");
         }
@@ -110,15 +122,15 @@ public static class UserFriendlyErrorMessage
 
         if (baseException.GetType().Name == "SocketException")
         {
-            return GetString("Error.Network.Socket", "Sunucuya bağlanılamadı (DNS veya Ağ hatası). Bağlantı adresini kontrol edin.");
+            return GetString("Error.Network.Socket", "Bağlantı kurulamadı. İnternet bağlantınızı ve kaynak adresini kontrol edin.");
         }
 
         if (baseException.GetType().Name == "AuthenticationException" || baseException.Message.Contains("SSL") || baseException.Message.Contains("certificate"))
         {
-            return GetString("Error.Security.Ssl", "SSL/Güvenlik sertifikası hatası. 'https://' yerine 'http://' kullanmayı deneyin.");
+            return GetString("Error.Security.Ssl", "Bağlantı güvenliği doğrulanamadı. Sunucunun güvenlik sertifikasını kontrol edin ve tekrar deneyin.");
         }
 
-        return FromText(baseException.Message, $"Bilinmeyen bir hata oluştu: {baseException.Message}");
+        return FromText(baseException.Message, GetString("Error.Generic.Unknown", "Bilinmeyen bir hata oluştu. Lütfen tekrar deneyin."));
     }
 
     public static string FromText(string? rawMessage, string? fallback = null)
@@ -180,12 +192,12 @@ public static class UserFriendlyErrorMessage
 
         if (ContainsAny(normalized, "404", "not found", "bulunamadi"))
         {
-            return GetString("Error.Http.NotFound", "İçerik bulunamadı. Kaynak güncel olmayabilir. (404)");
+            return GetString("Error.Http.NotFound", "İçerik bulunamadı. Kaynak güncel olmayabilir.");
         }
 
         if (ContainsAny(normalized, "500", "502", "503", "504", "server error", "sunucu"))
         {
-            return GetString("Error.Http.ServerUnreachableFormat", "Sunucu hatası oluştu. Biraz sonra tekrar deneyin.").Replace(" ({0})", "");
+            return GetString("Error.Http.ServerUnreachable", "Sunucuya şu anda ulaşılamıyor. Biraz sonra tekrar deneyin.");
         }
 
         if (ContainsAny(normalized,

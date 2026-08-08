@@ -416,7 +416,8 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
             {
                 _state = PlaybackState.Error;
                 ClearCues();
-                ErrorOccurred?.Invoke(this, ex.Message);
+                LogDebug($"LoadAsync failed: {ex}");
+                ErrorOccurred?.Invoke(this, _localizationService.GetString("VideoPlayer.Error.PlaybackStartFailed"));
                 completion.TrySetException(ex);
             }
         });
@@ -802,8 +803,8 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
             catch (ObjectDisposedException) { }
             catch (Exception ex)
             {
-                LogDebug($"Reinitialize after settings change failed: {ex.Message}");
-                ErrorOccurred?.Invoke(this, ex.Message);
+                LogDebug($"Reinitialize after settings change failed: {ex}");
+                ErrorOccurred?.Invoke(this, _localizationService.GetString("VideoPlayer.Error.PlaybackGeneric"));
             }
         }, cts.Token);
     }
@@ -1619,7 +1620,8 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
             _service._state = PlaybackState.Error;
             _service._isPlaying = false;
             _service.PlayingChanged?.Invoke(_service, false);
-            _service.ErrorOccurred?.Invoke(_service, error.Message ?? "ExoPlayer error");
+            AndroidVideoPlayerService.LogDebug($"ExoPlayer playback error: {error.Message}");
+            _service.ErrorOccurred?.Invoke(_service, _service._localizationService.GetString("VideoPlayer.Error.PlaybackGeneric"));
             _service.ClearCues();
         }
 

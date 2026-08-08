@@ -33,8 +33,12 @@ public sealed class AndroidDialogService : IDialogService
     public Task ShowLegalDocumentAsync(string title, string message) =>
         ShowAlertAsync(title, message);
 
+    /// <summary>
+    /// Kullanıcıya yalnızca UI katmanının ürettiği mesaj gösterilir; exception
+    /// asla dialog'a taşınmaz (ham hata yalnızca log/diagnostic kanallarındadır).
+    /// </summary>
     public Task ShowErrorAsync(string title, string message, Exception? ex = null) =>
-        ShowAlertAsync(title, ex is null ? message : $"{message}\n\n{ex.Message}");
+        ShowAlertAsync(title, message);
 
     public Task<bool> ShowConfirmationAsync(string title, string message)
     {

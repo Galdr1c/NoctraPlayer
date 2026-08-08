@@ -23,8 +23,7 @@ public class PlaylistImportPreview
     {
         static string Fallback(string key) => key switch
         {
-            "PlaylistPreview.ValidationFailedFormat" => "Validation failed: {0}{1}",
-            "PlaylistPreview.StatusCodeSuffixFormat" => " (Code: {0})",
+            "PlaylistPreview.ValidationFailedFormat" => "Connection could not be validated. Check your details and try again.",
             "PlaylistPreview.Health.Good" => "Excellent",
             "PlaylistPreview.Health.Weak" => "Fair",
             "PlaylistPreview.Health.Bad" => "Poor",
@@ -39,10 +38,7 @@ public class PlaylistImportPreview
 
         if (!IsValid)
         {
-            var statusPart = StatusCode.HasValue
-                ? string.Format(t("PlaylistPreview.StatusCodeSuffixFormat"), StatusCode)
-                : string.Empty;
-            return string.Format(t("PlaylistPreview.ValidationFailedFormat"), ErrorMessage, statusPart);
+            return t("PlaylistPreview.ValidationFailedFormat");
         }
 
         var healthText = Health switch
