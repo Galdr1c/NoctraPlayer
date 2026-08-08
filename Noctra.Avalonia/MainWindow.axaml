@@ -863,10 +863,24 @@
                       <Border Height="1" Background="{DynamicResource BorderBrush}" Opacity="0.3" Margin="0,0,0,24"/>
                   </StackPanel>
 
-                  <!-- Episode Row List -->
-                  <ItemsControl Grid.Row="1" ItemsSource="{Binding SelectedSeason.Episodes}"
-                                b:SlideTransitionBehavior.TriggerValue="{Binding SelectedSeason}">
-                      <ItemsControl.ItemTemplate>
+                  <!-- Episode Row List: bounded virtualization keeps long seasons responsive. -->
+                  <ListBox x:Name="DesktopEpisodeListBox"
+                           Grid.Row="1"
+                           ItemsSource="{Binding SelectedSeason.Episodes}"
+                           MaxHeight="760"
+                           Background="Transparent"
+                           BorderThickness="0"
+                           Padding="0"
+                           ScrollViewer.VerticalScrollBarVisibility="Auto"
+                           ScrollViewer.IsScrollInertiaEnabled="True"
+                           ScrollViewer.IsScrollChainingEnabled="True"
+                           b:SlideTransitionBehavior.TriggerValue="{Binding SelectedSeason}">
+                      <ListBox.ItemsPanel>
+                          <ItemsPanelTemplate>
+                              <VirtualizingStackPanel CacheLength="0.5" />
+                          </ItemsPanelTemplate>
+                      </ListBox.ItemsPanel>
+                      <ListBox.ItemTemplate>
                           <DataTemplate>
                               <Button Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).PlayEpisodeCommand}"
                                       CommandParameter="{Binding}"
@@ -932,8 +946,17 @@
                                   </Panel>
                               </Button>
                           </DataTemplate>
-                      </ItemsControl.ItemTemplate>
-                      <ItemsControl.Styles>
+                      </ListBox.ItemTemplate>
+                      <ListBox.Styles>
+                          <Style Selector="ListBoxItem">
+                              <Setter Property="Background" Value="Transparent" />
+                              <Setter Property="BorderBrush" Value="Transparent" />
+                              <Setter Property="Padding" Value="0" />
+                              <Setter Property="Focusable" Value="False" />
+                          </Style>
+                          <Style Selector="ListBoxItem:selected">
+                              <Setter Property="Background" Value="Transparent" />
+                          </Style>
                           <Style Selector="Button:pointerover Border#EpBgLayer">
                                 <Setter Property="Background" Value="{DynamicResource InteractiveHoverBrush}"/>
                                 <Setter Property="Opacity" Value="0.9"/>
@@ -942,8 +965,8 @@
                                <Setter Property="Background" Value="{DynamicResource InteractivePressedBrush}"/>
                                <Setter Property="Opacity" Value="1.0"/>
                            </Style>
-                      </ItemsControl.Styles>
-                  </ItemsControl>
+                      </ListBox.Styles>
+                  </ListBox>
                 </Grid>
 
               </Grid>

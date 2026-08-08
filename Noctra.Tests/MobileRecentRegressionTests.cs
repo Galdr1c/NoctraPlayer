@@ -108,6 +108,21 @@ public sealed class MobileRecentRegressionTests
     }
 
     [Fact]
+    public void DesktopSeriesDetail_VirtualizesEpisodesInsideBoundedViewport()
+    {
+        var source = File.ReadAllText(ProjectFile("Noctra.Avalonia", "MainWindow.axaml"));
+
+        Assert.DoesNotContain(
+            "<ItemsControl Grid.Row=\"1\" ItemsSource=\"{Binding SelectedSeason.Episodes}\"",
+            source,
+            StringComparison.Ordinal);
+        Assert.Contains("x:Name=\"DesktopEpisodeListBox\"", source, StringComparison.Ordinal);
+        Assert.Contains("<VirtualizingStackPanel", source, StringComparison.Ordinal);
+        Assert.Contains("MaxHeight=", source, StringComparison.Ordinal);
+        Assert.Contains("ScrollViewer.VerticalScrollBarVisibility=\"Auto\"", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void MobileRemoteImage_DecodesBitmapsToBoundedDisplaySize()
     {
         var source = File.ReadAllText(ProjectFile("Noctra.Mobile", "Controls", "MobileRemoteImage.cs"));

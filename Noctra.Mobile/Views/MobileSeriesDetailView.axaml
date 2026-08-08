@@ -421,22 +421,25 @@
             </ListBox>
 
             <!-- Episode Row List.
-                 NON-SCROLLING presentation: the outer page ScrollViewer is the
-                 ONLY vertical scroller, so the page pans as one unit and there is
-                 no nested scroll to trap gestures or swallow scroll chaining. -->
+                 Keep a bounded, virtualized viewport so long seasons do not
+                 realize every row. Scroll chaining lets a gesture continue to
+                 the detail page when the episode viewport reaches an edge. -->
             <ListBox x:Name="EpisodeListBox"
                      ItemsSource="{Binding SelectedSeason.Episodes}"
                      ItemContainerTheme="{StaticResource TransparentListBoxItemTheme}"
+                     MaxHeight="760"
                      Background="Transparent"
                      BorderThickness="0"
                      Padding="0"
                      SelectionChanged="ClearTransientSelection"
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                     ScrollViewer.VerticalScrollBarVisibility="Disabled"
+                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                     ScrollViewer.IsScrollInertiaEnabled="True"
+                     ScrollViewer.IsScrollChainingEnabled="True"
                      behaviors:MobileSlideTransitionBehavior.TriggerValue="{Binding SelectedSeason}">
               <ListBox.ItemsPanel>
                 <ItemsPanelTemplate>
-                  <VirtualizingStackPanel />
+                  <VirtualizingStackPanel CacheLength="0.5" />
                 </ItemsPanelTemplate>
               </ListBox.ItemsPanel>
               <ListBox.Styles>
