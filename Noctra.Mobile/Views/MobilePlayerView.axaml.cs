@@ -255,24 +255,19 @@ public partial class MobilePlayerView : UserControl
         {
             if (_boundVm?.IsEpgPanelOpen == true)
             {
-                EpgPanel.InitializeTimelineHeader();
+                _ = EpgPanel.OpenAsync();
                 _lastSurfaceRect = default;
                 QueueVideoSurfaceLayoutUpdate();
             }
             else
             {
+                EpgPanel.CloseGuide();
                 // EPG kapandı -> native surface normal player slotuna döner.
                 _lastSurfaceRect = default;
                 QueueVideoSurfaceLayoutUpdate();
             }
 
             return;
-        }
-
-        if (e.PropertyName == nameof(PlayerViewModel.EpgFocusRowIndex)
-            && _boundVm?.IsEpgPanelOpen == true)
-        {
-            EpgPanel.QueueFocusCurrentRow();
         }
     }
 
@@ -369,14 +364,6 @@ public partial class MobilePlayerView : UserControl
         if (totalWidth <= 0 || totalHeight <= 0)
         {
             return;
-        }
-
-        // Video yüksekliği: 16:9, ancak ekranın yarısını geçmesin.
-        var desiredHeight = Math.Min(totalWidth * 9.0 / 16.0, totalHeight * 0.5);
-        if (Math.Abs(videoSlot.Height - desiredHeight) > 0.5)
-        {
-            videoSlot.Height = desiredHeight;
-            return; // yükseklik değişti; yeni layout pass UpdateEpgVideoLayout'u tekrar tetikler
         }
 
         // VideoSlot'un pencereye göre konumunu al, piksel ölçeğine çevir.

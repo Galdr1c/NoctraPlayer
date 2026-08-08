@@ -4,6 +4,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:Noctra.ViewModels"
+             xmlns:epg="using:Noctra.Avalonia.ViewModels"
              xmlns:models="using:Noctra.Models"
              xmlns:controls="using:Noctra.Avalonia.Controls"
              xmlns:loc="using:Noctra.Avalonia.Localization"
@@ -474,13 +475,13 @@
                                     Padding="10,5"
                                     Margin="0,0,16,0"
                                     VerticalAlignment="Center"
-                                    IsVisible="{Binding IsEpgUpdateRequired}">
+                                    IsVisible="{Binding IsEpgError}">
                                 <StackPanel Orientation="Horizontal" Spacing="6">
                                     <materialIcons:MaterialIcon Kind="AlertCircle"
                                                                Width="14" Height="14"
                                                                Foreground="#FBBF24"
                                                                VerticalAlignment="Center"/>
-                                    <TextBlock Text="{Binding EpgStatusMessage}"
+                                    <TextBlock Text="{loc:Translate Player.Epg.ErrorDescription}"
                                                FontSize="12"
                                                FontWeight="SemiBold"
                                                Foreground="#FDE68A"
@@ -543,9 +544,9 @@
                                           HorizontalScrollBarVisibility="Disabled"
                                           VerticalScrollBarVisibility="Hidden"
                                           IsHitTestVisible="False">
-                                <ItemsControl ItemsSource="{Binding EpgRows}">
+                                <ItemsControl ItemsSource="{Binding #OverlayRoot.DesktopEpg.Rows}">
                                     <ItemsControl.ItemTemplate>
-                                        <DataTemplate x:DataType="vm:EpgPanelRow">
+                                        <DataTemplate x:DataType="epg:DesktopEpgPanelRow">
                                             <Border Height="68"
                                                     BorderBrush="#0DFFFFFF"
                                                     BorderThickness="0,0,1,1"
@@ -594,7 +595,7 @@
                                               VerticalScrollBarVisibility="Disabled"
                                               IsHitTestVisible="False">
                                     <Canvas x:Name="EpgTimeHeaderCanvas"
-                                            Width="{Binding EpgCanvasPixelWidth}"
+                                            Width="{Binding #OverlayRoot.DesktopEpg.CanvasWidth}"
                                             Height="40"/>
                                 </ScrollViewer>
                             </Border>
@@ -604,10 +605,10 @@
                                           HorizontalScrollBarVisibility="Auto"
                                           VerticalScrollBarVisibility="Auto"
                                           ScrollChanged="EpgTimelineScroll_ScrollChanged">
-                                <Grid Width="{Binding EpgCanvasPixelWidth}">
-                                    <ItemsControl ItemsSource="{Binding EpgRows}">
+                                <Grid Width="{Binding #OverlayRoot.DesktopEpg.CanvasWidth}">
+                                    <ItemsControl ItemsSource="{Binding #OverlayRoot.DesktopEpg.Rows}">
                                         <ItemsControl.ItemTemplate>
-                                            <DataTemplate x:DataType="vm:EpgPanelRow">
+                                            <DataTemplate x:DataType="epg:DesktopEpgPanelRow">
                                                 <Grid Height="68">
                                                     <!-- Satır arkaplanı -->
                                                     <Border Background="{Binding IsCurrentChannel,
@@ -642,7 +643,7 @@
                                                             </ItemsPanelTemplate>
                                                         </ItemsControl.ItemsPanel>
                                                         <ItemsControl.ItemTemplate>
-                                                            <DataTemplate x:DataType="vm:EpgProgramBlock">
+                                                            <DataTemplate x:DataType="epg:DesktopEpgProgramBlock">
                                                                 <!-- Margin.Left = PixelLeft, HorizontalAlignment=Left ile mutlak konum -->
                                                                 <Border Width="{Binding PixelWidth}"
                                                                         Margin="{Binding PixelLeft,

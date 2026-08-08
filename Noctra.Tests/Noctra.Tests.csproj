@@ -34,6 +34,10 @@
          the Android/Avalonia mobile application project. -->
     <Compile Include="..\Noctra.Mobile\Behaviors\MobileOverscrollPhysics.cs"
              Link="Behaviors\MobileOverscrollPhysics.cs" />
+    <!-- Pure EPG geometry stays in the mobile presentation layer while remaining
+         directly testable from the Core test project. -->
+    <Compile Include="..\Noctra.Mobile\ViewModels\MobileEpgTimelineGeometry.cs"
+             Link="ViewModels\MobileEpgTimelineGeometry.cs" />
   </ItemGroup>
 
 </Project>

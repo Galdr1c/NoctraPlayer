@@ -10,6 +10,7 @@ using Avalonia.Media;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Noctra.Avalonia.Localization;
+using Noctra.Avalonia.ViewModels;
 using Noctra.Core.Services;
 using Noctra.ViewModels;
 
@@ -25,6 +26,10 @@ public partial class VideoOverlayView : UserControl
         AvaloniaProperty.Register<VideoOverlayView, bool>(nameof(IsDownloadToastVisible));
     public static readonly StyledProperty<string> SeekToastTextProperty =
         AvaloniaProperty.Register<VideoOverlayView, string>(nameof(SeekToastText), "+0:10");
+    public static readonly StyledProperty<DesktopEpgGuidePresentation> DesktopEpgProperty =
+        AvaloniaProperty.Register<VideoOverlayView, DesktopEpgGuidePresentation>(
+            nameof(DesktopEpg),
+            DesktopEpgGuidePresentation.CreateWindow(DateTime.Now));
 
     private static readonly Cursor HiddenCursor = new(StandardCursorType.None);
     private static readonly Cursor VisibleCursor = new(StandardCursorType.Arrow);
@@ -60,6 +65,12 @@ public partial class VideoOverlayView : UserControl
     {
         get => GetValue(SeekToastTextProperty);
         set => SetValue(SeekToastTextProperty, value);
+    }
+
+    public DesktopEpgGuidePresentation DesktopEpg
+    {
+        get => GetValue(DesktopEpgProperty);
+        private set => SetValue(DesktopEpgProperty, value);
     }
 
     public VideoOverlayView()
@@ -208,51 +219,47 @@ public partial class VideoOverlayView : UserControl
         if (e.PropertyName == nameof(PlayerViewModel.IsEpgPanelOpen)
             && _playerViewModel?.IsEpgPanelOpen == true)
         {
-            InitializeEpgTimeHeader();
+            _ = OpenDesktopEpgAsync();
         }
-        else if (e.PropertyName == nameof(PlayerViewModel.EpgFocusRowIndex)
-                 && _playerViewModel?.IsEpgPanelOpen == true)
+        else if (e.PropertyName == nameof(PlayerViewModel.EpgGuideState)
+                 && _playerViewModel?.IsEpgPanelOpen == true
+                 && !_playerViewModel.IsEpgLoading)
         {
+            RebuildDesktopEpg();
             QueueFocusCurrentEpgRow();
         }
     }
 
-    private void InitializeEpgTimeHeader()
+    private async Task OpenDesktopEpgAsync()
     {
-        // Saat etiketlerini hesapla (pencere: now-2h → now+4h)
-        var now = DateTime.Now;
-        BuildEpgTimeHeader(now);
-        var labels = new[]
-        {
-            this.FindControl<TextBlock>("EpgH_Minus2"),
-            this.FindControl<TextBlock>("EpgH_Minus1"),
-            this.FindControl<TextBlock>("EpgH_Now"),
-            this.FindControl<TextBlock>("EpgH_Plus1"),
-            this.FindControl<TextBlock>("EpgH_Plus2"),
-            this.FindControl<TextBlock>("EpgH_Plus3"),
-        };
+        if (_playerViewModel == null)
+            return;
 
-        var offsets = new[] { -2, -1, 0, 1, 2, 3 };
-        for (int i = 0; i < labels.Length; i++)
-        {
-            if (labels[i] == null) continue;
-            var t = now.AddHours(offsets[i]);
-            labels[i]!.Text = t.ToString("HH:mm");
-        }
+        var window = DesktopEpgGuidePresentation.CreateWindow(DateTime.Now);
+        DesktopEpg = window;
+        BuildEpgTimeHeader();
 
-        // Zaman penceresi etiketini güncelle
-        var windowLabel = this.FindControl<TextBlock>("EpgTimeWindowLabel");
-        if (windowLabel != null)
-        {
-            var start = now.AddHours(-PlayerViewModel.EpgPastHours).ToString("HH:mm");
-            var end   = now.AddHours( PlayerViewModel.EpgFutureHours).ToString("HH:mm");
-            windowLabel.Text = $"{start} – {end}";
-        }
+        await _playerViewModel.LoadEpgPanelAsync(window.WindowStart, window.WindowEnd);
+        if (!_playerViewModel.IsEpgPanelOpen)
+            return;
 
+        RebuildDesktopEpg();
         QueueFocusCurrentEpgRow();
     }
 
-    private void BuildEpgTimeHeader(DateTime now)
+    private void RebuildDesktopEpg()
+    {
+        if (_playerViewModel == null)
+            return;
+
+        DesktopEpg = DesktopEpgGuidePresentation.Build(
+            _playerViewModel.EpgRows,
+            _playerViewModel.CurrentChannel,
+            DateTime.Now);
+        BuildEpgTimeHeader();
+    }
+
+    private void BuildEpgTimeHeader()
     {
         var canvas = this.FindControl<Canvas>("EpgTimeHeaderCanvas");
         if (canvas == null)
@@ -264,33 +271,39 @@ public partial class VideoOverlayView : UserControl
         var halfLineBrush = new SolidColorBrush(Color.Parse("#1AFFFFFF"));
         var nowBrush = new SolidColorBrush(Color.Parse("#CC7B2FBE"));
         var accentBrush = new SolidColorBrush(Color.Parse("#7B2FBE"));
-        var totalMinutes = (PlayerViewModel.EpgPastHours + PlayerViewModel.EpgFutureHours) * 60;
+        var totalMinutes = (int)(DesktopEpg.WindowEnd - DesktopEpg.WindowStart).TotalMinutes;
 
-        for (var minute = 30; minute < totalMinutes; minute += 30)
+        var windowLabel = this.FindControl<TextBlock>("EpgTimeWindowLabel");
+        if (windowLabel != null)
+            windowLabel.Text = $"{DesktopEpg.WindowStart:HH:mm} – {DesktopEpg.WindowEnd:HH:mm}";
+
+        for (var minute = 0; minute <= totalMinutes; minute += 30)
         {
-            var line = new Border
+            if (minute > 0 && minute < totalMinutes)
             {
-                Width = 1,
-                Height = 40,
-                Background = minute % 60 == 0 ? lineBrush : halfLineBrush
-            };
-            Canvas.SetLeft(line, minute * PlayerViewModel.EpgPxPerMinute);
-            canvas.Children.Add(line);
-        }
+                var tickTime = DesktopEpg.WindowStart.AddMinutes(minute);
+                var line = new Border
+                {
+                    Width = 1,
+                    Height = 40,
+                    Background = tickTime.Minute == 0 ? lineBrush : halfLineBrush
+                };
+                Canvas.SetLeft(line, minute * DesktopEpgGuidePresentation.PixelsPerMinute);
+                canvas.Children.Add(line);
+            }
 
-        for (var hour = -(int)PlayerViewModel.EpgPastHours; hour <= (int)PlayerViewModel.EpgFutureHours; hour++)
-        {
-            if (hour == 0)
+            var labelTime = DesktopEpg.WindowStart.AddMinutes(minute);
+            if (labelTime.Minute != 0)
                 continue;
 
             var label = new TextBlock
             {
-                Text = now.AddHours(hour).ToString("HH:mm"),
+                Text = labelTime.ToString("HH:mm"),
                 FontSize = 11,
                 FontWeight = FontWeight.Bold,
                 Foreground = new SolidColorBrush(Color.Parse("#80FFFFFF"))
             };
-            Canvas.SetLeft(label, (hour + PlayerViewModel.EpgPastHours) * 60 * PlayerViewModel.EpgPxPerMinute + 4);
+            Canvas.SetLeft(label, minute * DesktopEpgGuidePresentation.PixelsPerMinute + 4);
             Canvas.SetTop(label, 16);
             canvas.Children.Add(label);
         }
@@ -302,7 +315,7 @@ public partial class VideoOverlayView : UserControl
             Background = nowBrush,
             ZIndex = 10
         };
-        Canvas.SetLeft(nowLine, PlayerViewModel.EpgNowPixelPos);
+        Canvas.SetLeft(nowLine, DesktopEpg.NowLineLeft);
         canvas.Children.Add(nowLine);
 
         var nowLabel = new TextBlock
@@ -327,7 +340,7 @@ public partial class VideoOverlayView : UserControl
             ZIndex = 11,
             Child = nowLabel
         };
-        Canvas.SetLeft(nowBadge, PlayerViewModel.EpgNowPixelPos - 13);
+        Canvas.SetLeft(nowBadge, DesktopEpg.NowLineLeft - 13);
         Canvas.SetTop(nowBadge, 5);
         canvas.Children.Add(nowBadge);
     }
@@ -348,13 +361,16 @@ public partial class VideoOverlayView : UserControl
         if (timelineScroll == null)
             return;
 
-        var targetX = Math.Max(0, PlayerViewModel.EpgNowPixelPos - timelineScroll.Viewport.Width / 2);
+        var targetX = Math.Max(0, DesktopEpg.NowLineLeft - timelineScroll.Viewport.Width / 2);
         var targetY = timelineScroll.Offset.Y;
 
-        if (_playerViewModel?.EpgFocusRowIndex >= 0)
+        if (DesktopEpg.CurrentRowIndex >= 0)
         {
-            const double rowHeight = 68;
-            targetY = Math.Max(0, _playerViewModel.EpgFocusRowIndex * rowHeight - timelineScroll.Viewport.Height / 2 + rowHeight / 2);
+            targetY = Math.Max(
+                0,
+                DesktopEpg.CurrentRowIndex * DesktopEpgGuidePresentation.RowHeight
+                - timelineScroll.Viewport.Height / 2
+                + DesktopEpgGuidePresentation.RowHeight / 2);
         }
 
         timelineScroll.Offset = new global::Avalonia.Vector(targetX, targetY);
@@ -709,14 +725,14 @@ public partial class VideoOverlayView : UserControl
         if (point.Properties.PointerUpdateKind != PointerUpdateKind.LeftButtonReleased)
             return;
 
-        Noctra.ViewModels.EpgPanelRow? row = null;
+        DesktopEpgPanelRow? row = null;
         if (sender is Control control)
         {
-            row = control.DataContext as Noctra.ViewModels.EpgPanelRow
+            row = control.DataContext as DesktopEpgPanelRow
                   ?? control.GetVisualAncestors()
                       .OfType<Control>()
                       .Select(c => c.DataContext)
-                      .OfType<Noctra.ViewModels.EpgPanelRow>()
+                      .OfType<DesktopEpgPanelRow>()
                       .FirstOrDefault();
         }
 

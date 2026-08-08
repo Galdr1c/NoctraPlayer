@@ -1,274 +1,655 @@
-﻿<UserControl xmlns="https://github.com/avaloniaui"
+<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:models="using:Noctra.Models"
              xmlns:vm="clr-namespace:Noctra.ViewModels;assembly=Noctra.Core"
+             xmlns:mobileVm="using:Noctra.Mobile.ViewModels"
              xmlns:loc="using:Noctra.Mobile.Localization"
              xmlns:controls="using:Noctra.Mobile.Controls"
              xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="Noctra.Mobile.Views.MobilePlayerEpgPanel"
+             x:Name="EpgPanelRoot"
              x:DataType="vm:PlayerViewModel"
-             x:CompileBindings="False">
-    <Grid x:Name="EpgModeRoot" Grid.ColumnSpan="2"
-          RowDefinitions="Auto,*"
-          IsVisible="{Binding IsEpgPanelOpen}">
-      <!-- Top transparent video slot. The native surface is bound to this area. -->
-      <Border x:Name="VideoSlot" Grid.Row="0"
-              Background="Transparent"
+             x:CompileBindings="False"
+             Focusable="True"
+             KeyDown="EpgPanel_KeyDown"
+             PointerPressed="EpgPanel_PointerPressed">
+  <UserControl.Styles>
+    <Style Selector="Button.epgIconButton">
+      <Setter Property="MinWidth" Value="48" />
+      <Setter Property="MinHeight" Value="48" />
+      <Setter Property="Padding" Value="10" />
+      <Setter Property="CornerRadius" Value="24" />
+      <Setter Property="Background" Value="{DynamicResource Surface1Brush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+    </Style>
+    <Style Selector="Button.epgIconButton:pointerover">
+      <Setter Property="Background" Value="{DynamicResource InteractiveHoverBrush}" />
+    </Style>
+    <Style Selector="Button.epgIconButton:focus-visible">
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+      <Setter Property="BorderThickness" Value="3" />
+    </Style>
+    <Style Selector="Button.epgIconButton:focus-visible /template/ ContentPresenter">
+      <Setter Property="BoxShadow" Value="{DynamicResource FocusGlow}" />
+    </Style>
+
+    <Style Selector="Button.epgChannel">
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="Padding" Value="10,6" />
+      <Setter Property="CornerRadius" Value="0" />
+      <Setter Property="Background" Value="{DynamicResource Surface0Brush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+      <Setter Property="BorderThickness" Value="0,0,1,1" />
+    </Style>
+    <Style Selector="Button.epgChannel.playing">
+      <Setter Property="Background" Value="{DynamicResource TextSelectionBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+      <Setter Property="BorderThickness" Value="3,0,1,1" />
+    </Style>
+    <Style Selector="Button.epgChannel:pointerover">
+      <Setter Property="Background" Value="{DynamicResource InteractiveHoverBrush}" />
+    </Style>
+    <Style Selector="Button.epgChannel:focus-visible">
+      <Setter Property="Background" Value="{DynamicResource InteractiveHoverBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+      <Setter Property="BorderThickness" Value="3" />
+    </Style>
+    <Style Selector="Button.epgChannel:focus-visible /template/ ContentPresenter">
+      <Setter Property="BoxShadow" Value="{DynamicResource FocusGlow}" />
+    </Style>
+
+    <Style Selector="Button.epgProgram">
+      <Setter Property="Height" Value="52" />
+      <Setter Property="MinWidth" Value="24" />
+      <Setter Property="Padding" Value="10,6" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+      <Setter Property="HorizontalAlignment" Value="Left" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+      <Setter Property="CornerRadius" Value="{DynamicResource RadiusSmall}" />
+      <Setter Property="Background" Value="{DynamicResource Surface1Brush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+    </Style>
+    <Style Selector="Button.epgProgram.current">
+      <Setter Property="Background" Value="{DynamicResource NavActiveBackgroundBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource LiveRedBrush}" />
+    </Style>
+    <Style Selector="Button.epgProgram.playing">
+      <Setter Property="BorderBrush" Value="{DynamicResource LiveRedBrush}" />
+      <Setter Property="BorderThickness" Value="2" />
+    </Style>
+    <Style Selector="Button.epgProgram.selected">
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+      <Setter Property="BorderThickness" Value="2" />
+      <Setter Property="Background" Value="{DynamicResource TextSelectionBrush}" />
+    </Style>
+    <Style Selector="Button.epgProgram.past">
+      <Setter Property="Opacity" Value="0.58" />
+    </Style>
+    <Style Selector="Button.epgProgram:pointerover">
+      <Setter Property="Background" Value="{DynamicResource InteractiveHoverBrush}" />
+    </Style>
+    <Style Selector="Button.epgProgram:pressed">
+      <Setter Property="Background" Value="{DynamicResource InteractivePressedBrush}" />
+    </Style>
+    <Style Selector="Button.epgProgram:focus-visible">
+      <Setter Property="Opacity" Value="1" />
+      <Setter Property="Background" Value="{DynamicResource InteractiveHoverBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+      <Setter Property="BorderThickness" Value="3" />
+      <Setter Property="ZIndex" Value="20" />
+    </Style>
+    <Style Selector="Button.epgProgram:focus-visible /template/ ContentPresenter">
+      <Setter Property="BoxShadow" Value="{DynamicResource FocusGlow}" />
+    </Style>
+    <Style Selector="UserControl.remote Button.epgProgram">
+      <Setter Property="Height" Value="64" />
+      <Setter Property="Padding" Value="14,8" />
+    </Style>
+    <Style Selector="UserControl.remote Button.epgIconButton">
+      <Setter Property="MinWidth" Value="56" />
+      <Setter Property="MinHeight" Value="56" />
+      <Setter Property="CornerRadius" Value="28" />
+    </Style>
+  </UserControl.Styles>
+
+  <Grid x:Name="EpgModeRoot"
+        RowDefinitions="Auto,*"
+        Background="{DynamicResource Bg0Brush}"
+        IsVisible="{Binding IsEpgPanelOpen}">
+    <Grid x:Name="EpgHeroGrid"
+          Grid.Row="0"
+          Background="{DynamicResource Surface0Brush}">
+      <Border x:Name="VideoSlot"
+              Background="{x:Null}"
               ClipToBounds="True">
-        <!-- Thin translucent control strip on the bottom edge of the video. -->
         <Border VerticalAlignment="Bottom"
                 Background="{DynamicResource PlayerOverlayStrongBrush}"
-                Padding="12,6">
+                Padding="14,8">
           <Grid ColumnDefinitions="*,Auto">
-            <StackPanel VerticalAlignment="Center" Spacing="1">
+            <StackPanel VerticalAlignment="Center" Spacing="2">
               <TextBlock Text="{Binding CurrentChannel.Name}"
-                         FontSize="{DynamicResource FCaption}" FontWeight="SemiBold"
+                         FontSize="{DynamicResource FBody}"
+                         FontWeight="SemiBold"
                          Foreground="{DynamicResource PlayerOverlayTextBrush}"
-                         TextTrimming="CharacterEllipsis" MaxLines="1" />
-              <TextBlock Text="{Binding ConnectionStatus}"
-                         FontSize="{DynamicResource FOverline}"
+                         TextTrimming="CharacterEllipsis"
+                         MaxLines="1" />
+              <TextBlock Text="{Binding CurrentProgram.Title}"
+                         FontSize="{DynamicResource FCaption}"
                          Foreground="{DynamicResource PlayerOverlaySecondaryTextBrush}"
-                         TextTrimming="CharacterEllipsis" MaxLines="1" />
+                         TextTrimming="CharacterEllipsis"
+                         MaxLines="1" />
             </StackPanel>
-            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-              <Button Command="{Binding PlayPauseCommand}"
-                      MinHeight="44" MinWidth="44"
-                      Background="Transparent" BorderThickness="0" CornerRadius="22">
+            <StackPanel Grid.Column="1"
+                        Orientation="Horizontal"
+                        Spacing="6"
+                        VerticalAlignment="Center">
+              <Button Classes="epgIconButton"
+                      Command="{Binding PlayPauseCommand}"
+                      Background="{DynamicResource PlayerOverlayButtonBrush}"
+                      BorderBrush="{DynamicResource PlayerOverlayBorderBrush}"
+                                        AutomationProperties.Name="{loc:Translate Player.Overlay.PlayPause.Tooltip}">
                 <Grid>
-                  <icons:MaterialIcon Kind="Pause" Width="20" Height="20"
-                                      Foreground="{DynamicResource PlayerOverlayTextBrush}" IsVisible="{Binding IsPlaying}" />
-                  <icons:MaterialIcon Kind="Play" Width="20" Height="20"
-                                      Foreground="{DynamicResource PlayerOverlayTextBrush}" IsVisible="{Binding !IsPlaying}" />
+                  <icons:MaterialIcon Kind="Pause"
+                                      Width="22" Height="22"
+                                      Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                                      IsVisible="{Binding IsPlaying}" />
+                  <icons:MaterialIcon Kind="Play"
+                                      Width="22" Height="22"
+                                      Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                                      IsVisible="{Binding !IsPlaying}" />
                 </Grid>
               </Button>
-              <Button Command="{Binding ToggleFullScreenCommand}"
-                      MinHeight="44" MinWidth="44"
-                      Background="Transparent" BorderThickness="0" CornerRadius="22">
-                <Grid>
-                  <icons:MaterialIcon Kind="Fullscreen" Width="20" Height="20"
-                                      Foreground="{DynamicResource PlayerOverlayTextBrush}"
-                                      IsVisible="{Binding IsFullScreen, Converter={StaticResource InverseBoolConverter}}" />
-                  <icons:MaterialIcon Kind="FullscreenExit" Width="20" Height="20"
-                                      Foreground="{DynamicResource PlayerOverlayTextBrush}"
-                                      IsVisible="{Binding IsFullScreen}" />
-                </Grid>
-              </Button>
-              <Button Command="{Binding ToggleEpgPanelCommand}"
-                      MinHeight="44" MinWidth="44"
-                      Background="Transparent" BorderThickness="0" CornerRadius="22">
-                <icons:MaterialIcon Kind="Close" Width="18" Height="18" Foreground="{DynamicResource PlayerOverlayTextBrush}" />
+              <Button Classes="epgIconButton"
+                      Command="{Binding ToggleEpgPanelCommand}"
+                      Background="{DynamicResource PlayerOverlayButtonBrush}"
+                      BorderBrush="{DynamicResource PlayerOverlayBorderBrush}"
+                      AutomationProperties.Name="{loc:Translate Common.Close}">
+                <icons:MaterialIcon Kind="Close"
+                                    Width="20" Height="20"
+                                    Foreground="{DynamicResource PlayerOverlayTextBrush}" />
               </Button>
             </StackPanel>
           </Grid>
         </Border>
       </Border>
 
-      <!-- EPG timeline fills the remaining area. -->
-      <Grid Grid.Row="1" Background="#EE0D0D0D">
-        <Grid RowDefinitions="Auto,*">
-          <!-- EPG Header -->
-          <Border Padding="14,10" Background="#1A7B2FBE">
-            <Grid ColumnDefinitions="*,Auto,Auto">
-              <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                <icons:MaterialIcon Kind="CalendarClock" Width="18" Height="18"
-                                    Foreground="{DynamicResource AccentBrush}" />
-                <TextBlock Text="{loc:Translate Player.Epg.GuideTitle}"
-                           FontSize="{DynamicResource FOverline}" FontWeight="Black"
-                           Foreground="{DynamicResource AccentBrush}" LetterSpacing="2"
-                           VerticalAlignment="Center" />
-                <Border Background="#267B2FBE"
-                        CornerRadius="5"
-                        Padding="7,3"
-                        VerticalAlignment="Center">
-                  <TextBlock x:Name="EpgTimeWindowLabel"
-                             FontSize="{DynamicResource FOverline}" FontWeight="SemiBold"
-                             Foreground="#B3FFFFFF" />
-                </Border>
-                <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center"
-                            IsVisible="{Binding IsEpgLoading}">
-                  <ProgressBar IsIndeterminate="True" Width="50" Height="3"
-                               Foreground="{DynamicResource AccentBrush}" Background="#1AFFFFFF" />
-                  <TextBlock Text="{loc:Translate Common.Loading}" FontSize="{DynamicResource FOverline}"
-                             Foreground="{DynamicResource TextMutedBrush}" />
-                </StackPanel>
-              </StackPanel>
-              <Border Grid.Column="1" Background="#33F59E0B" BorderBrush="#66F59E0B"
-                      BorderThickness="1" CornerRadius="6" Padding="8,4" Margin="0,0,8,0"
-                      VerticalAlignment="Center" IsVisible="{Binding IsEpgUpdateRequired}">
-                <StackPanel Orientation="Horizontal" Spacing="4">
-                  <icons:MaterialIcon Kind="AlertCircle" Width="12" Height="12"
-                                      Foreground="#FBBF24" VerticalAlignment="Center" />
-                  <TextBlock Text="{Binding EpgStatusMessage}" FontSize="{DynamicResource FOverline}" FontWeight="SemiBold"
-                             Foreground="#FDE68A" TextTrimming="CharacterEllipsis" MaxWidth="120" />
-                </StackPanel>
-              </Border>
-              <Button Grid.Column="2" Command="{Binding ToggleEpgPanelCommand}"
-                      MinHeight="44" MinWidth="44"
-                      Background="Transparent" BorderThickness="0" CornerRadius="22">
-                <icons:MaterialIcon Kind="Close" Width="16" Height="16"
-                                    Foreground="{DynamicResource TextPrimaryBrush}" />
-              </Button>
+      <Border x:Name="ProgramDetailPanel"
+              Padding="18,14"
+              Background="{DynamicResource Surface0Brush}"
+              BorderBrush="{DynamicResource BorderBrush}"
+              BorderThickness="0,0,0,1">
+        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+          <Border Width="56" Height="56"
+                  CornerRadius="{DynamicResource RadiusSmall}"
+                  Background="{DynamicResource Surface1Brush}"
+                  ClipToBounds="True"
+                  VerticalAlignment="Top">
+            <Grid>
+              <controls:RemoteImage Url="{Binding Guide.SelectedChannel.LogoUrl, ElementName=EpgPanelRoot}"
+                                    Stretch="Uniform" />
             </Grid>
           </Border>
 
-          <!-- Timeline: frozen channel column plus synchronized program scroll. -->
-          <Grid Grid.Row="1" ColumnDefinitions="112,*" ClipToBounds="True"
-                Background="{DynamicResource Bg0Brush}">
-            <!-- Left: fixed channel header and channel list. -->
-            <Grid RowDefinitions="36,*" Background="#0D0D0D"
-                  ZIndex="{x:Static controls:MobileZIndex.EpgChannelOverlay}"
-                  ClipToBounds="True">
-              <Border Grid.Row="0" Background="#131313"
-                      BorderBrush="#1AFFFFFF" BorderThickness="0,0,1,1">
-                <TextBlock Text="{loc:Translate Player.Epg.ChannelHeader}"
-                           FontSize="{DynamicResource FOverline}" FontWeight="Black" LetterSpacing="1.2"
-                           Foreground="{DynamicResource TextMutedBrush}"
-                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+          <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <TextBlock Text="{Binding Guide.SelectedChannelName, ElementName=EpgPanelRoot}"
+                         FontSize="{DynamicResource FCaption}"
+                         FontWeight="SemiBold"
+                         Foreground="{DynamicResource AccentBrush}"
+                         TextTrimming="CharacterEllipsis"
+                         MaxLines="1" />
+              <Border Padding="7,2"
+                      CornerRadius="{DynamicResource RadiusPill}"
+                      Background="{DynamicResource NavActiveBackgroundBrush}"
+                      IsVisible="{Binding Guide.SelectedProgram.IsCurrentProgram, ElementName=EpgPanelRoot}">
+                <TextBlock Text="{loc:Translate Player.Epg.Live}"
+                           FontSize="{DynamicResource FOverline}"
+                           FontWeight="Bold"
+                           Foreground="{DynamicResource LiveRedBrush}" />
               </Border>
+            </StackPanel>
+            <TextBlock Text="{Binding Guide.SelectedTitle, ElementName=EpgPanelRoot}"
+                       FontSize="{DynamicResource FTitleL}"
+                       FontWeight="Bold"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
+                       TextTrimming="CharacterEllipsis"
+                       MaxLines="1" />
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <TextBlock Text="{Binding Guide.SelectedTimeRange, ElementName=EpgPanelRoot}"
+                         FontSize="{DynamicResource FCaption}"
+                         Foreground="{DynamicResource TextSecondaryBrush}" />
+              <TextBlock Text="{Binding Guide.SelectedTimingStatus, ElementName=EpgPanelRoot}"
+                         FontSize="{DynamicResource FCaption}"
+                         FontWeight="SemiBold"
+                         Foreground="{DynamicResource AccentBrush}" />
+              <TextBlock Text="{Binding Guide.SelectedCategory, ElementName=EpgPanelRoot}"
+                         FontSize="{DynamicResource FCaption}"
+                         Foreground="{DynamicResource TextMutedBrush}"
+                         IsVisible="{Binding Guide.HasSelectedCategory, ElementName=EpgPanelRoot}" />
+            </StackPanel>
+            <TextBlock Text="{Binding Guide.SelectedDescription, ElementName=EpgPanelRoot}"
+                       FontSize="{DynamicResource FCaption}"
+                       Foreground="{DynamicResource TextSecondaryBrush}"
+                       TextWrapping="Wrap"
+                       TextTrimming="CharacterEllipsis"
+                       MaxLines="2" />
+          </StackPanel>
 
-              <ScrollViewer Grid.Row="1"
-                            x:Name="EpgNamesScroll"
-                            HorizontalScrollBarVisibility="Disabled"
-                            VerticalScrollBarVisibility="Hidden"
-                            IsHitTestVisible="False">
-                <ItemsControl ItemsSource="{Binding EpgRows}">
-                  <ItemsControl.ItemTemplate>
-                    <DataTemplate x:DataType="vm:EpgPanelRow">
-                      <Border Height="60"
-                              MinHeight="48"
-                              BorderBrush="#0DFFFFFF"
-                              BorderThickness="0,0,1,1"
-                              Background="{Binding IsCurrentChannel, Converter={StaticResource BoolToSelectionBrushConverter}}">
-                        <Grid ColumnDefinitions="34,*" ColumnSpacing="6" Margin="6,0">
-                          <Border Width="30" Height="30" CornerRadius="6" ClipToBounds="True"
-                                  Background="{DynamicResource Surface1Brush}"
-                                  VerticalAlignment="Center">
-                            <Grid>
-                              <icons:MaterialIcon Kind="Television" Width="13" Height="13"
-                                                  Foreground="{DynamicResource AccentBrush}"
-                                                  HorizontalAlignment="Center" VerticalAlignment="Center" />
-                              <controls:RemoteImage Url="{Binding Channel.LogoUrl}" Stretch="Uniform" />
-                            </Grid>
-                          </Border>
-                          <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
-                            <TextBlock Text="{Binding Channel.Name}" FontSize="{DynamicResource FOverline}" FontWeight="SemiBold"
-                                       Foreground="{DynamicResource TextPrimaryBrush}"
-                                       TextTrimming="CharacterEllipsis" MaxLines="2" />
-                            <TextBlock Text="{Binding Channel.GroupTitle}" FontSize="7"
-                                       Foreground="{DynamicResource TextMutedBrush}"
-                                       TextTrimming="CharacterEllipsis" MaxLines="1"
-                                       IsVisible="{Binding Channel.GroupTitle, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
-                          </StackPanel>
-                        </Grid>
-                      </Border>
-                    </DataTemplate>
-                  </ItemsControl.ItemTemplate>
-                </ItemsControl>
-              </ScrollViewer>
+          <Button x:Name="WatchSelectedButton"
+                  Grid.Column="2"
+                  Classes="epgIconButton"
+                  Click="WatchSelectedButton_Click"
+                  IsVisible="{Binding Guide.CanWatchSelectedChannel, ElementName=EpgPanelRoot}"
+                  AutomationProperties.Name="{loc:Translate Player.Epg.WatchChannel}"
+                  AutomationProperties.HelpText="{loc:Translate Player.Epg.WatchChannelHelp}">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <icons:MaterialIcon Kind="Play" Width="20" Height="20"
+                                  Foreground="{DynamicResource AccentBrush}" />
+              <TextBlock x:Name="WatchSelectedText"
+                         Text="{loc:Translate Player.Epg.WatchChannel}"
+                         FontSize="{DynamicResource FCaption}"
+                         FontWeight="SemiBold"
+                         Foreground="{DynamicResource TextPrimaryBrush}"
+                         VerticalAlignment="Center" />
+            </StackPanel>
+          </Button>
+        </Grid>
+      </Border>
+    </Grid>
+
+    <Border Grid.Row="1"
+            Background="{DynamicResource Bg0Brush}">
+      <Grid RowDefinitions="Auto,Auto,*">
+        <Border Grid.Row="0"
+                Padding="14,8"
+                Background="{DynamicResource Surface0Brush}"
+                BorderBrush="{DynamicResource BorderBrush}"
+                BorderThickness="0,0,0,1">
+          <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+            <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+              <icons:MaterialIcon Kind="CalendarClock"
+                                  Width="22" Height="22"
+                                  Foreground="{DynamicResource AccentBrush}" />
+              <StackPanel Spacing="1">
+                <TextBlock Text="{loc:Translate Player.Epg.GuideTitle}"
+                           FontSize="{DynamicResource FBody}"
+                           FontWeight="Bold"
+                           Foreground="{DynamicResource TextPrimaryBrush}" />
+                <TextBlock Text="{Binding Guide.WindowLabel, ElementName=EpgPanelRoot}"
+                           FontSize="{DynamicResource FOverline}"
+                           Foreground="{DynamicResource TextMutedBrush}" />
+              </StackPanel>
+            </StackPanel>
+            <Button Grid.Column="1"
+                    Classes="epgIconButton"
+                    Click="NowButton_Click"
+                    AutomationProperties.Name="{loc:Translate Player.Epg.NowA11y}"
+                    AutomationProperties.HelpText="{loc:Translate Player.Epg.NowHelp}">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <icons:MaterialIcon Kind="CrosshairsGps" Width="18" Height="18"
+                                    Foreground="{DynamicResource LiveRedBrush}" />
+                <TextBlock Text="{loc:Translate Player.Epg.Now}"
+                           FontSize="{DynamicResource FCaption}"
+                           FontWeight="Bold"
+                           Foreground="{DynamicResource TextPrimaryBrush}"
+                           VerticalAlignment="Center" />
+              </StackPanel>
+            </Button>
+            <Button x:Name="CloseGuideButton"
+                    Grid.Column="2"
+                    Classes="epgIconButton"
+                    Command="{Binding ToggleEpgPanelCommand}"
+                    AutomationProperties.Name="{loc:Translate Common.Close}"
+                    AutomationProperties.HelpText="{loc:Translate Player.Epg.CloseHelp}">
+              <icons:MaterialIcon Kind="Close" Width="20" Height="20"
+                                  Foreground="{DynamicResource TextPrimaryBrush}" />
+            </Button>
+          </Grid>
+        </Border>
+
+        <Border Grid.Row="1"
+                Padding="12,8"
+                Background="{DynamicResource Surface1Brush}"
+                BorderBrush="{DynamicResource BorderBrush}"
+                BorderThickness="0,0,0,1"
+                IsVisible="{Binding IsEpgLoading}">
+          <StackPanel Orientation="Horizontal" Spacing="10">
+            <ProgressBar IsIndeterminate="True"
+                         Width="72" Height="4"
+                         Foreground="{DynamicResource AccentBrush}"
+                         Background="{DynamicResource Surface0Brush}"
+                         VerticalAlignment="Center" />
+            <TextBlock Text="{loc:Translate Player.Epg.LoadingDescription}"
+                       FontSize="{DynamicResource FCaption}"
+                       Foreground="{DynamicResource TextSecondaryBrush}"
+                       VerticalAlignment="Center" />
+          </StackPanel>
+        </Border>
+
+        <Grid Grid.Row="2">
+          <Grid x:Name="GuideGrid"
+                ColumnDefinitions="132,*"
+                IsVisible="{Binding HasEpgRows}"
+                ClipToBounds="True">
+            <Grid Grid.Column="0" RowDefinitions="48,*" ClipToBounds="True">
+              <Border Background="{DynamicResource Surface1Brush}"
+                      BorderBrush="{DynamicResource BorderBrush}"
+                      BorderThickness="0,0,1,1">
+                <TextBlock Text="{loc:Translate Player.Epg.ChannelHeader}"
+                           FontSize="{DynamicResource FOverline}"
+                           FontWeight="Bold"
+                           Foreground="{DynamicResource TextMutedBrush}"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center" />
+              </Border>
+              <ListBox x:Name="EpgChannelList"
+                       Grid.Row="1"
+                       ItemsSource="{Binding Guide.Rows, ElementName=EpgPanelRoot}"
+                       SelectionMode="Single"
+                       Background="{x:Null}"
+                       BorderThickness="0"
+                       ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                       ScrollViewer.VerticalScrollBarVisibility="Hidden">
+                <ListBox.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <VirtualizingStackPanel CacheLength="1.5" />
+                  </ItemsPanelTemplate>
+                </ListBox.ItemsPanel>
+                <ListBox.ItemContainerTheme>
+                  <ControlTheme TargetType="ListBoxItem">
+                    <Setter Property="Padding" Value="0" />
+                    <Setter Property="Margin" Value="0" />
+                    <Setter Property="Focusable" Value="False" />
+                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                  </ControlTheme>
+                </ListBox.ItemContainerTheme>
+                <ListBox.ItemTemplate>
+                  <DataTemplate x:DataType="mobileVm:MobileEpgRow">
+                    <Button Classes="epgChannel"
+                            Classes.playing="{Binding IsPlayingChannel}"
+                            Height="{Binding RowHeight}"
+                            Tag="{Binding}"
+                            GotFocus="ChannelButton_GotFocus"
+                            PointerReleased="ChannelButton_PointerReleased"
+                            AutomationProperties.Name="{Binding Channel.Name}"
+                            AutomationProperties.HelpText="{loc:Translate Player.Epg.ChannelA11yHelp}">
+                      <Grid ColumnDefinitions="44,*" ColumnSpacing="8">
+                        <Border Width="40" Height="40"
+                                CornerRadius="{DynamicResource RadiusSmall}"
+                                Background="{DynamicResource Surface1Brush}"
+                                ClipToBounds="True"
+                                VerticalAlignment="Center">
+                          <Grid>
+                            <controls:RemoteImage Url="{Binding Channel.LogoUrl}" Stretch="Uniform" />
+                          </Grid>
+                        </Border>
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                          <TextBlock Text="{Binding Channel.Name}"
+                                     FontSize="{DynamicResource FCaption}"
+                                     FontWeight="SemiBold"
+                                     Foreground="{DynamicResource TextPrimaryBrush}"
+                                     TextTrimming="CharacterEllipsis"
+                                     MaxLines="2" />
+                          <TextBlock Text="{Binding Channel.GroupTitle}"
+                                     FontSize="{DynamicResource FOverline}"
+                                     Foreground="{DynamicResource TextMutedBrush}"
+                                     TextTrimming="CharacterEllipsis"
+                                     MaxLines="1"
+                                     IsVisible="{Binding Channel.GroupTitle, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
+                        </StackPanel>
+                      </Grid>
+                    </Button>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
             </Grid>
 
-            <!-- Right: time header and program timeline. -->
-            <Grid Grid.Column="1" RowDefinitions="36,*" ClipToBounds="True">
-              <Border Grid.Row="0" Background="#131313"
-                      BorderBrush="#1AFFFFFF" BorderThickness="0,0,0,1">
+            <Grid Grid.Column="1" RowDefinitions="48,*" ClipToBounds="True">
+              <Border Background="{DynamicResource Surface1Brush}"
+                      BorderBrush="{DynamicResource BorderBrush}"
+                      BorderThickness="0,0,0,1">
                 <ScrollViewer x:Name="EpgTimeHeaderScroll"
                               HorizontalScrollBarVisibility="Hidden"
                               VerticalScrollBarVisibility="Disabled"
                               IsHitTestVisible="False">
-                  <Canvas x:Name="EpgTimeHeaderCanvas"
-                          Width="{Binding EpgCanvasPixelWidth}"
-                          Height="36" />
+                  <Grid Width="{Binding Guide.CanvasWidth, ElementName=EpgPanelRoot}"
+                        Height="48">
+                    <ItemsControl ItemsSource="{Binding Guide.TimeTicks, ElementName=EpgPanelRoot}">
+                      <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate><Grid /></ItemsPanelTemplate>
+                      </ItemsControl.ItemsPanel>
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="mobileVm:MobileEpgTimeTick">
+                          <Grid Width="90"
+                                Margin="{Binding Left, Converter={StaticResource DoubleToLeftMarginConverter}}"
+                                HorizontalAlignment="Left">
+                            <Border Width="1"
+                                    Background="{DynamicResource BorderBrush}"
+                                    HorizontalAlignment="Left"
+                                    VerticalAlignment="Stretch" />
+                            <TextBlock Text="{Binding Label}"
+                                       Margin="8,0,0,0"
+                                       FontSize="{DynamicResource FOverline}"
+                                       FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                       VerticalAlignment="Center" />
+                          </Grid>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <Border Width="2"
+                            Margin="{Binding Guide.NowLineLeft, ElementName=EpgPanelRoot, Converter={StaticResource DoubleToLeftMarginConverter}}"
+                            HorizontalAlignment="Left"
+                            Background="{DynamicResource LiveRedBrush}"
+                            IsVisible="{Binding Guide.IsNowLineVisible, ElementName=EpgPanelRoot}" />
+                    <Border Padding="7,3"
+                            Margin="{Binding Guide.NowLineLeft, ElementName=EpgPanelRoot, Converter={StaticResource DoubleToLeftMarginConverter}}"
+                            HorizontalAlignment="Left"
+                            VerticalAlignment="Top"
+                            CornerRadius="{DynamicResource RadiusPill}"
+                            Background="{DynamicResource LiveRedBrush}"
+                            IsVisible="{Binding Guide.IsNowLineVisible, ElementName=EpgPanelRoot}">
+                      <TextBlock Text="{loc:Translate Player.Epg.Now}"
+                                 FontSize="{DynamicResource FOverline}"
+                                 FontWeight="Bold"
+                                 Foreground="{DynamicResource PlayerOverlayTextBrush}" />
+                    </Border>
+                  </Grid>
                 </ScrollViewer>
               </Border>
 
-              <ScrollViewer Grid.Row="1"
-                            x:Name="EpgTimelineScroll"
+              <ScrollViewer x:Name="EpgTimelineHorizontalScroll"
+                            Grid.Row="1"
                             HorizontalScrollBarVisibility="Auto"
-                            VerticalScrollBarVisibility="Auto"
-                            ScrollChanged="EpgTimelineScroll_ScrollChanged"
-                            Background="{DynamicResource Bg0Brush}">
-                <Grid Width="{Binding EpgCanvasPixelWidth}">
-                  <ItemsControl ItemsSource="{Binding EpgRows}">
-                    <ItemsControl.ItemTemplate>
-                      <DataTemplate x:DataType="vm:EpgPanelRow">
-                        <Grid Height="60" MinHeight="48" ClipToBounds="True">
-                          <Border Background="{Binding IsCurrentChannel, Converter={StaticResource BoolToSelectionBrushConverter}}"
-                                  BorderBrush="#0DFFFFFF"
+                            VerticalScrollBarVisibility="Disabled"
+                            ScrollChanged="EpgTimelineHorizontalScroll_ScrollChanged">
+                <Grid Width="{Binding Guide.CanvasWidth, ElementName=EpgPanelRoot}">
+                  <ListBox x:Name="EpgTimelineList"
+                           ItemsSource="{Binding Guide.Rows, ElementName=EpgPanelRoot}"
+                           SelectionMode="Single"
+                           Background="{x:Null}"
+                           BorderThickness="0"
+                           ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                           ScrollViewer.VerticalScrollBarVisibility="Auto">
+                    <ListBox.ItemsPanel>
+                      <ItemsPanelTemplate>
+                        <VirtualizingStackPanel CacheLength="1.5" />
+                      </ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
+                    <ListBox.ItemContainerTheme>
+                      <ControlTheme TargetType="ListBoxItem">
+                        <Setter Property="Padding" Value="0" />
+                        <Setter Property="Margin" Value="0" />
+                        <Setter Property="Focusable" Value="False" />
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                      </ControlTheme>
+                    </ListBox.ItemContainerTheme>
+                    <ListBox.ItemTemplate>
+                      <DataTemplate x:DataType="mobileVm:MobileEpgRow">
+                        <Grid Width="{Binding CanvasWidth}"
+                              Height="{Binding RowHeight}"
+                              ClipToBounds="True">
+                          <Border Background="{DynamicResource TextSelectionBrush}"
+                                  Opacity="0.26"
+                                  IsVisible="{Binding IsPlayingChannel}" />
+                          <Border BorderBrush="{DynamicResource BorderBrush}"
                                   BorderThickness="0,0,0,1" />
-
-                          <TextBlock Text="{loc:Translate Player.Epg.NoInfo}" FontSize="{DynamicResource FOverline}"
-                                     Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center"
-                                     Margin="10,0,0,0"
-                                     IsVisible="{Binding HasEpgData, Converter={StaticResource InverseBoolConverter}}" />
-
-                          <ItemsControl ItemsSource="{Binding Blocks}"
-                                        IsVisible="{Binding HasEpgData}"
-                                        ClipToBounds="True">
+                          <TextBlock Text="{loc:Translate Player.Epg.NoInfo}"
+                                     Margin="12,0,0,0"
+                                     FontSize="{DynamicResource FCaption}"
+                                     Foreground="{DynamicResource TextMutedBrush}"
+                                     VerticalAlignment="Center"
+                                     IsVisible="{Binding HasPrograms, Converter={StaticResource InverseBoolConverter}}" />
+                          <ItemsControl ItemsSource="{Binding Programs}"
+                                        IsVisible="{Binding HasPrograms}">
                             <ItemsControl.ItemsPanel>
-                              <ItemsPanelTemplate>
-                                <Grid />
-                              </ItemsPanelTemplate>
+                              <ItemsPanelTemplate><Grid /></ItemsPanelTemplate>
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
-                              <DataTemplate x:DataType="vm:EpgProgramBlock">
-                                <Border Width="{Binding PixelWidth}"
-                                        Margin="{Binding PixelLeft, Converter={StaticResource DoubleToLeftMarginConverter}}"
-                                        HorizontalAlignment="Left" VerticalAlignment="Center"
-                                        Height="{Binding VisualHeight}" CornerRadius="5" ClipToBounds="True"
-                                        Padding="0"
-                                        PointerReleased="EpgRow_PointerReleased"
-                                        ToolTip.Tip="{Binding Program.Title}"
-                                        Opacity="{Binding IsPast, Converter={StaticResource BoolToOpacityConverter}, ConverterParameter=0.45}">
-                                  <Border.Background>
-                                    <SolidColorBrush Color="{Binding IsCurrentProgram, Converter={StaticResource BoolToEpgBlockColorConverter}}" />
-                                  </Border.Background>
-                                  <Border.BorderBrush>
-                                    <SolidColorBrush Color="{Binding IsCurrentProgram, Converter={StaticResource BoolToEpgBorderColorConverter}}" />
-                                  </Border.BorderBrush>
-                                  <Border.BorderThickness>1</Border.BorderThickness>
+                              <DataTemplate x:DataType="mobileVm:MobileEpgProgramItem">
+                                <Button Classes="epgProgram"
+                                        Classes.current="{Binding IsCurrentProgram}"
+                                        Classes.playing="{Binding IsPlayingProgram}"
+                                        Classes.selected="{Binding IsSelected}"
+                                        Classes.past="{Binding IsPast}"
+                                        Width="{Binding Width}"
+                                        Margin="{Binding Left, Converter={StaticResource DoubleToLeftMarginConverter}}"
+                                        Tag="{Binding}"
+                                        GotFocus="ProgramButton_GotFocus"
+                                        PointerReleased="ProgramButton_PointerReleased"
+                                        ToolTip.Tip="{Binding AccessibilityName}"
+                                        AutomationProperties.Name="{Binding AccessibilityName}"
+                                        AutomationProperties.HelpText="{loc:Translate Player.Epg.ProgramA11yHelp}">
                                   <Grid ClipToBounds="True">
-                                    <Border HorizontalAlignment="Left"
-                                            VerticalAlignment="Stretch"
-                                            Width="{Binding ProgressPixelWidth}"
-                                            Background="#38FFFFFF"
+                                    <Border Width="{Binding ProgressWidth}"
+                                            HorizontalAlignment="Left"
+                                            Background="{DynamicResource AccentLightBrush}"
+                                            Opacity="0.42"
                                             IsVisible="{Binding IsCurrentProgram}"
                                             IsHitTestVisible="False" />
-                                    <StackPanel Margin="7,0" VerticalAlignment="Center" Spacing="1"
-                                                IsVisible="{Binding HasReadableText}">
-                                      <TextBlock Text="{Binding Program.Title}" FontSize="{DynamicResource FOverline}" FontWeight="SemiBold"
-                                                 Foreground="{DynamicResource PlayerOverlayTextBrush}" TextTrimming="CharacterEllipsis"
+                                    <StackPanel Spacing="2" VerticalAlignment="Center">
+                                      <TextBlock Text="{Binding Program.Title}"
+                                                 FontSize="{DynamicResource FCaption}"
+                                                 FontWeight="SemiBold"
+                                                 Foreground="{DynamicResource TextPrimaryBrush}"
+                                                 TextTrimming="CharacterEllipsis"
                                                  MaxLines="1" />
-                                      <TextBlock Text="{Binding Program.TimeRange}" FontSize="7"
-                                                 Foreground="{DynamicResource PlayerOverlaySecondaryTextBrush}" TextTrimming="CharacterEllipsis"
+                                      <TextBlock Text="{Binding TimeRange}"
+                                                 FontSize="{DynamicResource FOverline}"
+                                                 Foreground="{DynamicResource TextSecondaryBrush}"
+                                                 TextTrimming="CharacterEllipsis"
                                                  MaxLines="1" />
                                     </StackPanel>
                                   </Grid>
-                                </Border>
+                                </Button>
                               </DataTemplate>
                             </ItemsControl.ItemTemplate>
                           </ItemsControl>
-
-                          <Border Width="1.5" HorizontalAlignment="Left" VerticalAlignment="Stretch"
-                                  Background="#CC7B2FBE"
-                                  Margin="{Binding NowLineLeft, Converter={StaticResource DoubleToLeftMarginConverter}}"
-                                  IsHitTestVisible="False"
-                                  ZIndex="{x:Static controls:MobileZIndex.EpgNowLine}" />
-
-                          <Border PointerReleased="EpgRow_PointerReleased"
-                                  Background="Transparent"
-                                  HorizontalAlignment="Stretch"
-                                  VerticalAlignment="Stretch"
-                                  ZIndex="{x:Static controls:MobileZIndex.EpgChannelOverlay}"
-                                  IsVisible="{Binding IsCurrentChannel, Converter={StaticResource InverseBoolConverter}}" />
                         </Grid>
                       </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                  </ItemsControl>
+                    </ListBox.ItemTemplate>
+                  </ListBox>
+                  <Border Width="2"
+                          Margin="{Binding Guide.NowLineLeft, ElementName=EpgPanelRoot, Converter={StaticResource DoubleToLeftMarginConverter}}"
+                          HorizontalAlignment="Left"
+                          VerticalAlignment="Stretch"
+                          Background="{DynamicResource LiveRedBrush}"
+                          IsVisible="{Binding Guide.IsNowLineVisible, ElementName=EpgPanelRoot}"
+                          IsHitTestVisible="False"
+                          ZIndex="30" />
                 </Grid>
               </ScrollViewer>
             </Grid>
           </Grid>
+
+          <Border Padding="16,10"
+                  VerticalAlignment="Top"
+                  Background="{DynamicResource Surface1Brush}"
+                  BorderBrush="{DynamicResource WarningBrush}"
+                  BorderThickness="0,0,0,1"
+                  IsVisible="{Binding EpgHasNoProgramData}">
+            <StackPanel Orientation="Horizontal" Spacing="10">
+              <icons:MaterialIcon Kind="InformationOutline"
+                                  Width="20" Height="20"
+                                  Foreground="{DynamicResource WarningBrush}" />
+              <TextBlock Text="{loc:Translate Player.Epg.NoProgramsDescription}"
+                         FontSize="{DynamicResource FCaption}"
+                         Foreground="{DynamicResource TextSecondaryBrush}"
+                         VerticalAlignment="Center" />
+            </StackPanel>
+          </Border>
+
+          <Border Padding="28"
+                  HorizontalAlignment="Center"
+                  VerticalAlignment="Center"
+                  Background="{DynamicResource Surface0Brush}"
+                  BorderBrush="{DynamicResource BorderBrush}"
+                  BorderThickness="1"
+                  CornerRadius="{DynamicResource RadiusLarge}"
+                  IsVisible="{Binding IsEpgEmpty}">
+            <StackPanel Spacing="10" MaxWidth="420" HorizontalAlignment="Center">
+              <icons:MaterialIcon Kind="TelevisionOff"
+                                  Width="42" Height="42"
+                                  Foreground="{DynamicResource TextMutedBrush}"
+                                  HorizontalAlignment="Center" />
+              <TextBlock Text="{loc:Translate Player.Epg.EmptyTitle}"
+                         FontSize="{DynamicResource FTitleL}"
+                         FontWeight="Bold"
+                         Foreground="{DynamicResource TextPrimaryBrush}"
+                         TextAlignment="Center" />
+              <TextBlock Text="{loc:Translate Player.Epg.EmptyDescription}"
+                         FontSize="{DynamicResource FBody}"
+                         Foreground="{DynamicResource TextSecondaryBrush}"
+                         TextWrapping="Wrap"
+                         TextAlignment="Center" />
+            </StackPanel>
+          </Border>
+
+          <Border Padding="18,12"
+                  HorizontalAlignment="Center"
+                  VerticalAlignment="Top"
+                  Margin="16"
+                  Background="{DynamicResource Surface0Brush}"
+                  BorderBrush="{DynamicResource ErrorBrush}"
+                  BorderThickness="1"
+                  CornerRadius="{DynamicResource RadiusMedium}"
+                  IsVisible="{Binding IsEpgError}">
+            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12" MaxWidth="720">
+              <icons:MaterialIcon Kind="WifiAlert"
+                                  Width="24" Height="24"
+                                  Foreground="{DynamicResource ErrorBrush}" />
+              <StackPanel Grid.Column="1" Spacing="2">
+                <TextBlock Text="{loc:Translate Player.Epg.ErrorTitle}"
+                           FontSize="{DynamicResource FBody}"
+                           FontWeight="Bold"
+                           Foreground="{DynamicResource TextPrimaryBrush}" />
+                <TextBlock Text="{loc:Translate Player.Epg.ErrorDescription}"
+                           FontSize="{DynamicResource FCaption}"
+                           Foreground="{DynamicResource TextSecondaryBrush}"
+                           TextWrapping="Wrap" />
+              </StackPanel>
+              <Button x:Name="RetryGuideButton"
+                      Grid.Column="2"
+                      Classes="epgIconButton"
+                      Command="{Binding RetryEpgPanelCommand}"
+                      AutomationProperties.Name="{loc:Translate Player.Epg.Retry}"
+                      AutomationProperties.HelpText="{loc:Translate Player.Epg.RetryHelp}">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <icons:MaterialIcon Kind="Refresh" Width="18" Height="18"
+                                      Foreground="{DynamicResource AccentBrush}" />
+                  <TextBlock Text="{loc:Translate Player.Epg.Retry}"
+                             FontSize="{DynamicResource FCaption}"
+                             FontWeight="SemiBold"
+                             Foreground="{DynamicResource TextPrimaryBrush}" />
+                </StackPanel>
+              </Button>
+            </Grid>
+          </Border>
         </Grid>
       </Grid>
-    </Grid>
+    </Border>
+  </Grid>
 </UserControl>
