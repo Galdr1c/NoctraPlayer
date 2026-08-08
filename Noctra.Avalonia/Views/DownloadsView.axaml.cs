@@ -79,6 +79,14 @@ public partial class DownloadsView : UserControl
         AutomationProperties.SetName(SortSelectionButton, label);
     }
 
+    private static void ClearTransientSelection(object? sender, SelectionChangedEventArgs e)
+    {
+        if (sender is ListBox listBox && listBox.SelectedIndex >= 0)
+        {
+            listBox.SelectedIndex = -1;
+        }
+    }
+
     protected override void OnKeyDown(KeyEventArgs e)
     {
         if (e.Key == Key.Escape && SelectionSheetHost.TryClose())

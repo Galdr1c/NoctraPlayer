@@ -830,6 +830,60 @@ public sealed class ContentDownloadIntegrationTests
     }
 
     [Fact]
+    public async Task PauseDownload_ActiveItemIsPausedBeforeCommandCompletes()
+    {
+        using var ctx = new DownloadIntegrationContext(
+            content: DownloadIntegrationContext.BuildContent(2_000_000));
+        ctx.Handler.InitialDelayMs = 5000;
+        var service = ctx.CreateService();
+
+        var result = await service.QueueDownloadAsync(
+            new DownloadContentRequest(
+                1,
+                DownloadItemType.Vod,
+                "slow movie",
+                ServerRoot + "slow.mp4"));
+
+        Assert.NotNull(result.DownloadId);
+        var downloading = await ctx.WaitForItemAsync(
+            result.DownloadId.Value,
+            item => item.Status == DownloadStatus.Downloading);
+        Assert.NotNull(downloading);
+
+        await service.PauseDownloadAsync(result.DownloadId.Value);
+
+        var paused = await ctx.GetItemAsync(result.DownloadId.Value);
+        Assert.NotNull(paused);
+        Assert.Equal(DownloadStatus.Paused, paused.Status);
+    }
+
+    [Fact]
+    public async Task CancelDownload_ActiveItemIsRemovedBeforeCommandCompletes()
+    {
+        using var ctx = new DownloadIntegrationContext(
+            content: DownloadIntegrationContext.BuildContent(2_000_000));
+        ctx.Handler.InitialDelayMs = 5000;
+        var service = ctx.CreateService();
+
+        var result = await service.QueueDownloadAsync(
+            new DownloadContentRequest(
+                1,
+                DownloadItemType.Vod,
+                "cancel movie",
+                ServerRoot + "cancel.mp4"));
+
+        Assert.NotNull(result.DownloadId);
+        var downloading = await ctx.WaitForItemAsync(
+            result.DownloadId.Value,
+            item => item.Status == DownloadStatus.Downloading);
+        Assert.NotNull(downloading);
+
+        await service.CancelDownloadAsync(result.DownloadId.Value);
+
+        Assert.Null(await ctx.GetItemAsync(result.DownloadId.Value));
+    }
+
+    [Fact]
     public async Task GetDownloads_ReturnsAllProfiles_GlobalVisibility()
     {
         using var ctx = new DownloadIntegrationContext();

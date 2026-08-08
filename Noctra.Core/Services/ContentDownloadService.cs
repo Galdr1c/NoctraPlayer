@@ -471,7 +471,7 @@ public class ContentDownloadService : IContentDownloadService
                 _cancelRequestedIds[downloadId] = 1;
             }
 
-            await RemoveDownloadArtifactsAndRecordAsync(downloadId, cancellationToken, siblingDeletionIds);
+            await RemoveDownloadArtifactsAndRecordWithRetryAsync(downloadId, cancellationToken, siblingDeletionIds);
         }
 
         CleanupEmptyDownloadDirectories();
@@ -496,10 +496,15 @@ public class ContentDownloadService : IContentDownloadService
         if (_activeDownloadCts.TryGetValue(downloadId, out var cts))
         {
             cts.Cancel();
+            await WaitForActiveWorkerAsync(downloadId, cancellationToken);
+            // The worker normally performs this cleanup in its finally block.
+            // Repeat it after the worker has unwound so a cancellation that
+            // raced a database write cannot leave a visible row behind.
+            await RemoveDownloadArtifactsAndRecordWithRetryAsync(downloadId, cancellationToken);
             return;
         }
 
-        await RemoveDownloadArtifactsAndRecordAsync(downloadId, cancellationToken);
+        await RemoveDownloadArtifactsAndRecordWithRetryAsync(downloadId, cancellationToken);
         DownloadsChanged?.Invoke(this, EventArgs.Empty);
     }
 
@@ -521,6 +526,8 @@ public class ContentDownloadService : IContentDownloadService
         if (_activeDownloadCts.TryGetValue(downloadId, out var cts))
         {
             cts.Cancel();
+            await WaitForActiveWorkerAsync(downloadId, cancellationToken);
+            await MarkPausedWithRetryAsync(downloadId, cancellationToken);
             return;
         }
 
@@ -887,9 +894,7 @@ public class ContentDownloadService : IContentDownloadService
             {
                 TryDeleteFile(plainTempPath);
                 TryDeleteFile(finalPath);
-                await MarkFailedAsync(
-                    downloadId,
-                    _localizationService.GetString("Download.Error.UnsupportedStreaming"));
+                _cancelRequestedIds[downloadId] = 1;
                 return;
             }
 
@@ -919,9 +924,7 @@ public class ContentDownloadService : IContentDownloadService
                 {
                     TryDeleteFile(plainTempPath);
                     TryDeleteFile(finalPath);
-                    await MarkFailedAsync(
-                        downloadId,
-                        _localizationService.GetString("Download.Error.UnsupportedStreaming"));
+                    _cancelRequestedIds[downloadId] = 1;
                     return;
                 }
 
@@ -1049,9 +1052,7 @@ public class ContentDownloadService : IContentDownloadService
             if (IsManifestFile(finalPath))
             {
                 TryDeleteFile(finalPath);
-                await MarkFailedAsync(
-                    downloadId,
-                    _localizationService.GetString("Download.Error.UnsupportedStreaming"));
+                _cancelRequestedIds[downloadId] = 1;
                 return;
             }
 
@@ -1099,7 +1100,7 @@ public class ContentDownloadService : IContentDownloadService
 
             if (_cancelRequestedIds.TryRemove(downloadId, out _))
             {
-                await RemoveDownloadArtifactsAndRecordAsync(downloadId, CancellationToken.None);
+                await RemoveDownloadArtifactsAndRecordWithRetryAsync(downloadId, CancellationToken.None);
                 DownloadsChanged?.Invoke(this, EventArgs.Empty);
             }
         }
@@ -1449,6 +1450,29 @@ public class ContentDownloadService : IContentDownloadService
         return null;
     }
 
+    private async Task RemoveDownloadArtifactsAndRecordWithRetryAsync(
+        int downloadId,
+        CancellationToken cancellationToken,
+        ISet<int>? siblingDeletionIds = null)
+    {
+        const int maxAttempts = 5;
+        for (var attempt = 1; ; attempt++)
+        {
+            try
+            {
+                await RemoveDownloadArtifactsAndRecordAsync(
+                    downloadId,
+                    cancellationToken,
+                    siblingDeletionIds);
+                return;
+            }
+            catch (Exception ex) when (IsDatabaseBusyException(ex) && attempt < maxAttempts)
+            {
+                await Task.Delay(50 * attempt, cancellationToken).ConfigureAwait(false);
+            }
+        }
+    }
+
     private async Task RemoveDownloadArtifactsAndRecordAsync(
         int downloadId,
         CancellationToken cancellationToken,
@@ -1657,20 +1681,114 @@ public class ContentDownloadService : IContentDownloadService
     }
 
     private async Task MarkPausedAsync(int downloadId)
+        => await MarkPausedWithRetryAsync(downloadId, CancellationToken.None);
+
+    private async Task MarkPausedWithRetryAsync(
+        int downloadId,
+        CancellationToken cancellationToken)
     {
-        using var db = await _contextFactory.CreateDbContextAsync();
-        var item = await db.DownloadItems.FirstOrDefaultAsync(d => d.Id == downloadId);
-        if (item == null)
+        const int maxAttempts = 5;
+        for (var attempt = 1; attempt <= maxAttempts; attempt++)
         {
-            return;
+            try
+            {
+                using var db = await _contextFactory.CreateDbContextAsync(cancellationToken);
+                var item = await db.DownloadItems.FirstOrDefaultAsync(
+                    d => d.Id == downloadId,
+                    cancellationToken);
+                if (item == null)
+                {
+                    return;
+                }
+
+                if (item.Status is not DownloadStatus.Completed and not DownloadStatus.Canceled)
+                {
+                    item.Status = DownloadStatus.Paused;
+                    item.SpeedBytesPerSecond = 0;
+                    item.EstimatedSecondsRemaining = null;
+                    item.UpdatedAt = DateTime.UtcNow;
+                    await db.SaveChangesAsync(cancellationToken);
+                    DownloadsChanged?.Invoke(this, EventArgs.Empty);
+                }
+
+                return;
+            }
+            catch (Exception ex) when (IsDatabaseBusyException(ex) && attempt < maxAttempts)
+            {
+                await Task.Delay(50 * attempt, cancellationToken);
+            }
+        }
+    }
+
+    private async Task WaitForActiveWorkerAsync(
+        int downloadId,
+        CancellationToken cancellationToken)
+    {
+        // The CTS is registered just before the first network await, while
+        // the worker-task dictionary is populated by the queue loop one line
+        // later. Cover that tiny registration window before falling back to a
+        // bounded wait for the worker to unwind.
+        for (var attempt = 0; attempt < 100; attempt++)
+        {
+            if (_activeDownloadTasks.TryGetValue(downloadId, out var workerTask))
+            {
+                try
+                {
+                    // A provider can leave an HTTP read pending even after its
+                    // cancellation token is signalled. Never keep the UI
+                    // command disabled until that network operation decides to
+                    // return; the caller will persist Paused/Canceled below and
+                    // the worker will observe the token when it unwinds.
+                    var completed = await Task.WhenAny(
+                        workerTask,
+                        Task.Delay(TimeSpan.FromSeconds(1), cancellationToken))
+                        .ConfigureAwait(false);
+
+                    if (!ReferenceEquals(completed, workerTask))
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        _logger?.LogDebug(
+                            "Timed out waiting for download worker {DownloadId} to stop.",
+                            downloadId);
+                        return;
+                    }
+
+                    await workerTask.ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    _logger?.LogDebug(ex, "Download worker stopped after pause for {DownloadId}.", downloadId);
+                }
+
+                return;
+            }
+
+            if (!_activeDownloadCts.ContainsKey(downloadId))
+            {
+                return;
+            }
+
+            await Task.Delay(10, cancellationToken);
+        }
+    }
+
+    private static bool IsDatabaseBusyException(Exception exception)
+    {
+        for (var current = exception; current is not null; current = current.InnerException)
+        {
+            if (current is Microsoft.Data.Sqlite.SqliteException sqlite &&
+                (sqlite.SqliteErrorCode == 5 || sqlite.SqliteExtendedErrorCode == 261))
+            {
+                return true;
+            }
+
+            if (current.Message.Contains("database is locked", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
         }
 
-        item.Status = DownloadStatus.Paused;
-        item.SpeedBytesPerSecond = 0;
-        item.EstimatedSecondsRemaining = null;
-        item.UpdatedAt = DateTime.UtcNow;
-        await db.SaveChangesAsync();
-        DownloadsChanged?.Invoke(this, EventArgs.Empty);
+        return false;
     }
 
     private async Task MarkInterruptedAsPausedAsync(int downloadId, string message)

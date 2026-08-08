@@ -1,4 +1,6 @@
 using System.ComponentModel.DataAnnotations.Schema;
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using Noctra.Services;
 
@@ -14,8 +16,18 @@ public enum DownloadStatus
     Canceled = 5
 }
 
-public class DownloadItem
+public class DownloadItem : INotifyPropertyChanged
 {
+    private DownloadStatus _status = DownloadStatus.Queued;
+    private long _bytesDownloaded;
+    private long? _bytesTotal;
+    private double _speedBytesPerSecond;
+    private int? _estimatedSecondsRemaining;
+    private string? _errorMessage;
+    private int _queueOrder;
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+
     public int Id { get; set; }
     public int ProfileId { get; set; }
     public int PlaylistId { get; set; }
@@ -44,12 +56,99 @@ public class DownloadItem
     public string? TempFilePath { get; set; }
     public string? AudioTracksJson { get; set; }
     public string? SubtitleTracksJson { get; set; }
-    public DownloadStatus Status { get; set; } = DownloadStatus.Queued;
-    public long BytesDownloaded { get; set; }
-    public long? BytesTotal { get; set; }
-    public double SpeedBytesPerSecond { get; set; }
-    public int? EstimatedSecondsRemaining { get; set; }
-    public string? ErrorMessage { get; set; }
+    public DownloadStatus Status
+    {
+        get => _status;
+        set
+        {
+            if (!SetField(ref _status, value))
+            {
+                return;
+            }
+
+            OnPropertyChanged(string.Empty);
+            OnPropertyChanged(nameof(IsActive));
+            OnPropertyChanged(nameof(IsCompleted));
+            OnPropertyChanged(nameof(IsPaused));
+            OnPropertyChanged(nameof(IsQueued));
+            OnPropertyChanged(nameof(StatusText));
+        }
+    }
+
+    public long BytesDownloaded
+    {
+        get => _bytesDownloaded;
+        set
+        {
+            if (!SetField(ref _bytesDownloaded, value))
+            {
+                return;
+            }
+
+            OnPropertyChanged(nameof(ProgressPercent));
+            OnPropertyChanged(nameof(ProgressText));
+            OnPropertyChanged(nameof(SizeText));
+        }
+    }
+
+    public long? BytesTotal
+    {
+        get => _bytesTotal;
+        set
+        {
+            if (!SetField(ref _bytesTotal, value))
+            {
+                return;
+            }
+
+            OnPropertyChanged(nameof(ProgressPercent));
+            OnPropertyChanged(nameof(ProgressText));
+            OnPropertyChanged(nameof(SizeText));
+        }
+    }
+
+    public double SpeedBytesPerSecond
+    {
+        get => _speedBytesPerSecond;
+        set
+        {
+            if (!SetField(ref _speedBytesPerSecond, value))
+            {
+                return;
+            }
+
+            OnPropertyChanged(nameof(SpeedText));
+        }
+    }
+
+    public int? EstimatedSecondsRemaining
+    {
+        get => _estimatedSecondsRemaining;
+        set
+        {
+            if (!SetField(ref _estimatedSecondsRemaining, value))
+            {
+                return;
+            }
+
+            OnPropertyChanged(nameof(EtaText));
+        }
+    }
+
+    public string? ErrorMessage
+    {
+        get => _errorMessage;
+        set
+        {
+            if (!SetField(ref _errorMessage, value))
+            {
+                return;
+            }
+
+            OnPropertyChanged(string.Empty);
+            OnPropertyChanged(nameof(StatusText));
+        }
+    }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? CompletedAt { get; set; }
@@ -70,7 +169,11 @@ public class DownloadItem
     public bool IsQueued => Status == DownloadStatus.Queued;
 
     [NotMapped]
-    public int QueueOrder { get; set; }
+    public int QueueOrder
+    {
+        get => _queueOrder;
+        set => SetField(ref _queueOrder, value);
+    }
 
     [NotMapped]
     public string StatusText
@@ -213,4 +316,23 @@ public class DownloadItem
 
         return $"{value:0.##} {Units[unitIndex]}";
     }
+
+    private bool SetField<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)
+    {
+        if (EqualityComparer<T>.Default.Equals(field, value))
+        {
+            return false;
+        }
+
+        field = value;
+        if (!string.IsNullOrEmpty(propertyName))
+        {
+            OnPropertyChanged(propertyName);
+        }
+
+        return true;
+    }
+
+    private void OnPropertyChanged(string propertyName)
+        => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 }

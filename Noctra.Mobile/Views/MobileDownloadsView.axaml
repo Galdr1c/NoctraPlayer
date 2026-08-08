@@ -395,8 +395,22 @@
                         Title="{loc:Translate Downloads.Ongoing.Empty.Title}"
                         Description="{loc:Translate Downloads.Ongoing.Empty.Description}" />
 
-            <ItemsControl ItemsSource="{Binding ActiveDownloadingItems}">
-              <ItemsControl.ItemTemplate>
+            <ListBox ItemsSource="{Binding ActiveDownloadingItems}"
+                     ItemContainerTheme="{StaticResource TransparentListBoxItemTheme}"
+                     MaxHeight="640"
+                     Background="Transparent"
+                     BorderThickness="0"
+                     Padding="0"
+                     SelectionChanged="ClearTransientSelection"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                     ScrollViewer.IsScrollChainingEnabled="True">
+              <ListBox.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <VirtualizingStackPanel CacheLength="0.5" />
+                </ItemsPanelTemplate>
+              </ListBox.ItemsPanel>
+              <ListBox.ItemTemplate>
                 <DataTemplate x:DataType="models:DownloadItem">
                   <Border Background="{DynamicResource Surface0Brush}"
                           CornerRadius="8"
@@ -466,7 +480,7 @@
                         <StackPanel Grid.Column="1"
                                     Orientation="Horizontal"
                                     Spacing="8">
-                          <Button Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).TogglePauseDownloadCommand}"
+                          <Button Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).TogglePauseDownloadCommand}"
                                   CommandParameter="{Binding}"
                                   Classes="SettingsActionButton"
                                   MinHeight="48"
@@ -479,7 +493,7 @@
                               <TextBlock Text="{Binding IsPaused, Converter={StaticResource BoolToLocalizedStringConverter}, ConverterParameter='Downloads.Action.Resume|Downloads.Action.Pause'}" />
                             </StackPanel>
                           </Button>
-                          <Button Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).CancelDownloadCommand}"
+                          <Button Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).CancelDownloadCommand}"
                                   CommandParameter="{Binding}"
                                   Theme="{StaticResource DangerButtonStyle}"
                                   MinHeight="48"
@@ -495,8 +509,8 @@
                     </StackPanel>
                   </Border>
                 </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
+              </ListBox.ItemTemplate>
+            </ListBox>
 
             <!-- Queue Section -->
             <Grid ColumnDefinitions="*,Auto"
@@ -509,11 +523,8 @@
               <Button Grid.Column="1"
                       Command="{Binding ClearQueueCommand}"
                       MinHeight="44"
-                      Padding="12,0"
-                      Background="{DynamicResource Surface1Brush}"
-                      Foreground="{DynamicResource TextPrimaryBrush}"
-                      BorderThickness="0"
-                      CornerRadius="6"
+                      Padding="4,0"
+                      Theme="{StaticResource DangerButtonStyle}"
                       FontSize="{DynamicResource FCaption}">
                 <StackPanel Orientation="Horizontal" Spacing="6">
                   <icons:MaterialIcon Kind="Close" Width="16" Height="16" />
@@ -522,8 +533,22 @@
               </Button>
             </Grid>
 
-            <ItemsControl ItemsSource="{Binding QueuedDownloadItems}">
-              <ItemsControl.ItemTemplate>
+            <ListBox ItemsSource="{Binding QueuedDownloadItems}"
+                     ItemContainerTheme="{StaticResource TransparentListBoxItemTheme}"
+                     MaxHeight="640"
+                     Background="Transparent"
+                     BorderThickness="0"
+                     Padding="0"
+                     SelectionChanged="ClearTransientSelection"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                     ScrollViewer.IsScrollChainingEnabled="True">
+              <ListBox.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <VirtualizingStackPanel CacheLength="0.5" />
+                </ItemsPanelTemplate>
+              </ListBox.ItemsPanel>
+              <ListBox.ItemTemplate>
                 <DataTemplate x:DataType="models:DownloadItem">
                   <Border Background="{DynamicResource Surface0Brush}"
                           CornerRadius="8"
@@ -572,15 +597,11 @@
                                    FontSize="{DynamicResource FCaption}"
                                    VerticalAlignment="Center" />
                         <Button
-                              Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).CancelDownloadCommand}"
+                              Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).CancelDownloadCommand}"
                               CommandParameter="{Binding}"
                               MinHeight="48"
-                              Padding="10,0"
-                              Background="Transparent"
-                              Foreground="{DynamicResource ErrorBrush}"
-                              BorderThickness="1"
-                              BorderBrush="{DynamicResource ErrorBrush}"
-                              CornerRadius="8"
+                              Padding="4,0"
+                              Theme="{StaticResource DangerButtonStyle}"
                               FontSize="{DynamicResource FCaption}">
                           <StackPanel Orientation="Horizontal" Spacing="5">
                             <icons:MaterialIcon Kind="Close" Width="14" Height="14" />
@@ -591,8 +612,8 @@
                     </Grid>
                   </Border>
                 </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
+              </ListBox.ItemTemplate>
+            </ListBox>
 
             <!-- Failed Section -->
             <Grid ColumnDefinitions="*,Auto"
@@ -604,8 +625,22 @@
                          FontWeight="SemiBold" />
             </Grid>
 
-            <ItemsControl ItemsSource="{Binding FailedDownloadItems}">
-              <ItemsControl.ItemTemplate>
+            <ListBox ItemsSource="{Binding FailedDownloadItems}"
+                     ItemContainerTheme="{StaticResource TransparentListBoxItemTheme}"
+                     MaxHeight="640"
+                     Background="Transparent"
+                     BorderThickness="0"
+                     Padding="0"
+                     SelectionChanged="ClearTransientSelection"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                     ScrollViewer.IsScrollChainingEnabled="True">
+              <ListBox.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <VirtualizingStackPanel CacheLength="0.5" />
+                </ItemsPanelTemplate>
+              </ListBox.ItemsPanel>
+              <ListBox.ItemTemplate>
                 <DataTemplate x:DataType="models:DownloadItem">
                   <Border Background="{DynamicResource Surface0Brush}"
                           CornerRadius="8"
@@ -656,7 +691,7 @@
                         <StackPanel Grid.Column="1"
                                     Orientation="Horizontal"
                                     Spacing="8">
-                          <Button Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).RetryDownloadCommand}"
+                          <Button Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RetryDownloadCommand}"
                                   CommandParameter="{Binding}"
                                   Theme="{StaticResource PrimaryButtonStyle}"
                                   VerticalContentAlignment="Center"
@@ -666,7 +701,7 @@
                               <TextBlock Text="{loc:Translate Downloads.Failed.Retry}" />
                             </StackPanel>
                           </Button>
-                          <Button Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).CancelDownloadCommand}"
+                          <Button Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).CancelDownloadCommand}"
                                   CommandParameter="{Binding}"
                                   Theme="{StaticResource DangerButtonStyle}"
                                   FontSize="{DynamicResource FCaption}">
@@ -680,8 +715,8 @@
                     </StackPanel>
                   </Border>
                 </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
+              </ListBox.ItemTemplate>
+            </ListBox>
           </StackPanel>
         </TabItem>
       </TabControl>

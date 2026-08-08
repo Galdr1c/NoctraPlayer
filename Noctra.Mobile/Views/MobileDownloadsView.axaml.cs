@@ -86,6 +86,14 @@ public partial class MobileDownloadsView : UserControl
         }
     }
 
+    private static void ClearTransientSelection(object? sender, SelectionChangedEventArgs e)
+    {
+        if (sender is ListBox listBox && listBox.SelectedIndex >= 0)
+        {
+            listBox.SelectedIndex = -1;
+        }
+    }
+
     private void UpdateDownloadSortTrigger()
     {
         if (_viewModel is not null)

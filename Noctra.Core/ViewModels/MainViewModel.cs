@@ -278,6 +278,11 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private string _downloadStatusMessage = string.Empty;
 
+    // Queueing a whole season performs one SQLite lookup/write per episode.
+    // Keep that producer off the UI synchronization context so a large season
+    // cannot block navigation while the Download Center is being populated.
+    private int _seasonDownloadWorkerRunning;
+
     [ObservableProperty]
     private bool _isChannelLoading;
 
@@ -444,13 +449,13 @@ public partial class MainViewModel : ObservableObject
         {
             _dispatcherService.BeginInvoke(() =>
             {
-                if (CurrentProfileId.HasValue)
+                if (CurrentProfileId.HasValue && ActiveView == AppView.Downloads)
                 {
-                    _ = RefreshDownloadsFromServiceAsync(CurrentProfileId.Value);
-                    
-                    // IF we are in the Downloads view, we want the landing page (grids) to update too.
-                    // We use a short delay to debounce multiple updates and ensure DB is ready.
-                    if (ActiveView == AppView.Downloads && !IsDownloadCenterVisible)
+                    if (IsDownloadCenterVisible)
+                    {
+                        ScheduleDownloadCenterRefresh(CurrentProfileId.Value);
+                    }
+                    else
                     {
                         ScheduleDownloadsLandingRefresh(CurrentProfileId.Value);
                     }
@@ -3011,6 +3016,13 @@ public partial class MainViewModel : ObservableObject
     private CancellationTokenSource? _filterCts;
     private CancellationTokenSource? _downloadsLandingRefreshCts;
     private int _isDownloadsLandingRefreshing;
+    private readonly SemaphoreSlim _downloadsRefreshGate = new(1, 1);
+    private int _downloadsRefreshWorkerRunning;
+    private int _downloadsRefreshPending;
+    private int _downloadsRefreshProfileId;
+    private DateTime _lastDownloadCenterRefreshUtc = DateTime.MinValue;
+    private const int DownloadsRefreshCoalesceDelayMs = 150;
+    private const int DownloadsRefreshMinIntervalMs = 750;
     private const int ImmediateFilterCoalesceDelayMs = 75;
     private const int DuplicateFilterSuppressWindowMs = 350;
     private readonly int _filterDelayMs = 300;
@@ -6221,8 +6233,22 @@ public partial class MainViewModel : ObservableObject
                 // running; otherwise open the Library tab.
                 _downloadTabUserSelection = false;
                 IsDownloadCenterVisible = ActiveDownloadCount > 0;
-                UpdateDownloadedItems();
-                _ = RefreshDownloadedItemsFromDatabaseAsync();
+                if (CurrentProfileId.HasValue && IsDownloadCenterVisible)
+                {
+                    // ActiveDownloadCount is a cached summary. Refresh the
+                    // center after navigation so a newly queued season is
+                    // visible without doing the database read on the command
+                    // path.
+                    ScheduleDownloadCenterRefresh(CurrentProfileId.Value);
+                }
+                // Do not scan every completed file while the Download Center
+                // is showing an active/queued season. The library refresh is
+                // deferred until the user switches to the Library tab; this
+                // keeps navigation responsive even with hundreds of episodes.
+                if (!IsDownloadCenterVisible)
+                {
+                    UpdateDownloadedItems();
+                }
             }
             else SelectedChannelType = null;
         }
@@ -7161,7 +7187,83 @@ public partial class MainViewModel : ObservableObject
             Path.GetFullPath(right).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
             StringComparison.OrdinalIgnoreCase);
 
+    private void ScheduleDownloadCenterRefresh(int profileId)
+    {
+        Volatile.Write(ref _downloadsRefreshProfileId, profileId);
+        Interlocked.Exchange(ref _downloadsRefreshPending, 1);
+
+        if (Interlocked.Exchange(ref _downloadsRefreshWorkerRunning, 1) == 1)
+        {
+            return;
+        }
+
+        _ = ProcessDownloadCenterRefreshAsync();
+    }
+
+    private async Task ProcessDownloadCenterRefreshAsync()
+    {
+        try
+        {
+            while (Interlocked.Exchange(ref _downloadsRefreshPending, 0) == 1)
+            {
+                // Queue bursts are common when a season is added. Let the
+                // collection settle so one UI refresh handles the whole burst.
+                await Task.Delay(DownloadsRefreshCoalesceDelayMs).ConfigureAwait(false);
+
+                // Progress notifications are emitted by the downloader while
+                // a large file is streaming. Do not reset all five download
+                // lists on every notification; a bounded refresh cadence keeps
+                // nested virtualized lists scrollable on low-end Android.
+                var sinceLastRefresh = DateTime.UtcNow - _lastDownloadCenterRefreshUtc;
+                var minimumInterval = TimeSpan.FromMilliseconds(DownloadsRefreshMinIntervalMs);
+                if (sinceLastRefresh < minimumInterval)
+                {
+                    await Task.Delay(minimumInterval - sinceLastRefresh).ConfigureAwait(false);
+                }
+
+                var profileId = Volatile.Read(ref _downloadsRefreshProfileId);
+                if (profileId > 0 && CurrentProfileId == profileId)
+                {
+                    await RefreshDownloadsFromServiceAsync(profileId).ConfigureAwait(false);
+                    _lastDownloadCenterRefreshUtc = DateTime.UtcNow;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogDebug(ex, "Download center refresh worker failed.");
+        }
+        finally
+        {
+            Interlocked.Exchange(ref _downloadsRefreshWorkerRunning, 0);
+
+            // Close the race where an event arrived after the loop observed
+            // no pending work but before the worker flag was cleared.
+            if (Volatile.Read(ref _downloadsRefreshPending) == 1 &&
+                Interlocked.Exchange(ref _downloadsRefreshWorkerRunning, 1) == 0)
+            {
+                _ = ProcessDownloadCenterRefreshAsync();
+            }
+        }
+    }
+
     private async Task RefreshDownloadsFromServiceAsync(int profileId)
+    {
+        // Preserve the caller's UI context for direct navigation/command
+        // refreshes, while the event-driven worker still runs off the UI
+        // thread after its coalescing delay.
+        await _downloadsRefreshGate.WaitAsync();
+        try
+        {
+            await RefreshDownloadsFromServiceCoreAsync(profileId);
+        }
+        finally
+        {
+            _downloadsRefreshGate.Release();
+        }
+    }
+
+    private async Task RefreshDownloadsFromServiceCoreAsync(int profileId)
     {
         try
         {
@@ -7177,12 +7279,12 @@ public partial class MainViewModel : ObservableObject
                 .OrderByDescending(d => d.CreatedAt)
                 .ToList();
 
-            SetItems(ActiveDownloadItems, allActive);
+            SetDownloadItemsIfChanged(ActiveDownloadItems, allActive, includeProgress: true);
 
-            SetItems(ActiveDownloadingItems, allActive
+            SetDownloadItemsIfChanged(ActiveDownloadingItems, allActive
                 .Where(d => d.Status == DownloadStatus.Downloading || d.Status == DownloadStatus.Paused)
                 .OrderBy(d => d.Status == DownloadStatus.Paused ? 1 : 0)
-                .ThenBy(d => d.CreatedAt));
+                .ThenBy(d => d.CreatedAt), includeProgress: true);
 
             // QueueOrder reflects the REAL queue position: only queued items,
             // numbered from the first item to download (oldest) to the last.
@@ -7197,9 +7299,9 @@ public partial class MainViewModel : ObservableObject
                 queuedItems[i].QueueOrder = i + 1;
             }
 
-            SetItems(QueuedDownloadItems, queuedItems);
+            SetDownloadItemsIfChanged(QueuedDownloadItems, queuedItems, includeProgress: false);
 
-            SetItems(CompletedDownloadItems, downloads
+            SetDownloadItemsIfChanged(CompletedDownloadItems, downloads
                 .Where(d => d.Status == DownloadStatus.Completed)
                 .Where(d =>
                 {
@@ -7207,23 +7309,20 @@ public partial class MainViewModel : ObservableObject
                     return ts >= _downloadCenterSessionStartUtc;
                 })
                 .OrderByDescending(d => d.CompletedAt ?? d.UpdatedAt)
-                .Take(100));
+                .Take(100), includeProgress: true);
 
-            SetItems(FailedDownloadItems, downloads
+            SetDownloadItemsIfChanged(FailedDownloadItems, downloads
                 .Where(d => d.Status == DownloadStatus.Failed)
-                .OrderByDescending(d => d.CreatedAt));
+                .OrderByDescending(d => d.CreatedAt), includeProgress: true);
 
             UpdateDownloadCenterSummary(profileId);
         }
         catch (Exception ex)
         {
             _logger?.LogDebug($"RefreshDownloadsFromServiceAsync failed: {ex.Message}");
-            SetItems(ActiveDownloadItems, Enumerable.Empty<DownloadItem>());
-            SetItems(ActiveDownloadingItems, Enumerable.Empty<DownloadItem>());
-            SetItems(QueuedDownloadItems, Enumerable.Empty<DownloadItem>());
-            SetItems(CompletedDownloadItems, Enumerable.Empty<DownloadItem>());
-            SetItems(FailedDownloadItems, Enumerable.Empty<DownloadItem>());
-            SetDownloadCenterSummaryEmpty();
+            // A transient SQLite/network failure must not blank the entire
+            // download center. Keep the last known rows visible; a later
+            // coalesced refresh will reconcile the single changed item.
         }
 
         ShowDownloadsEmptyState = DownloadedVodChannels.Count == 0 &&
@@ -7526,14 +7625,21 @@ public partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private async Task CancelDownloadAsync(DownloadItem? item)
+    private Task CancelDownloadAsync(DownloadItem? item)
     {
         if (item == null || item.Id <= 0)
         {
-            return;
+            return Task.CompletedTask;
         }
 
-        await _contentDownloadService.CancelDownloadAsync(item.Id);
+        // Cancellation can wait on an in-flight HTTP read or SQLite retry.
+        // Keep that wait off the UI synchronization context so the Download
+        // Center remains scrollable while the row transitions to Canceled.
+        _ = RunDownloadActionInBackgroundAsync(
+            () => _contentDownloadService.CancelDownloadAsync(item.Id),
+            "cancel",
+            item.Id);
+        return Task.CompletedTask;
     }
 
     [RelayCommand]
@@ -7556,11 +7662,11 @@ public partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private async Task TogglePauseDownloadAsync(DownloadItem? item)
+    private Task TogglePauseDownloadAsync(DownloadItem? item)
     {
         if (item == null || item.Id <= 0)
         {
-            return;
+            return Task.CompletedTask;
         }
 
         if (item.IsPaused)
@@ -7568,17 +7674,43 @@ public partial class MainViewModel : ObservableObject
             // Phase 28: Enforce profile guard for manual resume
             if (CurrentProfileId.HasValue && item.ProfileId != CurrentProfileId.Value)
             {
-                await _dialogService.ShowErrorAsync(
+                _ = _dialogService.ShowErrorAsync(
                     _localizationService.GetString("Download.Error.ResumeWrongProfile.Title"),
                     _localizationService.GetString("Download.Error.ResumeWrongProfile.Message"));
-                return;
+                return Task.CompletedTask;
             }
 
-            await _contentDownloadService.ResumeDownloadAsync(item.Id);
+            _ = RunDownloadActionInBackgroundAsync(
+                () => _contentDownloadService.ResumeDownloadAsync(item.Id),
+                "resume",
+                item.Id);
         }
         else
         {
-            await _contentDownloadService.PauseDownloadAsync(item.Id);
+            _ = RunDownloadActionInBackgroundAsync(
+                () => _contentDownloadService.PauseDownloadAsync(item.Id),
+                "pause",
+                item.Id);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private async Task RunDownloadActionInBackgroundAsync(
+        Func<Task> action,
+        string actionName,
+        int downloadId)
+    {
+        try
+        {
+            await Task.Run(action).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogDebug(ex,
+                "Background download action {Action} failed for {DownloadId}.",
+                actionName,
+                downloadId);
         }
     }
 
@@ -7587,17 +7719,22 @@ public partial class MainViewModel : ObservableObject
     {
         try
         {
-            // Pause active downloads
-            foreach (var item in ActiveDownloadingItems.Where(d => !d.IsPaused).ToList())
-            {
-                await _contentDownloadService.PauseDownloadAsync(item.Id);
-            }
+            var ids = ActiveDownloadingItems
+                .Where(d => !d.IsPaused)
+                .Select(d => d.Id)
+                .Concat(QueuedDownloadItems.Select(d => d.Id))
+                .Where(id => id > 0)
+                .Distinct()
+                .ToList();
 
-            // Also pause queued items so they don't start automatically
-            foreach (var item in QueuedDownloadItems.ToList())
+            await Task.Run(async () =>
             {
-                await _contentDownloadService.PauseDownloadAsync(item.Id);
-            }
+                foreach (var id in ids)
+                {
+                    await _contentDownloadService.PauseDownloadAsync(id)
+                        .ConfigureAwait(false);
+                }
+            }).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -7616,10 +7753,20 @@ public partial class MainViewModel : ObservableObject
 
             if (!confirmed) return;
 
-            foreach (var item in QueuedDownloadItems.ToList())
+            var ids = QueuedDownloadItems
+                .Select(item => item.Id)
+                .Where(id => id > 0)
+                .Distinct()
+                .ToList();
+
+            await Task.Run(async () =>
             {
-                await _contentDownloadService.CancelDownloadAsync(item.Id);
-            }
+                foreach (var id in ids)
+                {
+                    await _contentDownloadService.CancelDownloadAsync(id)
+                        .ConfigureAwait(false);
+                }
+            }).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -9166,59 +9313,99 @@ public partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private async Task DownloadSelectedSeason()
+    private Task DownloadSelectedSeason()
     {
-        if (SelectedSeason == null || !CurrentProfileId.HasValue) return;
+        if (SelectedSeason == null || !CurrentProfileId.HasValue ||
+            Interlocked.CompareExchange(ref _seasonDownloadWorkerRunning, 1, 0) != 0)
+        {
+            return Task.CompletedTask;
+        }
 
-        var episodes = SelectedSeason.Episodes
+        var season = SelectedSeason;
+        var profileId = CurrentProfileId.Value;
+        var seasonNumber = season.SeasonNumber;
+        var playlistId = SelectedPlaylist?.Id ?? 0;
+        var seriesId = SelectedSeries?.Id ?? 0;
+        var seriesTitle = SelectedSeries?.Name;
+        var posterUrl = SelectedSeries?.CoverUrl;
+        var episodes = season.Episodes
             .OrderBy(e => e.EpisodeNumber)
             .ToList();
-        
-        if (episodes.Count == 0) return;
 
-        int queued = 0;
-        int skipped = 0;
-        int failed = 0;
+        if (episodes.Count == 0)
+        {
+            Interlocked.Exchange(ref _seasonDownloadWorkerRunning, 0);
+            return Task.CompletedTask;
+        }
+
+        var requests = new List<DownloadContentRequest>(episodes.Count);
+        var invalidCount = 0;
+        foreach (var episode in episodes)
+        {
+            if (string.IsNullOrWhiteSpace(episode.StreamUrl))
+            {
+                invalidCount++;
+                continue;
+            }
+
+            requests.Add(new DownloadContentRequest(
+                profileId,
+                DownloadItemType.SeriesEpisode,
+                episode.Name,
+                episode.StreamUrl,
+                posterUrl,
+                playlistId,
+                0,
+                episode.Id,
+                null,
+                null,
+                seriesId,
+                seriesTitle,
+                seasonNumber,
+                episode.EpisodeNumber,
+                string.IsNullOrWhiteSpace(episode.TmdbEpisodeName) ? episode.Name : episode.TmdbEpisodeName));
+        }
 
         DownloadStatusMessage = string.Format(CultureInfo.CurrentCulture,
             _localizationService.GetString("Download.Season.StartingFormat"),
-            SelectedSeason.SeasonNumber,
+            seasonNumber,
             episodes.Count);
         StatusMessage = DownloadStatusMessage;
         IsDownloadInProgress = true;
 
+        // QueueDownloadAsync performs synchronous work before its first await
+        // and raises DownloadsChanged for every item. Running the producer on a
+        // pool thread keeps navigation, sheets and the Download Center
+        // responsive while the service's single queue worker owns the files.
+        _ = Task.Run(() => QueueSeasonDownloadsInBackgroundAsync(
+            seasonNumber,
+            requests,
+            invalidCount));
+
+        return Task.CompletedTask;
+    }
+
+    private async Task QueueSeasonDownloadsInBackgroundAsync(
+        int seasonNumber,
+        IReadOnlyList<DownloadContentRequest> requests,
+        int invalidCount)
+    {
+        var queued = 0;
+        var skipped = 0;
+        var failed = invalidCount;
+
         try
         {
-            foreach (var episode in episodes)
+            foreach (var request in requests)
             {
-                if (string.IsNullOrWhiteSpace(episode.StreamUrl))
-                {
-                    failed++;
-                    continue;
-                }
-
                 try
                 {
-                    var request = new DownloadContentRequest(
-                        CurrentProfileId.Value,
-                        DownloadItemType.SeriesEpisode,
-                        episode.Name,
-                        episode.StreamUrl,
-                        SelectedSeries?.CoverUrl,
-                        SelectedPlaylist?.Id ?? 0,
-                        0,
-                        episode.Id,
-                        null,
-                        null,
-                        SelectedSeries?.Id ?? 0,
-                        SelectedSeries?.Name,
-                        SelectedSeason.SeasonNumber,
-                        episode.EpisodeNumber,
-                        string.IsNullOrWhiteSpace(episode.TmdbEpisodeName) ? episode.Name : episode.TmdbEpisodeName);
+                    var result = await _contentDownloadService
+                        .QueueDownloadAsync(request)
+                        .ConfigureAwait(false);
 
-                    var result = await _contentDownloadService.QueueDownloadAsync(request);
                     // AlreadyExists wins: the service reports Success=true for
-                    // an already-queued/completed item, so it must be checked first.
+                    // an already-queued/completed item.
                     if (result.AlreadyExists) skipped++;
                     else if (result.Success) queued++;
                     else failed++;
@@ -9226,7 +9413,8 @@ public partial class MainViewModel : ObservableObject
                 catch (Exception ex)
                 {
                     failed++;
-                    _logger?.LogWarning(ex, "Season download failed for episode: {Name}", episode.Name);
+                    _logger?.LogWarning(ex,
+                        "Season download failed for episode: {Name}", request.DisplayName);
                 }
             }
 
@@ -9240,16 +9428,33 @@ public partial class MainViewModel : ObservableObject
             if (skipped > 0)
                 parts.Add(string.Format(CultureInfo.CurrentCulture,
                     _localizationService.GetString("Download.Season.Result.SkippedFormat"), skipped));
+
             var message = string.Format(CultureInfo.CurrentCulture,
                 _localizationService.GetString("Download.Season.ResultFormat"),
-                SelectedSeason.SeasonNumber,
+                seasonNumber,
                 string.Join(", ", parts));
-            DownloadStatusMessage = message;
-            StatusMessage = message;
+
+            _dispatcherService.BeginInvoke(() =>
+            {
+                DownloadStatusMessage = message;
+                StatusMessage = message;
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(ex, "Season download queueing failed");
+            var message = string.Format(CultureInfo.CurrentCulture,
+                _localizationService.GetString("Download.Status.ExceptionFormat"), ex.Message);
+            _dispatcherService.BeginInvoke(() =>
+            {
+                DownloadStatusMessage = message;
+                StatusMessage = message;
+            });
         }
         finally
         {
-            IsDownloadInProgress = false;
+            Interlocked.Exchange(ref _seasonDownloadWorkerRunning, 0);
+            _dispatcherService.BeginInvoke(() => IsDownloadInProgress = false);
         }
     }
 
@@ -11211,6 +11416,110 @@ public partial class MainViewModel : ObservableObject
             collection.ReplaceAll(list);
             onComplete?.Invoke();
         });
+    }
+
+    private void SetDownloadItemsIfChanged(
+        BatchObservableCollection<DownloadItem> collection,
+        IEnumerable<DownloadItem> items,
+        bool includeProgress)
+    {
+        var list = items.ToList();
+        _dispatcherService.Invoke(() =>
+        {
+            if (AreDownloadItemsEquivalent(collection, list, includeProgress))
+            {
+                return;
+            }
+
+            // Keep realized virtualized rows alive when the same download IDs
+            // remain in the same order. DownloadItem publishes property
+            // changes for progress/status fields, so only the affected row's
+            // bindings update instead of rebuilding the whole ListBox.
+            if (HaveSameDownloadIdentity(collection, list))
+            {
+                for (var i = 0; i < list.Count; i++)
+                {
+                    ApplyDownloadSnapshot(collection[i], list[i]);
+                }
+
+                return;
+            }
+
+            // A Reset is reserved for structural changes (a new item, a
+            // removed item, or an order change). Those are infrequent compared
+            // with progress notifications and still preserve range updates.
+            collection.ReplaceAll(list);
+        });
+    }
+
+    private static bool HaveSameDownloadIdentity(
+        IReadOnlyList<DownloadItem> current,
+        IReadOnlyList<DownloadItem> next)
+    {
+        if (current.Count != next.Count)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < current.Count; i++)
+        {
+            if (current[i].Id != next[i].Id)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static void ApplyDownloadSnapshot(
+        DownloadItem target,
+        DownloadItem source)
+    {
+        target.Status = source.Status;
+        target.BytesDownloaded = source.BytesDownloaded;
+        target.BytesTotal = source.BytesTotal;
+        target.SpeedBytesPerSecond = source.SpeedBytesPerSecond;
+        target.EstimatedSecondsRemaining = source.EstimatedSecondsRemaining;
+        target.ErrorMessage = source.ErrorMessage;
+        target.QueueOrder = source.QueueOrder;
+    }
+
+    private static bool AreDownloadItemsEquivalent(
+        IReadOnlyList<DownloadItem> current,
+        IReadOnlyList<DownloadItem> next,
+        bool includeProgress)
+    {
+        if (current.Count != next.Count)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < current.Count; i++)
+        {
+            var left = current[i];
+            var right = next[i];
+            if (left.Id != right.Id ||
+                left.Status != right.Status ||
+                left.QueueOrder != right.QueueOrder ||
+                !string.Equals(left.DisplayName, right.DisplayName, StringComparison.Ordinal) ||
+                !string.Equals(left.PosterUrl, right.PosterUrl, StringComparison.Ordinal) ||
+                !string.Equals(left.ErrorMessage, right.ErrorMessage, StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            if (includeProgress &&
+                (left.BytesDownloaded != right.BytesDownloaded ||
+                 left.BytesTotal != right.BytesTotal ||
+                 Math.Abs(left.SpeedBytesPerSecond - right.SpeedBytesPerSecond) > 0.5 ||
+                 left.EstimatedSecondsRemaining != right.EstimatedSecondsRemaining))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     [GeneratedRegex(@"(?:\b|_)(adult|xxx|porn|sexy|18\+| \+18|pink|redlight|erotik|erotic|lust|hentai|brazzers|bangbros|babes|realitykings|digitalplayground|naughtyamerica|passion|penthouse|hustler|playboy|blue movie|hardcore|softcore|x-rated|sex|cam|strip|fetish|bondage|bdsm|amateur|milf|gay|lesbian|pornstar|yetişkin|mature)(?:\b|_)", RegexOptions.IgnoreCase)]

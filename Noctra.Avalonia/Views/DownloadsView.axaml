@@ -79,6 +79,13 @@
       <Setter Property="Padding" Value="10,2" />
     </Style>
 
+    <Style Selector="ListBox.downloadVirtualList ListBoxItem">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="Padding" Value="0"/>
+      <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+    </Style>
+
     <!-- Whole-card open button (no dead zones; trash stays a separate target) -->
     <Style Selector="Button.downloadCard">
       <Setter Property="Background" Value="Transparent"/>
@@ -91,6 +98,15 @@
     </Style>
     <Style Selector="Button.downloadCard:pointerover">
       <Setter Property="Background" Value="{DynamicResource Surface1Brush}"/>
+    </Style>
+    <Style Selector="ListBox.downloadVirtualList > ListBoxItem:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="Transparent"/>
+    </Style>
+    <Style Selector="ListBox.downloadVirtualList > ListBoxItem:pressed /template/ ContentPresenter">
+      <Setter Property="Background" Value="Transparent"/>
+    </Style>
+    <Style Selector="ListBox.downloadVirtualList > ListBoxItem:selected /template/ ContentPresenter">
+      <Setter Property="Background" Value="Transparent"/>
     </Style>
     <Style Selector="Button.dangerTextHover">
       <Setter Property="Background" Value="Transparent"/>
@@ -366,8 +382,22 @@
               </StackPanel>
 
               <!-- Active Cards -->
-              <ItemsControl ItemsSource="{Binding ActiveDownloadingItems}">
-                <ItemsControl.ItemTemplate>
+              <ListBox ItemsSource="{Binding ActiveDownloadingItems}"
+                       Classes="downloadVirtualList"
+                       MaxHeight="640"
+                       Background="Transparent"
+                       BorderThickness="0"
+                       Padding="0"
+                       SelectionChanged="ClearTransientSelection"
+                       ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                       ScrollViewer.VerticalScrollBarVisibility="Auto"
+                       ScrollViewer.IsScrollChainingEnabled="True">
+                <ListBox.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <VirtualizingStackPanel CacheLength="0.5" />
+                  </ItemsPanelTemplate>
+                </ListBox.ItemsPanel>
+                <ListBox.ItemTemplate>
                   <DataTemplate x:DataType="models:DownloadItem">
                     <Border Background="{DynamicResource Surface0Brush}" CornerRadius="8" Padding="16" Margin="0,0,0,12" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" ClipToBounds="True">
                       <StackPanel Spacing="8">
@@ -430,8 +460,8 @@
                       </StackPanel>
                     </Border>
                   </DataTemplate>
-                </ItemsControl.ItemTemplate>
-              </ItemsControl>
+                </ListBox.ItemTemplate>
+              </ListBox>
 
               <!-- Queue Header -->
               <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,16,0,0"
@@ -447,8 +477,22 @@
               </Grid>
 
               <!-- Queue Cards -->
-              <ItemsControl ItemsSource="{Binding QueuedDownloadItems}">
-                <ItemsControl.ItemTemplate>
+              <ListBox ItemsSource="{Binding QueuedDownloadItems}"
+                       Classes="downloadVirtualList"
+                       MaxHeight="640"
+                       Background="Transparent"
+                       BorderThickness="0"
+                       Padding="0"
+                       SelectionChanged="ClearTransientSelection"
+                       ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                       ScrollViewer.VerticalScrollBarVisibility="Auto"
+                       ScrollViewer.IsScrollChainingEnabled="True">
+                <ListBox.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <VirtualizingStackPanel CacheLength="0.5" />
+                  </ItemsPanelTemplate>
+                </ListBox.ItemsPanel>
+                <ListBox.ItemTemplate>
                   <DataTemplate x:DataType="models:DownloadItem">
                     <Border Background="{DynamicResource Surface0Brush}" Opacity="0.8" CornerRadius="8" Padding="12" Margin="0,0,0,8">
                       <Grid ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="10">
@@ -486,8 +530,8 @@
                       </Grid>
                     </Border>
                   </DataTemplate>
-                </ItemsControl.ItemTemplate>
-              </ItemsControl>
+                </ListBox.ItemTemplate>
+              </ListBox>
 
               <!-- Failed Header -->
               <Grid ColumnDefinitions="*,Auto" Margin="0,16,0,0"
@@ -496,8 +540,22 @@
               </Grid>
 
               <!-- Failed Cards -->
-              <ItemsControl ItemsSource="{Binding FailedDownloadItems}">
-                <ItemsControl.ItemTemplate>
+              <ListBox ItemsSource="{Binding FailedDownloadItems}"
+                       Classes="downloadVirtualList"
+                       MaxHeight="640"
+                       Background="Transparent"
+                       BorderThickness="0"
+                       Padding="0"
+                       SelectionChanged="ClearTransientSelection"
+                       ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                       ScrollViewer.VerticalScrollBarVisibility="Auto"
+                       ScrollViewer.IsScrollChainingEnabled="True">
+                <ListBox.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <VirtualizingStackPanel CacheLength="0.5" />
+                  </ItemsPanelTemplate>
+                </ListBox.ItemsPanel>
+                <ListBox.ItemTemplate>
                   <DataTemplate x:DataType="models:DownloadItem">
                     <Border Background="{DynamicResource Surface0Brush}" CornerRadius="8" Padding="12" Margin="0,0,0,8">
                       <StackPanel Spacing="8">
@@ -542,8 +600,8 @@
                       </StackPanel>
                     </Border>
                   </DataTemplate>
-                </ItemsControl.ItemTemplate>
-              </ItemsControl>
+                </ListBox.ItemTemplate>
+              </ListBox>
             </StackPanel>
           </TabItem>
         </TabControl>
