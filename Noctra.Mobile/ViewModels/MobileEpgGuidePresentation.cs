@@ -21,6 +21,7 @@ public sealed partial class MobileEpgGuidePresentation : ObservableObject
 
     private readonly PlayerViewModel _player;
     private readonly Func<string, string> _translate;
+    private DateTime _displayDate = DateTime.Today;
 
     public MobileEpgGuidePresentation(
         PlayerViewModel player,
@@ -58,7 +59,13 @@ public sealed partial class MobileEpgGuidePresentation : ObservableObject
     public string SelectedCategory => SelectedProgram?.Program.Category ?? string.Empty;
     public bool HasSelectedCategory => !string.IsNullOrWhiteSpace(SelectedCategory);
     public bool CanWatchSelectedChannel => SelectedChannel is not null;
-    public string WindowLabel => $"{WindowStart:HH:mm} – {WindowEnd:HH:mm}";
+    public string DateLabel => string.Format(
+        CultureInfo.CurrentCulture,
+        _translate("Player.Epg.DateHeaderFormat"),
+        _translate("Player.Epg.Today"),
+        _displayDate.ToString(
+            _translate("Player.Epg.DateValueFormat"),
+            CultureInfo.CurrentCulture));
     public string SelectedTimingStatus => GetTimingStatus(SelectedProgram, DateTime.Now);
 
     public (DateTime Start, DateTime End) ConfigureWindow(
@@ -68,8 +75,9 @@ public sealed partial class MobileEpgGuidePresentation : ObservableObject
     {
         WindowStart = MobileEpgTimelineGeometry.SnapWindowStart(localNow, PastWindow);
         WindowEnd = WindowStart + PastWindow + FutureWindow;
+        _displayDate = localNow.Date;
         ConfigureScale(localNow, availableTimelineWidth, remoteMode);
-        OnPropertyChanged(nameof(WindowLabel));
+        OnPropertyChanged(nameof(DateLabel));
         return (WindowStart, WindowEnd);
     }
 
@@ -161,6 +169,9 @@ public sealed partial class MobileEpgGuidePresentation : ObservableObject
 
     public void UpdateLive(DateTime localNow)
     {
+        _displayDate = localNow.Date;
+        OnPropertyChanged(nameof(DateLabel));
+
         var nowUtc = localNow.ToUniversalTime();
         NowLineLeft = (localNow - WindowStart).TotalMinutes * PixelsPerMinute;
         IsNowLineVisible = localNow >= WindowStart && localNow <= WindowEnd;
@@ -357,8 +368,6 @@ public sealed partial class MobileEpgRow : ObservableObject
 
 public sealed partial class MobileEpgProgramItem : ObservableObject
 {
-    private readonly MobileEpgBlockGeometry _geometry;
-
     public MobileEpgProgramItem(
         Channel channel,
         EpgProgram program,
@@ -367,7 +376,6 @@ public sealed partial class MobileEpgProgramItem : ObservableObject
     {
         Channel = channel;
         Program = program;
-        _geometry = geometry;
         Left = geometry.Left;
         Width = geometry.Width;
         IsClippedLeft = geometry.IsClippedLeft;
@@ -393,23 +401,12 @@ public sealed partial class MobileEpgProgramItem : ObservableObject
     [ObservableProperty] private bool _isPlayingProgram;
     [ObservableProperty] private bool _isPast;
     [ObservableProperty] private bool _isSelected;
-    [ObservableProperty] private double _progressWidth;
 
     public void UpdateLive(DateTime nowUtc)
     {
         IsCurrentProgram = nowUtc >= Program.StartTime && nowUtc < Program.EndTime;
         IsPlayingProgram = IsPlayingChannel && IsCurrentProgram;
         IsPast = Program.EndTime <= nowUtc;
-
-        if (!IsCurrentProgram || Program.EndTime <= Program.StartTime)
-        {
-            ProgressWidth = 0;
-            return;
-        }
-
-        ProgressWidth = MobileEpgTimelineGeometry.CalculateProgressWidth(
-            _geometry,
-            nowUtc.ToLocalTime());
     }
 }
 

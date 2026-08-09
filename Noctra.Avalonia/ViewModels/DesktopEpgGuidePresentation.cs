@@ -19,6 +19,8 @@ public sealed class DesktopEpgGuidePresentation
 
     public DateTime WindowEnd { get; init; }
 
+    public DateTime DisplayDate { get; init; }
+
     public double CanvasWidth { get; init; }
 
     public double NowLineLeft { get; init; }
@@ -45,6 +47,7 @@ public sealed class DesktopEpgGuidePresentation
         {
             WindowStart = windowStart,
             WindowEnd = windowEnd,
+            DisplayDate = now.Date,
             CanvasWidth = canvasWidth,
             NowLineLeft = Math.Clamp(
                 (now - windowStart).TotalMinutes * PixelsPerMinute,
@@ -87,6 +90,7 @@ public sealed class DesktopEpgGuidePresentation
         {
             WindowStart = window.WindowStart,
             WindowEnd = window.WindowEnd,
+            DisplayDate = window.DisplayDate,
             CanvasWidth = window.CanvasWidth,
             NowLineLeft = window.NowLineLeft,
             CurrentRowIndex = currentRowIndex,
@@ -129,8 +133,6 @@ public sealed class DesktopEpgProgramBlock
     public bool IsCurrentProgram { get; init; }
     public bool IsClippedLeft { get; init; }
     public bool IsPast { get; init; }
-    public double ProgressPixelWidth =>
-        IsCurrentProgram ? Program.ProgressPercentage / 100.0 * PixelWidth : 0;
     public double TitleTextWidth => Math.Max(0, PixelWidth - 14);
     public bool IsStrip => PixelWidth < 6;
     public bool IsCompact => PixelWidth >= 6 && PixelWidth < 48;

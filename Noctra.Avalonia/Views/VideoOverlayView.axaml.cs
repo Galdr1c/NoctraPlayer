@@ -1,4 +1,6 @@
 using System;
+using System.ComponentModel;
+using System.Globalization;
 using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
@@ -40,6 +42,7 @@ public partial class VideoOverlayView : UserControl
     private PlayerViewModel? _playerViewModel;
     private bool _isTimelinePointerDown;
     private bool _isCommittingSeek;
+    private bool _isLocalizationSubscribed;
     private DateTime _lastPointerInteractionUtc = DateTime.MinValue;
     private static readonly TimeSpan PointerInteractionThrottle = TimeSpan.FromMilliseconds(100);
 
@@ -111,6 +114,12 @@ public partial class VideoOverlayView : UserControl
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
+        if (!_isLocalizationSubscribed)
+        {
+            LocalizationSource.Instance.PropertyChanged += LocalizationSource_PropertyChanged;
+            _isLocalizationSubscribed = true;
+        }
+
         // Subscribe to slider events explicitly to handle bubbled/tunnelled events correctly
         var slider = this.FindControl<Slider>("TimelineSlider");
         if (slider != null)
@@ -129,6 +138,25 @@ public partial class VideoOverlayView : UserControl
         {
             // Block scrolling from volume slider to prevent volume toast spam
             volumeSlider.AddHandler(InputElement.PointerWheelChangedEvent, Slider_PointerWheelChanged_Tunnel, RoutingStrategies.Tunnel);
+        }
+    }
+
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        if (_isLocalizationSubscribed)
+        {
+            LocalizationSource.Instance.PropertyChanged -= LocalizationSource_PropertyChanged;
+            _isLocalizationSubscribed = false;
+        }
+
+        base.OnDetachedFromVisualTree(e);
+    }
+
+    private void LocalizationSource_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (_playerViewModel?.IsEpgPanelOpen == true)
+        {
+            UpdateDesktopEpgDateLabel();
         }
     }
 
@@ -273,9 +301,7 @@ public partial class VideoOverlayView : UserControl
         var accentBrush = new SolidColorBrush(Color.Parse("#7B2FBE"));
         var totalMinutes = (int)(DesktopEpg.WindowEnd - DesktopEpg.WindowStart).TotalMinutes;
 
-        var windowLabel = this.FindControl<TextBlock>("EpgTimeWindowLabel");
-        if (windowLabel != null)
-            windowLabel.Text = $"{DesktopEpg.WindowStart:HH:mm} – {DesktopEpg.WindowEnd:HH:mm}";
+        UpdateDesktopEpgDateLabel();
 
         for (var minute = 0; minute <= totalMinutes; minute += 30)
         {
@@ -343,6 +369,23 @@ public partial class VideoOverlayView : UserControl
         Canvas.SetLeft(nowBadge, DesktopEpg.NowLineLeft - 13);
         Canvas.SetTop(nowBadge, 5);
         canvas.Children.Add(nowBadge);
+    }
+
+    private void UpdateDesktopEpgDateLabel()
+    {
+        var dateLabel = this.FindControl<TextBlock>("EpgDateLabel");
+        if (dateLabel is null)
+        {
+            return;
+        }
+
+        dateLabel.Text = string.Format(
+            CultureInfo.CurrentCulture,
+            LocalizationSource.Instance["Player.Epg.DateHeaderFormat"],
+            LocalizationSource.Instance["Player.Epg.Today"],
+            DesktopEpg.DisplayDate.ToString(
+                LocalizationSource.Instance["Player.Epg.DateValueFormat"],
+                CultureInfo.CurrentCulture));
     }
 
     private void QueueFocusCurrentEpgRow()

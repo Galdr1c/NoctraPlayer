@@ -73,26 +73,6 @@ public sealed class MobileEpgTimelineGeometryTests
     }
 
     [Fact]
-    public void CalculateProgressWidth_UsesOnlyTheVisibleClippedInterval()
-    {
-        var day = new DateTime(2026, 8, 8, 0, 0, 0, DateTimeKind.Local);
-        var block = MobileEpgTimelineGeometry.CalculateBlock(
-            day.AddHours(13),
-            day.AddHours(18),
-            day.AddHours(14),
-            day.AddHours(18),
-            pixelsPerMinute: 1,
-            minimumWidth: 24);
-
-        Assert.NotNull(block);
-        var progressWidth = MobileEpgTimelineGeometry.CalculateProgressWidth(
-            block.Value,
-            day.AddHours(15));
-
-        Assert.Equal(60, progressWidth);
-    }
-
-    [Fact]
     public void CalculateBlock_KeepsVisualWidthSeparateFromMinimumHitWidth()
     {
         var windowStart = new DateTime(2026, 8, 8, 17, 30, 0, DateTimeKind.Local);

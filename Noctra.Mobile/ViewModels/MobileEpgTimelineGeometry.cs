@@ -56,20 +56,6 @@ public static class MobileEpgTimelineGeometry
             clippedEnd);
     }
 
-    public static double CalculateProgressWidth(
-        MobileEpgBlockGeometry block,
-        DateTime currentTime)
-    {
-        if (block.VisibleEnd <= block.VisibleStart)
-        {
-            return 0;
-        }
-
-        var progress = (currentTime - block.VisibleStart).TotalSeconds
-                       / (block.VisibleEnd - block.VisibleStart).TotalSeconds;
-        return block.Width * Math.Clamp(progress, 0, 1);
-    }
-
     public static int FindNearestProgramIndex(
         IReadOnlyList<MobileEpgProgramInterval> programs,
         DateTime anchor)
