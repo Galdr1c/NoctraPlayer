@@ -35,15 +35,15 @@
       <Setter Property="HorizontalContentAlignment" Value="Stretch" />
       <Setter Property="HorizontalAlignment" Value="Stretch" />
       <Setter Property="Padding" Value="10,6" />
-      <Setter Property="CornerRadius" Value="0" />
-      <Setter Property="Background" Value="{DynamicResource Surface0Brush}" />
+      <Setter Property="CornerRadius" Value="4,0,0,4" />
+      <Setter Property="Background" Value="{DynamicResource SurfaceLightBrush}" />
       <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
       <Setter Property="BorderThickness" Value="0,0,1,1" />
     </Style>
     <Style Selector="Button.epgChannel.playing">
       <Setter Property="Background" Value="{DynamicResource TextSelectionBrush}" />
       <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
-      <Setter Property="BorderThickness" Value="3,0,1,1" />
+      <Setter Property="BorderThickness" Value="3,0,0,0" />
     </Style>
     <Style Selector="Button.epgChannel:pointerover">
       <Setter Property="Background" Value="{DynamicResource InteractiveHoverBrush}" />
@@ -77,22 +77,21 @@
       <Setter Property="Padding" Value="10,6" />
       <Setter Property="HorizontalAlignment" Value="Left" />
       <Setter Property="VerticalAlignment" Value="Stretch" />
-      <Setter Property="CornerRadius" Value="{DynamicResource RadiusSmall}" />
+      <Setter Property="CornerRadius" Value="4" />
       <Setter Property="Background" Value="{DynamicResource Surface1Brush}" />
       <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
       <Setter Property="BorderThickness" Value="1" />
     </Style>
     <Style Selector="Button.epgProgramHitTarget.current Border.epgProgramVisual">
-      <Setter Property="Background" Value="{DynamicResource NavActiveBackgroundBrush}" />
-      <Setter Property="BorderBrush" Value="{DynamicResource LiveRedBrush}" />
+      <Setter Property="Background" Value="{DynamicResource PremiumCardBackgroundBrush}" />
     </Style>
     <Style Selector="Button.epgProgramHitTarget.playing Border.epgProgramVisual">
-      <Setter Property="BorderBrush" Value="{DynamicResource LiveRedBrush}" />
-      <Setter Property="BorderThickness" Value="2" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
     </Style>
     <Style Selector="Button.epgProgramHitTarget.selected Border.epgProgramVisual">
       <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
-      <Setter Property="BorderThickness" Value="2" />
+      <Setter Property="BorderThickness" Value="1" />
       <Setter Property="Background" Value="{DynamicResource TextSelectionBrush}" />
     </Style>
     <Style Selector="Button.epgProgramHitTarget.past Border.epgProgramVisual">
@@ -162,8 +161,8 @@
                         VerticalAlignment="Center">
               <Button Classes="epgIconButton"
                       Command="{Binding PlayPauseCommand}"
-                      Background="{DynamicResource PlayerOverlayButtonBrush}"
-                      BorderBrush="{DynamicResource PlayerOverlayBorderBrush}"
+                      Background="Transparent"
+                      BorderBrush="Transparent"
                                         AutomationProperties.Name="{loc:Translate Player.Overlay.PlayPause.Tooltip}">
                 <Grid>
                   <icons:MaterialIcon Kind="Pause"
@@ -287,6 +286,8 @@
             </StackPanel>
             <Button Grid.Column="1"
                     Classes="epgIconButton"
+                    Background="Transparent"
+                    BorderBrush="Transparent"
                     Click="NowButton_Click"
                     AutomationProperties.Name="{loc:Translate Player.Epg.NowA11y}"
                     AutomationProperties.HelpText="{loc:Translate Player.Epg.NowHelp}">
@@ -298,6 +299,8 @@
             <Button x:Name="CloseGuideButton"
                     Grid.Column="2"
                     Classes="epgIconButton"
+                    Background="Transparent"
+                    BorderBrush="Transparent"
                     Command="{Binding ToggleEpgPanelCommand}"
                     AutomationProperties.Name="{loc:Translate Common.Close}"
                     AutomationProperties.HelpText="{loc:Translate Player.Epg.CloseHelp}">
@@ -374,8 +377,8 @@
                             PointerReleased="ChannelButton_PointerReleased"
                             AutomationProperties.Name="{Binding Channel.Name}"
                             AutomationProperties.HelpText="{loc:Translate Player.Epg.ChannelA11yHelp}">
-                      <Grid ColumnDefinitions="44,*" ColumnSpacing="8">
-                        <Border Width="40" Height="40"
+                      <Grid ColumnDefinitions="32,*" ColumnSpacing="6">
+                        <Border Width="30" Height="30"
                                 CornerRadius="{DynamicResource RadiusSmall}"
                                 Background="{DynamicResource Surface1Brush}"
                                 ClipToBounds="True"
@@ -389,6 +392,7 @@
                                      FontSize="{DynamicResource FCaption}"
                                      FontWeight="SemiBold"
                                      Foreground="{DynamicResource TextPrimaryBrush}"
+                                     TextWrapping="Wrap"
                                      TextTrimming="CharacterEllipsis"
                                      MaxLines="2" />
                           <TextBlock Text="{Binding Channel.GroupTitle}"

@@ -64,11 +64,11 @@
             RowDefinitions="*,Auto,Auto"
             IsHitTestVisible="False">
         <Grid Grid.Row="0"
-              ColumnDefinitions="48,*"
+              ColumnDefinitions="42,*"
               VerticalAlignment="Center">
           <Border Grid.Column="0"
-                  Width="46"
-                  Height="46"
+                  Width="36"
+                  Height="36"
                   Background="{DynamicResource PlaceHolderBrush}">
             <Grid>
               <Border Background="{DynamicResource PlaceHolderBrush}">
@@ -78,18 +78,18 @@
                 </Border.IsVisible>
               </Border>
               <controls:RemoteImage x:Name="ChannelLogo"
-                                    Width="46"
-                                    Height="46"
+                                    Width="36"
+                                    Height="36"
                                     Stretch="Uniform"
                                     Url="{Binding CoverUrl}"
                                     RenderOptions.BitmapInterpolationMode="MediumQuality"/>
             </Grid>
           </Border>
           <StackPanel Grid.Column="1"
-                      Margin="14,0,0,0"
+                      Margin="8,0,0,0"
                       VerticalAlignment="Center"
                       Spacing="3">
-            <TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+            <TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="14" FontWeight="SemiBold" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxLines="2"/>
             <TextBlock Text="{Binding GroupTitle}" Foreground="{DynamicResource TextMutedBrush}" FontSize="11" TextTrimming="CharacterEllipsis"/>
           </StackPanel>
         </Grid>

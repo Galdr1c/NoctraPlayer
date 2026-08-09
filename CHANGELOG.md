@@ -34,6 +34,7 @@ Detailed historical engineering notes are archived in [`docs/history/legacy-chan
 
 ### Changed
 
+- **Channel logos use the rail/card space more efficiently**: Live cards and EPG channel rails now use smaller logo bounds, wider name columns, and up to two lines for long channel names on mobile and desktop. Touch targets, favorites, and row heights remain unchanged.
 - **EPG guide headers are simpler and user-facing**: Mobile/TV and desktop now show a fully localized `Today · 8 August`-style date instead of repeating the internal timeline bounds. All five supported languages provide their own title, “Today” label, and natural date pattern (including German `9. August` and Spanish `9 de agosto`). Guide titles use natural title case, the mobile video hero's duplicate close action was removed, and remote/keyboard focus now has a single close target in the guide header.
 - **EPG cards use the Now line as the single progress indicator**: Removed the redundant per-program progress fill and its mobile/desktop presentation calculations. Current-program styling remains intact, while the red Now line continues to show the exact live position without duplicating the same information inside every card.
 - **Promo card hidden on permanent Premium**: The promo code card is no longer shown on editions that are already permanently Premium (where redemption is meaningless). On timed promo Premium it stays visible — the system supports stacking duration — and the apply button relabels to "Add Duration" ("Süre Ekle") on desktop and mobile.
