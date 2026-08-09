@@ -59,53 +59,69 @@
       <Setter Property="BoxShadow" Value="{DynamicResource FocusGlow}" />
     </Style>
 
-    <Style Selector="Button.epgProgram">
+    <!-- The button owns the touch target; the inner border owns the
+         time-accurate visual width. Keeping these separate prevents a short
+         EPG segment from covering the next segment on the timeline. -->
+    <Style Selector="Button.epgProgramHitTarget">
       <Setter Property="Height" Value="52" />
-      <Setter Property="MinWidth" Value="24" />
-      <Setter Property="Padding" Value="10,6" />
-      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-      <Setter Property="VerticalContentAlignment" Value="Center" />
+      <Setter Property="MinWidth" Value="0" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="HorizontalContentAlignment" Value="Left" />
+      <Setter Property="VerticalContentAlignment" Value="Stretch" />
       <Setter Property="HorizontalAlignment" Value="Left" />
       <Setter Property="VerticalAlignment" Value="Center" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+    </Style>
+    <Style Selector="Border.epgProgramVisual">
+      <Setter Property="MinWidth" Value="0" />
+      <Setter Property="Padding" Value="10,6" />
+      <Setter Property="HorizontalAlignment" Value="Left" />
+      <Setter Property="VerticalAlignment" Value="Stretch" />
       <Setter Property="CornerRadius" Value="{DynamicResource RadiusSmall}" />
       <Setter Property="Background" Value="{DynamicResource Surface1Brush}" />
       <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
       <Setter Property="BorderThickness" Value="1" />
     </Style>
-    <Style Selector="Button.epgProgram.current">
+    <Style Selector="Button.epgProgramHitTarget.current Border.epgProgramVisual">
       <Setter Property="Background" Value="{DynamicResource NavActiveBackgroundBrush}" />
       <Setter Property="BorderBrush" Value="{DynamicResource LiveRedBrush}" />
     </Style>
-    <Style Selector="Button.epgProgram.playing">
+    <Style Selector="Button.epgProgramHitTarget.playing Border.epgProgramVisual">
       <Setter Property="BorderBrush" Value="{DynamicResource LiveRedBrush}" />
       <Setter Property="BorderThickness" Value="2" />
     </Style>
-    <Style Selector="Button.epgProgram.selected">
+    <Style Selector="Button.epgProgramHitTarget.selected Border.epgProgramVisual">
       <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
       <Setter Property="BorderThickness" Value="2" />
       <Setter Property="Background" Value="{DynamicResource TextSelectionBrush}" />
     </Style>
-    <Style Selector="Button.epgProgram.past">
+    <Style Selector="Button.epgProgramHitTarget.past Border.epgProgramVisual">
       <Setter Property="Opacity" Value="0.58" />
     </Style>
-    <Style Selector="Button.epgProgram:pointerover">
+    <Style Selector="Button.epgProgramHitTarget:pointerover Border.epgProgramVisual">
       <Setter Property="Background" Value="{DynamicResource InteractiveHoverBrush}" />
     </Style>
-    <Style Selector="Button.epgProgram:pressed">
+    <Style Selector="Button.epgProgramHitTarget:pressed Border.epgProgramVisual">
       <Setter Property="Background" Value="{DynamicResource InteractivePressedBrush}" />
     </Style>
-    <Style Selector="Button.epgProgram:focus-visible">
+    <Style Selector="Button.epgProgramHitTarget:focus-visible">
       <Setter Property="Opacity" Value="1" />
+      <Setter Property="ZIndex" Value="20" />
+    </Style>
+    <Style Selector="Button.epgProgramHitTarget:focus-visible Border.epgProgramVisual">
       <Setter Property="Background" Value="{DynamicResource InteractiveHoverBrush}" />
       <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
       <Setter Property="BorderThickness" Value="3" />
-      <Setter Property="ZIndex" Value="20" />
     </Style>
-    <Style Selector="Button.epgProgram:focus-visible /template/ ContentPresenter">
+    <Style Selector="Button.epgProgramHitTarget:focus-visible /template/ ContentPresenter">
       <Setter Property="BoxShadow" Value="{DynamicResource FocusGlow}" />
     </Style>
-    <Style Selector="UserControl.remote Button.epgProgram">
+    <Style Selector="UserControl.remote Button.epgProgramHitTarget">
       <Setter Property="Height" Value="64" />
+    </Style>
+    <Style Selector="UserControl.remote Button.epgProgramHitTarget Border.epgProgramVisual">
       <Setter Property="Padding" Value="14,8" />
     </Style>
     <Style Selector="UserControl.remote Button.epgIconButton">
@@ -117,11 +133,11 @@
 
   <Grid x:Name="EpgModeRoot"
         RowDefinitions="Auto,*"
-        Background="{DynamicResource Bg0Brush}"
+        Background="{x:Null}"
         IsVisible="{Binding IsEpgPanelOpen}">
     <Grid x:Name="EpgHeroGrid"
           Grid.Row="0"
-          Background="{DynamicResource Surface0Brush}">
+          Background="{x:Null}">
       <Border x:Name="VideoSlot"
               Background="{x:Null}"
               ClipToBounds="True">
@@ -297,15 +313,6 @@
                            Foreground="{DynamicResource TextPrimaryBrush}"
                            VerticalAlignment="Center" />
               </StackPanel>
-            </Button>
-            <Button x:Name="CloseGuideButton"
-                    Grid.Column="2"
-                    Classes="epgIconButton"
-                    Command="{Binding ToggleEpgPanelCommand}"
-                    AutomationProperties.Name="{loc:Translate Common.Close}"
-                    AutomationProperties.HelpText="{loc:Translate Player.Epg.CloseHelp}">
-              <icons:MaterialIcon Kind="Close" Width="20" Height="20"
-                                  Foreground="{DynamicResource TextPrimaryBrush}" />
             </Button>
           </Grid>
         </Border>
@@ -510,12 +517,12 @@
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                               <DataTemplate x:DataType="mobileVm:MobileEpgProgramItem">
-                                <Button Classes="epgProgram"
+                                <Button Classes="epgProgramHitTarget"
                                         Classes.current="{Binding IsCurrentProgram}"
                                         Classes.playing="{Binding IsPlayingProgram}"
                                         Classes.selected="{Binding IsSelected}"
                                         Classes.past="{Binding IsPast}"
-                                        Width="{Binding Width}"
+                                        Width="{Binding HitTargetWidth}"
                                         Margin="{Binding Left, Converter={StaticResource DoubleToLeftMarginConverter}}"
                                         Tag="{Binding}"
                                         GotFocus="ProgramButton_GotFocus"
@@ -523,7 +530,10 @@
                                         ToolTip.Tip="{Binding AccessibilityName}"
                                         AutomationProperties.Name="{Binding AccessibilityName}"
                                         AutomationProperties.HelpText="{loc:Translate Player.Epg.ProgramA11yHelp}">
-                                  <Grid ClipToBounds="True">
+                                  <Border Classes="epgProgramVisual"
+                                          Width="{Binding Width}"
+                                          ClipToBounds="True">
+                                    <Grid>
                                     <Border Width="{Binding ProgressWidth}"
                                             HorizontalAlignment="Left"
                                             Background="{DynamicResource AccentLightBrush}"
@@ -543,7 +553,8 @@
                                                  TextTrimming="CharacterEllipsis"
                                                  MaxLines="1" />
                                     </StackPanel>
-                                  </Grid>
+                                    </Grid>
+                                  </Border>
                                 </Button>
                               </DataTemplate>
                             </ItemsControl.ItemTemplate>

@@ -372,6 +372,7 @@ public sealed partial class MobileEpgProgramItem : ObservableObject
         Width = geometry.Width;
         IsClippedLeft = geometry.IsClippedLeft;
         IsClippedRight = geometry.IsClippedRight;
+        HitTargetWidth = geometry.HitTargetWidth;
         _isPlayingChannel = isPlayingChannel;
     }
 
@@ -379,6 +380,7 @@ public sealed partial class MobileEpgProgramItem : ObservableObject
     public EpgProgram Program { get; }
     public double Left { get; }
     public double Width { get; }
+    public double HitTargetWidth { get; }
     public bool IsClippedLeft { get; }
     public bool IsClippedRight { get; }
     public DateTime AnchorTime => Program.StartTime.ToLocalTime()

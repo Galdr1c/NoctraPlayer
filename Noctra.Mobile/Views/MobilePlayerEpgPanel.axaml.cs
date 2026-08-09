@@ -58,6 +58,23 @@ public partial class MobilePlayerEpgPanel : UserControl
 
     public Control? VideoSlotControl => VideoSlot;
 
+    /// <summary>
+    /// Re-runs the responsive guide layout after the host window changes size.
+    /// The Android TextureView is positioned from <see cref="VideoSlot"/>;
+    /// invalidating both the panel and its hero grid prevents a stale
+    /// landscape-sized slot from surviving a return to portrait orientation.
+    /// </summary>
+    public void RefreshLayoutForSurface()
+    {
+        ApplyAdaptiveLayout();
+        InvalidateMeasure();
+        InvalidateArrange();
+        EpgModeRoot.InvalidateMeasure();
+        EpgModeRoot.InvalidateArrange();
+        EpgHeroGrid.InvalidateMeasure();
+        EpgHeroGrid.InvalidateArrange();
+    }
+
     public async Task OpenAsync()
     {
         if (_player is null && DataContext is PlayerViewModel player)
@@ -433,14 +450,50 @@ public partial class MobilePlayerEpgPanel : UserControl
 
     private void ProgramButton_PointerReleased(object? sender, PointerReleasedEventArgs e)
     {
-        if (sender is not Button { Tag: MobileEpgProgramItem item }
+        if (sender is not Button button
+            || button.Tag is not MobileEpgProgramItem item
             || e.GetCurrentPoint(this).Properties.PointerUpdateKind != PointerUpdateKind.LeftButtonReleased)
         {
             return;
         }
 
-        Guide?.Select(item);
+        var timelineX = item.Left + e.GetCurrentPoint(button).Position.X;
+        Guide?.Select(FindProgramAtTimelinePosition(item, timelineX) ?? item);
         e.Handled = true;
+    }
+
+    private MobileEpgProgramItem? FindProgramAtTimelinePosition(
+        MobileEpgProgramItem source,
+        double timelineX)
+    {
+        var row = Guide?.Rows.FirstOrDefault(candidate =>
+            candidate.Channel.Id == source.Channel.Id);
+        if (row is null || row.Programs.Count == 0)
+        {
+            return null;
+        }
+
+        var containing = row.Programs.FirstOrDefault(program =>
+            timelineX >= program.Left
+            && timelineX < program.Left + program.Width);
+        if (containing is not null)
+        {
+            return containing;
+        }
+
+        return row.Programs
+            .OrderBy(program => DistanceToRange(timelineX, program.Left, program.Left + program.Width))
+            .FirstOrDefault();
+    }
+
+    private static double DistanceToRange(double value, double start, double end)
+    {
+        if (value < start)
+        {
+            return start - value;
+        }
+
+        return value > end ? value - end : 0;
     }
 
     private void ChannelButton_GotFocus(object? sender, RoutedEventArgs e)

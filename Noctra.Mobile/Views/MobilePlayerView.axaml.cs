@@ -136,6 +136,7 @@ public partial class MobilePlayerView : UserControl
     private ISettingsService? _settingsService;
     private PlayerViewModel? _boundVm;
     private Rect _lastSurfaceRect;
+    private bool _epgSurfaceLayoutReady;
     private bool _gestureHintCheckStarted;
 
     public MobilePlayerView()
@@ -156,6 +157,7 @@ public partial class MobilePlayerView : UserControl
         };
 
         LayoutUpdated += OnLayoutUpdated;
+        SizeChanged += OnPlayerSizeChanged;
     }
 
     public void ApplyWatermarkInsets(Thickness safeArea, bool isFullScreen, bool isPictureInPicture)
@@ -255,20 +257,61 @@ public partial class MobilePlayerView : UserControl
         {
             if (_boundVm?.IsEpgPanelOpen == true)
             {
-                _ = EpgPanel.OpenAsync();
+                // Keep the native surface in its last stable layout while the
+                // guide shell is measured and its data is rebuilt. Moving it to
+                // a transient zero/partial slot here produces a black frame
+                // during the first second of opening the EPG panel.
+                _epgSurfaceLayoutReady = false;
+                _ = OpenEpgPanelAndUpdateSurfaceAsync();
                 _lastSurfaceRect = default;
-                QueueVideoSurfaceLayoutUpdate();
             }
             else
             {
                 EpgPanel.CloseGuide();
                 // EPG kapandı -> native surface normal player slotuna döner.
+                _epgSurfaceLayoutReady = false;
                 _lastSurfaceRect = default;
                 QueueVideoSurfaceLayoutUpdate();
             }
 
             return;
         }
+    }
+
+    private async Task OpenEpgPanelAndUpdateSurfaceAsync()
+    {
+        try
+        {
+            await EpgPanel.OpenAsync();
+        }
+        finally
+        {
+            if (_boundVm?.IsEpgPanelOpen == true)
+            {
+                _epgSurfaceLayoutReady = true;
+                _lastSurfaceRect = default;
+                QueueVideoSurfaceLayoutUpdate();
+            }
+        }
+    }
+
+    private void OnPlayerSizeChanged(object? sender, SizeChangedEventArgs e)
+    {
+        // Orientation changes can preserve the previous sentinel/rectangle in
+        // the native TextureView. Force one fresh bounds calculation after the
+        // Avalonia tree has received its new size.
+        _lastSurfaceRect = default;
+        if (_boundVm?.IsEpgPanelOpen == true)
+        {
+            EpgPanel.RefreshLayoutForSurface();
+            Dispatcher.UIThread.Post(() =>
+            {
+                EpgPanel.RefreshLayoutForSurface();
+                _lastSurfaceRect = default;
+                UpdateVideoSurfaceLayout();
+            }, DispatcherPriority.Render);
+        }
+        QueueVideoSurfaceLayoutUpdate();
     }
 
     private void OnLayoutUpdated(object? sender, EventArgs e)
@@ -317,6 +360,11 @@ public partial class MobilePlayerView : UserControl
 
         if (_boundVm?.IsEpgPanelOpen == true)
         {
+            if (!_epgSurfaceLayoutReady)
+            {
+                return;
+            }
+
             UpdateEpgVideoLayout();
             return;
         }

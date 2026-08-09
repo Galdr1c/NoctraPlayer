@@ -19,6 +19,46 @@ public sealed class MobileEpgPanelContractTests
     }
 
     [Fact]
+    public void PlayerView_DefersEpgSurfaceResizeUntilGuideIsReady()
+    {
+        var source = Read("Noctra.Mobile", "Views", "MobilePlayerView.axaml.cs");
+
+        Assert.Contains("_epgSurfaceLayoutReady", source, StringComparison.Ordinal);
+        Assert.Contains("OpenEpgPanelAndUpdateSurfaceAsync", source, StringComparison.Ordinal);
+        Assert.Contains("await EpgPanel.OpenAsync()", source, StringComparison.Ordinal);
+
+        var handlerStart = source.IndexOf(
+            "if (e.PropertyName == nameof(PlayerViewModel.IsEpgPanelOpen))",
+            StringComparison.Ordinal);
+        var handlerEnd = source.IndexOf("private void OnLayoutUpdated", handlerStart, StringComparison.Ordinal);
+        Assert.True(handlerStart >= 0 && handlerEnd > handlerStart, "EPG property handler must exist.");
+        var handler = source[handlerStart..handlerEnd];
+
+        Assert.Contains("_ = OpenEpgPanelAndUpdateSurfaceAsync();", handler, StringComparison.Ordinal);
+        Assert.DoesNotContain("QueueVideoSurfaceLayoutUpdate();", handler[..handler.IndexOf("else", StringComparison.Ordinal)], StringComparison.Ordinal);
+        Assert.Contains("_epgSurfaceLayoutReady = false;", handler, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void PlayerView_ReflowsEpgPanelBeforeReapplyingSurfaceAfterOrientation()
+    {
+        var source = Read("Noctra.Mobile", "Views", "MobilePlayerView.axaml.cs");
+
+        var sizeStart = source.IndexOf("private void OnPlayerSizeChanged", StringComparison.Ordinal);
+        var sizeEnd = source.IndexOf("private void OnLayoutUpdated", sizeStart, StringComparison.Ordinal);
+        Assert.True(sizeStart >= 0 && sizeEnd > sizeStart, "Player size handler must exist.");
+
+        var handler = source[sizeStart..sizeEnd];
+        Assert.Contains("EpgPanel.RefreshLayoutForSurface();", handler, StringComparison.Ordinal);
+        Assert.Contains("DispatcherPriority.Render", handler, StringComparison.Ordinal);
+        Assert.Contains("UpdateVideoSurfaceLayout();", handler, StringComparison.Ordinal);
+
+        var panel = Read("Noctra.Mobile", "Views", "MobilePlayerEpgPanel.axaml.cs");
+        Assert.Contains("public void RefreshLayoutForSurface()", panel, StringComparison.Ordinal);
+        Assert.Contains("EpgHeroGrid.InvalidateArrange();", panel, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void MobileCompositionRoot_ProvidesLiveChannelsToTheGuide()
     {
         var resolver = Read("Noctra.Mobile", "Services", "MobileViewModelResolver.cs");
@@ -50,7 +90,8 @@ public sealed class MobileEpgPanelContractTests
     {
         var player = Read("Noctra.Core", "ViewModels", "PlayerViewModel.cs");
         var loadStart = player.IndexOf("public async Task LoadEpgPanelAsync", StringComparison.Ordinal);
-        var loadEnd = player.IndexOf("[RelayCommand]\n    private Task RetryEpgPanel", loadStart, StringComparison.Ordinal);
+        var loadEnd = player.IndexOf("private Task RetryEpgPanel", loadStart, StringComparison.Ordinal);
+        Assert.True(loadStart >= 0 && loadEnd > loadStart, "EPG load method boundaries must exist.");
         var loadMethod = player[loadStart..loadEnd];
 
         Assert.Contains("var loadToken = loadCts.Token", loadMethod, StringComparison.Ordinal);
@@ -79,7 +120,11 @@ public sealed class MobileEpgPanelContractTests
         var presentation = Read("Noctra.Mobile", "ViewModels", "MobileEpgGuidePresentation.cs");
 
         Assert.Contains("VirtualizingStackPanel", axaml, StringComparison.Ordinal);
-        Assert.Contains("Classes=\"epgProgram\"", axaml, StringComparison.Ordinal);
+        Assert.Contains("Classes=\"epgProgramHitTarget\"", axaml, StringComparison.Ordinal);
+        Assert.Contains("Classes=\"epgProgramVisual\"", axaml, StringComparison.Ordinal);
+        Assert.Contains("Width=\"{Binding HitTargetWidth}\"", axaml, StringComparison.Ordinal);
+        Assert.Contains("Width=\"{Binding Width}\"", axaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("<Setter Property=\"MinWidth\" Value=\"24\" />", axaml, StringComparison.Ordinal);
         Assert.Contains("AutomationProperties.Name", axaml, StringComparison.Ordinal);
         Assert.Contains("DynamicResource", axaml, StringComparison.Ordinal);
         Assert.DoesNotMatch("#[0-9A-Fa-f]{6,8}", axaml);
@@ -112,6 +157,28 @@ public sealed class MobileEpgPanelContractTests
         Assert.Contains("_resizeTimer", codeBehind, StringComparison.Ordinal);
         Assert.Contains("&& _openCts is null", codeBehind, StringComparison.Ordinal);
         Assert.Contains("EpgGuideState == EpgGuideLoadState.Ready", codeBehind, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Guide_MiniPlayerSlotRemainsTransparentForNativeVideoSurface()
+    {
+        var axaml = Read("Noctra.Mobile", "Views", "MobilePlayerEpgPanel.axaml");
+
+        var modeRootStart = axaml.IndexOf("x:Name=\"EpgModeRoot\"", StringComparison.Ordinal);
+        var heroStart = axaml.IndexOf("x:Name=\"EpgHeroGrid\"", StringComparison.Ordinal);
+        Assert.True(modeRootStart >= 0, "EPG mode root must exist.");
+        Assert.True(heroStart > modeRootStart, "EPG hero grid must be inside the mode root.");
+
+        var modeRoot = axaml[modeRootStart..heroStart];
+        var heroEnd = axaml.IndexOf("x:Name=\"ProgramDetailPanel\"", heroStart, StringComparison.Ordinal);
+        Assert.True(heroEnd > heroStart, "EPG hero content must define a program detail panel.");
+        var hero = axaml[heroStart..heroEnd];
+
+        // The Android TextureView is composited below Avalonia. Opaque ancestors
+        // would paint over the transparent VideoSlot and leave the mini-player blank.
+        Assert.Contains("Background=\"{x:Null}\"", modeRoot, StringComparison.Ordinal);
+        Assert.Contains("Background=\"{x:Null}\"", hero, StringComparison.Ordinal);
+        Assert.Contains("x:Name=\"VideoSlot\"", hero, StringComparison.Ordinal);
     }
 
     [Fact]

@@ -93,6 +93,36 @@ public sealed class MobileEpgTimelineGeometryTests
     }
 
     [Fact]
+    public void CalculateBlock_KeepsVisualWidthSeparateFromMinimumHitWidth()
+    {
+        var windowStart = new DateTime(2026, 8, 8, 17, 30, 0, DateTimeKind.Local);
+        var block = MobileEpgTimelineGeometry.CalculateBlock(
+            windowStart,
+            windowStart.AddMinutes(5),
+            windowStart,
+            windowStart.AddHours(8),
+            pixelsPerMinute: 2.2,
+            minimumWidth: 24);
+
+        Assert.NotNull(block);
+        Assert.Equal(11, block.Value.Width, precision: 6);
+        Assert.Equal(24, block.Value.HitTargetWidth, precision: 6);
+
+        var next = MobileEpgTimelineGeometry.CalculateBlock(
+            windowStart.AddMinutes(5),
+            windowStart.AddMinutes(10),
+            windowStart,
+            windowStart.AddHours(8),
+            pixelsPerMinute: 2.2,
+            minimumWidth: 24);
+
+        Assert.NotNull(next);
+        Assert.True(
+            block.Value.Left + block.Value.Width <= next.Value.Left,
+            "Visual program blocks must not overlap their real timeline intervals.");
+    }
+
+    [Fact]
     public void FindNextPopulatedRowIndex_SkipsChannelsWithoutPrograms()
     {
         var index = MobileEpgTimelineGeometry.FindNextPopulatedRowIndex(

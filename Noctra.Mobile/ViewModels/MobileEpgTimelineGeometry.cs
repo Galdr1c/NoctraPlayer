@@ -41,11 +41,15 @@ public static class MobileEpgTimelineGeometry
         var clippedStart = programStart < windowStart ? windowStart : programStart;
         var clippedEnd = programEnd > windowEnd ? windowEnd : programEnd;
         var left = (clippedStart - windowStart).TotalMinutes * pixelsPerMinute;
-        var visibleWidth = (clippedEnd - clippedStart).TotalMinutes * pixelsPerMinute;
+        var visibleWidth = Math.Max(
+            0,
+            (clippedEnd - clippedStart).TotalMinutes * pixelsPerMinute);
+        var touchMinimum = Math.Max(0, minimumWidth);
 
         return new MobileEpgBlockGeometry(
             left,
-            Math.Max(minimumWidth, visibleWidth),
+            visibleWidth,
+            Math.Max(touchMinimum, visibleWidth),
             programStart < windowStart,
             programEnd > windowEnd,
             clippedStart,
@@ -126,6 +130,7 @@ public static class MobileEpgTimelineGeometry
 public readonly record struct MobileEpgBlockGeometry(
     double Left,
     double Width,
+    double HitTargetWidth,
     bool IsClippedLeft,
     bool IsClippedRight,
     DateTime VisibleStart,
