@@ -139,6 +139,102 @@ namespace Noctra.Tests
             Assert.Equal(0, second);
         }
 
+        [Fact]
+        public void FilterEpgBatch_DeduplicatesOnlyWithinTheSameChannel()
+        {
+            var start = new DateTime(2026, 8, 9, 18, 0, 0, DateTimeKind.Utc);
+            var existing = new List<EpgProgram>
+            {
+                new()
+                {
+                    ChannelId = "channel-a",
+                    Title = "Main News",
+                    StartTime = start,
+                    EndTime = start.AddHours(1)
+                }
+            };
+            var duplicate = new EpgProgram
+            {
+                ChannelId = "channel-a",
+                Title = "Main News",
+                StartTime = start,
+                EndTime = start.AddHours(1)
+            };
+            var otherChannel = new EpgProgram
+            {
+                ChannelId = "channel-b",
+                Title = "Main News",
+                StartTime = start,
+                EndTime = start.AddHours(1)
+            };
+            var differentProgram = new EpgProgram
+            {
+                ChannelId = "channel-a",
+                Title = "Weather",
+                StartTime = start.AddHours(2),
+                EndTime = start.AddHours(2.5)
+            };
+
+            var accepted = EpgService.FilterEpgBatch(
+                [duplicate, otherChannel, differentProgram],
+                existing);
+
+            Assert.DoesNotContain(duplicate, accepted);
+            Assert.Contains(otherChannel, accepted);
+            Assert.Contains(differentProgram, accepted);
+        }
+
+        [Fact]
+        public async Task PersistEpgBatch_ClearsTrackedEntitiesAfterCommit()
+        {
+            using var context = CreateContext(Guid.NewGuid().ToString());
+            var start = new DateTime(2026, 8, 9, 18, 0, 0, DateTimeKind.Utc);
+            var programs = new List<EpgProgram>
+            {
+                new()
+                {
+                    ChannelId = "channel-a",
+                    Title = "News",
+                    StartTime = start,
+                    EndTime = start.AddHours(1)
+                },
+                new()
+                {
+                    ChannelId = "channel-b",
+                    Title = "Movie",
+                    StartTime = start,
+                    EndTime = start.AddHours(2)
+                }
+            };
+
+            await EpgService.PersistEpgBatchAsync(context, programs);
+
+            Assert.Empty(context.ChangeTracker.Entries());
+            Assert.Equal(2, await context.EpgPrograms.CountAsync());
+        }
+
+        [Fact]
+        public async Task LoadLiveChannelsForEpg_ReturnsOnlyLiveItems()
+        {
+            var playlistService = new Mock<IPlaylistService>();
+            playlistService
+                .Setup(service => service.GetChannelsAsync(42))
+                .ReturnsAsync(
+                [
+                    new Channel { Id = 1, Type = ChannelType.Live },
+                    new Channel { Id = 2, Type = ChannelType.VOD },
+                    new Channel { Id = 3, Type = ChannelType.Series }
+                ]);
+
+            var channels = await EpgService.LoadLiveChannelsForEpgAsync(
+                playlistService.Object,
+                42);
+
+            var channel = Assert.Single(channels);
+            Assert.Equal(1, channel.Id);
+            Assert.Equal(ChannelType.Live, channel.Type);
+        }
+
         private EpgService CreateEpgServiceForLoad(AppSettings settings)
         {
             var dbName = Guid.NewGuid().ToString();

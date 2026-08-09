@@ -849,7 +849,7 @@
                                     <!-- En altta tek bir yenile butonu (opsiyonel ama kullanıcı eski haliyle alarak olabilir) -->
                                      <!-- Tüm EPG Kaynaklarını Yenile -->
                                      <Button Command="{Binding RefreshEpgNowCommand}"
-                                             IsEnabled="{Binding !_mainViewModel.IsGlobalLoading}"
+                                             IsEnabled="{Binding CanRefreshEpgNow}"
                                              Theme="{StaticResource SettingsActionButton}"
                                              Cursor="Hand">
                                          <StackPanel Orientation="Horizontal" Spacing="10">

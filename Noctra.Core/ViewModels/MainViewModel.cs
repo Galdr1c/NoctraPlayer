@@ -5477,6 +5477,16 @@ public partial class MainViewModel : ObservableObject
         try
         {
             _epgService.ClearLastError();
+            if (!isBackgroundSync)
+            {
+                EpgProgress = new EpgProgressInfo
+                {
+                    Status = EpgLoadStatus.Downloading,
+                    Message = _localizationService.GetString("Main.Status.UpdatingEpg"),
+                    ProgressPercent = 0
+                };
+            }
+
             if (!isBackgroundSync && setBusyState)
             {
                 IsLoading = true;
@@ -5497,18 +5507,23 @@ public partial class MainViewModel : ObservableObject
                 }
             }
 
-            IEnumerable<Channel> channelsForMapping = Channels;
+            List<Channel> liveChannels;
             if (SelectedPlaylist != null)
             {
-                {
-                    channelsForMapping = await _playlistService.GetChannelsAsync(SelectedPlaylist.Id);
-                }
+                // A large profile can contain more than 100k items. Fetching and
+                // materializing that snapshot on the caller context creates the visible
+                // hitch immediately after the refresh button is pressed.
+                liveChannels = await EpgService.LoadLiveChannelsForEpgAsync(
+                    _playlistService,
+                    SelectedPlaylist.Id);
             }
-
-            // EPG is relevant for live channels only.
-            var liveChannels = channelsForMapping
-                .Where(c => c.Type == ChannelType.Live)
-                .ToList();
+            else
+            {
+                // EPG is relevant for live channels only.
+                liveChannels = Channels
+                    .Where(channel => channel.Type == ChannelType.Live)
+                    .ToList();
+            }
 
             if (liveChannels.Count == 0)
             {
@@ -5660,8 +5675,6 @@ public partial class MainViewModel : ObservableObject
                 }
             }
 
-            EpgProgress = null; // Clear progress info when done
-
             EnsureEpgBackgroundSync();
 
             if (!isBackgroundSync)
@@ -5730,6 +5743,8 @@ public partial class MainViewModel : ObservableObject
         }
         finally
         {
+            EpgProgress = null;
+
             if (!isBackgroundSync && setBusyState)
             {
                 IsLoading = false;

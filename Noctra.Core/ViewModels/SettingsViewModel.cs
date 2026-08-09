@@ -48,6 +48,7 @@ public partial class SettingsViewModel : ObservableObject, IAsyncDisposable
     
     private int _isRefreshOperationRunning;
     private string? _activeRefreshScope;
+    private bool _wasEpgRefreshActive;
     private bool _isLoadingSettings;
     private bool _autoSaveEnabled;
 
@@ -298,6 +299,10 @@ public partial class SettingsViewModel : ObservableObject, IAsyncDisposable
 
     public bool IsGlobalLoading => _mainViewModel.IsGlobalLoading;
     public string GlobalLoadingMessage => _mainViewModel.GlobalLoadingMessage;
+    public bool CanRefreshEpgNow =>
+        !IsGlobalLoading &&
+        Volatile.Read(ref _isRefreshOperationRunning) == 0 &&
+        _mainViewModel.EpgProgress is null;
 
     [ObservableProperty]
     private string _currentProfileName = string.Empty;
@@ -390,6 +395,7 @@ public partial class SettingsViewModel : ObservableObject, IAsyncDisposable
         
         LoadSettings();
         LoadProfileInfo();
+        SyncEpgProgressFromMain();
         _initialStatisticsTask = LoadInitialStatisticsAsync();
         _ = _mainViewModel.RefreshCurrentProfileExpirationAsync();
         _ = UpdateCacheSizeAsync();
@@ -400,6 +406,13 @@ public partial class SettingsViewModel : ObservableObject, IAsyncDisposable
     private async Task LoadInitialStatisticsAsync()
     {
         await ScanChannelListStatsCoreAsync(updateStatusMessage: false);
+
+        if (_mainViewModel.EpgProgress is not null)
+        {
+            SyncEpgProgressFromMain();
+            return;
+        }
+
         await ScanEpgStatsCoreAsync(updateStatusMessage: false);
     }
 
@@ -1193,6 +1206,7 @@ public partial class SettingsViewModel : ObservableObject, IAsyncDisposable
         else if (e.PropertyName == nameof(MainViewModel.IsGlobalLoading))
         {
             OnPropertyChanged(nameof(IsGlobalLoading));
+            NotifyEpgRefreshAvailability();
             AddCustomEpgCommand.NotifyCanExecuteChanged();
         }
         else if (e.PropertyName == nameof(MainViewModel.GlobalLoadingMessage))
@@ -1203,6 +1217,10 @@ public partial class SettingsViewModel : ObservableObject, IAsyncDisposable
                  e.PropertyName == nameof(MainViewModel.ChannelLoadingStats))
         {
             SyncChannelProgressFromMain();
+        }
+        else if (e.PropertyName == nameof(MainViewModel.EpgProgress))
+        {
+            SyncEpgProgressFromMain();
         }
     }
 
@@ -2085,7 +2103,9 @@ public partial class SettingsViewModel : ObservableObject, IAsyncDisposable
         EndRefreshOperation();
     }
 
-    [RelayCommand]
+    private bool CanStartEpgRefresh() => CanRefreshEpgNow;
+
+    [RelayCommand(CanExecute = nameof(CanStartEpgRefresh))]
     private async Task RefreshEpgNowAsync()
     {
         // Önce ayarları kaydet ki arka plan görevi yeni URL'yi görebilsin
@@ -2215,6 +2235,7 @@ public partial class SettingsViewModel : ObservableObject, IAsyncDisposable
         }
 
         _activeRefreshScope = scope;
+        NotifyEpgRefreshAvailability();
         RefreshProgressPercent = 0;
         ChannelListLastError = null;
         var area = scope.Equals("EPG", StringComparison.OrdinalIgnoreCase)
@@ -2230,6 +2251,7 @@ public partial class SettingsViewModel : ObservableObject, IAsyncDisposable
     {
         _activeRefreshScope = null;
         Interlocked.Exchange(ref _isRefreshOperationRunning, 0);
+        NotifyEpgRefreshAvailability();
 
         // Refresh sırasında süresi dolan auto-clear'lar atlandı. Şimdi yeniden
         // planlayarak mesajların ekranda yapışmasını önle.
@@ -2287,6 +2309,40 @@ public partial class SettingsViewModel : ObservableObject, IAsyncDisposable
                 : fallbackMessage ?? _localizationService.GetString("Settings.Refresh.Channel.Started");
 
         SetProgressStatus("Channel", percent, message, updateMainStatus: false);
+    }
+
+    private void SyncEpgProgressFromMain()
+    {
+        var progress = _mainViewModel.EpgProgress;
+        if (progress is not null)
+        {
+            _wasEpgRefreshActive = true;
+            _activeRefreshScope = "EPG";
+            Interlocked.Exchange(ref _isRefreshOperationRunning, 1);
+            NotifyEpgRefreshAvailability();
+
+            SetProgressStatus(
+                "EPG",
+                (int)Math.Round(progress.ProgressPercent),
+                progress.Message,
+                updateMainStatus: false);
+            return;
+        }
+
+        if (!_wasEpgRefreshActive)
+        {
+            return;
+        }
+
+        _wasEpgRefreshActive = false;
+        EndRefreshOperation();
+        _ = ScanEpgStatsCoreAsync(updateStatusMessage: false);
+    }
+
+    private void NotifyEpgRefreshAvailability()
+    {
+        OnPropertyChanged(nameof(CanRefreshEpgNow));
+        RefreshEpgNowCommand.NotifyCanExecuteChanged();
     }
 
     private void SetProgressStatus(string scope, int percent, string message, bool updateMainStatus = true)

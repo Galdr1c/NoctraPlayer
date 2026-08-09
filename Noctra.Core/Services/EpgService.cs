@@ -365,8 +365,7 @@ public class EpgService : IEpgService
                                     LoadedCount = totalLoaded
                                 });
 
-                                await AddProgramsDeduplicatedAsync(context, programs).ConfigureAwait(false);
-                                await context.SaveChangesAsync().ConfigureAwait(false);
+                                await PersistEpgBatchAsync(context, programs).ConfigureAwait(false);
                                 programs.Clear();
                             }
                         }
@@ -375,8 +374,7 @@ public class EpgService : IEpgService
 
                 if (programs.Any())
                 {
-                    await AddProgramsDeduplicatedAsync(context, programs).ConfigureAwait(false);
-                    await context.SaveChangesAsync().ConfigureAwait(false);
+                    await PersistEpgBatchAsync(context, programs).ConfigureAwait(false);
                 }
             }
             finally
@@ -471,6 +469,35 @@ public class EpgService : IEpgService
         return separatorIndex > 0 ? languageCode[..separatorIndex] : languageCode;
     }
 
+    internal static async Task<List<Channel>> LoadLiveChannelsForEpgAsync(
+        IPlaylistService playlistService,
+        int playlistId)
+    {
+        return await Task.Run(async () =>
+        {
+            var channels = await playlistService
+                .GetChannelsAsync(playlistId)
+                .ConfigureAwait(false);
+
+            return channels
+                .Where(channel => channel.Type == ChannelType.Live)
+                .ToList();
+        }).ConfigureAwait(false);
+    }
+
+    internal static async Task PersistEpgBatchAsync(
+        AppDbContext context,
+        List<EpgProgram> programs)
+    {
+        await AddProgramsDeduplicatedAsync(context, programs).ConfigureAwait(false);
+        await context.SaveChangesAsync().ConfigureAwait(false);
+
+        // A refresh can persist hundreds of thousands of rows. Keeping every inserted
+        // entity tracked makes each later SaveChanges progressively more expensive and
+        // retains the complete import in managed memory.
+        context.ChangeTracker.Clear();
+    }
+
     private static async Task AddProgramsDeduplicatedAsync(AppDbContext context, List<EpgProgram> programs)
     {
         if (programs.Count == 0)
@@ -503,7 +530,32 @@ public class EpgService : IEpgService
                 .ToListAsync()
                 .ConfigureAwait(false);
 
-        var exactKeys = new HashSet<string>(existingPrograms.Select(BuildEpgDedupKey), StringComparer.Ordinal);
+        var accepted = FilterEpgBatch(programs, existingPrograms);
+
+        if (accepted.Count > 0)
+        {
+            await context.EpgPrograms.AddRangeAsync(accepted).ConfigureAwait(false);
+        }
+    }
+
+    internal static List<EpgProgram> FilterEpgBatch(
+        IReadOnlyCollection<EpgProgram> programs,
+        IReadOnlyCollection<EpgProgram> existingPrograms)
+    {
+        var exactKeys = new HashSet<string>(
+            existingPrograms.Select(BuildEpgDedupKey),
+            StringComparer.Ordinal);
+
+        var existingByChannel = existingPrograms
+            .Where(program => !string.IsNullOrWhiteSpace(program.ChannelId))
+            .GroupBy(program => program.ChannelId, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(
+                group => group.Key,
+                group => group.ToList(),
+                StringComparer.OrdinalIgnoreCase);
+
+        var acceptedByChannel = new Dictionary<string, List<EpgProgram>>(
+            StringComparer.OrdinalIgnoreCase);
         var accepted = new List<EpgProgram>(programs.Count);
 
         foreach (var program in programs
@@ -522,19 +574,28 @@ public class EpgService : IEpgService
                 continue;
             }
 
-            if (HasEquivalentOverlappingProgram(program, existingPrograms) ||
-                HasEquivalentOverlappingProgram(program, accepted))
+            if (!existingByChannel.TryGetValue(program.ChannelId, out var existingCandidates))
+            {
+                existingCandidates = [];
+            }
+
+            if (!acceptedByChannel.TryGetValue(program.ChannelId, out var acceptedCandidates))
+            {
+                acceptedCandidates = [];
+                acceptedByChannel[program.ChannelId] = acceptedCandidates;
+            }
+
+            if (HasEquivalentOverlappingProgram(program, existingCandidates) ||
+                HasEquivalentOverlappingProgram(program, acceptedCandidates))
             {
                 continue;
             }
 
             accepted.Add(program);
+            acceptedCandidates.Add(program);
         }
 
-        if (accepted.Count > 0)
-        {
-            await context.EpgPrograms.AddRangeAsync(accepted).ConfigureAwait(false);
-        }
+        return accepted;
     }
 
     private static bool HasEquivalentOverlappingProgram(EpgProgram program, IEnumerable<EpgProgram> candidates)
@@ -872,7 +933,7 @@ public class EpgService : IEpgService
 
         var noise = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
-            "hd", "fhd", "uhd", "sd", "hevc", "h265", "h264", "4k", "fullhd", "qhd", "hdr", "10bit", "av1", "raw", "1080i", "720i",
+            "hd", "fhd", "uhd", "sd", "hevc", "h265", "h264", "2k", "4k", "fullhd", "qhd", "hdr", "10bit", "av1", "raw", "1080i", "720i",
             "feed", "ticari", "50fps", "60fps", "mobie", "mobile", "sdmobile", "fhdmobile", "web", "app", "ios", "android", "iptv", "ts", "m3u8",
             "1080p", "720p", "480p", "2160p", "1080", "720", "576", "live", "vip", "premium",
             "backup", "bkp", "multi", "sub", "ace",

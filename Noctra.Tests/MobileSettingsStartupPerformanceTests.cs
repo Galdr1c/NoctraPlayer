@@ -80,6 +80,34 @@ public sealed class MobileSettingsStartupPerformanceTests
             StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void Settings_RehydratesAndObservesAnActiveEpgRefresh()
+    {
+        var source = ReadProjectFile(
+            "Noctra.Core",
+            "ViewModels",
+            "SettingsViewModel.cs");
+        var constructor = ExtractMethodByDeclaration(
+            source,
+            "public SettingsViewModel(");
+        var propertyChanged = ExtractMethodByDeclaration(
+            source,
+            "private void MainViewModel_PropertyChanged");
+
+        Assert.Contains(
+            "SyncEpgProgressFromMain();",
+            constructor,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "nameof(MainViewModel.EpgProgress)",
+            propertyChanged,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "SyncEpgProgressFromMain();",
+            propertyChanged,
+            StringComparison.Ordinal);
+    }
+
     private static string ExtractMethod(string source, string methodName)
     {
         var declaration = $"private async Task {methodName}";
