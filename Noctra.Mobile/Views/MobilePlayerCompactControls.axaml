@@ -5,5 +5,6 @@
              x:Class="Noctra.Mobile.Views.MobilePlayerCompactControls"
              x:DataType="vm:PlayerViewModel"
              x:CompileBindings="False">
-  <player:MobilePlayerTransportBar DataContext="{Binding}" />
+  <player:MobilePlayerTransportBar x:Name="TransportBar"
+                                   DataContext="{Binding}" />
 </UserControl>

@@ -13,6 +13,8 @@
              x:Name="PlayerRoot"
              x:DataType="vm:PlayerViewModel"
              x:CompileBindings="False"
+             Focusable="True"
+             FocusAdorner="{x:Null}"
              mc:Ignorable="d">
   <Grid Background="Transparent"
         ClipToBounds="True"

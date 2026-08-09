@@ -9,7 +9,9 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using Microsoft.Extensions.DependencyInjection;
 using Noctra.Mobile.Localization;
+using Noctra.Mobile.Services;
 using Noctra.Mobile.ViewModels;
 using Noctra.Models;
 using Noctra.ViewModels;
@@ -32,6 +34,7 @@ public partial class MobilePlayerEpgPanel : UserControl
     private bool _isRemoteMode;
     private bool _isOpen;
     private bool _isLocalizationSubscribed;
+    private MobileInputModeService? _inputModeService;
 
     public MobilePlayerEpgPanel()
     {
@@ -89,7 +92,7 @@ public partial class MobilePlayerEpgPanel : UserControl
 
         _isOpen = true;
         CapturePreviousFocus();
-        SetRemoteMode(false);
+        SetRemoteMode(_inputModeService?.IsRemote == true);
         ApplyAdaptiveLayout();
 
         var openCts = new CancellationTokenSource();
@@ -196,6 +199,7 @@ public partial class MobilePlayerEpgPanel : UserControl
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
         BindPlayer(DataContext as PlayerViewModel);
+        AttachInputModeService();
         if (!_isLocalizationSubscribed)
         {
             LocalizationSource.Instance.PropertyChanged += LocalizationSource_PropertyChanged;
@@ -209,12 +213,41 @@ public partial class MobilePlayerEpgPanel : UserControl
     {
         CloseGuide();
         BindPlayer(null);
+        DetachInputModeService();
         if (_isLocalizationSubscribed)
         {
             LocalizationSource.Instance.PropertyChanged -= LocalizationSource_PropertyChanged;
             _isLocalizationSubscribed = false;
         }
     }
+
+    private void AttachInputModeService()
+    {
+        if (_inputModeService is null && Application.Current is App { Services: not null } app)
+        {
+            _inputModeService = app.Services.GetService<MobileInputModeService>();
+        }
+
+        if (_inputModeService is null)
+        {
+            return;
+        }
+
+        _inputModeService.ModeChanged -= InputModeService_ModeChanged;
+        _inputModeService.ModeChanged += InputModeService_ModeChanged;
+        SetRemoteMode(_inputModeService.IsRemote);
+    }
+
+    private void DetachInputModeService()
+    {
+        if (_inputModeService is not null)
+        {
+            _inputModeService.ModeChanged -= InputModeService_ModeChanged;
+        }
+    }
+
+    private void InputModeService_ModeChanged(object? sender, MobileInputMode mode)
+        => SetRemoteMode(mode == MobileInputMode.Remote);
 
     private void OnSizeChanged(object? sender, SizeChangedEventArgs e)
     {
@@ -334,14 +367,28 @@ public partial class MobilePlayerEpgPanel : UserControl
 
     private void EpgPanel_PointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        SetRemoteMode(false);
+        if (_inputModeService is not null)
+        {
+            _inputModeService.SetMode(MobileInputMode.Touch);
+        }
+        else
+        {
+            SetRemoteMode(false);
+        }
     }
 
     private void EpgPanel_KeyDown(object? sender, KeyEventArgs e)
     {
-        if (e.Key is Key.Left or Key.Right or Key.Up or Key.Down)
+        if (e.Key != Key.None)
         {
-            SetRemoteMode(true);
+            if (_inputModeService is not null)
+            {
+                _inputModeService.SetMode(MobileInputMode.Remote);
+            }
+            else
+            {
+                SetRemoteMode(true);
+            }
         }
 
         if (e.Key is Key.Escape or Key.Back)

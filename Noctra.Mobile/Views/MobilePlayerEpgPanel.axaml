@@ -14,6 +14,7 @@
              PointerPressed="EpgPanel_PointerPressed">
   <UserControl.Styles>
     <Style Selector="Button.epgIconButton">
+      <Setter Property="FocusAdorner" Value="{x:Null}" />
       <Setter Property="MinWidth" Value="48" />
       <Setter Property="MinHeight" Value="48" />
       <Setter Property="Padding" Value="6" />
@@ -32,6 +33,7 @@
     </Style>
 
     <Style Selector="Button.epgChannel">
+      <Setter Property="FocusAdorner" Value="{x:Null}" />
       <Setter Property="HorizontalContentAlignment" Value="Stretch" />
       <Setter Property="HorizontalAlignment" Value="Stretch" />
       <Setter Property="Padding" Value="10,6" />
@@ -61,6 +63,7 @@
          time-accurate visual width. Keeping these separate prevents a short
          EPG segment from covering the next segment on the timeline. -->
     <Style Selector="Button.epgProgramHitTarget">
+      <Setter Property="FocusAdorner" Value="{x:Null}" />
       <Setter Property="Height" Value="52" />
       <Setter Property="MinWidth" Value="0" />
       <Setter Property="Padding" Value="0" />
@@ -101,7 +104,7 @@
       <Setter Property="Background" Value="{DynamicResource InteractiveHoverBrush}" />
     </Style>
     <Style Selector="Button.epgProgramHitTarget:pressed Border.epgProgramVisual">
-      <Setter Property="Background" Value="{DynamicResource InteractivePressedBrush}" />
+      <Setter Property="Opacity" Value="0.88" />
     </Style>
     <Style Selector="Button.epgProgramHitTarget:focus-visible">
       <Setter Property="Opacity" Value="1" />
@@ -114,6 +117,9 @@
     </Style>
     <Style Selector="Button.epgProgramHitTarget:focus-visible /template/ ContentPresenter">
       <Setter Property="BoxShadow" Value="{DynamicResource FocusGlow}" />
+    </Style>
+    <Style Selector="Button.epgProgramHitTarget:pressed /template/ ContentPresenter">
+      <Setter Property="CornerRadius" Value="4" />
     </Style>
     <Style Selector="UserControl.remote Button.epgProgramHitTarget">
       <Setter Property="Height" Value="64" />

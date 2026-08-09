@@ -1,9 +1,19 @@
 using System;
+using System.ComponentModel;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading.Tasks;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Media;
+using Avalonia.Threading;
+using Avalonia.VisualTree;
+using Material.Icons;
+using Material.Icons.Avalonia;
+using Microsoft.Extensions.DependencyInjection;
+using Noctra.Mobile.Services;
 using Noctra.ViewModels;
 
 namespace Noctra.Mobile.Views;
@@ -20,14 +30,167 @@ public partial class MobilePlayerSheets : UserControl
     private double _dragOffsetY;
     private int _animationVersion;
     private TranslateTransform? _sheetTranslation;
+    private PlayerViewModel? _boundViewModel;
+    private MobileInputModeService? _inputModeService;
+    private IInputElement? _focusBeforeOpen;
+    private bool _wasOpen;
 
     public MobilePlayerSheets()
     {
         InitializeComponent();
         _sheetTranslation = SheetSurface.RenderTransform as TranslateTransform;
+        DataContextChanged += OnDataContextChanged;
+        AttachedToVisualTree += (_, _) => AttachInputModeService();
+        DetachedFromVisualTree += (_, _) => DetachInputModeService();
+        AddHandler(PointerPressedEvent, OnAnyPointerPressed, RoutingStrategies.Tunnel, handledEventsToo: true);
     }
 
     private PlayerViewModel? ViewModel => DataContext as PlayerViewModel;
+
+    private void OnDataContextChanged(object? sender, EventArgs e)
+    {
+        if (_boundViewModel is not null)
+        {
+            _boundViewModel.PropertyChanged -= ViewModel_PropertyChanged;
+        }
+
+        _boundViewModel = ViewModel;
+        if (_boundViewModel is not null)
+        {
+            _boundViewModel.PropertyChanged += ViewModel_PropertyChanged;
+        }
+
+        SyncSheetFocusState();
+    }
+
+    private void AttachInputModeService()
+    {
+        if (_boundViewModel is not null)
+        {
+            _boundViewModel.PropertyChanged -= ViewModel_PropertyChanged;
+            _boundViewModel.PropertyChanged += ViewModel_PropertyChanged;
+        }
+
+        if (_inputModeService is null && Application.Current is App { Services: not null } app)
+        {
+            _inputModeService = app.Services.GetService<MobileInputModeService>();
+        }
+
+        if (_inputModeService is not null)
+        {
+            _inputModeService.ModeChanged -= InputModeService_ModeChanged;
+            _inputModeService.ModeChanged += InputModeService_ModeChanged;
+        }
+    }
+
+    private void DetachInputModeService()
+    {
+        if (_inputModeService is not null)
+        {
+            _inputModeService.ModeChanged -= InputModeService_ModeChanged;
+        }
+
+        if (_boundViewModel is not null)
+        {
+            _boundViewModel.PropertyChanged -= ViewModel_PropertyChanged;
+        }
+    }
+
+    private void InputModeService_ModeChanged(object? sender, MobileInputMode mode)
+    {
+        if (mode == MobileInputMode.Remote && _wasOpen)
+        {
+            QueuePreferredFocus();
+        }
+    }
+
+    private void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(PlayerViewModel.ActiveMobilePanelState)
+            or nameof(PlayerViewModel.IsMobileDetailPanelOpen))
+        {
+            SyncSheetFocusState();
+        }
+    }
+
+    private void SyncSheetFocusState()
+    {
+        var isOpen = _boundViewModel?.IsMobileDetailPanelOpen == true;
+        if (isOpen && !_wasOpen)
+        {
+            _focusBeforeOpen = TopLevel.GetTopLevel(this)?.FocusManager?.GetFocusedElement();
+        }
+
+        if (isOpen && _inputModeService?.IsRemote == true)
+        {
+            QueuePreferredFocus();
+        }
+        else if (!isOpen && _wasOpen)
+        {
+            RestorePreviousFocus();
+        }
+
+        _wasOpen = isOpen;
+    }
+
+    private void QueuePreferredFocus()
+        => Dispatcher.UIThread.Post(FocusPreferredControl, DispatcherPriority.Input);
+
+    private void FocusPreferredControl()
+    {
+        if (_boundViewModel?.IsMobileDetailPanelOpen != true || _inputModeService?.IsRemote != true)
+        {
+            return;
+        }
+
+        var buttons = SheetSurface.GetVisualDescendants()
+            .OfType<Button>()
+            .Where(button => button.IsEffectivelyVisible && button.IsEnabled && button.Focusable)
+            .ToList();
+
+        var selectedButton = buttons.FirstOrDefault(button =>
+            button.GetVisualDescendants()
+                .OfType<MaterialIcon>()
+                .Any(icon => icon.Kind == MaterialIconKind.RadioboxMarked && icon.IsEffectivelyVisible));
+
+        (selectedButton ?? buttons.FirstOrDefault())?.Focus(NavigationMethod.Directional);
+    }
+
+    private void RestorePreviousFocus()
+    {
+        if (_focusBeforeOpen is Control { IsEffectivelyVisible: true, IsEnabled: true } control)
+        {
+            Dispatcher.UIThread.Post(
+                () => control.Focus(NavigationMethod.Directional),
+                DispatcherPriority.Input);
+        }
+
+        _focusBeforeOpen = null;
+    }
+
+    private void OnAnyPointerPressed(object? sender, PointerPressedEventArgs e)
+        => _inputModeService?.SetMode(MobileInputMode.Touch);
+
+    private void PlayerSheets_KeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.None)
+        {
+            return;
+        }
+
+        _inputModeService?.SetMode(MobileInputMode.Remote);
+        if (e.Key is not (Key.Escape or Key.Back))
+        {
+            return;
+        }
+
+        if (_boundViewModel?.BackFromPlayerPanelCommand.CanExecute(null) == true)
+        {
+            _boundViewModel.BackFromPlayerPanelCommand.Execute(null);
+        }
+
+        e.Handled = true;
+    }
 
     private TranslateTransform SheetTranslation
         => _sheetTranslation ??= SheetSurface.RenderTransform as TranslateTransform

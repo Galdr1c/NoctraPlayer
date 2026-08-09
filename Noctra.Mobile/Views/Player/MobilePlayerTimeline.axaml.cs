@@ -20,8 +20,29 @@ public partial class MobilePlayerTimeline : UserControl
         PointerMoved += OnPointerMoved;
         PointerReleased += OnPointerReleased;
         PointerCaptureLost += OnPointerCaptureLost;
+        KeyDown += OnKeyDown;
         SizeChanged += (_, _) => UpdateProgress();
         Tapped += (_, e) => e.Handled = true;
+    }
+
+    private void OnKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (_vm is null || _vm.IsLiveContent || e.Key is not (Key.Left or Key.Right))
+        {
+            return;
+        }
+
+        var command = e.Key == Key.Left
+            ? _vm.SkipBackwardCommand
+            : _vm.SkipForwardCommand;
+
+        if (command.CanExecute("10"))
+        {
+            command.Execute("10");
+            _vm.ShowOverlayCommand.Execute(null);
+        }
+
+        e.Handled = true;
     }
 
     protected override void OnDataContextChanged(EventArgs e)

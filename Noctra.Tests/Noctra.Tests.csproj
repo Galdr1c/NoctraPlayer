@@ -38,6 +38,13 @@
          directly testable from the Core test project. -->
     <Compile Include="..\Noctra.Mobile\ViewModels\MobileEpgTimelineGeometry.cs"
              Link="ViewModels\MobileEpgTimelineGeometry.cs" />
+    <!-- The guide presentation state is pure C# and is linked into the test
+         project so selection/focus behavior can be exercised without an
+         Android visual tree. -->
+    <Compile Include="..\Noctra.Mobile\ViewModels\MobileEpgGuidePresentation.cs"
+             Link="ViewModels\MobileEpgGuidePresentation.cs" />
+    <Compile Include="..\Noctra.Mobile\Services\MobileInputModeService.cs"
+             Link="Services\MobileInputModeService.cs" />
   </ItemGroup>
 
 </Project>

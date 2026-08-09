@@ -8,4 +8,7 @@ public partial class MobilePlayerCompactControls : UserControl
     {
         InitializeComponent();
     }
+
+    public void FocusPrimaryAction()
+        => TransportBar.FocusPrimaryAction();
 }

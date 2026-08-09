@@ -5,6 +5,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Data;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Threading;
 using Microsoft.Extensions.DependencyInjection;
@@ -134,6 +135,7 @@ public partial class MobilePlayerView : UserControl
     private IPlayerWindowService? _playerWindowService;
     private IVideoSurfaceService? _videoSurfaceService;
     private ISettingsService? _settingsService;
+    private MobileInputModeService? _inputModeService;
     private PlayerViewModel? _boundVm;
     private Rect _lastSurfaceRect;
     private bool _epgSurfaceLayoutReady;
@@ -158,6 +160,10 @@ public partial class MobilePlayerView : UserControl
 
         LayoutUpdated += OnLayoutUpdated;
         SizeChanged += OnPlayerSizeChanged;
+        AddHandler(KeyDownEvent, OnPlayerKeyDown, RoutingStrategies.Tunnel, handledEventsToo: true);
+        AddHandler(PointerPressedEvent, OnPlayerPointerPressed, RoutingStrategies.Tunnel, handledEventsToo: true);
+        AttachedToVisualTree += (_, _) => AttachInputModeService();
+        DetachedFromVisualTree += (_, _) => DetachInputModeService();
     }
 
     public void ApplyWatermarkInsets(Thickness safeArea, bool isFullScreen, bool isPictureInPicture)
@@ -209,8 +215,99 @@ public partial class MobilePlayerView : UserControl
             _boundVm.PremiumUpsellRequested += OnPremiumUpsellRequested;
             TryShowGestureHintsOnceAsync();
             QueueVideoSurfaceLayoutUpdate();
+
+            if (_inputModeService?.IsRemote == true)
+            {
+                Dispatcher.UIThread.Post(() => Focus(), DispatcherPriority.Input);
+            }
         }
     }
+
+    private void AttachInputModeService()
+    {
+        if (_inputModeService is null && Application.Current is App { Services: not null } app)
+        {
+            _inputModeService = app.Services.GetService<MobileInputModeService>();
+        }
+
+        if (_inputModeService is null)
+        {
+            return;
+        }
+
+        _inputModeService.ModeChanged -= InputModeService_ModeChanged;
+        _inputModeService.ModeChanged += InputModeService_ModeChanged;
+        ApplyInputMode(_inputModeService.CurrentMode);
+    }
+
+    private void DetachInputModeService()
+    {
+        if (_inputModeService is not null)
+        {
+            _inputModeService.ModeChanged -= InputModeService_ModeChanged;
+        }
+    }
+
+    private void InputModeService_ModeChanged(object? sender, MobileInputMode mode)
+        => ApplyInputMode(mode);
+
+    private void ApplyInputMode(MobileInputMode mode)
+        => Classes.Set("remote-input", mode == MobileInputMode.Remote);
+
+    private void OnPlayerPointerPressed(object? sender, PointerPressedEventArgs e)
+        => _inputModeService?.SetMode(MobileInputMode.Touch);
+
+    private void OnPlayerKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.None)
+        {
+            return;
+        }
+
+        _inputModeService?.SetMode(MobileInputMode.Remote);
+
+        if (_boundVm is not { } vm || vm.IsPiPMode)
+        {
+            return;
+        }
+
+        if (vm.ActiveMobilePanelState != PlayerViewModel.MobilePanelState.None)
+        {
+            return;
+        }
+
+        if (!vm.AreMobileControlsVisible && IsOverlayRevealKey(e.Key) && !vm.IsLocked)
+        {
+            if (vm.ShowOverlayCommand.CanExecute(null))
+            {
+                vm.ShowOverlayCommand.Execute(null);
+            }
+
+            Dispatcher.UIThread.Post(() => PlayerControls.FocusPrimaryAction(), DispatcherPriority.Input);
+            e.Handled = true;
+            return;
+        }
+
+        if (vm.AreMobileControlsVisible && e.Key is Key.Escape or Key.Back)
+        {
+            if (vm.ToggleControlsCommand.CanExecute(null))
+            {
+                vm.ToggleControlsCommand.Execute(null);
+            }
+
+            Dispatcher.UIThread.Post(() => Focus(), DispatcherPriority.Input);
+            e.Handled = true;
+        }
+    }
+
+    private static bool IsOverlayRevealKey(Key key)
+        => key is Key.Left
+            or Key.Right
+            or Key.Up
+            or Key.Down
+            or Key.Enter
+            or Key.Space
+            or Key.Tab;
 
     private void OnPremiumUpsellRequested(object? sender, EventArgs e)
     {
@@ -219,11 +316,42 @@ public partial class MobilePlayerView : UserControl
 
     public bool TryHandleBack()
     {
-        return PlayerUpsellHost.TryClose();
+        if (PlayerUpsellHost.TryClose())
+        {
+            return true;
+        }
+
+        if (_boundVm is not { } vm
+            || vm.ActiveMobilePanelState != PlayerViewModel.MobilePanelState.None
+            || !vm.AreMobileControlsVisible)
+        {
+            return false;
+        }
+
+        if (vm.ToggleControlsCommand.CanExecute(null))
+        {
+            vm.ToggleControlsCommand.Execute(null);
+        }
+
+        Dispatcher.UIThread.Post(() => Focus(), DispatcherPriority.Input);
+        return true;
     }
 
     private void OnPlayerPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
+        if (e.PropertyName == nameof(PlayerViewModel.IsFullScreen)
+            && _boundVm?.IsFullScreen == true)
+        {
+            Dispatcher.UIThread.Post(() => Focus(), DispatcherPriority.Input);
+        }
+
+        if (e.PropertyName == nameof(PlayerViewModel.IsVisible)
+            && _boundVm?.AreMobileControlsVisible == false
+            && _boundVm.ActiveMobilePanelState == PlayerViewModel.MobilePanelState.None)
+        {
+            Dispatcher.UIThread.Post(() => Focus(), DispatcherPriority.Input);
+        }
+
         if (e.PropertyName is nameof(PlayerViewModel.Volume) or nameof(PlayerViewModel.IsMuted))
         {
             ShowVolumeToastIfVolumeStateChanged();

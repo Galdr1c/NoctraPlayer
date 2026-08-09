@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Input;
 
 namespace Noctra.Mobile.Views.Player;
 
@@ -8,4 +9,7 @@ public partial class MobilePlayerTransportBar : UserControl
     {
         InitializeComponent();
     }
+
+    public void FocusPrimaryAction()
+        => PlayPauseButton.Focus(NavigationMethod.Directional);
 }

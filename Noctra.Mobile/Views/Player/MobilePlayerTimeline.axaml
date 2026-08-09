@@ -5,12 +5,25 @@
              x:DataType="vm:PlayerViewModel"
              x:CompileBindings="False"
              Focusable="True"
+             FocusAdorner="{x:Null}"
              AutomationProperties.Name="{Binding TimelineAccessibilityName}">
+  <UserControl.Styles>
+    <Style Selector="UserControl:focus-visible Border#FocusRing">
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+      <Setter Property="BoxShadow" Value="{DynamicResource FocusGlow}" />
+    </Style>
+  </UserControl.Styles>
   <!-- The visual track stays thin while the complete 40-DIP area owns touch input. -->
   <Grid x:Name="RootGrid"
         Height="40"
         Background="Transparent"
         ClipToBounds="False">
+    <Border x:Name="FocusRing"
+            Margin="1"
+            CornerRadius="8"
+            BorderBrush="Transparent"
+            BorderThickness="2"
+            IsHitTestVisible="False" />
     <Grid x:Name="TrackGrid"
           Height="4"
           Margin="7,0"

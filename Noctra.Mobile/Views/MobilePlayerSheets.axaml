@@ -6,7 +6,19 @@
              xmlns:player="using:Noctra.Mobile.Views.Player"
              x:Class="Noctra.Mobile.Views.MobilePlayerSheets"
              x:DataType="vm:PlayerViewModel"
-             x:CompileBindings="False">
+             x:CompileBindings="False"
+             Focusable="True"
+             KeyDown="PlayerSheets_KeyDown">
+  <UserControl.Styles>
+    <Style Selector="Button">
+      <Setter Property="FocusAdorner" Value="{x:Null}" />
+    </Style>
+    <Style Selector="Button:focus-visible /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource InteractiveHoverBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+      <Setter Property="BoxShadow" Value="{DynamicResource FocusGlow}" />
+    </Style>
+  </UserControl.Styles>
   <Grid>
     <Border x:Name="ScrimLayer"
             Background="{DynamicResource OverlayDimBrush}"
