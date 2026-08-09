@@ -78,10 +78,10 @@ public class LanguageDetectionService
     {
         ["TR"] = new[]
         {
-            "TRT", "Kanal D", "ATV", "Star TV", "Show TV", "TV8", "FOX TV", "Haber", "NTV",
-            "CNN Türk", "A Haber", "TLC", "beyaz", "teve2", "TV360", "Habertürk", "S Sport",
+            "TRT", "Kanal D", "Star TV", "Show TV", "TV8", "FOX TV", "NTV",
+            "CNN Türk", "A Haber", "beyaz", "teve2", "TV360", "Habertürk", "S Sport",
             "TJK", "TGRT", "Ulusal", "Ülke TV", "KRT", "24 TV", "Semerkand", "Diyanet",
-            "Bloomberg HT", "İhlas", "DMAX", "Euro D", "Kanal 7", "NOW TV", "Kral", "PowerTürk",
+            "Bloomberg HT", "İhlas", "Euro D", "Kanal 7", "NOW TV", "Kral", "PowerTürk",
             "Number1", "BeinSport TR", "Spor Smart", "tabii", "Exxen", "Gain", "TV100",
             "Salon1", "Salon2", "Sinema", "TİVİBU"
         },
@@ -138,7 +138,7 @@ public class LanguageDetectionService
         ["AL"] = new[] { "Tring", "Top Channel", "Klan", "Vizion", "RTSH" },
         ["GE"] = new[] { "1TV", "2TV", "Imedi", "Rustavi", "Mtavari", "Postv" },
         ["GR"] = new[] { "ERT", "Mega Channel", "Ant1", "Star Channel", "Alpha TV", "Skai TV", "Open TV" },
-        ["HU"] = new[] { "M1", "M2", "M4", "M5", "Duna", "RTL Klub", "TV2", "Hír TV", "ATV" },
+        ["HU"] = new[] { "M1", "M2", "M4", "M5", "Duna", "RTL Klub", "TV2", "Hír TV" },
         ["HK"] = new[] { "RTHK", "TVB", "ViuTV", "HOY TV" },
         ["SE"] = new[] { "SVT", "TV4", "Kanal 5", "Kanal 9", "Kanal 11", "Kunskapskanalen" }
     };
@@ -147,10 +147,10 @@ public class LanguageDetectionService
     /// Tek bir kanal adından ülke kodunu tespit eder
     /// </summary>
     /// <param name="channelName">Kanal adı</param>
-    /// <returns>ISO 3166-1 alpha-2 ülke kodu (varsayılan: "US")</returns>
-    public string DetectCountryFromName(string? channelName)
+    /// <returns>Kanıt varsa ISO 3166-1 alpha-2 ülke kodu; bilinmiyorsa null</returns>
+    public string? DetectCountryFromName(string? channelName)
     {
-        if (string.IsNullOrWhiteSpace(channelName)) return "US";
+        if (string.IsNullOrWhiteSpace(channelName)) return null;
 
         // 1) Priority: Try tokens first (prefix markers like TR |, [DE], etc.)
         var tokens = Tokenize(channelName);
@@ -162,33 +162,23 @@ public class LanguageDetectionService
             }
         }
 
-        // 2) Fallback to patterns
-        foreach (var (country, patterns) in CountryPatterns)
-        {
-            foreach (var pattern in patterns)
-            {
-                if (channelName.Contains(pattern, StringComparison.OrdinalIgnoreCase))
-                {
-                    return country;
-                }
-            }
-        }
-
-        return "US"; // Default fallback
+        // 2) Patterns are a best-effort hint only. Ambiguous/global brands are
+        // excluded and the most specific whole-token match wins.
+        return DetectCountryFromPatterns(channelName);
     }
 
     /// <summary>
     /// Kanal listesinden en baskın ülkeyi tespit eder
     /// </summary>
     /// <param name="channelNames">Kanal adları listesi</param>
-    /// <returns>ISO 3166-1 alpha-2 ülke kodu (varsayılan: "US")</returns>
-    public string DetectCountry(IEnumerable<Noctra.Models.Channel> channels)
+    /// <returns>Kanıt varsa ISO 3166-1 alpha-2 ülke kodu; bilinmiyorsa null</returns>
+    public string? DetectCountry(IEnumerable<Noctra.Models.Channel> channels)
     {
         if (channels == null || !channels.Any())
-            return "US";
+            return null;
 
         var countries = DetectCountries(channels);
-        return countries.Count > 0 ? countries[0].CountryCode : "US";
+        return countries.Count > 0 ? countries[0].CountryCode : null;
     }
 
     /// <summary>
@@ -198,7 +188,7 @@ public class LanguageDetectionService
     {
         var channelList = channels.ToList();
         if (channelList.Count == 0)
-            return new List<(string, int, double)> { ("US", 0, 100) };
+            return [];
 
         var scores = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
@@ -231,20 +221,11 @@ public class LanguageDetectionService
 
             if (foundViaToken) continue;
 
-            // 2) Fallback to patterns
-            foreach (var (country, patterns) in CountryPatterns)
+            // 2) Fallback to an unambiguous, whole-token pattern hint.
+            var patternCountry = DetectCountryFromPatterns(name);
+            if (!string.IsNullOrWhiteSpace(patternCountry))
             {
-                bool foundPattern = false;
-                foreach (var pattern in patterns)
-                {
-                    if (name.Contains(pattern, StringComparison.OrdinalIgnoreCase))
-                    {
-                        scores[country] = scores.GetValueOrDefault(country) + 1;
-                        foundPattern = true;
-                        break;
-                    }
-                }
-                if (foundPattern) break;
+                scores[patternCountry] = scores.GetValueOrDefault(patternCountry) + 1;
             }
         }
 
@@ -254,6 +235,61 @@ public class LanguageDetectionService
             .OrderByDescending(kv => kv.Value)
             .Select(kv => (kv.Key, kv.Value, Math.Round((double)kv.Value / total * 100, 1)))
             .ToList();
+    }
+
+    private static string? DetectCountryFromPatterns(string channelName)
+    {
+        var bestPatternLength = 0;
+        var bestCountries = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var (country, patterns) in CountryPatterns)
+        {
+            foreach (var pattern in patterns)
+            {
+                if (!ContainsWholePattern(channelName, pattern))
+                {
+                    continue;
+                }
+
+                if (pattern.Length > bestPatternLength)
+                {
+                    bestPatternLength = pattern.Length;
+                    bestCountries.Clear();
+                    bestCountries.Add(country);
+                }
+                else if (pattern.Length == bestPatternLength)
+                {
+                    bestCountries.Add(country);
+                }
+            }
+        }
+
+        return bestCountries.Count == 1 ? bestCountries.Single() : null;
+    }
+
+    private static bool ContainsWholePattern(string value, string pattern)
+    {
+        var searchStart = 0;
+        while (searchStart < value.Length)
+        {
+            var index = value.IndexOf(pattern, searchStart, StringComparison.OrdinalIgnoreCase);
+            if (index < 0)
+            {
+                return false;
+            }
+
+            var end = index + pattern.Length;
+            var hasLeftBoundary = index == 0 || !char.IsLetterOrDigit(value[index - 1]);
+            var hasRightBoundary = end == value.Length || !char.IsLetterOrDigit(value[end]);
+            if (hasLeftBoundary && hasRightBoundary)
+            {
+                return true;
+            }
+
+            searchStart = index + 1;
+        }
+
+        return false;
     }
 
     private static Dictionary<string, int> DetectCountryCodeScores(IEnumerable<string> names)

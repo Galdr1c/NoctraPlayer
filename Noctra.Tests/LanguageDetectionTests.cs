@@ -52,7 +52,7 @@ namespace Noctra.Tests
             var names = new List<string> 
             { 
                 "FRANCE 2", "FRANCE 3", 
-                "TRT 1", "KANAL D", "ATV",
+                "TRT 1", "KANAL D", "TV8",
                 "BBC ONE", "BBC TWO"
             };
             var channels = names.Select(n => new Channel { Name = n }).ToList();
@@ -114,7 +114,6 @@ namespace Noctra.Tests
         [InlineData("TR: Kanal D [HD]", "TR")]
         [InlineData("【TR】Kanal D", "TR")]
         [InlineData("〔DE〕RTL", "DE")]
-        [InlineData("Random Channel", "US")] // Fallback
         public void DetectCountry_WithVariousPrefixFormats_ExtractsCorrectly(string channelName, string expectedCountry)
         {
             var service = new LanguageDetectionService();
@@ -123,6 +122,49 @@ namespace Noctra.Tests
             var result = service.DetectCountry(channels);
             
             Assert.Equal(expectedCountry, result);
+        }
+
+        [Fact]
+        public void DetectCountryFromName_UnknownName_ReturnsNull()
+        {
+            var service = new LanguageDetectionService();
+
+            Assert.Null(service.DetectCountryFromName("QZX Network 917"));
+        }
+
+        [Fact]
+        public void DetectCountry_OnlyUnknownNames_ReturnsNull()
+        {
+            var service = new LanguageDetectionService();
+            var channels = new List<Channel> { new Channel { Name = "QZX Network 917" } };
+
+            Assert.Null(service.DetectCountry(channels));
+        }
+
+        [Theory]
+        [InlineData("ATV")]
+        [InlineData("Global Haber Network")]
+        [InlineData("TLC")]
+        [InlineData("DMAX")]
+        [InlineData("NewsATVInternational")]
+        public void DetectCountryFromName_AmbiguousOrGenericPattern_ReturnsNull(string channelName)
+        {
+            var service = new LanguageDetectionService();
+
+            Assert.Null(service.DetectCountryFromName(channelName));
+        }
+
+        [Theory]
+        [InlineData("CNN Türk", "TR")]
+        [InlineData("DMAX DE", "DE")]
+        [InlineData("BBC One", "GB")]
+        public void DetectCountryFromName_SpecificUnambiguousPattern_ReturnsCountry(
+            string channelName,
+            string expectedCountry)
+        {
+            var service = new LanguageDetectionService();
+
+            Assert.Equal(expectedCountry, service.DetectCountryFromName(channelName));
         }
     }
 }

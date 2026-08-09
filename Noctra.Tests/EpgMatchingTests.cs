@@ -74,6 +74,17 @@ public class EpgMatchingTests
         return (List<string>?)result;
     }
 
+    private static List<string>? ResolveXmlChannelTargets(
+        List<string>? exactTvgIds,
+        IEnumerable<string> displayNameVariants,
+        Dictionary<string, List<string>> channelMap)
+    {
+        var m = _epgType.GetMethod("ResolveXmlChannelTargets",
+            BindingFlags.NonPublic | BindingFlags.Static);
+        Assert.NotNull(m);
+        return (List<string>?)m.Invoke(null, new object?[] { exactTvgIds, displayNameVariants, channelMap });
+    }
+
     // =========================================================================
     // A — NormalizeName
     // =========================================================================
@@ -117,6 +128,26 @@ public class EpgMatchingTests
         Assert.Equal(expected, result);
     }
 
+    [Theory]
+    [InlineData("HBO Max", "hbomax")]
+    [InlineData("beIN Sports 1 MAX", "beinsports1max")]
+    [InlineData("S Sports 1 Plus", "ssports1plus")]
+    [InlineData("Channel Extra", "channelextra")]
+    [InlineData("SAT.1", "sat1")]
+    public void NormalizeName_BrandQualifiers_ArePreserved(string input, string expected)
+    {
+        Assert.Equal(expected, NormalizeName(input));
+    }
+
+    [Theory]
+    [InlineData("HBO", "HBO Max")]
+    [InlineData("S Sports 1", "S Sports 1 Plus")]
+    [InlineData("beIN Sports 1", "beIN Sports 1 MAX")]
+    public void NormalizeName_DistinctBrandedChannels_DoNotCollapse(string first, string second)
+    {
+        Assert.NotEqual(NormalizeName(first), NormalizeName(second));
+    }
+
     [Fact]
     public void NormalizeName_Lowercase_Applied()
     {
@@ -140,7 +171,7 @@ public class EpgMatchingTests
     public void GetNameVariants_SimpleName_ContainsNormalizedFull()
     {
         var variants = GetNameVariants("TRT 1");
-        Assert.Contains("TR:trt1", variants);
+        Assert.Contains("XX:trt1", variants);
     }
 
     [Fact]
@@ -445,6 +476,76 @@ public class EpgMatchingTests
         Assert.Equal("ch-trt1", ResolveMappedChannelIds("trt1", map)?.First());
         Assert.Equal("ch-trt2", ResolveMappedChannelIds("trt2", map)?.First());
     }
+
+    [Theory]
+    [InlineData("TR:trthaber", "TR:tgrthaber")]
+    [InlineData("TR:trtbelgesel", "TR:tgrtbelgesel")]
+    public void ResolveMappedChannelIds_DifferentBroadcasterBrand_DoesNotFuzzyMatch(
+        string xmlDisplayName,
+        string playlistName)
+    {
+        var map = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase)
+        {
+            [playlistName] = new List<string> { "wrong-channel" }
+        };
+
+        Assert.Null(ResolveMappedChannelIds(xmlDisplayName, map));
+    }
+
+    [Fact]
+    public void ResolveMappedChannelIds_AmbiguousFuzzyCandidates_ReturnsNull()
+    {
+        var map = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["TR:kanald"] = new List<string> { "kanal-d" },
+            ["TR:kanal7"] = new List<string> { "kanal-7" }
+        };
+
+        Assert.Null(ResolveMappedChannelIds("TR:kanalx", map));
+    }
+
+    [Fact]
+    public void ResolveMappedChannelIds_UnknownCountry_DoesNotChooseBetweenCountryDuplicates()
+    {
+        var map = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["TR:atv"] = new List<string> { "atv-tr" },
+            ["HU:atv"] = new List<string> { "atv-hu" }
+        };
+
+        Assert.Null(ResolveMappedChannelIds("XX:atv", map));
+    }
+
+    [Fact]
+    public void ResolveXmlChannelTargets_ExactTvgId_WinsOverConflictingDisplayName()
+    {
+        var map = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["TR:tgrthaber"] = new List<string> { "tgrt-internal" }
+        };
+
+        var result = ResolveXmlChannelTargets(
+            new List<string> { "trt-internal", "trt-backup" },
+            new[] { "TR:tgrthaber" },
+            map);
+
+        Assert.Equal(new[] { "trt-internal", "trt-backup" }, result);
+    }
+
+    [Fact]
+    public void ResolveXmlChannelTargets_ConflictingExactDisplayNames_ReturnsNull()
+    {
+        var map = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["TR:trthaber"] = new List<string> { "trt-internal" },
+            ["TR:tgrthaber"] = new List<string> { "tgrt-internal" }
+        };
+
+        Assert.Null(ResolveXmlChannelTargets(
+            null,
+            new[] { "TR:trthaber", "TR:tgrthaber" },
+            map));
+    }
 }
 
 // =============================================================================
@@ -469,16 +570,16 @@ public class EpgGetNameVariantsRealWorldTests
     // Her test: EPG XML display-name olarak gelecek isim → channelMap'teki normalize isimle eşleşmeli
 
     [Theory]
-    [InlineData("TRT 1",             "TR:trt1")]
-    [InlineData("TRT 1 HD",          "TR:trt1")]
-    [InlineData("Kanal D",           "TR:kanald")]
-    [InlineData("Show TV",           "TR:showtv")]
-    [InlineData("Star TV",           "TR:startv")]
-    [InlineData("FOX",               "US:fox")]
-    [InlineData("NTV",               "TR:ntv")]
-    [InlineData("ATV",               "TR:atv")]
-    [InlineData("CNN Türk",          "TR:cnnturk")]
-    [InlineData("beIN Sports 1",     "US:beinsports1")]
+    [InlineData("TRT 1",             "XX:trt1")]
+    [InlineData("TRT 1 HD",          "XX:trt1")]
+    [InlineData("Kanal D",           "XX:kanald")]
+    [InlineData("Show TV",           "XX:showtv")]
+    [InlineData("Star TV",           "XX:startv")]
+    [InlineData("FOX",               "XX:fox")]
+    [InlineData("NTV",               "XX:ntv")]
+    [InlineData("ATV",               "XX:atv")]
+    [InlineData("CNN Türk",          "XX:cnnturk")]
+    [InlineData("beIN Sports 1",     "XX:beinsports1")]
     public void GetNameVariants_ChannelName_ContainsNormalizedForm(string channelName, string expectedNormalized)
     {
         var variants = GetNameVariants(channelName);
@@ -541,6 +642,18 @@ public class EpgCountryAwareMatchingTests
             .Cast<string>().ToList();
     }
 
+    private static List<string> GetNameVariantsWithCountryHint(string name, string countryHint)
+    {
+        var m = _epgType.GetMethod("GetNameVariantsWithCountryHint",
+            BindingFlags.NonPublic | BindingFlags.Instance);
+        Assert.NotNull(m);
+        return ((System.Collections.IEnumerable)m.Invoke(
+                _epgServiceInstance,
+                new object?[] { name, countryHint })!)
+            .Cast<string>()
+            .ToList();
+    }
+
     private static List<string>? ResolveMappedChannelIds(string normalizedName, Dictionary<string, List<string>> channelMap)
     {
         var m = _epgType.GetMethod("ResolveMappedChannelIds",
@@ -573,6 +686,40 @@ public class EpgCountryAwareMatchingTests
         var m = _epgType.GetMethod("IsAllowedPrimaryGroupCountryCompatible",
             BindingFlags.NonPublic | BindingFlags.Static)!;
         return (bool)m.Invoke(null, new object?[] { primaryId, sourceCountryCode, groupCountriesByPrimaryId })!;
+    }
+
+    [Fact]
+    public void GetNameVariants_ExplicitCountryHint_OverridesGenericBrandDefault()
+    {
+        var variants = GetNameVariantsWithCountryHint("Discovery Channel", "TR");
+
+        Assert.Contains("TR:discoverychannel", variants);
+        Assert.DoesNotContain("US:discoverychannel", variants);
+    }
+
+    [Fact]
+    public void GetNameVariants_UnknownCountry_UsesNeutralPrefixInsteadOfUnitedStates()
+    {
+        var variants = GetNameVariants("QZX Network 917");
+
+        Assert.Contains("XX:qzxnetwork917", variants);
+        Assert.DoesNotContain("US:qzxnetwork917", variants);
+    }
+
+    [Theory]
+    [InlineData("Global Haber Network", "globalhabernetwork")]
+    [InlineData("ATV", "atv")]
+    [InlineData("TLC", "tlc")]
+    [InlineData("DMAX", "dmax")]
+    public void GetNameVariants_BroadCountryPattern_RemainsNeutralForEpgIdentity(
+        string channelName,
+        string normalizedName)
+    {
+        var variants = GetNameVariants(channelName);
+
+        Assert.Contains($"XX:{normalizedName}", variants);
+        Assert.DoesNotContain(variants, variant =>
+            variant.StartsWith("TR:", StringComparison.OrdinalIgnoreCase));
     }
 
     private static bool HasEquivalentOverlappingProgram(EpgProgram program, IEnumerable<EpgProgram> candidates)

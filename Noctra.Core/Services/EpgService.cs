@@ -127,15 +127,19 @@ public class EpgService : IEpgService
                 {
                     var idStr = channel.Id.ToString();
                     var groupCountryCode = DetectExplicitCountryCode(channel.GroupTitle);
-                    if (!string.IsNullOrWhiteSpace(groupCountryCode))
+                    var channelCountryCode = NormalizeExplicitCountryCode(channel.Country)
+                        ?? DetectExplicitCountryCode(channel.Name)
+                        ?? DetectExplicitCountryCode(channel.TvgName)
+                        ?? groupCountryCode;
+                    if (!string.IsNullOrWhiteSpace(channelCountryCode))
                     {
-                        internalIdToGroupCountry[idStr] = groupCountryCode;
+                        internalIdToGroupCountry[idStr] = channelCountryCode;
                     }
 
                     if (!string.IsNullOrWhiteSpace(channel.TvgId))
                     {
                         allowedPrimaryIds.Add(channel.TvgId!);
-                        AddAllowedPrimaryGroupCountry(allowedPrimaryIdGroupCountries, channel.TvgId!, groupCountryCode);
+                        AddAllowedPrimaryGroupCountry(allowedPrimaryIdGroupCountries, channel.TvgId!, channelCountryCode);
                         if (!tvgIdToInternalIds.TryGetValue(channel.TvgId!, out var list))
                         {
                             list = new List<string>();
@@ -145,9 +149,9 @@ public class EpgService : IEpgService
                     }
 
                     allowedPrimaryIds.Add(idStr);
-                    AddAllowedPrimaryGroupCountry(allowedPrimaryIdGroupCountries, idStr, groupCountryCode);
+                    AddAllowedPrimaryGroupCountry(allowedPrimaryIdGroupCountries, idStr, channelCountryCode);
 
-                    foreach (var variant in GetNameVariants(channel.Name))
+                    foreach (var variant in GetNameVariantsWithCountryHint(channel.Name, channelCountryCode))
                     {
                         if (string.IsNullOrEmpty(variant)) continue;
                         if (!channelMap.TryGetValue(variant, out var list))
@@ -159,7 +163,7 @@ public class EpgService : IEpgService
                     }
                     if (!string.IsNullOrEmpty(channel.TvgName))
                     {
-                        foreach (var variant in GetNameVariants(channel.TvgName))
+                        foreach (var variant in GetNameVariantsWithCountryHint(channel.TvgName, channelCountryCode))
                         {
                             if (string.IsNullOrEmpty(variant)) continue;
                             if (!channelMap.TryGetValue(variant, out var list))
@@ -199,7 +203,8 @@ public class EpgService : IEpgService
                             {
                                     var xmlId = reader.GetAttribute("id");
                                     var effectiveXmlId = xmlId;
-                                    
+                                    var displayNameVariants = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
                                     // Fallback for malformed XML where channel ID is missing or empty
                                     var isMalformedId = string.IsNullOrWhiteSpace(xmlId);
 
@@ -216,46 +221,43 @@ public class EpgService : IEpgService
                                                 effectiveXmlId = displayName;
                                             }
 
-                                            foreach (var variant in GetNameVariants(displayName))
+                                            var displayCountryCode = DetectExplicitCountryCode(displayName) ?? sourceCountryCode;
+                                            foreach (var variant in GetNameVariantsWithCountryHint(displayName, displayCountryCode))
                                             {
-                                                var dbChannelIds = ResolveMappedChannelIds(variant, channelMap);
-                                                dbChannelIds = FilterIdsByGroupCountry(dbChannelIds, internalIdToGroupCountry, sourceCountryCode);
-                                                if (dbChannelIds != null && dbChannelIds.Any())
-                                                {
-                                                    if (!xmlChannelIdToDbTvgIds.TryGetValue(effectiveXmlId!, out var targetList))
-                                                    {
-                                                        targetList = new List<string>();
-                                                        xmlChannelIdToDbTvgIds[effectiveXmlId!] = targetList;
-                                                    }
-                                                    foreach (var id in dbChannelIds)
-                                                        if (!targetList.Contains(id)) targetList.Add(id);
-                                                    
-                                                    if (isPrimary) allowedPrimaryIds.Add(effectiveXmlId!);
-                                                    break; 
-                                                }
+                                                displayNameVariants.Add(variant);
                                             }
                                         }
                                     }
 
-                                    // If we still have a valid ID (from attribute or fallback) 
-                                    // and it matches a TvgId directly in our database
-                                    if (!string.IsNullOrWhiteSpace(effectiveXmlId) && tvgIdToInternalIds.TryGetValue(effectiveXmlId, out var byTvgIds))
+                                    if (string.IsNullOrWhiteSpace(effectiveXmlId))
                                     {
-                                        byTvgIds = FilterIdsByGroupCountry(byTvgIds, internalIdToGroupCountry, sourceCountryCode) ?? [];
-                                        if (byTvgIds.Count == 0)
+                                        continue;
+                                    }
+
+                                    List<string>? exactTvgIds = null;
+                                    var hadExactTvgId = tvgIdToInternalIds.TryGetValue(effectiveXmlId, out var byTvgIds);
+                                    if (hadExactTvgId)
+                                    {
+                                        exactTvgIds = FilterIdsByGroupCountry(byTvgIds, internalIdToGroupCountry, sourceCountryCode);
+                                        if (exactTvgIds == null || exactTvgIds.Count == 0)
                                         {
+                                            // An explicit ID that belongs to another country must not fall back
+                                            // to a weaker name match.
                                             continue;
                                         }
+                                    }
 
-                                        if (!xmlChannelIdToDbTvgIds.TryGetValue(effectiveXmlId, out var targetList))
-                                        {
-                                            targetList = new List<string>();
-                                            xmlChannelIdToDbTvgIds[effectiveXmlId] = targetList;
-                                        }
-                                        foreach (var id in byTvgIds)
-                                            if (!targetList.Contains(id)) targetList.Add(id);
+                                    var resolvedIds = ResolveXmlChannelTargets(exactTvgIds, displayNameVariants, channelMap);
+                                    resolvedIds = FilterIdsByGroupCountry(resolvedIds, internalIdToGroupCountry, sourceCountryCode);
+                                    if (resolvedIds == null || resolvedIds.Count == 0)
+                                    {
+                                        continue;
+                                    }
 
-                                        if (isPrimary) allowedPrimaryIds.Add(effectiveXmlId);
+                                    xmlChannelIdToDbTvgIds[effectiveXmlId] = resolvedIds;
+                                    if (isPrimary)
+                                    {
+                                        allowedPrimaryIds.Add(effectiveXmlId);
                                     }
                             }
                         }
@@ -614,14 +616,23 @@ public class EpgService : IEpgService
     }
 
     private IEnumerable<string> GetNameVariants(string name)
+        => GetNameVariantsWithCountryHint(name, null);
+
+    private IEnumerable<string> GetNameVariantsWithCountryHint(string name, string? countryHint)
     {
         if (string.IsNullOrWhiteSpace(name))
             yield break;
 
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        // Extract country code from name using LanguageDetectionService
-        var countryCode = _languageDetectionService.DetectCountryFromName(name);
+        // Explicit playlist/XMLTV metadata is stronger evidence than words in the
+        // channel name. Name detection remains a fallback for metadata-poor lists.
+        // Only explicit metadata/prefixes may become a hard country identity.
+        // Broad name patterns (for example "Haber", "ATV" or "TLC") are useful
+        // for suggestions, but are too ambiguous for EPG ownership.
+        var countryCode = NormalizeExplicitCountryCode(countryHint)
+            ?? DetectExplicitCountryCode(name)
+            ?? "XX";
 
         // 1. Full normalized name WITH country prefix
         var normalizedFull = NormalizeName(name);
@@ -784,7 +795,7 @@ public class EpgService : IEpgService
             "hd", "fhd", "uhd", "sd", "hevc", "h265", "h264", "4k", "fullhd", "qhd", "hdr", "10bit", "av1", "raw", "1080i", "720i",
             "feed", "ticari", "50fps", "60fps", "mobie", "mobile", "sdmobile", "fhdmobile", "web", "app", "ios", "android", "iptv", "ts", "m3u8",
             "1080p", "720p", "480p", "2160p", "1080", "720", "576", "live", "vip", "premium",
-            "backup", "bkp", "multi", "sub", "ace", "plus", "extra", "max", "sat",
+            "backup", "bkp", "multi", "sub", "ace",
             "turkey", "turkiye", "türkiye", "tr", "tur",
             "de", "ger", "germany", "deutschland", "at", "aut", "austria", "osterreich",
             "gb", "uk", "en", "eng", "england", "britain",
@@ -987,6 +998,95 @@ public class EpgService : IEpgService
         return new string(chars).Normalize(NormalizationForm.FormC);
     }
 
+    private static List<string>? ResolveXmlChannelTargets(
+        List<string>? exactTvgIds,
+        IEnumerable<string> displayNameVariants,
+        Dictionary<string, List<string>> channelMap)
+    {
+        var exactIds = DistinctChannelIds(exactTvgIds);
+        if (exactIds.Count > 0)
+        {
+            return exactIds;
+        }
+
+        var variants = displayNameVariants
+            .Where(variant => !string.IsNullOrWhiteSpace(variant))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        // Exact display-name evidence is evaluated as a set. Multiple names in the
+        // same XMLTV channel may be aliases, but conflicting exact targets are unsafe.
+        var exactNameCandidates = variants
+            .Where(channelMap.ContainsKey)
+            .Select(variant => channelMap[variant]);
+        var exactNameTarget = SelectSingleTargetSet(exactNameCandidates, out var exactNameConflict);
+        if (exactNameConflict)
+        {
+            return null;
+        }
+
+        if (exactNameTarget != null)
+        {
+            return exactNameTarget;
+        }
+
+        var fuzzyCandidates = variants
+            .Select(variant => ResolveMappedChannelIds(variant, channelMap))
+            .Where(ids => ids != null)
+            .Select(ids => ids!);
+        return SelectSingleTargetSet(fuzzyCandidates, out _);
+    }
+
+    private static List<string>? SelectSingleTargetSet(
+        IEnumerable<List<string>> candidates,
+        out bool conflict)
+    {
+        conflict = false;
+        List<string>? selected = null;
+        string? selectedKey = null;
+
+        foreach (var candidate in candidates)
+        {
+            var distinctIds = DistinctChannelIds(candidate);
+            if (distinctIds.Count == 0)
+            {
+                continue;
+            }
+
+            var key = BuildChannelIdSetKey(distinctIds);
+            if (selected == null)
+            {
+                selected = distinctIds;
+                selectedKey = key;
+                continue;
+            }
+
+            if (!string.Equals(selectedKey, key, StringComparison.OrdinalIgnoreCase))
+            {
+                conflict = true;
+                return null;
+            }
+        }
+
+        return selected;
+    }
+
+    private static List<string> DistinctChannelIds(IEnumerable<string>? ids)
+    {
+        if (ids == null)
+        {
+            return [];
+        }
+
+        return ids
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private static string BuildChannelIdSetKey(IEnumerable<string> ids)
+        => string.Join('\u001F', ids.OrderBy(id => id, StringComparer.OrdinalIgnoreCase));
+
     private static List<string>? ResolveMappedChannelIds(string normalizedDisplayName, Dictionary<string, List<string>> channelMap)
     {
         if (string.IsNullOrWhiteSpace(normalizedDisplayName) || normalizedDisplayName.Length < 3)
@@ -998,34 +1098,79 @@ public class EpgService : IEpgService
             return exactList;
         }
 
-        // Optimization: Skip fuzzy matching for very short names to avoid false positives.
+        // Fuzzy matching is deliberately conservative: a wrong guide is worse than
+        // no guide. Exact IDs and exact normalized names are handled above.
         if (normalizedDisplayName.Length < 4)
             return null;
 
-        // Dynamic threshold: shorter names need less strict matching
-        var maxLen = Math.Max(normalizedDisplayName.Length, 3);
-        var threshold = maxLen <= 6 ? 0.70 : maxLen <= 10 ? 0.75 : 0.82;
-
-        List<string>? bestIds = null;
-        double bestScore = 0;
+        const double minimumConfidence = 0.92;
+        const double minimumRunnerUpMargin = 0.06;
+        var (displayCountry, displayBaseName) = SplitCountryQualifiedName(normalizedDisplayName);
+        var candidatesByTargetSet = new Dictionary<string, (List<string> Ids, double Score)>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var kvp in channelMap)
         {
-            // Preliminary check: if first characters don't match, similarity is likely low
-            if (kvp.Key[0] != normalizedDisplayName[0]) continue;
-
-            var score = Similarity(normalizedDisplayName, kvp.Key);
-            if (score > bestScore)
+            var (candidateCountry, candidateBaseName) = SplitCountryQualifiedName(kvp.Key);
+            if (!string.IsNullOrWhiteSpace(displayCountry) &&
+                !string.IsNullOrWhiteSpace(candidateCountry) &&
+                !string.Equals(displayCountry, candidateCountry, StringComparison.OrdinalIgnoreCase))
             {
-                bestScore = score;
-                bestIds = kvp.Value;
+                continue;
             }
-            
-            // If we found a very high confidence match, stop searching
-            if (bestScore > 0.95) break;
+
+            if (displayBaseName.Length == 0 || candidateBaseName.Length == 0 ||
+                displayBaseName[0] != candidateBaseName[0])
+            {
+                continue;
+            }
+
+            var score = Similarity(displayBaseName, candidateBaseName);
+            if (score < minimumConfidence)
+            {
+                continue;
+            }
+
+            var ids = DistinctChannelIds(kvp.Value);
+            if (ids.Count == 0)
+            {
+                continue;
+            }
+
+            var targetSetKey = BuildChannelIdSetKey(ids);
+            if (!candidatesByTargetSet.TryGetValue(targetSetKey, out var current) || score > current.Score)
+            {
+                candidatesByTargetSet[targetSetKey] = (ids, score);
+            }
         }
 
-        return bestScore >= threshold ? bestIds : null;
+        var rankedCandidates = candidatesByTargetSet.Values
+            .OrderByDescending(candidate => candidate.Score)
+            .ToList();
+        if (rankedCandidates.Count == 0)
+        {
+            return null;
+        }
+
+        if (rankedCandidates.Count > 1 &&
+            rankedCandidates[0].Score - rankedCandidates[1].Score < minimumRunnerUpMargin)
+        {
+            return null;
+        }
+
+        return rankedCandidates[0].Ids;
+    }
+
+    private static (string? Country, string BaseName) SplitCountryQualifiedName(string value)
+    {
+        var separatorIndex = value.IndexOf(':');
+        if (separatorIndex <= 0 || separatorIndex >= value.Length - 1)
+        {
+            return (null, value);
+        }
+
+        var country = value[..separatorIndex];
+        return (string.Equals(country, "XX", StringComparison.OrdinalIgnoreCase) ? null : country,
+            value[(separatorIndex + 1)..]);
     }
 
     private static double Similarity(string a, string b)
