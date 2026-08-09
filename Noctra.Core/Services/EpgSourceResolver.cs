@@ -3,7 +3,7 @@ using Noctra.Models;
 namespace Noctra.Services;
 
 /// <summary>
-/// Ülke koduna göre en uygun EPG kaynaklarını belirler
+/// Yapılandırılmış EPG kaynaklarını güven sırasına koyar ve import tercihlerini taşır.
 /// Öncelik: Custom URL → Provider EPG → M3U x-tvg-url
 /// </summary>
 public class EpgSourceResolver
@@ -15,15 +15,14 @@ public class EpgSourceResolver
     /// Priority 2: M3U x-tvg-url
     /// </summary>
     public List<EpgSource> ResolveEpgSources(
-        List<string> countryCodes, 
         string? providerEpgUrl = null, 
         string? m3uEpgUrl = null, 
         IEnumerable<string>? customEpgUrls = null, 
-        bool hasUsableTvgIds = false,
         string? preferredLanguageCode = null,
         IDictionary<string, string>? providerHeaders = null)
     {
         var sources = new List<EpgSource>();
+        var normalizedPreferredLanguage = LocalizationService.NormalizeLanguageCode(preferredLanguageCode);
 
         // 0. Kullanıcının özel EPG URL'leri (ayarlardan — EN YÜKSEK ÖNCELİK)
         if (customEpgUrls != null)
@@ -37,7 +36,8 @@ public class EpgSourceResolver
                         Url = url.Trim(),
                         Priority = 0,
                         Type = EpgSourceType.CustomUrl,
-                        IsPrimary = true
+                        IsPrimary = true,
+                        PreferredLanguageCode = normalizedPreferredLanguage
                     });
                 }
             }
@@ -54,6 +54,7 @@ public class EpgSourceResolver
                     Priority = 1,
                     Type = EpgSourceType.Provider,
                     IsPrimary = true,
+                    PreferredLanguageCode = normalizedPreferredLanguage,
                     Headers = providerHeaders
                 });
             }
@@ -69,7 +70,8 @@ public class EpgSourceResolver
                     Url = m3uEpgUrl,
                     Priority = 2,
                     Type = EpgSourceType.M3UHeader,
-                    IsPrimary = string.IsNullOrEmpty(providerEpgUrl) 
+                    IsPrimary = string.IsNullOrEmpty(providerEpgUrl),
+                    PreferredLanguageCode = normalizedPreferredLanguage
                 });
             }
         }
@@ -130,6 +132,7 @@ public class EpgSource
     public int Priority { get; set; }
     public EpgSourceType Type { get; set; }
     public bool IsPrimary { get; set; }
+    public string PreferredLanguageCode { get; set; } = "en-US";
     /// <summary>
     /// Public kaynaklarda, provider yoksa eski EPG verisini temizlemek için
     /// </summary>

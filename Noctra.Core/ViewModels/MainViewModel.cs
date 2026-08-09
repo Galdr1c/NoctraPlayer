@@ -5579,14 +5579,11 @@ public partial class MainViewModel : ObservableObject
             var appLanguage = (_settingsService.Settings.Language ?? "en").ToUpperInvariant();
             var playlistEpgUrl = (SelectedPlaylist?.EpgUrl ?? string.Empty).Trim();
             var customEpgUrls = _settingsService.Settings.CustomEpgUrls?.Where(u => !string.IsNullOrWhiteSpace(u)).ToList() ?? new List<string>();
-            var hasUsableTvgIds = channelsForMapping.Any(c => !string.IsNullOrWhiteSpace(c.TvgId));
-            
+
             var epgSources = _epgSourceResolver.ResolveEpgSources(
-                new List<string>(), // Country based detection removed with iptv-epg.org
                 providerEpgUrl, 
                 playlistEpgUrl, 
                 customEpgUrls,
-                hasUsableTvgIds,
                 preferredLanguageCode: appLanguage,
                 providerHeaders: providerHeaders);
 
@@ -5636,7 +5633,8 @@ public partial class MainViewModel : ObservableObject
                         daysAhead: 7, 
                         progress: epgProgressReporter,
                         clearBeforeSave: source.ClearBeforeLoad,
-                        headers: source.Headers); // ATOMIC CLEAR: Only clear if we actually start saving programs
+                        headers: source.Headers,
+                        preferredLanguageCode: source.PreferredLanguageCode); // ATOMIC CLEAR: Only clear if we actually start saving programs
 
                     if (loadedPrograms > 0)
                     {

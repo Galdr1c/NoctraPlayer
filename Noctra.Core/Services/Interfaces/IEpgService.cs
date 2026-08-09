@@ -37,8 +37,9 @@ public interface IEpgService
     /// <param name="progress">İlerleme raporlama arayüzü</param>
     /// <param name="clearBeforeSave">Veri kaydedilmeden hemen önce mevcut veriyi siler (Sadece başarılı yüklemede)</param>
     /// <param name="headers">Özel HTTP başlıkları (örn: Stalker MAC adresi)</param>
+    /// <param name="preferredLanguageCode">Çok dilli XMLTV metinlerinde tercih edilen uygulama dili</param>
     /// <returns>Yüklenen ve eslesen program sayisi</returns>
-    Task<int> LoadEpgAsync(string epgUrl, bool isPrimary, List<Channel>? channelsForMapping = null, int daysAhead = 1, IProgress<EpgProgressInfo>? progress = null, bool clearBeforeSave = false, IDictionary<string, string>? headers = null);
+    Task<int> LoadEpgAsync(string epgUrl, bool isPrimary, List<Channel>? channelsForMapping = null, int daysAhead = 1, IProgress<EpgProgressInfo>? progress = null, bool clearBeforeSave = false, IDictionary<string, string>? headers = null, string? preferredLanguageCode = null);
 
     /// <summary>
     /// EPG veritabanını temizler

@@ -42,7 +42,7 @@ public class EpgService : IEpgService
         LastError = null;
     }
 
-    public async Task<int> LoadEpgAsync(string epgUrl, bool isPrimary, List<Channel>? channelsForMapping = null, int daysAhead = 1, IProgress<EpgProgressInfo>? progress = null, bool clearBeforeSave = false, IDictionary<string, string>? headers = null)
+    public async Task<int> LoadEpgAsync(string epgUrl, bool isPrimary, List<Channel>? channelsForMapping = null, int daysAhead = 1, IProgress<EpgProgressInfo>? progress = null, bool clearBeforeSave = false, IDictionary<string, string>? headers = null, string? preferredLanguageCode = null)
     {
         if (!await _loadSemaphore.WaitAsync(0).ConfigureAwait(false))
         {
@@ -60,6 +60,8 @@ public class EpgService : IEpgService
                 _logger?.LogInformation("EPG is disabled in settings, skipping load.");
                 return 0;
             }
+
+            preferredLanguageCode ??= _settingsService.Settings.Language;
 
             LastError = null; // Clear previous error
             if (string.IsNullOrEmpty(epgUrl)) return 0;
@@ -304,30 +306,41 @@ public class EpgService : IEpgService
                                 StartTime = startTime,
                                 EndTime = endTime
                             };
+                            var localizedTitles = new List<KeyValuePair<string?, string>>();
+                            var localizedDescriptions = new List<KeyValuePair<string?, string>>();
 
                             using var subReader = reader.ReadSubtree();
-                            while (await subReader.ReadAsync().ConfigureAwait(false))
+                            while (!subReader.EOF)
                             {
-                                if (subReader.NodeType == System.Xml.XmlNodeType.Element)
+                                if (subReader.NodeType == System.Xml.XmlNodeType.Element &&
+                                    subReader.LocalName is "title" or "desc")
                                 {
-                                    switch (subReader.Name)
+                                    var elementName = subReader.LocalName;
+                                    var language = subReader.GetAttribute("lang")
+                                        ?? subReader.GetAttribute("lang", "http://www.w3.org/XML/1998/namespace");
+                                    var value = await subReader.ReadElementContentAsStringAsync().ConfigureAwait(false);
+
+                                    if (elementName == "title")
                                     {
-                                        case "title":
-                                            programTemplate.Title = await subReader.ReadElementContentAsStringAsync().ConfigureAwait(false);
-                                            break;
-                                        case "desc":
-                                            if (string.IsNullOrWhiteSpace(programTemplate.Description))
-                                            {
-                                                var desc = await subReader.ReadElementContentAsStringAsync().ConfigureAwait(false);
-                                                if (!string.IsNullOrWhiteSpace(desc))
-                                                {
-                                                    programTemplate.Description = desc;
-                                                }
-                                            }
-                                            break;
+                                        localizedTitles.Add(new KeyValuePair<string?, string>(language, value));
                                     }
+                                    else
+                                    {
+                                        localizedDescriptions.Add(new KeyValuePair<string?, string>(language, value));
+                                    }
+
+                                    // ReadElementContentAsStringAsync already advances to the next node.
+                                    continue;
+                                }
+
+                                if (!await subReader.ReadAsync().ConfigureAwait(false))
+                                {
+                                    break;
                                 }
                             }
+
+                            programTemplate.Title = SelectLocalizedText(localizedTitles, preferredLanguageCode) ?? string.Empty;
+                            programTemplate.Description = SelectLocalizedText(localizedDescriptions, preferredLanguageCode);
 
                             foreach (var tId in targetIds)
                             {
@@ -389,6 +402,73 @@ public class EpgService : IEpgService
         {
             _loadSemaphore.Release();
         }
+    }
+
+    private static string? SelectLocalizedText(
+        IReadOnlyList<KeyValuePair<string?, string>> values,
+        string? preferredLanguageCode)
+    {
+        var candidates = values
+            .Where(value => !string.IsNullOrWhiteSpace(value.Value))
+            .Select(value => new
+            {
+                Language = NormalizeXmlTvLanguageCode(value.Key),
+                Value = value.Value.Trim()
+            })
+            .ToList();
+
+        if (candidates.Count == 0)
+        {
+            return null;
+        }
+
+        var preferredLanguage = NormalizeXmlTvLanguageCode(preferredLanguageCode);
+        if (preferredLanguage != null)
+        {
+            var exactMatch = candidates.FirstOrDefault(candidate =>
+                string.Equals(candidate.Language, preferredLanguage, StringComparison.Ordinal));
+            if (exactMatch != null)
+            {
+                return exactMatch.Value;
+            }
+
+            var preferredBaseLanguage = GetBaseLanguage(preferredLanguage);
+            var baseLanguageMatch = candidates.FirstOrDefault(candidate =>
+                candidate.Language != null &&
+                string.Equals(GetBaseLanguage(candidate.Language), preferredBaseLanguage, StringComparison.Ordinal));
+            if (baseLanguageMatch != null)
+            {
+                return baseLanguageMatch.Value;
+            }
+        }
+
+        return candidates.FirstOrDefault(candidate => candidate.Language == null)?.Value
+            ?? candidates[0].Value;
+    }
+
+    private static string? NormalizeXmlTvLanguageCode(string? languageCode)
+    {
+        if (string.IsNullOrWhiteSpace(languageCode))
+        {
+            return null;
+        }
+
+        var normalized = languageCode.Trim().Replace('_', '-').ToLowerInvariant();
+        return normalized switch
+        {
+            "tur" => "tr",
+            "eng" => "en",
+            "deu" or "ger" => "de",
+            "fra" or "fre" => "fr",
+            "spa" => "es",
+            _ => normalized
+        };
+    }
+
+    private static string GetBaseLanguage(string languageCode)
+    {
+        var separatorIndex = languageCode.IndexOf('-');
+        return separatorIndex > 0 ? languageCode[..separatorIndex] : languageCode;
     }
 
     private static async Task AddProgramsDeduplicatedAsync(AppDbContext context, List<EpgProgram> programs)

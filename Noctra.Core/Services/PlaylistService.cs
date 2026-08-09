@@ -244,7 +244,6 @@ public partial class PlaylistService : IPlaylistService
                     var appLanguage = (_settingsService?.Settings?.Language ?? "tr").ToUpperInvariant();
 
                     var epgSources = _epgSourceResolver.ResolveEpgSources(
-                        new List<string>(), // Country based detection removed with iptv-epg.org
                         providerEpgUrl: _epgSourceResolver.TryInferXtreamEpgUrl(sourceUrl),
                         m3uEpgUrl: NormalizeEpgUrl(detectedEpgUrl),
                         preferredLanguageCode: appLanguage);
@@ -262,7 +261,7 @@ public partial class PlaylistService : IPlaylistService
                         try
                         {
                             System.Diagnostics.Debug.WriteLine($"[AutoEPG] Loading from {source.Url}");
-                            var loadedPrograms = await _epgService.LoadEpgAsync(source.Url, source.IsPrimary, channelSnapshot, clearBeforeSave: source.ClearBeforeLoad);
+                            var loadedPrograms = await _epgService.LoadEpgAsync(source.Url, source.IsPrimary, channelSnapshot, clearBeforeSave: source.ClearBeforeLoad, preferredLanguageCode: source.PreferredLanguageCode);
                             if (loadedPrograms > 0)
                             {
                                 usedEpgUrl = source.Url;
@@ -2310,11 +2309,8 @@ WHERE PlaylistId = {playlistId}
         playlist.DetectedCountry = countryCandidates[0];
 
         var appLanguage = (_settingsService?.Settings?.Language ?? "tr").ToUpperInvariant();
-        var majorCountries = countryCandidates.Take(2).ToList();
-
-        // EPG kaynaklarını çöz (çoklu ülke + tekilleştirme)
+        // EPG kaynaklarını güven sırasına göre çöz ve uygulama dilini import zincirine taşı.
         var epgSources = _epgSourceResolver.ResolveEpgSources(
-            majorCountries,
             m3uEpgUrl: playlist.EpgUrl,
             preferredLanguageCode: appLanguage);
 
@@ -2331,7 +2327,7 @@ WHERE PlaylistId = {playlistId}
                 System.Diagnostics.Debug.WriteLine($"[PlaylistService] RefreshEpg trying: {source.Type} - {source.Url}");
 
                 var beforeCount = await _epgService.GetTotalProgramCountAsync();
-                var loaded = await _epgService.LoadEpgAsync(source.Url, source.IsPrimary, channels, clearBeforeSave: source.ClearBeforeLoad);
+                var loaded = await _epgService.LoadEpgAsync(source.Url, source.IsPrimary, channels, clearBeforeSave: source.ClearBeforeLoad, preferredLanguageCode: source.PreferredLanguageCode);
                 var afterCount = await _epgService.GetTotalProgramCountAsync();
                 
                 if (loaded == 0)

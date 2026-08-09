@@ -33,6 +33,12 @@ Broad country-name patterns remain available only as general playlist heuristics
 
 The importer buffers display-name variants for an XMLTV channel, resolves a single target set, and assigns that set once. Exact `tvg-id` conflicts do not fall back to names. Existing EPG rows must be cleared and re-imported after deployment so previously duplicated programmes disappear.
 
+## Programme text language
+
+XMLTV programme titles and descriptions may contain several values distinguished by a `lang` attribute. The importer selects title and description independently and deterministically: an exact preferred locale match first, then the same base language (for example `tr-TR` and `tr`), then an untagged value, and finally the first non-empty value. ISO 639-2 aliases used by XMLTV feeds (`tur`, `eng`, `deu`/`ger`, `fra`/`fre`, and `spa`) map to their two-letter language codes.
+
+The application language is carried explicitly from `EpgSourceResolver` through `EpgSource` into `IEpgService.LoadEpgAsync`; XML element order must not decide the displayed language. Source trust order remains Custom URL, Provider, then M3U header. Country lists are not used to guess a source from arbitrary URLs because the candidates do not contain reliable source-country metadata.
+
 ## Verification
 
-Focused tests cover TRT/TGRT rejection, ambiguous fuzzy rejection, exact `tvg-id` precedence over conflicting display names, country hints for generic channel brands, neutral unknown countries, preservation of exact duplicate-stream fan-out, and distinct normalized identities for `Plus`, `Extra`, `Max`, and `SAT.1` channels. Existing EPG matching and project tests must remain green.
+Focused tests cover TRT/TGRT rejection, ambiguous fuzzy rejection, exact `tvg-id` precedence over conflicting display names, country hints for generic channel brands, neutral unknown countries, preservation of exact duplicate-stream fan-out, distinct normalized identities for `Plus`, `Extra`, `Max`, and `SAT.1` channels, preferred XMLTV title/description language, locale/base-language matching, and deterministic fallback behavior. Existing EPG matching and project tests must remain green.

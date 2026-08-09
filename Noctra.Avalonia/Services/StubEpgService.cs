@@ -9,7 +9,7 @@ public sealed class StubEpgService : IEpgService
     public DateTime? LastUpdated => null;
     public string? LastError => null;
 
-    public Task<int> LoadEpgAsync(string epgUrl, bool isPrimary, List<Channel>? channelsForMapping = null, int daysAhead = 1, IProgress<EpgProgressInfo>? progress = null, bool clearBeforeSave = false, IDictionary<string, string>? headers = null)
+    public Task<int> LoadEpgAsync(string epgUrl, bool isPrimary, List<Channel>? channelsForMapping = null, int daysAhead = 1, IProgress<EpgProgressInfo>? progress = null, bool clearBeforeSave = false, IDictionary<string, string>? headers = null, string? preferredLanguageCode = null)
         => Task.FromResult(0);
 
     public Task ClearEpgAsync() => Task.CompletedTask;
