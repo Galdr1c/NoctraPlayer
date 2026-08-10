@@ -39,7 +39,7 @@ public class PlayerOverlayManager
         _vm.IsVisible = true;
         if (CanAutoHideOverlay())
         {
-            _vm._autoHideTimer.Change(4000, Timeout.Infinite);
+            _vm._autoHideTimer.Change(PlayerViewModel.OverlayAutoHideDelayMs, Timeout.Infinite);
         }
     }
 

@@ -1602,6 +1602,12 @@ namespace Noctra.Tests
         }
 
         [Fact]
+        public void OverlayAutoHideDelayMs_IsFiveSeconds()
+        {
+            Assert.Equal(5000, PlayerViewModel.OverlayAutoHideDelayMs);
+        }
+
+        [Fact]
         public void StartSeeking_PreventsOverlayAutoHideWhileSeekIsActive()
         {
             var ctx = new PlayerTestContext();

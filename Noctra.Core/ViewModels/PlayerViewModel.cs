@@ -22,7 +22,7 @@ namespace Noctra.ViewModels;
 /// </summary>
 public partial class PlayerViewModel : ObservableObject, IDisposable
 {
-    private const double OverlayAutoHideDelayMs = 4000;
+    internal const int OverlayAutoHideDelayMs = 5000;
     public const float PlaybackRateHalf = 0.5f;
     public const float PlaybackRateThreeQuarters = 0.75f;
     public const float PlaybackRateNormal = 1.0f;

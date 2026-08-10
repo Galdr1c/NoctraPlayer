@@ -8,6 +8,7 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using Microsoft.Extensions.DependencyInjection;
 using Noctra.Mobile.Localization;
 using Noctra.Mobile.Services;
@@ -769,8 +770,49 @@ public partial class MobilePlayerView : UserControl
             return;
         }
 
+        // Tıklanan eleman kontrol elemanları (top overlay, transport bar, buton, slider, sheet vs.) ise
+        // bu etkileşim kontrolleri kazara kapatmamalı, aksine otomatik gizleme zamanlayıcısını yenilemelidir.
+        if (IsInteractiveControlSource(e.Source))
+        {
+            _boundVm?.RestartAutoHideTimer();
+            return;
+        }
+
         _singleTapTimer.Stop();
         _singleTapTimer.Start();
+    }
+
+    private bool IsInteractiveControlSource(object? source)
+    {
+        if (source is not Visual visual)
+        {
+            return false;
+        }
+
+        if (ReferenceEquals(visual, LeftZone) ||
+            ReferenceEquals(visual, RightZone) ||
+            ReferenceEquals(visual, VideoSurfaceSlot) ||
+            ReferenceEquals(visual, VideoSurfaceLayer))
+        {
+            return false;
+        }
+
+        for (var current = visual; current is not null; current = current.GetVisualParent())
+        {
+            if (ReferenceEquals(current, PlayerControls) ||
+                current is MobilePlayerTopOverlay ||
+                current is MobilePlayerSheets ||
+                current is MobilePlayerEpgPanel ||
+                current is MobileUpsellView ||
+                current is Button ||
+                current is Slider ||
+                current is ToggleSwitch)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private void ExecuteSingleTapToggle()
