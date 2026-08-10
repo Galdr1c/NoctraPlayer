@@ -34,15 +34,19 @@ public sealed class ReviewPromptTracker
     public void RecordProviderAdded()
     {
         var settings = _settingsService.Settings;
-        settings.ReviewPromptProviderAddCount++;
-        _ = SaveBestEffortAsync();
+        if (settings.ReviewPromptProviderAddCount < ReviewPromptPolicy.MinimumProviderAdds)
+        {
+            settings.ReviewPromptProviderAddCount++;
+            _ = SaveBestEffortAsync();
+        }
         RaisePromptRequestedIfEligible();
     }
 
     /// <summary>
     /// Records a completed playback session with the real watched duration.
     /// Only sessions that reached a meaningful length increment the session
-    /// count; cumulative watch time always accrues.
+    /// count; cumulative watch time accrues up to the eligibility threshold
+    /// and is then capped so the settings file does not grow without bound.
     /// </summary>
     public void RecordPlaybackSession(TimeSpan watchedDuration)
     {
@@ -52,9 +56,17 @@ public sealed class ReviewPromptTracker
         }
 
         var settings = _settingsService.Settings;
-        settings.ReviewPromptTotalPlaybackSeconds += watchedDuration.TotalSeconds;
+        var cap = ReviewPromptPolicy.MinimumTotalPlayback.TotalSeconds;
 
-        if (watchedDuration >= ReviewPromptPolicy.MeaningfulPlaybackSession)
+        if (settings.ReviewPromptTotalPlaybackSeconds < cap)
+        {
+            settings.ReviewPromptTotalPlaybackSeconds = Math.Min(
+                cap,
+                settings.ReviewPromptTotalPlaybackSeconds + watchedDuration.TotalSeconds);
+        }
+
+        if (watchedDuration >= ReviewPromptPolicy.MeaningfulPlaybackSession &&
+            settings.ReviewPromptPlaybackCount < ReviewPromptPolicy.MinimumPlaybackSessions)
         {
             settings.ReviewPromptPlaybackCount++;
         }

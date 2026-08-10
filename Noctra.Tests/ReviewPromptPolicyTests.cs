@@ -18,7 +18,7 @@ namespace Noctra.Tests
             ReviewPromptLaunchCount = 3,
             ReviewPromptProviderAddCount = 1,
             ReviewPromptPlaybackCount = 3,
-            ReviewPromptTotalPlaybackSeconds = 60 * 60 // 60 dk
+            ReviewPromptTotalPlaybackSeconds = 30 * 60 // 30 dk (minimum esik)
         };
 
         [Fact]
@@ -61,9 +61,9 @@ namespace Noctra.Tests
 
         [Theory]
         [InlineData(0)]
-        [InlineData(30 * 60)]
-        [InlineData(59 * 60 + 59)]
-        public void IsEligible_WhenTotalPlaybackBelowOneHour_ReturnsFalse(double totalSeconds)
+        [InlineData(10 * 60)]
+        [InlineData(30 * 60 - 1)]
+        public void IsEligible_WhenTotalPlaybackBelowThirtyMinutes_ReturnsFalse(double totalSeconds)
         {
             var settings = SettingsWithAllCriteriaMet();
             settings.ReviewPromptTotalPlaybackSeconds = totalSeconds;
@@ -152,10 +152,26 @@ namespace Noctra.Tests
         {
             var (tracker, _, settings) = CreateTracker();
 
+            tracker.RecordPlaybackSession(TimeSpan.FromMinutes(10));
             tracker.RecordPlaybackSession(TimeSpan.FromMinutes(20));
-            tracker.RecordPlaybackSession(TimeSpan.FromMinutes(40));
 
-            Assert.Equal(60 * 60, settings.ReviewPromptTotalPlaybackSeconds, precision: 3);
+            // 10 + 20 = 30 dk = esige tam ulasilir, cap'te kesilebilir
+            Assert.Equal(30 * 60, settings.ReviewPromptTotalPlaybackSeconds, precision: 3);
+        }
+
+        [Fact]
+        public void RecordPlaybackSession_DoesNotExceedCap()
+        {
+            var (tracker, _, settings) = CreateTracker();
+
+            // Esigi asacak kadar cok izleme
+            tracker.RecordPlaybackSession(TimeSpan.FromMinutes(20));
+            tracker.RecordPlaybackSession(TimeSpan.FromMinutes(20));
+            tracker.RecordPlaybackSession(TimeSpan.FromMinutes(20));
+
+            // Cap: MinimumTotalPlayback = 30 dk = 1800 s
+            Assert.Equal(ReviewPromptPolicy.MinimumTotalPlayback.TotalSeconds,
+                settings.ReviewPromptTotalPlaybackSeconds, precision: 3);
         }
 
         [Fact]
@@ -197,7 +213,7 @@ namespace Noctra.Tests
             settings.ReviewPromptLaunchCount = 3;
             settings.ReviewPromptProviderAddCount = 0;
             settings.ReviewPromptPlaybackCount = 3;
-            settings.ReviewPromptTotalPlaybackSeconds = 3600;
+            settings.ReviewPromptTotalPlaybackSeconds = 30 * 60; // 30 dk = minimum esik
 
             var raised = false;
             tracker.PromptRequested += () => raised = true;
@@ -228,7 +244,7 @@ namespace Noctra.Tests
             settings.ReviewPromptLaunchCount = 3;
             settings.ReviewPromptProviderAddCount = 1;
             settings.ReviewPromptPlaybackCount = 3;
-            settings.ReviewPromptTotalPlaybackSeconds = 3600;
+            settings.ReviewPromptTotalPlaybackSeconds = 30 * 60; // 30 dk = minimum esik
             settings.ReviewPromptSnoozedUntilUtc = DateTime.UtcNow.AddDays(7);
 
             var raised = false;
