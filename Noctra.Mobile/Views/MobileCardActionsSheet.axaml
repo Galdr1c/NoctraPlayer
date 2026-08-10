@@ -42,7 +42,7 @@
 
     <Border x:Name="SheetSurface"
             MaxWidth="520"
-            Background="{DynamicResource Bg0Color}"
+            Background="{DynamicResource Bg0Brush}"
             BorderBrush="{DynamicResource BorderBrush}"
             BorderThickness="1,1,1,0"
             CornerRadius="8,8,0,0"

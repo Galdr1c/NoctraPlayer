@@ -58,7 +58,7 @@
   <SolidColorBrush x:Key="InteractiveHoverBrush" Color="#ECECEC" />
   <SolidColorBrush x:Key="InteractivePressedBrush" Color="#E0E0E0" />
   <SolidColorBrush x:Key="ScrollBarThumbBrush" Color="#CCCCCC" Opacity="0.6" />
-  <SolidColorBrush x:Key="ScrollBarHoverBrush" Color="{StaticResource AccentBrush}" />
+  <SolidColorBrush x:Key="ScrollBarHoverBrush" Color="#8B5CF6" />
   <SolidColorBrush x:Key="TextControlSelectionHighlightColor" Color="#8B5CF6" />
 
   <LinearGradientBrush x:Key="PrimaryGradientBrush" StartPoint="0,0" EndPoint="1,1">

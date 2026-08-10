@@ -45,7 +45,7 @@
                    Foreground="{DynamicResource PlayerOverlaySheetSecondaryTextBrush}" />
         <TextBlock Text="{Binding QualityResolutionText}"
                    FontSize="{Binding FTitleM}" LetterSpacing="2.5"
-                   Foreground="{DynamicResource Accent500Color}" />
+                   Foreground="{DynamicResource AccentBrush}" />
       </StackPanel>
       <StackPanel Grid.Column="1" Spacing="2">
         <TextBlock Text="{loc:Translate Player.Quality.Fps}"
@@ -53,7 +53,7 @@
                    Foreground="{DynamicResource PlayerOverlaySheetSecondaryTextBrush}" />
         <TextBlock Text="{Binding QualityFpsText}"
                    FontSize="{Binding FTitleM}" LetterSpacing="2.5"
-                   Foreground="{DynamicResource Accent500Color}" />
+                   Foreground="{DynamicResource AccentBrush}" />
       </StackPanel>
       <StackPanel Grid.Row="1" Spacing="2">
         <TextBlock Text="{loc:Translate Player.Quality.Codec}"
@@ -61,7 +61,7 @@
                    Foreground="{DynamicResource PlayerOverlaySheetSecondaryTextBrush}" />
         <TextBlock Text="{Binding QualityVideoCodecText}"
                    FontSize="{Binding FTitleM}" LetterSpacing="2.5"
-                   Foreground="{DynamicResource Accent500Color}" />
+                   Foreground="{DynamicResource AccentBrush}" />
       </StackPanel>
       <StackPanel Grid.Row="1" Grid.Column="1" Spacing="2">
         <TextBlock Text="{loc:Translate Player.Quality.Bitrate}"
@@ -69,7 +69,7 @@
                    Foreground="{DynamicResource PlayerOverlaySheetSecondaryTextBrush}" />
         <TextBlock Text="{Binding QualityVideoBitrateText}"
                    FontSize="{Binding FTitleM}" LetterSpacing="2.5"
-                   Foreground="{DynamicResource Accent500Color}" />
+                   Foreground="{DynamicResource AccentBrush}" />
       </StackPanel>
     </Grid>
 
