@@ -287,17 +287,30 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private bool _isChannelLoading;
 
+    // Set while a background aggregation is running for the current playlist.
+    // Keeps the Series view in its loading state instead of flashing the empty
+    // state during the (often multi-minute) series aggregation window.
+    [ObservableProperty]
+    private bool _isSeriesAggregationPending;
+
     private int CurrentViewItemCount => ActiveView == AppView.Series ? SeriesViewItems.Count : FilteredChannels.CountedItemCount;
 
     private bool IsContentStillLoading => IsLoading || IsChannelLoading || _isNavigationContentResetPending;
 
-    public bool IsContentLoading => IsContentStillLoading && CurrentViewItemCount == 0;
-    public bool ShowEmptyChannels => !IsContentStillLoading && CurrentViewItemCount == 0;
+    private bool IsSeriesAggregationPendingForCurrentView => ActiveView == AppView.Series && IsSeriesAggregationPending;
+
+    public bool IsContentLoading => (IsContentStillLoading || IsSeriesAggregationPendingForCurrentView) && CurrentViewItemCount == 0;
+    public bool ShowEmptyChannels => !IsContentStillLoading && !IsSeriesAggregationPendingForCurrentView && CurrentViewItemCount == 0;
     public bool ShowContentFilters => !IsContentLoading && !ShowEmptyChannels;
     public bool ShowGroupFilter => ShowContentFilters && Groups.Count > 0;
 
     private static bool IsDummyChannel(Channel c) =>
         c.StreamUrl != null && (c.StreamUrl.StartsWith("xtream-dummy://") || c.StreamUrl.StartsWith("stalker-dummy://"));
+
+    partial void OnIsSeriesAggregationPendingChanged(bool value)
+    {
+        NotifyContentStateChanged();
+    }
 
     partial void OnIsChannelLoadingChanged(bool value)
     {
@@ -481,6 +494,19 @@ public partial class MainViewModel : ObservableObject
             });
         };
 
+        // When background aggregation starts, keep the Series view in its
+        // loading state so it never flashes the empty state mid-aggregation.
+        _mediaService.OnAggregationStarted += (playlistId) =>
+        {
+            _dispatcherService.BeginInvoke(() =>
+            {
+                if (SelectedPlaylist?.Id == playlistId)
+                {
+                    IsSeriesAggregationPending = true;
+                }
+            });
+        };
+
         // When background aggregation completes, reload series data
         _mediaService.OnAggregationCompleted += (playlistId) =>
         {
@@ -490,6 +516,7 @@ public partial class MainViewModel : ObservableObject
                 {
                     try
                     {
+                        IsSeriesAggregationPending = false;
                         if (IsChannelLoading && ActiveView != AppView.Series)
                         {
                             Interlocked.Exchange(ref _deferredSeriesRefreshAfterChannelLoad, 1);
@@ -1084,6 +1111,7 @@ public partial class MainViewModel : ObservableObject
                                                                     catch (Exception ex)
                                                                     {
                                                                         _logger?.LogError(ex, "[Xtream] AggregateContent failed for playlist {PlaylistId}", playlist.Id);
+                                                                        BeginInvokeIfProfileScopeActive(profileScope, () => IsSeriesAggregationPending = false);
                                                                     }
                                                                     await CompleteProviderImportJobAsync(importJob, "Completed", profileScope.Token);
                                                                 }
@@ -2311,6 +2339,8 @@ public partial class MainViewModel : ObservableObject
 
     partial void OnSelectedPlaylistChanged(Playlist? value)
     {
+        IsSeriesAggregationPending = false;
+
         if (_suppressSelectedPlaylistChanged)
         {
             return;

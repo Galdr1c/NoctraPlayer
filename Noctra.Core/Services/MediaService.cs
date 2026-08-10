@@ -13,6 +13,13 @@ public partial class MediaService : IMediaService
 
     public event Action<int>? OnAggregationCompleted;
 
+    public event Action<int>? OnAggregationStarted;
+
+    public void RaiseAggregationStarted(int playlistId)
+    {
+        OnAggregationStarted?.Invoke(playlistId);
+    }
+
     public void RaiseAggregationCompleted(int playlistId)
     {
         OnAggregationCompleted?.Invoke(playlistId);
@@ -25,6 +32,10 @@ public partial class MediaService : IMediaService
 
     public async Task AggregateContentAsync(int playlistId, CancellationToken cancellationToken = default)
     {
+        // Notify consumers that aggregation for this playlist has begun so UI
+        // states (e.g. empty-state vs loading) can stay correct while it runs.
+        RaiseAggregationStarted(playlistId);
+
         await _aggregateLock.WaitAsync(cancellationToken);
         try
         {

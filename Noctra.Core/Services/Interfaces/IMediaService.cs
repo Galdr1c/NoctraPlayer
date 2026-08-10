@@ -8,9 +8,19 @@ namespace Noctra.Services.Interfaces;
 public interface IMediaService
 {
     /// <summary>
+    /// Fired when background aggregation for a playlist starts
+    /// </summary>
+    event Action<int>? OnAggregationStarted;
+
+    /// <summary>
     /// Fired when background aggregation for a playlist completes successfully
     /// </summary>
     event Action<int>? OnAggregationCompleted;
+
+    /// <summary>
+    /// Raises the OnAggregationStarted event (for cross-service invocation)
+    /// </summary>
+    void RaiseAggregationStarted(int playlistId);
 
     /// <summary>
     /// Raises the OnAggregationCompleted event (for cross-service invocation)

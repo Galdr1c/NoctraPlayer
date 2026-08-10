@@ -231,6 +231,7 @@ public partial class PlaylistService : IPlaylistService
                 catch (Exception ex)
                 {
                     System.Diagnostics.Debug.WriteLine($"[PlaylistService] Background aggregation failed: {ex.Message}");
+                    _mediaService.RaiseAggregationCompleted(aggregationPlaylistId);
                 }
             });
 
@@ -1149,6 +1150,7 @@ WHERE PlaylistId = {playlistId}
                 catch (Exception ex)
                 {
                     System.Diagnostics.Debug.WriteLine($"[PlaylistService] Background aggregation (file) failed: {ex.Message}");
+                    _mediaService.RaiseAggregationCompleted(fileAggregationPlaylistId);
                 }
             });
 
@@ -1455,6 +1457,7 @@ WHERE PlaylistId = {playlistId}
             {
                 await LogDetailedErrorAsync("RefreshAsync_Aggregation", ex);
                 System.Diagnostics.Debug.WriteLine($"[PlaylistService] Background aggregation (refresh) failed: {ex.Message}");
+                _mediaService.RaiseAggregationCompleted(refreshAggregationPlaylistId);
             }
         });
 
@@ -1676,6 +1679,7 @@ WHERE PlaylistId = {playlistId}
                 catch (Exception ex)
                 {
                     _logger?.LogWarning(ex, "Background aggregation failed for playlist {PlaylistId}", aggregationPlaylistId);
+                    _mediaService.RaiseAggregationCompleted(aggregationPlaylistId);
                 }
             });
 
