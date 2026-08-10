@@ -94,6 +94,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IProfilePinService, ProfilePinService>();
         services.AddSingleton<ReviewPromptFallbackHandler>();
         services.AddSingleton<ReviewPromptTracker>();
+        services.AddSingleton<StartupWorkCoordinator>();
 
         return services;
     }

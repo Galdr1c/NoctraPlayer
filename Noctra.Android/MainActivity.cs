@@ -18,6 +18,7 @@ using Noctra.Mobile.Services;
 using Noctra.Services;
 using Noctra.Services.Interfaces;
 using Noctra.Models;
+using Noctra.Core.Services;
 
 namespace Noctra.Android;
 
@@ -102,7 +103,17 @@ public class MainActivity : AvaloniaMainActivity
         }
 #endif
 
-        Window?.DecorView?.Post(() => PerformanceTrace.Mark("android.first_ui_turn"));
+        Window?.DecorView?.Post(() =>
+        {
+            PerformanceTrace.Mark("android.first_ui_turn");
+            // İlk kare çizildi: ertelenen startup işleri (EPG sync, history
+            // rayları...) artık koordinatör üzerinden ilerleyebilir.
+            if (Avalonia.Application.Current is Noctra.Mobile.App app &&
+                app.Services?.GetService<StartupWorkCoordinator>() is { } coordinator)
+            {
+                coordinator.MarkFirstFrameRendered();
+            }
+        });
     }
 
     private void ConfigureAvaloniaOverlaySurface(int remainingAttempts = 2)

@@ -78,6 +78,7 @@ public partial class MainViewModel : ObservableObject
     private readonly IPlatformActionService _platformActions;
     private readonly IStorageInfoService _storageInfo;
     private readonly ReviewPromptTracker? _reviewPromptTracker;
+    private readonly StartupWorkCoordinator _startupWorkCoordinator;
     private readonly DateTime _downloadCenterSessionStartUtc = DateTime.UtcNow;
     private readonly ConcurrentDictionary<string, byte> _pendingVisualEnrichmentKeys = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<int, byte> _pendingSeriesMetadataEnrichmentIds = new();
@@ -413,7 +414,8 @@ public partial class MainViewModel : ObservableObject
         IImportJobService? importJobService = null,
         IContentQueryService? contentQueryService = null,
         IStorageInfoService? storageInfo = null,
-        ReviewPromptTracker? reviewPromptTracker = null)
+        ReviewPromptTracker? reviewPromptTracker = null,
+        StartupWorkCoordinator? startupWorkCoordinator = null)
     {
         _localizationService = localizationService;
         _settingsService = settingsService;
@@ -445,6 +447,7 @@ public partial class MainViewModel : ObservableObject
         _platformActions = platformActions ?? new DesktopPlatformActionService();
         _storageInfo = storageInfo ?? new DesktopStorageInfoService();
         _reviewPromptTracker = reviewPromptTracker;
+        _startupWorkCoordinator = startupWorkCoordinator ?? StartupWorkCoordinator.Immediate;
         RebuildSortOptions();
         StatusMessage = _localizationService.GetString("Common.Ready");
         _downloadLandingStoredBytes = 0;
@@ -2493,7 +2496,11 @@ public partial class MainViewModel : ObservableObject
 
     private void StartPostChannelLoadBackgroundTasks()
     {
-        _ = RunPostChannelLoadBackgroundTasksAsync();
+        // EPG sync ilk kareden önce başlamasın; ağ/DB işi ilk frame ile yarışmasın.
+        _ = _startupWorkCoordinator.RunAsync(
+            "post-channel-load-epg",
+            RunPostChannelLoadBackgroundTasksAsync,
+            StartupWorkStage.AfterFirstFrame);
     }
 
     private void DeferPostChannelLoadBackgroundTasks()
@@ -2594,22 +2601,14 @@ public partial class MainViewModel : ObservableObject
             _cachedEpisodeContinue = null;
             UpdateSeriesViewItems();
 
-            // Arka planda tüm dizi ilerlemelerini verimli şekilde yükle (Bulk sync)
-            if (CurrentProfileId.HasValue && _allSeriesCache.Count > 0)
-            {
-                _ = Task.Run(async () => {
-                    await _dispatcherService.InvokeAsync(async () => {
-                        await UpdateHistoryBucketsAsync();
-                        await UpdateContinueWatchingRailAsync();
-                    });
-                });
-            }
-            else
-            {
-                // Profil yoksa direkt UI güncellemesi yap
-                await UpdateContinueWatchingRailAsync();
-                await UpdateHistoryBucketsAsync();
-            }
+            // Arka planda tüm dizi ilerlemelerini verimli şekilde yükle (Bulk sync).
+            // Dikkat: rails işini UI thread'e taşıma! Her iki metod da içindeki
+            // koleksiyon güncellemelerini _dispatcherService üzerinden marshal eder;
+            // EF sorgularının thread pool'da kalması startup ANR'sini önler.
+            _ = _startupWorkCoordinator.RunAsync(
+                "home-rails",
+                RunHomeRailsBackgroundAsync,
+                StartupWorkStage.Background);
             return;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -2621,6 +2620,24 @@ public partial class MainViewModel : ObservableObject
             _logger?.LogError(ex, "Error loading series cache for home content");
         }
 
+    }
+
+    /// <summary>
+    /// Home raylarını (History + Continue Watching) thread pool'da yeniler.
+    /// Her iki metod da son UI uygulamasını _dispatcherService üzerinden
+    /// marshal eder, bu yüzden çağrıyı UI thread'e taşımak gereksiz ve zararlıdır.
+    /// </summary>
+    private async Task RunHomeRailsBackgroundAsync()
+    {
+        try
+        {
+            await UpdateHistoryBucketsAsync();
+            await UpdateContinueWatchingRailAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Background home rail refresh failed");
+        }
     }
 
     private async Task UpdateContinueWatchingRailAsync()
@@ -6525,7 +6542,11 @@ public partial class MainViewModel : ObservableObject
 
     private async Task UpdateHistoryBucketsAsync(IEnumerable<Channel>? sourceChannels = null)
     {
-        var historySnapshot = (sourceChannels ?? HistoryChannels).ToList();
+        // HistoryChannels UI-bound bir koleksiyondur; thread pool'dan okunursa
+        // eşzamanlı UI mutasyonuyla yarışabilir. Snapshot okumayı dispatcher'a marshal et.
+        var historySnapshot = sourceChannels != null
+            ? sourceChannels.ToList()
+            : await _dispatcherService.InvokeAsync(() => HistoryChannels.ToList());
         SetItems(HistoryLiveChannels, historySnapshot.Where(c => c.Type == ChannelType.Live));
         _dispatcherService.Invoke(() => OnPropertyChanged(nameof(HistoryLiveChannels)));
         SetItems(HistoryVodChannels, historySnapshot.Where(c => c.Type == ChannelType.VOD));
