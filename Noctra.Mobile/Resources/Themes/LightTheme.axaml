@@ -121,7 +121,6 @@
   <!-- Player overlays intentionally stay dark in every app theme for video readability. -->
   <SolidColorBrush x:Key="PlayerSurfaceBrush" Color="#000000" />
   <SolidColorBrush x:Key="PlayerOverlayPanelBrush" Color="#E60A0A0A" />
-  <SolidColorBrush x:Key="PlayerOverlaySheetBrush" Color="#F20A0A0A" />
   <SolidColorBrush x:Key="PlayerOverlayButtonBrush" Color="#99000000" />
   <SolidColorBrush x:Key="PlayerOverlayStrongBrush" Color="#E6000000" />
   <SolidColorBrush x:Key="PlayerOverlayShieldBrush" Color="#B3000000" />
@@ -130,6 +129,16 @@
   <SolidColorBrush x:Key="PlayerOverlayBorderBrush" Color="#40FFFFFF" />
   <SolidColorBrush x:Key="NextEpisodeHighlightColor" Color="#901E103F" />
   <SolidColorBrush x:Key="NextEpisodeCancel" Color="#DDE50914" />
+
+  <!-- Player sheet panels follow the app theme so they feel native in light mode. -->
+  <SolidColorBrush x:Key="PlayerOverlaySheetBrush" Color="#F2FAFAFA" />
+  <SolidColorBrush x:Key="PlayerOverlaySheetTextBrush" Color="#1A1535" />
+  <SolidColorBrush x:Key="PlayerOverlaySheetSecondaryTextBrush" Color="#4A4565" />
+  <SolidColorBrush x:Key="PlayerOverlaySheetMutedTextBrush" Color="#6A6585" />
+  <SolidColorBrush x:Key="PlayerOverlaySheetBorderBrush" Color="#DCDCDC" />
+  <SolidColorBrush x:Key="PlayerOverlaySheetHoverBrush" Color="#ECECEC" />
+  <SolidColorBrush x:Key="PlayerOverlaySheetPressedBrush" Color="#E0E0E0" />
+  <SolidColorBrush x:Key="PlayerOverlaySheetSurface1Brush" Color="#EBEBEB" />
 
   <LinearGradientBrush x:Key="PlayerTopGradientBrush" StartPoint="0%,0%" EndPoint="0%,100%">
     <GradientStop Color="#CC000000" Offset="0" />
@@ -151,7 +160,7 @@
   <BoxShadows x:Key="DefaultShadow">0 2 10 0 #15000000</BoxShadows>
   <BoxShadows x:Key="CardShadow">0 4 15 0 #1A000000</BoxShadows>
   <BoxShadows x:Key="FocusGlow">0 0 6 0 #208B5CF6</BoxShadows>
-  <BoxShadows x:Key="OverlaySheetShadow">0 -10 35 0 #80000000</BoxShadows>
+  <BoxShadows x:Key="OverlaySheetShadow">0 -8 25 0 #30000000</BoxShadows>
 
   <x:Double x:Key="FontSizeH1">32</x:Double>
   <x:Double x:Key="FontSizeH2">24</x:Double>

@@ -127,13 +127,22 @@
   <!-- Player overlays intentionally stay dark in every app theme for video readability. -->
   <SolidColorBrush x:Key="PlayerSurfaceBrush" Color="#000000" />
   <SolidColorBrush x:Key="PlayerOverlayPanelBrush" Color="#E60A0A0A" />
-  <SolidColorBrush x:Key="PlayerOverlaySheetBrush" Color="#F20A0A0A" />
   <SolidColorBrush x:Key="PlayerOverlayButtonBrush" Color="#99000000" />
   <SolidColorBrush x:Key="PlayerOverlayStrongBrush" Color="#E6000000" />
   <SolidColorBrush x:Key="PlayerOverlayShieldBrush" Color="#B3000000" />
   <SolidColorBrush x:Key="PlayerOverlayTextBrush" Color="#FFFFFFFF" />
   <SolidColorBrush x:Key="PlayerOverlaySecondaryTextBrush" Color="#CCFFFFFF" />
   <SolidColorBrush x:Key="PlayerOverlayBorderBrush" Color="#40FFFFFF" />
+
+  <!-- Player sheet panels: dark theme keeps the same dark palette. -->
+  <SolidColorBrush x:Key="PlayerOverlaySheetBrush" Color="#F20A0A0A" />
+  <SolidColorBrush x:Key="PlayerOverlaySheetTextBrush" Color="#FFFFFFFF" />
+  <SolidColorBrush x:Key="PlayerOverlaySheetSecondaryTextBrush" Color="#CCFFFFFF" />
+  <SolidColorBrush x:Key="PlayerOverlaySheetMutedTextBrush" Color="#99FFFFFF" />
+  <SolidColorBrush x:Key="PlayerOverlaySheetBorderBrush" Color="#40FFFFFF" />
+  <SolidColorBrush x:Key="PlayerOverlaySheetHoverBrush" Color="#20FFFFFF" />
+  <SolidColorBrush x:Key="PlayerOverlaySheetPressedBrush" Color="#30FFFFFF" />
+  <SolidColorBrush x:Key="PlayerOverlaySheetSurface1Brush" Color="#1AFFFFFF" />
   <LinearGradientBrush x:Key="PlayerTopGradientBrush" StartPoint="0%,0%" EndPoint="0%,100%">
     <GradientStop Color="#CC000000" Offset="0" />
     <GradientStop Color="#00000000" Offset="1" />

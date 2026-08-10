@@ -14,7 +14,7 @@
       <Setter Property="FocusAdorner" Value="{x:Null}" />
     </Style>
     <Style Selector="Button:focus-visible /template/ ContentPresenter">
-      <Setter Property="Background" Value="{DynamicResource InteractiveHoverBrush}" />
+      <Setter Property="Background" Value="{DynamicResource PlayerOverlaySheetHoverBrush}" />
       <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
       <Setter Property="BoxShadow" Value="{DynamicResource FocusGlow}" />
     </Style>
@@ -26,7 +26,7 @@
     <Border x:Name="SheetSurface"
             MaxWidth="520"
             Background="{DynamicResource PlayerOverlaySheetBrush}"
-            BorderBrush="{DynamicResource BorderBrush}"
+            BorderBrush="{DynamicResource PlayerOverlaySheetBorderBrush}"
             BorderThickness="1,1,1,0"
             CornerRadius="8,8,0,0"
             Margin="16,0"
@@ -51,7 +51,7 @@
             <Border Width="36"
                     Height="4"
                     CornerRadius="2"
-                    Background="{DynamicResource BorderBrush}"
+                    Background="{DynamicResource PlayerOverlaySheetBorderBrush}"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center"
                     Margin="0,10,0,4" />
@@ -104,18 +104,18 @@
                                     HorizontalAlignment="Center" />
                 <TextBlock Text="{loc:Translate Player.Resume.Title}"
                            FontSize="18" FontWeight="Bold"
-                           Foreground="{DynamicResource TextPrimaryBrush}"
+                           Foreground="{DynamicResource PlayerOverlaySheetTextBrush}"
                            HorizontalAlignment="Center" />
               </StackPanel>
-              <Border Background="{DynamicResource Surface1Brush}" CornerRadius="6" Padding="12,8">
+              <Border Background="{DynamicResource PlayerOverlaySheetSurface1Brush}" CornerRadius="6" Padding="12,8">
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
                   <icons:MaterialIcon Kind="ClockOutline" Width="16" Height="16"
-                                      Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center" />
+                                      Foreground="{DynamicResource PlayerOverlaySheetMutedTextBrush}" VerticalAlignment="Center" />
                   <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
                     <TextBlock Text="{loc:Translate Player.Resume.LastPosition}"
-                               Foreground="{DynamicResource TextMutedBrush}" FontSize="12" />
+                               Foreground="{DynamicResource PlayerOverlaySheetMutedTextBrush}" FontSize="12" />
                     <TextBlock Text="{Binding ResumePositionText}"
-                               Foreground="{DynamicResource TextPrimaryBrush}" FontSize="12" FontWeight="Bold" />
+                               Foreground="{DynamicResource PlayerOverlaySheetTextBrush}" FontSize="12" FontWeight="Bold" />
                   </StackPanel>
                 </StackPanel>
               </Border>
@@ -172,6 +172,7 @@
                         HorizontalContentAlignment="Center"
                         VerticalContentAlignment="Center"
                         Background="Transparent"
+                        Foreground="{DynamicResource PlayerOverlaySheetSecondaryTextBrush}"
                         BorderThickness="0" />
               </StackPanel>
             </StackPanel>

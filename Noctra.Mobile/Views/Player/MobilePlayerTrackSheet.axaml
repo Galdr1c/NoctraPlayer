@@ -9,7 +9,7 @@
   <UserControl.Styles>
     <Style Selector="Button.SelectionSheetOption">
       <Setter Property="Background" Value="Transparent" />
-      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource PlayerOverlaySheetBorderBrush}" />
       <Setter Property="BorderThickness" Value="0,0,0,1.5" />
       <Setter Property="Padding" Value="16,4,48,4" />
       <Setter Property="Margin" Value="0,0,0,8" />
@@ -19,7 +19,7 @@
       <Setter Property="HorizontalAlignment" Value="Stretch" />
     </Style>
     <Style Selector="Button.SelectionSheetOption:pressed /template/ ContentPresenter">
-      <Setter Property="Background" Value="{DynamicResource InteractivePressedBrush}" />
+      <Setter Property="Background" Value="{DynamicResource PlayerOverlaySheetPressedBrush}" />
       <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
     </Style>
   </UserControl.Styles>
@@ -28,21 +28,21 @@
     <Grid ColumnDefinitions="*,Auto">
       <TextBlock Text="{loc:Translate Player.Mobile.AudioSubtitles}"
                  FontSize="16" FontWeight="SemiBold"
-                 Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                 Foreground="{DynamicResource PlayerOverlaySheetTextBrush}"
                  VerticalAlignment="Center" />
       <Button Grid.Column="1"
               Command="{Binding BackFromPlayerPanelCommand}"
               Width="40" Height="40" Padding="0"
               Background="Transparent" BorderThickness="0">
         <icons:MaterialIcon Kind="Close" Width="22" Height="22"
-                            Foreground="{DynamicResource TextMutedBrush}" />
+                            Foreground="{DynamicResource PlayerOverlaySheetMutedTextBrush}" />
       </Button>
     </Grid>
 
     <StackPanel Spacing="8">
       <TextBlock Text="{loc:Translate Player.Settings.Audio}"
                  FontSize="11" FontWeight="Bold"
-                 Foreground="{DynamicResource PlayerOverlaySecondaryTextBrush}"
+                 Foreground="{DynamicResource PlayerOverlaySheetSecondaryTextBrush}"
                  LetterSpacing="1" />
       <ItemsControl ItemsSource="{Binding AudioTracks}">
         <ItemsControl.ItemTemplate>
@@ -62,7 +62,7 @@
                 </Border>
                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
                   <TextBlock Text="{Binding Name}"
-                             Foreground="{DynamicResource TextPrimaryBrush}"
+                             Foreground="{DynamicResource PlayerOverlaySheetTextBrush}"
                              FontSize="{DynamicResource FBodyL}"
                              FontWeight="Normal"
                              TextWrapping="Wrap"
@@ -94,7 +94,7 @@
     <StackPanel Spacing="8">
       <TextBlock Text="{loc:Translate Player.Settings.Subtitle}"
                  FontSize="11" FontWeight="Bold"
-                 Foreground="{DynamicResource PlayerOverlaySecondaryTextBrush}"
+                 Foreground="{DynamicResource PlayerOverlaySheetSecondaryTextBrush}"
                  LetterSpacing="1" />
       <ItemsControl ItemsSource="{Binding SubtitleTracks}">
         <ItemsControl.ItemTemplate>
@@ -114,7 +114,7 @@
                 </Border>
                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
                   <TextBlock Text="{Binding Name}"
-                             Foreground="{DynamicResource TextPrimaryBrush}"
+                             Foreground="{DynamicResource PlayerOverlaySheetTextBrush}"
                              FontSize="{DynamicResource FBodyL}"
                              FontWeight="Normal"
                              TextWrapping="Wrap"
@@ -148,7 +148,7 @@
             Command="{Binding OpenSubtitleAppearanceSettingsCommand}">
       <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" IsHitTestVisible="False">
         <TextBlock Text="{loc:Translate Player.Settings.SubtitleAppearance}"
-                   Foreground="{DynamicResource TextPrimaryBrush}"
+                   Foreground="{DynamicResource PlayerOverlaySheetTextBrush}"
                    FontSize="{DynamicResource FBodyL}"
                    FontWeight="Normal"
                    VerticalAlignment="Center" />
@@ -156,7 +156,7 @@
                             Kind="ChevronRight"
                             Width="22"
                             Height="22"
-                            Foreground="{DynamicResource TextMutedBrush}"
+                            Foreground="{DynamicResource PlayerOverlaySheetMutedTextBrush}"
                             VerticalAlignment="Center" />
       </Grid>
     </Button>

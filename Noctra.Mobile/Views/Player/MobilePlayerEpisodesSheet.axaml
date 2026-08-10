@@ -13,11 +13,11 @@
       <StackPanel Spacing="2" VerticalAlignment="Center">
         <TextBlock Text="{loc:Translate Player.Overlay.Episodes.Tooltip}"
                    FontSize="11" FontWeight="Bold"
-                   Foreground="{DynamicResource PlayerOverlaySecondaryTextBrush}"
+                   Foreground="{DynamicResource PlayerOverlaySheetSecondaryTextBrush}"
                    LetterSpacing="1" />
         <TextBlock Text="{Binding EpisodesPanelTitle}"
                    FontSize="16" FontWeight="SemiBold"
-                   Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                   Foreground="{DynamicResource PlayerOverlaySheetTextBrush}"
                    TextWrapping="Wrap" />
       </StackPanel>
       <Button Grid.Column="1"
@@ -26,7 +26,7 @@
               Background="Transparent" BorderThickness="0"
               CornerRadius="20">
         <icons:MaterialIcon Kind="Close" Width="22" Height="22"
-                            Foreground="{DynamicResource TextMutedBrush}" />
+                            Foreground="{DynamicResource PlayerOverlaySheetMutedTextBrush}" />
       </Button>
     </Grid>
 
@@ -63,17 +63,17 @@
               <Grid ColumnDefinitions="92,*" ColumnSpacing="10" Margin="8">
                 <Border Width="92" Height="64"
                         CornerRadius="10" ClipToBounds="True"
-                        Background="{DynamicResource Surface0Brush}"
+                        Background="{DynamicResource PlayerOverlaySheetSurface1Brush}"
                         VerticalAlignment="Top">
                   <Grid>
                     <controls:RemoteImage Url="{Binding CoverUrl}" Stretch="UniformToFill" />
                     <Border VerticalAlignment="Bottom"
                             HorizontalAlignment="Left"
-                            Background="#AA000000"
+                            Background="{DynamicResource PlayerOverlayShieldBrush}"
                             CornerRadius="0,8,0,0"
                             Padding="6,3,8,3">
                       <TextBlock Text="{Binding EpisodeNumber}"
-                                 Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                                 Foreground="#FFFFFF"
                                  FontSize="11" FontWeight="Bold" />
                     </Border>
                   </Grid>
@@ -84,11 +84,11 @@
                              FontSize="12" FontStyle="Italic"
                              TextTrimming="CharacterEllipsis" MaxLines="1" />
                   <TextBlock Text="{Binding Name}"
-                             Foreground="{DynamicResource TextPrimaryBrush}"
+                             Foreground="{DynamicResource PlayerOverlaySheetTextBrush}"
                              FontSize="12" FontWeight="Bold"
                              TextWrapping="Wrap" MaxLines="2" />
                   <TextBlock Text="{Binding EpisodeMetaText}"
-                             Foreground="{DynamicResource TextMutedBrush}"
+                             Foreground="{DynamicResource PlayerOverlaySheetMutedTextBrush}"
                              FontSize="11" />
                 </StackPanel>
               </Grid>

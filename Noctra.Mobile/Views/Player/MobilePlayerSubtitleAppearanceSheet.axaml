@@ -10,7 +10,7 @@
   <UserControl.Styles>
     <Style Selector="Button.SelectionSheetOption">
       <Setter Property="Background" Value="Transparent" />
-      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource PlayerOverlaySheetBorderBrush}" />
       <Setter Property="BorderThickness" Value="0,0,0,1.5" />
       <Setter Property="Padding" Value="8,4" />
       <Setter Property="MinHeight" Value="48" />
@@ -19,7 +19,7 @@
       <Setter Property="HorizontalAlignment" Value="Stretch" />
     </Style>
     <Style Selector="Button.SelectionSheetOption:pressed /template/ ContentPresenter">
-      <Setter Property="Background" Value="{DynamicResource InteractivePressedBrush}" />
+      <Setter Property="Background" Value="{DynamicResource PlayerOverlaySheetPressedBrush}" />
       <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
     </Style>
   </UserControl.Styles>
@@ -29,14 +29,14 @@
       <TextBlock Grid.Column="1"
                  Text="{loc:Translate Player.Settings.SubtitleAppearance}"
                  FontSize="16" FontWeight="SemiBold"
-                 Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                 Foreground="{DynamicResource PlayerOverlaySheetTextBrush}"
                  VerticalAlignment="Center" />
       <Button Grid.Column="2"
               Command="{Binding BackFromPlayerPanelCommand}"
               Width="40" Height="40" Padding="0"
               Background="Transparent" BorderThickness="0">
         <icons:MaterialIcon Kind="Close" Width="22" Height="22"
-                            Foreground="{DynamicResource TextMutedBrush}" />
+                            Foreground="{DynamicResource PlayerOverlaySheetMutedTextBrush}" />
       </Button>
     </Grid>
 
@@ -46,13 +46,13 @@
         <StackPanel Spacing="8">
           <TextBlock Text="{loc:Translate Player.Settings.SubtitleAppearance.Preview}"
                      FontSize="11" FontWeight="Bold"
-                     Foreground="{DynamicResource PlayerOverlaySecondaryTextBrush}"
+                     Foreground="{DynamicResource PlayerOverlaySheetSecondaryTextBrush}"
                      LetterSpacing="1" />
           <Border MinHeight="150"
                   MaxHeight="190"
                   CornerRadius="14"
                   ClipToBounds="True"
-                  BorderBrush="{DynamicResource BorderBrush}"
+                  BorderBrush="{DynamicResource PlayerOverlaySheetBorderBrush}"
                   BorderThickness="1">
             <Grid>
               <!-- Video hissi veren gradient arka plan -->
@@ -99,7 +99,7 @@
         <StackPanel Spacing="8">
           <TextBlock Text="{loc:Translate Player.Settings.SubtitleSize}"
                      FontSize="11" FontWeight="Bold"
-                     Foreground="{DynamicResource PlayerOverlaySecondaryTextBrush}"
+                     Foreground="{DynamicResource PlayerOverlaySheetSecondaryTextBrush}"
                      LetterSpacing="1" />
           <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="8">
             <Button Classes="SelectionSheetOption"
@@ -116,7 +116,7 @@
                 </Border>
                 <Grid ColumnDefinitions="*,Auto">
                   <TextBlock Text="{loc:Translate Player.Settings.SubtitleSize.Small}"
-                             Foreground="{DynamicResource TextPrimaryBrush}"
+                             Foreground="{DynamicResource PlayerOverlaySheetTextBrush}"
                              FontWeight="Normal"
                              VerticalAlignment="Center" />
                   <icons:MaterialIcon Grid.Column="1"
@@ -150,7 +150,7 @@
                 </Border>
                 <Grid ColumnDefinitions="*,Auto">
                   <TextBlock Text="{loc:Translate Player.Settings.SubtitleSize.Normal}"
-                             Foreground="{DynamicResource TextPrimaryBrush}"
+                             Foreground="{DynamicResource PlayerOverlaySheetTextBrush}"
                              FontWeight="Normal"
                              VerticalAlignment="Center" />
                   <icons:MaterialIcon Grid.Column="1"
@@ -184,7 +184,7 @@
                 </Border>
                 <Grid ColumnDefinitions="*,Auto">
                   <TextBlock Text="{loc:Translate Player.Settings.SubtitleSize.Large}"
-                             Foreground="{DynamicResource TextPrimaryBrush}"
+                             Foreground="{DynamicResource PlayerOverlaySheetTextBrush}"
                              FontWeight="Normal"
                              VerticalAlignment="Center" />
                   <icons:MaterialIcon Grid.Column="1"
@@ -218,7 +218,7 @@
                 </Border>
                 <Grid ColumnDefinitions="*,Auto">
                   <TextBlock Text="{loc:Translate Player.Settings.SubtitleSize.ExtraLarge}"
-                             Foreground="{DynamicResource TextPrimaryBrush}"
+                             Foreground="{DynamicResource PlayerOverlaySheetTextBrush}"
                              FontWeight="Normal"
                              VerticalAlignment="Center" />
                   <icons:MaterialIcon Grid.Column="1"
@@ -244,7 +244,7 @@
         <StackPanel Spacing="8">
           <TextBlock Text="{loc:Translate Player.Settings.SubtitleBackground}"
                      FontSize="11" FontWeight="Bold"
-                     Foreground="{DynamicResource PlayerOverlaySecondaryTextBrush}"
+                     Foreground="{DynamicResource PlayerOverlaySheetSecondaryTextBrush}"
                      LetterSpacing="1" />
           <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="8">
             <Button Classes="SelectionSheetOption"
@@ -261,7 +261,7 @@
                 </Border>
                 <Grid ColumnDefinitions="*,Auto">
                   <TextBlock Text="{loc:Translate Player.Settings.SubtitleBackground.Off}"
-                             Foreground="{DynamicResource TextPrimaryBrush}"
+                             Foreground="{DynamicResource PlayerOverlaySheetTextBrush}"
                              FontWeight="Normal"
                              VerticalAlignment="Center" />
                   <icons:MaterialIcon Grid.Column="1"
@@ -295,7 +295,7 @@
                 </Border>
                 <Grid ColumnDefinitions="*,Auto">
                   <TextBlock Text="{loc:Translate Player.Settings.SubtitleBackground.Light}"
-                             Foreground="{DynamicResource TextPrimaryBrush}"
+                             Foreground="{DynamicResource PlayerOverlaySheetTextBrush}"
                              FontWeight="Normal"
                              VerticalAlignment="Center" />
                   <icons:MaterialIcon Grid.Column="1"
@@ -329,7 +329,7 @@
                 </Border>
                 <Grid ColumnDefinitions="*,Auto">
                   <TextBlock Text="{loc:Translate Player.Settings.SubtitleBackground.Medium}"
-                             Foreground="{DynamicResource TextPrimaryBrush}"
+                             Foreground="{DynamicResource PlayerOverlaySheetTextBrush}"
                              FontWeight="Normal"
                              VerticalAlignment="Center" />
                   <icons:MaterialIcon Grid.Column="1"
@@ -363,7 +363,7 @@
                 </Border>
                 <Grid ColumnDefinitions="*,Auto">
                   <TextBlock Text="{loc:Translate Player.Settings.SubtitleBackground.Dark}"
-                             Foreground="{DynamicResource TextPrimaryBrush}"
+                             Foreground="{DynamicResource PlayerOverlaySheetTextBrush}"
                              FontWeight="Normal"
                              VerticalAlignment="Center" />
                   <icons:MaterialIcon Grid.Column="1"
@@ -389,7 +389,7 @@
         <StackPanel Spacing="8">
           <TextBlock Text="{loc:Translate Player.Settings.SubtitlePosition}"
                      FontSize="11" FontWeight="Bold"
-                     Foreground="{DynamicResource PlayerOverlaySecondaryTextBrush}"
+                     Foreground="{DynamicResource PlayerOverlaySheetSecondaryTextBrush}"
                      LetterSpacing="1" />
           <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
             <Button Classes="SelectionSheetOption"
@@ -406,7 +406,7 @@
                 </Border>
                 <Grid ColumnDefinitions="*,Auto">
                   <TextBlock Text="{loc:Translate Player.Settings.SubtitlePosition.Bottom}"
-                             Foreground="{DynamicResource TextPrimaryBrush}"
+                             Foreground="{DynamicResource PlayerOverlaySheetTextBrush}"
                              FontWeight="Normal"
                              VerticalAlignment="Center" />
                   <icons:MaterialIcon Grid.Column="1"
@@ -440,7 +440,7 @@
                 </Border>
                 <Grid ColumnDefinitions="*,Auto">
                   <TextBlock Text="{loc:Translate Player.Settings.SubtitlePosition.LowerMiddle}"
-                             Foreground="{DynamicResource TextPrimaryBrush}"
+                             Foreground="{DynamicResource PlayerOverlaySheetTextBrush}"
                              FontWeight="Normal"
                              VerticalAlignment="Center" />
                   <icons:MaterialIcon Grid.Column="1"
@@ -475,7 +475,7 @@
                 </Border>
                 <Grid ColumnDefinitions="*,Auto">
                   <TextBlock Text="{loc:Translate Player.Settings.SubtitlePosition.UpperMiddle}"
-                             Foreground="{DynamicResource TextPrimaryBrush}"
+                             Foreground="{DynamicResource PlayerOverlaySheetTextBrush}"
                              FontWeight="Normal"
                              VerticalAlignment="Center" />
                   <icons:MaterialIcon Grid.Column="1"
@@ -509,7 +509,7 @@
                 </Border>
                 <Grid ColumnDefinitions="*,Auto">
                   <TextBlock Text="{loc:Translate Player.Settings.SubtitlePosition.Top}"
-                             Foreground="{DynamicResource TextPrimaryBrush}"
+                             Foreground="{DynamicResource PlayerOverlaySheetTextBrush}"
                              FontWeight="Normal"
                              VerticalAlignment="Center" />
                   <icons:MaterialIcon Grid.Column="1"

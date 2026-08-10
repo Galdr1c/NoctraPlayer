@@ -9,7 +9,7 @@
   <UserControl.Styles>
     <Style Selector="Button.moreSheetRow">
       <Setter Property="Background" Value="Transparent" />
-      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource PlayerOverlaySheetBorderBrush}" />
       <Setter Property="BorderThickness" Value="0,0,0,1.5" />
       <Setter Property="Padding" Value="16,4" />
       <Setter Property="MinHeight" Value="48" />
@@ -18,7 +18,7 @@
       <Setter Property="HorizontalAlignment" Value="Stretch" />
     </Style>
     <Style Selector="Button.moreSheetRow:pressed /template/ ContentPresenter">
-      <Setter Property="Background" Value="{DynamicResource InteractivePressedBrush}" />
+      <Setter Property="Background" Value="{DynamicResource PlayerOverlaySheetPressedBrush}" />
       <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
       <Setter Property="Opacity" Value="0.8" />
     </Style>
@@ -30,7 +30,7 @@
       <TextBlock Text="{loc:Translate Player.Overlay.Settings.Tooltip}"
                  FontSize="{DynamicResource FTitleL}"
                  FontWeight="Bold"
-                 Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                 Foreground="{DynamicResource PlayerOverlaySheetTextBrush}"
                  Margin="14,8,12,0" />
       <Button Grid.Column="1"
               Background="Transparent"
@@ -43,14 +43,14 @@
         <icons:MaterialIcon Kind="Close"
                             Width="22"
                             Height="22"
-                            Foreground="{DynamicResource PlayerOverlaySecondaryTextBrush}" />
+                            Foreground="{DynamicResource PlayerOverlaySheetSecondaryTextBrush}" />
       </Button>
     </Grid>
 
     <TextBlock Text="{loc:Translate Player.Mobile.Playback}"
                FontSize="11"
                FontWeight="Bold"
-               Foreground="{DynamicResource PlayerOverlaySecondaryTextBrush}"
+               Foreground="{DynamicResource PlayerOverlaySheetSecondaryTextBrush}"
                LetterSpacing="1"
                Margin="14,0,14,6" />
 
@@ -58,17 +58,17 @@
             Command="{Binding OpenAudioSettingsCommand}">
       <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="14">
         <icons:MaterialIcon Kind="Subtitles" Width="22" Height="22"
-                            Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                            Foreground="{DynamicResource PlayerOverlaySheetTextBrush}"
                             VerticalAlignment="Center" />
         <TextBlock Grid.Column="1"
                    Text="{loc:Translate Player.Mobile.AudioSubtitles}"
-                   Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                   Foreground="{DynamicResource PlayerOverlaySheetTextBrush}"
                    FontSize="15"
                    FontWeight="SemiBold"
                    VerticalAlignment="Center" />
         <TextBlock Grid.Column="2"
                    Text="{Binding AudioSubtitleSummary}"
-                   Foreground="{DynamicResource PlayerOverlaySecondaryTextBrush}"
+                   Foreground="{DynamicResource PlayerOverlaySheetSecondaryTextBrush}"
                    FontSize="13"
                    VerticalAlignment="Center" />
       </Grid>
@@ -78,17 +78,17 @@
             Command="{Binding OpenQualitySettingsCommand}">
       <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="14">
         <icons:MaterialIcon Kind="InformationSlabBoxOutline" Width="22" Height="22"
-                            Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                            Foreground="{DynamicResource PlayerOverlaySheetTextBrush}"
                             VerticalAlignment="Center" />
         <TextBlock Grid.Column="1"
                    Text="{loc:Translate Player.Quality.Title}"
-                   Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                   Foreground="{DynamicResource PlayerOverlaySheetTextBrush}"
                    FontSize="15"
                    FontWeight="SemiBold"
                    VerticalAlignment="Center" />
         <TextBlock Grid.Column="2"
                    Text="{Binding QualityResolutionText}"
-                   Foreground="{DynamicResource PlayerOverlaySecondaryTextBrush}"
+                   Foreground="{DynamicResource PlayerOverlaySheetSecondaryTextBrush}"
                    FontSize="13"
                    VerticalAlignment="Center" />
       </Grid>
@@ -98,17 +98,17 @@
             Command="{Binding CycleVideoFillModeCommand}">
       <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="14">
         <icons:MaterialIcon Kind="AspectRatio" Width="22" Height="22"
-                            Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                            Foreground="{DynamicResource PlayerOverlaySheetTextBrush}"
                             VerticalAlignment="Center" />
         <TextBlock Grid.Column="1"
                    Text="{loc:Translate Player.Overlay.FillMode.Tooltip}"
-                   Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                   Foreground="{DynamicResource PlayerOverlaySheetTextBrush}"
                    FontSize="15"
                    FontWeight="SemiBold"
                    VerticalAlignment="Center" />
         <TextBlock Grid.Column="2"
                    Text="{Binding VideoFillMode}"
-                   Foreground="{DynamicResource PlayerOverlaySecondaryTextBrush}"
+                   Foreground="{DynamicResource PlayerOverlaySheetSecondaryTextBrush}"
                    FontSize="13"
                    VerticalAlignment="Center" />
       </Grid>
@@ -117,7 +117,7 @@
     <TextBlock Text="{loc:Translate Player.Mobile.Content}"
                FontSize="11"
                FontWeight="Bold"
-               Foreground="{DynamicResource PlayerOverlaySecondaryTextBrush}"
+               Foreground="{DynamicResource PlayerOverlaySheetSecondaryTextBrush}"
                LetterSpacing="1"
                Margin="14,12,14,6" />
 
@@ -125,11 +125,11 @@
             Command="{Binding OpenInfoPanelCommand}">
       <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="14">
         <icons:MaterialIcon Kind="InformationOutline" Width="22" Height="22"
-                            Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                            Foreground="{DynamicResource PlayerOverlaySheetTextBrush}"
                             VerticalAlignment="Center" />
         <TextBlock Grid.Column="1"
                    Text="{loc:Translate Player.Info.Title}"
-                   Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                   Foreground="{DynamicResource PlayerOverlaySheetTextBrush}"
                    FontSize="15"
                    FontWeight="SemiBold"
                    VerticalAlignment="Center" />
@@ -141,11 +141,11 @@
             Command="{Binding OpenEpisodesCommand}">
       <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="14">
         <icons:MaterialIcon Kind="Animation" Width="22" Height="22"
-                            Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                            Foreground="{DynamicResource PlayerOverlaySheetTextBrush}"
                             VerticalAlignment="Center" />
         <TextBlock Grid.Column="1"
                    Text="{loc:Translate Player.Overlay.Episodes.Tooltip}"
-                   Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                   Foreground="{DynamicResource PlayerOverlaySheetTextBrush}"
                    FontSize="15"
                    FontWeight="SemiBold"
                    VerticalAlignment="Center" />
@@ -157,11 +157,11 @@
             Command="{Binding DownloadCurrentContentCommand}">
       <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="14">
         <icons:MaterialIcon Kind="Download" Width="22" Height="22"
-                            Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                            Foreground="{DynamicResource PlayerOverlaySheetTextBrush}"
                             VerticalAlignment="Center" />
         <TextBlock Grid.Column="1"
                    Text="{loc:Translate Player.Overlay.Download.Tooltip}"
-                   Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                   Foreground="{DynamicResource PlayerOverlaySheetTextBrush}"
                    FontSize="15"
                    FontWeight="SemiBold"
                    VerticalAlignment="Center" />
@@ -172,11 +172,11 @@
             Command="{Binding ShowSleepTimerMenuCommand}">
       <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="14">
         <icons:MaterialIcon Kind="WeatherNight" Width="22" Height="22"
-                            Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                            Foreground="{DynamicResource PlayerOverlaySheetTextBrush}"
                             VerticalAlignment="Center" />
         <TextBlock Grid.Column="1"
                    Text="{loc:Translate Player.Overlay.SleepTimer.Tooltip}"
-                   Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                   Foreground="{DynamicResource PlayerOverlaySheetTextBrush}"
                    FontSize="15"
                    FontWeight="SemiBold"
                    VerticalAlignment="Center" />
