@@ -22,9 +22,6 @@ namespace Noctra.Android.Services;
 /// </summary>
 public sealed class AndroidReviewPromptService : IReviewPromptService
 {
-    private const int MinimumLaunches = 1;
-    private static readonly TimeSpan PromptDelay = TimeSpan.FromMinutes(3);
-    private static readonly TimeSpan SnoozeDuration = TimeSpan.FromDays(3);
     private static readonly TimeSpan ReviewFlowTimeout = TimeSpan.FromSeconds(30);
 
     private readonly ISettingsService _settingsService;
@@ -38,12 +35,23 @@ public sealed class AndroidReviewPromptService : IReviewPromptService
         ISettingsService settingsService,
         AndroidActivityProvider activityProvider,
         ILocalizationService localizationService,
-        ReviewPromptFallbackHandler fallbackHandler)
+        ReviewPromptFallbackHandler fallbackHandler,
+        ReviewPromptTracker? reviewPromptTracker = null)
     {
         _settingsService = settingsService;
         _activityProvider = activityProvider;
         _localizationService = localizationService;
         _fallbackHandler = fallbackHandler;
+
+        if (reviewPromptTracker is not null)
+        {
+            reviewPromptTracker.PromptRequested += OnPromptRequested;
+        }
+    }
+
+    private void OnPromptRequested()
+    {
+        _ = TryShowPromptAsync();
     }
 
     public async Task TryShowMainWindowPromptAsync(CancellationToken cancellationToken = default)
@@ -62,7 +70,7 @@ public sealed class AndroidReviewPromptService : IReviewPromptService
             settings.ReviewPromptLaunchCount++;
             await _settingsService.SaveAsyncBestEffort();
 
-            if (!IsEligible(settings, DateTime.UtcNow))
+            if (!ReviewPromptPolicy.IsEligible(settings, DateTime.UtcNow))
             {
                 return;
             }
@@ -74,9 +82,20 @@ public sealed class AndroidReviewPromptService : IReviewPromptService
 
         try
         {
-            await Task.Delay(PromptDelay, cancellationToken);
+            await Task.Delay(ReviewPromptPolicy.LaunchSettleDelay, cancellationToken);
         }
         catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        await ShowIfStillEligibleAsync(cancellationToken);
+    }
+
+    public async Task TryShowPromptAsync(CancellationToken cancellationToken = default)
+    {
+        // Event-driven entry: no launch counter bump, no settle delay.
+        if (!ReviewPromptPolicy.IsEligible(_settingsService.Settings, DateTime.UtcNow))
         {
             return;
         }
@@ -90,7 +109,7 @@ public sealed class AndroidReviewPromptService : IReviewPromptService
         try
         {
             var settings = _settingsService.Settings;
-            if (!IsEligible(settings, DateTime.UtcNow))
+            if (!ReviewPromptPolicy.IsEligible(settings, DateTime.UtcNow))
             {
                 return;
             }
@@ -156,7 +175,7 @@ public sealed class AndroidReviewPromptService : IReviewPromptService
                         }
                         else
                         {
-                            settings.ReviewPromptSnoozedUntilUtc = DateTime.UtcNow.Add(SnoozeDuration);
+                            settings.ReviewPromptSnoozedUntilUtc = DateTime.UtcNow.Add(ReviewPromptPolicy.SnoozeDuration);
                         }
 
                         break;
@@ -165,7 +184,7 @@ public sealed class AndroidReviewPromptService : IReviewPromptService
                         break;
                     case ReviewPromptFallbackResult.Later:
                     default:
-                        settings.ReviewPromptSnoozedUntilUtc = DateTime.UtcNow.Add(SnoozeDuration);
+                        settings.ReviewPromptSnoozedUntilUtc = DateTime.UtcNow.Add(ReviewPromptPolicy.SnoozeDuration);
                         break;
                 }
             }
@@ -180,32 +199,6 @@ public sealed class AndroidReviewPromptService : IReviewPromptService
         {
             _gate.Release();
         }
-    }
-
-    private static bool IsEligible(Noctra.Models.AppSettings settings, DateTime nowUtc)
-    {
-        if (settings.ReviewPromptDismissed || settings.ReviewPromptCompletedAtUtc.HasValue)
-        {
-            return false;
-        }
-
-        if (settings.ReviewPromptLaunchCount < MinimumLaunches)
-        {
-            return false;
-        }
-
-        if (settings.ReviewPromptSnoozedUntilUtc.HasValue && settings.ReviewPromptSnoozedUntilUtc.Value > nowUtc)
-        {
-            return false;
-        }
-
-        if (settings.ReviewPromptLastShownAtUtc.HasValue &&
-            nowUtc - settings.ReviewPromptLastShownAtUtc.Value < SnoozeDuration)
-        {
-            return false;
-        }
-
-        return true;
     }
 
     private async Task<bool> LaunchInAppReviewAsync(Activity activity, CancellationToken cancellationToken)

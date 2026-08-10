@@ -1211,6 +1211,8 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
     internal DateTime _lastWatchHistoryUpdateUtc = DateTime.MinValue;
     internal DateTime _sessionPlaybackStartTimeUtc = DateTime.MinValue;
+    private double _reviewSessionWatchedSeconds;
+    private readonly ReviewPromptTracker? _reviewPromptTracker;
 
     internal readonly System.Threading.Timer _autoHideTimer;
     internal System.Threading.Timer? _unreachableWarningTimer;
@@ -1260,7 +1262,8 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         ILocalizationService localizationService,
         MainViewModel mainViewModel,
         IWatchHistoryService? watchHistoryService,
-        IStalkerPortalService stalkerPortalService)
+        IStalkerPortalService stalkerPortalService,
+        ReviewPromptTracker? reviewPromptTracker = null)
     {
         _videoPlayerService = videoPlayerService;
         _epgService = epgService;
@@ -1275,6 +1278,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         _mainViewModel = mainViewModel;
         _watchHistoryService = watchHistoryService;
         _stalkerPortalService = stalkerPortalService;
+        _reviewPromptTracker = reviewPromptTracker;
 
         // Initialize Controllers
         PlaybackController = new PlayerPlaybackController(this);
@@ -1622,6 +1626,40 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
     internal Task FlushWatchHistoryAsync(bool force, TimeSpan? incrementDelta = null)
         => EpisodeNavigator.FlushWatchHistoryAsync(force, incrementDelta);
+
+    /// <summary>
+    /// Accumulates real watch time for the current playback session so the
+    /// review prompt tracker can be fed with the session's actual duration.
+    /// Only called while playback is actively running.
+    /// </summary>
+    internal void AccumulateReviewWatchedSeconds(TimeSpan delta)
+    {
+        if (delta > TimeSpan.Zero)
+        {
+            _reviewSessionWatchedSeconds += delta.TotalSeconds;
+        }
+    }
+
+    /// <summary>
+    /// Records the completed playback session (real watched duration) with the
+    /// review prompt tracker and resets the session accumulator. Includes the
+    /// tail since the last 5s history tick so the final segment is not lost.
+    /// </summary>
+    internal void RecordCompletedPlaybackSessionForReview()
+    {
+        if (IsPlaying && _lastWatchHistoryUpdateUtc != DateTime.MinValue)
+        {
+            var tail = (DateTime.UtcNow - _lastWatchHistoryUpdateUtc).TotalSeconds;
+            if (tail > 0)
+            {
+                _reviewSessionWatchedSeconds += tail;
+            }
+        }
+
+        var watched = TimeSpan.FromSeconds(_reviewSessionWatchedSeconds);
+        _reviewSessionWatchedSeconds = 0;
+        _reviewPromptTracker?.RecordPlaybackSession(watched);
+    }
 
     internal void UpdateMediaInfo()
         => QualityMonitor.UpdateMediaInfo();
@@ -2262,6 +2300,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
             LogDebug($"Exit history flush failed: {ex.Message}");
         }
 
+        RecordCompletedPlaybackSessionForReview();
         _mainViewModel?.EndPlayerPlaybackSession();
 
         ResetPlayerAfterExit();

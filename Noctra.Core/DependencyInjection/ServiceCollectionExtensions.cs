@@ -93,6 +93,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IDatabaseSchemaFixupService, DatabaseSchemaFixupService>();
         services.AddSingleton<IProfilePinService, ProfilePinService>();
         services.AddSingleton<ReviewPromptFallbackHandler>();
+        services.AddSingleton<ReviewPromptTracker>();
 
         return services;
     }

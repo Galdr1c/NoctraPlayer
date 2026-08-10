@@ -67,7 +67,10 @@ namespace Noctra.Tests
                 ReviewPromptLastShownAtUtc = DateTime.UtcNow.AddDays(-1),
                 ReviewPromptSnoozedUntilUtc = DateTime.UtcNow.AddDays(3),
                 ReviewPromptDismissed = true,
-                ReviewPromptCompletedAtUtc = DateTime.UtcNow
+                ReviewPromptCompletedAtUtc = DateTime.UtcNow,
+                ReviewPromptProviderAddCount = 1,
+                ReviewPromptPlaybackCount = 5,
+                ReviewPromptTotalPlaybackSeconds = 7200
             };
 
             var json = SettingsService.SerializePersistableSettings(settings, 167);
@@ -82,6 +85,9 @@ namespace Noctra.Tests
             Assert.DoesNotContain("reviewPromptSnoozedUntilUtc", json);
             Assert.DoesNotContain("reviewPromptDismissed", json);
             Assert.DoesNotContain("reviewPromptCompletedAtUtc", json);
+            Assert.DoesNotContain("reviewPromptProviderAddCount", json);
+            Assert.DoesNotContain("reviewPromptPlaybackCount", json);
+            Assert.DoesNotContain("reviewPromptTotalPlaybackSeconds", json);
         }
 
         [Fact]
@@ -175,7 +181,10 @@ namespace Noctra.Tests
                 ReviewPromptLastShownAtUtc = DateTime.UtcNow.AddDays(-1),
                 ReviewPromptSnoozedUntilUtc = DateTime.UtcNow.AddDays(3),
                 ReviewPromptDismissed = true,
-                ReviewPromptCompletedAtUtc = DateTime.UtcNow
+                ReviewPromptCompletedAtUtc = DateTime.UtcNow,
+                ReviewPromptProviderAddCount = 1,
+                ReviewPromptPlaybackCount = 5,
+                ReviewPromptTotalPlaybackSeconds = 7200
             };
 
             var json = SettingsService.SerializePersistableSettings(settings, 0);
@@ -189,6 +198,9 @@ namespace Noctra.Tests
             Assert.Contains("reviewPromptSnoozedUntilUtc", json);
             Assert.Contains("reviewPromptDismissed", json);
             Assert.Contains("reviewPromptCompletedAtUtc", json);
+            Assert.Contains("reviewPromptProviderAddCount", json);
+            Assert.Contains("reviewPromptPlaybackCount", json);
+            Assert.Contains("reviewPromptTotalPlaybackSeconds", json);
         }
 
         [Fact]

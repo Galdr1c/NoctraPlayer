@@ -152,6 +152,9 @@ public class SettingsService : ISettingsService
         target.ReviewPromptSnoozedUntilUtc = source.ReviewPromptSnoozedUntilUtc;
         target.ReviewPromptDismissed = source.ReviewPromptDismissed;
         target.ReviewPromptCompletedAtUtc = source.ReviewPromptCompletedAtUtc;
+        target.ReviewPromptProviderAddCount = source.ReviewPromptProviderAddCount;
+        target.ReviewPromptPlaybackCount = source.ReviewPromptPlaybackCount;
+        target.ReviewPromptTotalPlaybackSeconds = source.ReviewPromptTotalPlaybackSeconds;
     }
 
     public async Task<AppSettings?> PeekProfileSettingsAsync(int profileId)
@@ -456,6 +459,9 @@ public class SettingsService : ISettingsService
             copy.ReviewPromptSnoozedUntilUtc = null;
             copy.ReviewPromptDismissed = false;
             copy.ReviewPromptCompletedAtUtc = null;
+            copy.ReviewPromptProviderAddCount = 0;
+            copy.ReviewPromptPlaybackCount = 0;
+            copy.ReviewPromptTotalPlaybackSeconds = 0;
         }
         else
         {
@@ -520,7 +526,10 @@ public class SettingsService : ISettingsService
                 "reviewPromptLastShownAtUtc",
                 "reviewPromptSnoozedUntilUtc",
                 "reviewPromptDismissed",
-                "reviewPromptCompletedAtUtc");
+                "reviewPromptCompletedAtUtc",
+                "reviewPromptProviderAddCount",
+                "reviewPromptPlaybackCount",
+                "reviewPromptTotalPlaybackSeconds");
         }
 
         return JsonSerializer.Serialize(node, JsonOptions);

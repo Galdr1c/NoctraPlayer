@@ -77,6 +77,7 @@ public partial class MainViewModel : ObservableObject
     private readonly IAppPathService _appPaths;
     private readonly IPlatformActionService _platformActions;
     private readonly IStorageInfoService _storageInfo;
+    private readonly ReviewPromptTracker? _reviewPromptTracker;
     private readonly DateTime _downloadCenterSessionStartUtc = DateTime.UtcNow;
     private readonly ConcurrentDictionary<string, byte> _pendingVisualEnrichmentKeys = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<int, byte> _pendingSeriesMetadataEnrichmentIds = new();
@@ -398,7 +399,8 @@ public partial class MainViewModel : ObservableObject
         IPlatformActionService? platformActions = null,
         IImportJobService? importJobService = null,
         IContentQueryService? contentQueryService = null,
-        IStorageInfoService? storageInfo = null)
+        IStorageInfoService? storageInfo = null,
+        ReviewPromptTracker? reviewPromptTracker = null)
     {
         _localizationService = localizationService;
         _settingsService = settingsService;
@@ -429,6 +431,7 @@ public partial class MainViewModel : ObservableObject
         _appPaths = appPaths ?? new DesktopAppPathService();
         _platformActions = platformActions ?? new DesktopPlatformActionService();
         _storageInfo = storageInfo ?? new DesktopStorageInfoService();
+        _reviewPromptTracker = reviewPromptTracker;
         RebuildSortOptions();
         StatusMessage = _localizationService.GetString("Common.Ready");
         _downloadLandingStoredBytes = 0;
@@ -5076,6 +5079,7 @@ public partial class MainViewModel : ObservableObject
             var playlist = await _playlistService.AddFromUrlAsync(NewPlaylistName, NewPlaylistUrl, CurrentProfileId);
             await LoadPlaylistsAsync();
             SelectedPlaylist = playlist;
+            _reviewPromptTracker?.RecordProviderAdded();
             
             StatusMessage = string.Format(CultureInfo.CurrentCulture,
                 _localizationService.GetString("Main.Status.PlaylistAddedFormat"),

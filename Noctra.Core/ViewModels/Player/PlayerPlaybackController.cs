@@ -734,6 +734,7 @@ public class PlayerPlaybackController
         ResetSeekInteractionState();
         _vm._watchHistoryTimer.Stop();
         await _vm.FlushWatchHistoryAsync(force: true);
+        _vm.RecordCompletedPlaybackSessionForReview();
         _vm.MainViewModel?.EndPlayerPlaybackSession();
         _vm.VideoPlayerService.Stop();
         _vm._livePauseRequiresHardRestart = false;

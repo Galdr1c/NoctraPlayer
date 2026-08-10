@@ -396,6 +396,26 @@ public class AppSettings
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public DateTime? ReviewPromptCompletedAtUtc { get; set; }
 
+    /// <summary>
+    /// Basariyla eklenen provider (profil/playlist) sayisi. Review prompt'u
+    /// deneyim tabanli hale getirmek icin kullanilir.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public int ReviewPromptProviderAddCount { get; set; } = 0;
+
+    /// <summary>
+    /// Anlamli surede tamamlanan playback oturum sayisi (orn. >= 30 saniye).
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public int ReviewPromptPlaybackCount { get; set; } = 0;
+
+    /// <summary>
+    /// Birikimli gercek izlenme suresi (saniye). Review promptu icin
+    /// "toplam izleme >= 30 dakika" sarti burada takip edilir.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public double ReviewPromptTotalPlaybackSeconds { get; set; } = 0;
+
     // ============ Senkronizasyon Ayarlari ============
 
     /// <summary>

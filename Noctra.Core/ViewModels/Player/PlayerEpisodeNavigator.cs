@@ -688,6 +688,7 @@ public class PlayerEpisodeNavigator
             : nowUtc - _vm._lastWatchHistoryUpdateUtc;
             
         _vm._lastWatchHistoryUpdateUtc = nowUtc;
+        _vm.AccumulateReviewWatchedSeconds(delta);
 
         await FlushWatchHistoryAsync(force: false, incrementDelta: delta);
     }

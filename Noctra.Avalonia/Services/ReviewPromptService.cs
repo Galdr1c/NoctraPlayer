@@ -12,11 +12,9 @@ namespace Noctra.Avalonia.Services;
 
 public sealed class ReviewPromptService : IReviewPromptService
 {
-    private const int MinimumLaunches = 1;
-    private static readonly TimeSpan PromptDelay = TimeSpan.FromMinutes(3);
     private static readonly TimeSpan OwnerRetryInterval = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan OwnerWaitTimeout = TimeSpan.FromMinutes(30);
-    private static readonly TimeSpan SnoozeDuration = TimeSpan.FromDays(3);
+    private static readonly TimeSpan EventOwnerWaitTimeout = TimeSpan.FromSeconds(10);
 
     private readonly ISettingsService _settingsService;
     private readonly IAppEditionService _appEditionService;
@@ -29,12 +27,23 @@ public sealed class ReviewPromptService : IReviewPromptService
         ISettingsService settingsService,
         IAppEditionService appEditionService,
         IPackageIdentityService packageIdentityService,
-        ILocalizationService localizationService)
+        ILocalizationService localizationService,
+        ReviewPromptTracker? reviewPromptTracker = null)
     {
         _settingsService = settingsService;
         _appEditionService = appEditionService;
         _packageIdentityService = packageIdentityService;
         _localizationService = localizationService;
+
+        if (reviewPromptTracker is not null)
+        {
+            reviewPromptTracker.PromptRequested += OnPromptRequested;
+        }
+    }
+
+    private void OnPromptRequested()
+    {
+        _ = TryShowPromptAsync();
     }
 
     public async Task TryShowMainWindowPromptAsync(CancellationToken cancellationToken = default)
@@ -53,7 +62,7 @@ public sealed class ReviewPromptService : IReviewPromptService
             settings.ReviewPromptLaunchCount++;
             await _settingsService.SaveAsyncBestEffort();
 
-            if (!IsEligible(settings, DateTime.UtcNow))
+            if (!ReviewPromptPolicy.IsEligible(settings, DateTime.UtcNow))
             {
                 return;
             }
@@ -65,7 +74,7 @@ public sealed class ReviewPromptService : IReviewPromptService
 
         try
         {
-            await Task.Delay(PromptDelay, cancellationToken);
+            await Task.Delay(ReviewPromptPolicy.LaunchSettleDelay, cancellationToken);
         }
         catch (OperationCanceledException)
         {
@@ -89,13 +98,41 @@ public sealed class ReviewPromptService : IReviewPromptService
         });
     }
 
+    public async Task TryShowPromptAsync(CancellationToken cancellationToken = default)
+    {
+        // Event-driven entry: no launch counter bump, no settle delay.
+        if (!ReviewPromptPolicy.IsEligible(_settingsService.Settings, DateTime.UtcNow))
+        {
+            return;
+        }
+
+        // Event-driven calls (e.g. right after a playback session) should not
+        // hold the flow open for the long launch-path owner timeout; bail out
+        // quickly if the window is not ready right now.
+        var ownerReady = await WaitForOwnerAsync(cancellationToken, EventOwnerWaitTimeout);
+        if (!ownerReady)
+        {
+            return;
+        }
+
+        await Dispatcher.UIThread.InvokeAsync(async () =>
+        {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return;
+            }
+
+            await ShowIfStillEligibleAsync();
+        });
+    }
+
     private async Task ShowIfStillEligibleAsync()
     {
         await _gate.WaitAsync();
         try
         {
             var settings = _settingsService.Settings;
-            if (!IsEligible(settings, DateTime.UtcNow) || !TryGetOwner(out var owner))
+            if (!ReviewPromptPolicy.IsEligible(settings, DateTime.UtcNow) || !TryGetOwner(out var owner))
             {
                 return;
             }
@@ -117,7 +154,7 @@ public sealed class ReviewPromptService : IReviewPromptService
                     }
                     else
                     {
-                        settings.ReviewPromptSnoozedUntilUtc = DateTime.UtcNow.Add(SnoozeDuration);
+                        settings.ReviewPromptSnoozedUntilUtc = DateTime.UtcNow.Add(ReviewPromptPolicy.SnoozeDuration);
                     }
 
                     await _settingsService.SaveAsyncBestEffort();
@@ -129,7 +166,7 @@ public sealed class ReviewPromptService : IReviewPromptService
                     break;
 
                 default:
-                    settings.ReviewPromptSnoozedUntilUtc = DateTime.UtcNow.Add(SnoozeDuration);
+                    settings.ReviewPromptSnoozedUntilUtc = DateTime.UtcNow.Add(ReviewPromptPolicy.SnoozeDuration);
                     await _settingsService.SaveAsyncBestEffort();
                     break;
             }
@@ -140,35 +177,9 @@ public sealed class ReviewPromptService : IReviewPromptService
         }
     }
 
-    private bool IsEligible(Noctra.Models.AppSettings settings, DateTime nowUtc)
+    private async Task<bool> WaitForOwnerAsync(CancellationToken cancellationToken, TimeSpan? timeout = null)
     {
-        if (settings.ReviewPromptDismissed || settings.ReviewPromptCompletedAtUtc.HasValue)
-        {
-            return false;
-        }
-
-        if (settings.ReviewPromptLaunchCount < MinimumLaunches)
-        {
-            return false;
-        }
-
-        if (settings.ReviewPromptSnoozedUntilUtc.HasValue && settings.ReviewPromptSnoozedUntilUtc.Value > nowUtc)
-        {
-            return false;
-        }
-
-        if (settings.ReviewPromptLastShownAtUtc.HasValue &&
-            nowUtc - settings.ReviewPromptLastShownAtUtc.Value < SnoozeDuration)
-        {
-            return false;
-        }
-
-        return true;
-    }
-
-    private async Task<bool> WaitForOwnerAsync(CancellationToken cancellationToken)
-    {
-        var deadline = DateTime.UtcNow.Add(OwnerWaitTimeout);
+        var deadline = DateTime.UtcNow.Add(timeout ?? OwnerWaitTimeout);
 
         while (DateTime.UtcNow < deadline)
         {

@@ -25,6 +25,7 @@ public partial class AddProfileViewModel : ObservableObject
     private readonly IProfilePinService _pinService;
     private readonly ILocalizationService _localizationService;
     private readonly IPlaylistFilePickerService? _playlistFilePickerService;
+    private readonly ReviewPromptTracker? _reviewPromptTracker;
 
     // Simplified Account Details
     [ObservableProperty]
@@ -1073,7 +1074,8 @@ public partial class AddProfileViewModel : ObservableObject
         ISecurityService securityService,
         IProfilePinService pinService,
         ILocalizationService localizationService,
-        IPlaylistFilePickerService? playlistFilePickerService = null)
+        IPlaylistFilePickerService? playlistFilePickerService = null,
+        ReviewPromptTracker? reviewPromptTracker = null)
     {
         _profileService = profileService;
         _dispatcherService = dispatcherService;
@@ -1087,6 +1089,7 @@ public partial class AddProfileViewModel : ObservableObject
         _pinService = pinService;
         _localizationService = localizationService;
         _playlistFilePickerService = playlistFilePickerService;
+        _reviewPromptTracker = reviewPromptTracker;
 
         // Initialize with a random avatar instead of always the first one
         var avatars = _avatarService.GetAvatarsByCategory().Values.FirstOrDefault();
@@ -1891,6 +1894,13 @@ public partial class AddProfileViewModel : ObservableObject
             // Success feedback
             SetStatus(_localizationService.GetString("AddProfile.Status.Saved"), FormStatusKind.Success);
             await Task.Delay(400);
+
+            // Yeni bir provider/profil basariyla eklendi — review uygunlugu icin
+            // deneyim sayacini artir (yalnizca yeni profil olusturmada).
+            if (EditingProfile is null)
+            {
+                _reviewPromptTracker?.RecordProviderAdded();
+            }
 
             RequestClose?.Invoke(this, EventArgs.Empty);
         }
