@@ -15,21 +15,20 @@ public class TmdbSyncService : ITmdbSyncService
     private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
     private readonly IMetadataService _metadataService;
     private readonly IDispatcherService _dispatcherService;
+    private readonly ITmdbEnrichmentScheduler _enrichmentScheduler;
     private readonly ILogger<TmdbSyncService>? _logger;
-
-    // Rate limit: TMDB allows ~40 req / 10s
-    private const int REQUEST_DELAY_MS = 750; // 3 slots × (1000/750) = 4 req/s = TMDB limit (40/10s)
-    private const int MAX_CONCURRENT = 3;
 
     public TmdbSyncService(
         IDbContextFactory<AppDbContext> dbContextFactory,
         IMetadataService metadataService,
         IDispatcherService dispatcherService,
+        ITmdbEnrichmentScheduler enrichmentScheduler,
         ILogger<TmdbSyncService>? logger = null)
     {
         _dbContextFactory = dbContextFactory;
         _metadataService = metadataService;
         _dispatcherService = dispatcherService;
+        _enrichmentScheduler = enrichmentScheduler;
         _logger = logger;
     }
 
@@ -60,21 +59,10 @@ public class TmdbSyncService : ITmdbSyncService
 
         _logger?.LogDebug("Enriching {Count} series with TMDB data (M3U only filtering active)", pending.Count);
 
-        // Process with limited concurrency (MAX_CONCURRENT parallel requests)
-        using var semaphore = new SemaphoreSlim(MAX_CONCURRENT);
-        var tasks = pending.Select(async s =>
-        {
-            await semaphore.WaitAsync(cancellationToken);
-            try
-            {
-                await EnrichSingleSeriesAsync(s, cancellationToken);
-                await Task.Delay(REQUEST_DELAY_MS, cancellationToken);
-            }
-            finally
-            {
-                semaphore.Release();
-            }
-        });
+        var tasks = pending.Select(series => _enrichmentScheduler.ScheduleAsync(
+            $"series-sync:{series.PlaylistId}:{series.Id}",
+            token => EnrichSingleSeriesAsync(series, token),
+            cancellationToken));
 
         await Task.WhenAll(tasks);
     }
@@ -97,9 +85,14 @@ public class TmdbSyncService : ITmdbSyncService
                 await EnrichWithSearchOnlyAsync(series, languageCode, cancellationToken);
             }
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             _logger?.LogDebug(ex, "Failed to enrich series: {Name}", series.Name);
+            throw;
         }
     }
 
@@ -112,10 +105,12 @@ public class TmdbSyncService : ITmdbSyncService
     {
         var cleanName = SeriesInfoParser.CleanSeriesName(series.Name);
         var meta = await _metadataService.SearchSeriesAsync(cleanName, languageCode, cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
 
         using var context = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
         var dbSeries = await context.Series.FindAsync(new object[] { series.Id }, cancellationToken);
         if (dbSeries == null) return;
+        cancellationToken.ThrowIfCancellationRequested();
 
         dbSeries.LastTmdbSync = DateTime.UtcNow;
 
@@ -141,9 +136,20 @@ public class TmdbSyncService : ITmdbSyncService
             dbSeries.NetworkLogoUrl = meta.NetworkLogoUrl;
             dbSeries.ContentRating = meta.ContentRating;
 
-            // Update in-memory for immediate UI refresh
-            _dispatcherService.BeginInvoke(() =>
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+        await context.SaveChangesAsync(cancellationToken);
+
+        if (meta != null && meta.TmdbId.HasValue)
+        {
+            await _dispatcherService.InvokeAsync(() =>
             {
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    return Task.CompletedTask;
+                }
+
                 series.TmdbId = meta.TmdbId;
                 series.TmdbTitle = meta.Title;
                 series.Plot = meta.Description;
@@ -160,10 +166,9 @@ public class TmdbSyncService : ITmdbSyncService
                 series.NetworkName = meta.NetworkName;
                 series.NetworkLogoUrl = meta.NetworkLogoUrl;
                 series.ContentRating = meta.ContentRating;
+                return Task.CompletedTask;
             });
         }
-
-        await context.SaveChangesAsync(cancellationToken);
     }
 
     /// <summary>
@@ -174,10 +179,12 @@ public class TmdbSyncService : ITmdbSyncService
     private async Task EnrichWithFullDetailsAsync(Series series, string languageCode, CancellationToken cancellationToken)
     {
         var details = await _metadataService.FetchSeriesDetailsAsync(series.TmdbId!.Value, languageCode, cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
 
         using var context = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
         var dbSeries = await context.Series.FindAsync(new object[] { series.Id }, cancellationToken);
         if (dbSeries == null) return;
+        cancellationToken.ThrowIfCancellationRequested();
 
         dbSeries.LastTmdbSync = DateTime.UtcNow;
 
@@ -226,9 +233,20 @@ public class TmdbSyncService : ITmdbSyncService
             if (trailer != null && !string.IsNullOrEmpty(trailer.Key))
                 dbSeries.TrailerUrl = $"https://www.youtube.com/watch?v={trailer.Key}";
 
-            // Update in-memory for immediate UI refresh
-            _dispatcherService.BeginInvoke(() =>
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+        await context.SaveChangesAsync(cancellationToken);
+
+        if (details != null)
+        {
+            await _dispatcherService.InvokeAsync(() =>
             {
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    return Task.CompletedTask;
+                }
+
                 series.TmdbTitle = dbSeries.TmdbTitle;
                 series.Plot = dbSeries.Plot;
                 series.Rating = dbSeries.Rating;
@@ -247,10 +265,9 @@ public class TmdbSyncService : ITmdbSyncService
                     series.Genre = dbSeries.Genre;
                 if (!string.IsNullOrEmpty(dbSeries.TrailerUrl))
                     series.TrailerUrl = dbSeries.TrailerUrl;
+                return Task.CompletedTask;
             });
         }
-
-        await context.SaveChangesAsync(cancellationToken);
     }
 
     private bool IsMetadataSufficient(Series series)

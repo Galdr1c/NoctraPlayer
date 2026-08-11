@@ -192,6 +192,10 @@ public partial class MetadataService : IMetadataService
 
             return response;
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             _logger?.LogError(ex, "Direct TMDB API fallback failed for: {Url}", TrimForLog(fallbackUrl));
@@ -373,6 +377,10 @@ public partial class MetadataService : IMetadataService
 
             return metadata;
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             _logger?.LogError(ex, "Error fetching metadata for: {Query}", searchQuery);
@@ -397,6 +405,10 @@ public partial class MetadataService : IMetadataService
             // Retry up to 2 times on transient network errors
             return await FetchJsonWithFallbackAsync<TmdbDetail>(url, cancellationToken);
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             _logger?.LogWarning(ex, "Error fetching series details for TmdbId {Id}", tmdbId);
@@ -419,6 +431,10 @@ public partial class MetadataService : IMetadataService
             // Retry up to 2 times on transient network errors
             return await FetchJsonWithFallbackAsync<TmdbSeasonDetail>(url, cancellationToken);
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             _logger?.LogWarning(ex, "Error fetching season {SeasonNumber} details for TmdbId {Id}", seasonNumber, tmdbId);
@@ -435,6 +451,10 @@ public partial class MetadataService : IMetadataService
             var url = $"{TMDB_BASE_URL}/{endpoint}/{id}?append_to_response={append}&language={languageCode}";
             
             return await FetchJsonWithFallbackAsync<TmdbDetail>(url, cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -616,6 +636,10 @@ public partial class MetadataService : IMetadataService
 
             return null;
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             _logger?.LogWarning(ex, "TMDB series search failed for: {Query}", searchQuery);
@@ -770,6 +794,10 @@ public partial class MetadataService : IMetadataService
             }
 
             _genreCache.TryAdd(languageCode, langGenres);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception ex)
         {

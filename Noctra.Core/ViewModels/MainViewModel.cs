@@ -72,6 +72,7 @@ public partial class MainViewModel : ObservableObject
     private readonly EpgSourceResolver _epgSourceResolver;
     private readonly IDbContextFactory<AppDbContext> _contextFactory;
     private readonly ITmdbSyncService _tmdbSyncService;
+    private readonly ITmdbEnrichmentScheduler? _tmdbEnrichmentScheduler;
     private readonly ILicenseService _licenseService;
     private readonly IAppVersionService _appVersionService;
     private readonly IAppPathService _appPaths;
@@ -81,15 +82,15 @@ public partial class MainViewModel : ObservableObject
     private readonly StartupWorkCoordinator _startupWorkCoordinator;
     private readonly DateTime _downloadCenterSessionStartUtc = DateTime.UtcNow;
     private readonly ConcurrentDictionary<string, byte> _pendingVisualEnrichmentKeys = new(StringComparer.OrdinalIgnoreCase);
-    private readonly ConcurrentDictionary<int, byte> _pendingSeriesMetadataEnrichmentIds = new();
     private readonly ConcurrentDictionary<string, byte> _seriesVisualNoPosterKeys = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<PersonalStateKey, SemaphoreSlim> _personalStateGates = new();
     private long _downloadLandingStoredBytes;
-    private readonly SemaphoreSlim _channelVisualEnrichmentSemaphore = new(3, 3);
-    private readonly SemaphoreSlim _seriesVisualEnrichmentSemaphore = new(3, 3);
     private CancellationTokenSource? _slowLoadingWarnCts;
     private CancellationTokenSource? _profileLoadCts;
     private int _profileLoadGeneration;
+    private long _tmdbEnrichmentGeneration;
+    private TmdbVisualEnrichmentScope? _tmdbVisualEnrichmentScope;
+    private long _staleTmdbCommitRejections;
     private readonly ILocalizationService _localizationService;
     private bool _suppressNavigationFilterRefresh;
     private bool _suppressSelectedPlaylistChanged;
@@ -101,6 +102,13 @@ public partial class MainViewModel : ObservableObject
     private long _staleNavigationResetCompletions;
 
     private sealed record NavigationContentResetOwner(long Generation, AppView View, int FilterVersion);
+
+    private sealed record TmdbVisualEnrichmentScope(
+        long Generation,
+        AppView View,
+        int? PlaylistId,
+        CancellationTokenSource Cancellation,
+        CancellationToken Token);
 
     // Guards media-selection flows before they reach MainWindow playback.
     // This prevents rapid Live/VOD/Series clicks from completing out of order
@@ -335,6 +343,8 @@ public partial class MainViewModel : ObservableObject
 
     partial void OnActiveViewChanged(AppView value)
     {
+        ReplaceTmdbVisualEnrichmentScope(value, SelectedPlaylist?.Id, "view");
+
         // Görünüm değiştiğinde kategori tipini de senkronize et
         SelectedChannelType = value switch
         {
@@ -425,7 +435,8 @@ public partial class MainViewModel : ObservableObject
         IContentQueryService? contentQueryService = null,
         IStorageInfoService? storageInfo = null,
         ReviewPromptTracker? reviewPromptTracker = null,
-        StartupWorkCoordinator? startupWorkCoordinator = null)
+        StartupWorkCoordinator? startupWorkCoordinator = null,
+        ITmdbEnrichmentScheduler? tmdbEnrichmentScheduler = null)
     {
         _localizationService = localizationService;
         _settingsService = settingsService;
@@ -451,6 +462,7 @@ public partial class MainViewModel : ObservableObject
         _contextFactory = contextFactory;
         _securityService = securityService;
         _tmdbSyncService = tmdbSyncService;
+        _tmdbEnrichmentScheduler = tmdbEnrichmentScheduler;
         _licenseService = licenseService;
         _appVersionService = appVersionService;
         _appPaths = appPaths ?? new DesktopAppPathService();
@@ -717,6 +729,7 @@ public partial class MainViewModel : ObservableObject
 
     public void CancelProfileBackgroundLoading()
     {
+        CancelTmdbVisualEnrichmentScope("app-closing");
         CancelActiveProfileLoadScope("app-closing");
     }
 
@@ -1400,7 +1413,6 @@ public partial class MainViewModel : ObservableObject
         _seriesFilteredSource.Clear();
         _allSeriesCache.Clear();
         _seriesCachePlaylistId = null;
-        _pendingSeriesMetadataEnrichmentIds.Clear();
         _seriesVisualNoPosterKeys.Clear();
         _allGroupsCache.Clear();
         _liveGroupsCache.Clear();
@@ -1477,7 +1489,6 @@ public partial class MainViewModel : ObservableObject
         _seriesFilteredSource.Clear();
         _allSeriesCache.Clear();
         _seriesCachePlaylistId = null;
-        _pendingSeriesMetadataEnrichmentIds.Clear();
         _seriesVisualNoPosterKeys.Clear();
         _allGroupsCache.Clear();
         _liveGroupsCache.Clear();
@@ -2352,6 +2363,7 @@ public partial class MainViewModel : ObservableObject
 
     partial void OnSelectedPlaylistChanged(Playlist? value)
     {
+        ReplaceTmdbVisualEnrichmentScope(ActiveView, value?.Id, "playlist");
         IsSeriesAggregationPending = false;
 
         if (_suppressSelectedPlaylistChanged)
@@ -3367,6 +3379,11 @@ public partial class MainViewModel : ObservableObject
         NotifyContentStateChanged();
     }
 
+    partial void OnCurrentProfileChanged(Profile? value)
+    {
+        ReplaceTmdbVisualEnrichmentScope(ActiveView, SelectedPlaylist?.Id, "profile");
+    }
+
     public async Task LoadMoreChannelsAsync(
         CancellationToken cancellationToken = default,
         int? contentGeneration = null)
@@ -3613,33 +3630,20 @@ public partial class MainViewModel : ObservableObject
             NotifyContentStateChanged();
 
             // M3U lists often lack poster metadata, so only they use TMDB enrichment here.
-            if (ShouldUseTmdbVisualEnrichment())
+            if (ShouldUseTmdbVisualEnrichment() &&
+                TryGetCurrentTmdbVisualEnrichmentScope(out var scope))
             {
                 var enrichPage = page
-                    .Where(s => s.Id > 0 &&
-                                ((s.TmdbId == null && s.LastTmdbSync == null) || s.MetadataFetchedAt == null) &&
-                                _pendingSeriesMetadataEnrichmentIds.TryAdd(s.Id, 1))
+                    .Where(s => s.PlaylistId == scope.PlaylistId &&
+                                s.Id > 0 &&
+                                ((s.TmdbId == null && s.LastTmdbSync == null) || s.MetadataFetchedAt == null))
                     .ToList();
                 if (enrichPage.Count > 0)
                 {
-                    _ = Task.Run(async () =>
-                    {
-                        try
-                        {
-                            await _tmdbSyncService.EnrichSeriesBatchAsync(enrichPage);
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger?.LogDebug($"TMDB enrichment for page failed: {ex.Message}");
-                        }
-                        finally
-                        {
-                            foreach (var series in enrichPage)
-                            {
-                                _pendingSeriesMetadataEnrichmentIds.TryRemove(series.Id, out _);
-                            }
-                        }
-                    });
+                    var key = $"series-page:{scope.PlaylistId}:g{scope.Generation}";
+                    _ = ObserveTmdbEnrichmentAsync(
+                        _tmdbSyncService.EnrichSeriesBatchAsync(enrichPage, scope.Token),
+                        key);
                 }
             }
 
@@ -3656,18 +3660,112 @@ public partial class MainViewModel : ObservableObject
     private bool ShouldUseTmdbVisualEnrichment()
         => CurrentProfile?.ProviderAccount?.Type == ProfileType.M3U;
 
+    private void ReplaceTmdbVisualEnrichmentScope(AppView view, int? playlistId, string reason)
+    {
+        var cancellation = new CancellationTokenSource();
+        var scope = new TmdbVisualEnrichmentScope(
+            Interlocked.Increment(ref _tmdbEnrichmentGeneration),
+            view,
+            playlistId,
+            cancellation,
+            cancellation.Token);
+        var previous = Interlocked.Exchange(ref _tmdbVisualEnrichmentScope, scope);
+        CancelTmdbVisualEnrichmentScope(previous, reason);
+        PerformanceTrace.Mark("tmdb.scope.started.count", scope.Generation, $"{view}:{playlistId}");
+    }
+
+    private void CancelTmdbVisualEnrichmentScope(string reason)
+    {
+        Interlocked.Increment(ref _tmdbEnrichmentGeneration);
+        var previous = Interlocked.Exchange(ref _tmdbVisualEnrichmentScope, null);
+        CancelTmdbVisualEnrichmentScope(previous, reason);
+    }
+
+    private static void CancelTmdbVisualEnrichmentScope(
+        TmdbVisualEnrichmentScope? scope,
+        string reason)
+    {
+        if (scope == null)
+        {
+            return;
+        }
+
+        try
+        {
+            PerformanceTrace.Mark("tmdb.scope.cancelled.count", scope.Generation, reason);
+            scope.Cancellation.Cancel();
+        }
+        catch (ObjectDisposedException)
+        {
+            // The captured token remains safe even if a racing owner already disposed the CTS.
+        }
+        finally
+        {
+            scope.Cancellation.Dispose();
+        }
+    }
+
+    private bool TryGetCurrentTmdbVisualEnrichmentScope(
+        out TmdbVisualEnrichmentScope scope)
+    {
+        scope = Volatile.Read(ref _tmdbVisualEnrichmentScope)!;
+        return scope != null && IsTmdbVisualEnrichmentScopeCurrent(scope);
+    }
+
+    private bool IsTmdbVisualEnrichmentScopeCurrent(TmdbVisualEnrichmentScope scope)
+        => !scope.Token.IsCancellationRequested &&
+           ReferenceEquals(Volatile.Read(ref _tmdbVisualEnrichmentScope), scope) &&
+           ActiveView == scope.View &&
+           SelectedPlaylist?.Id == scope.PlaylistId;
+
+    private bool CanCommitTmdbVisualEnrichment(
+        TmdbVisualEnrichmentScope scope,
+        CancellationToken cancellationToken)
+    {
+        if (!cancellationToken.IsCancellationRequested &&
+            IsTmdbVisualEnrichmentScopeCurrent(scope))
+        {
+            return true;
+        }
+
+        PerformanceTrace.Mark(
+            "tmdb.commit.stale_rejected.count",
+            Interlocked.Increment(ref _staleTmdbCommitRejections),
+            $"{scope.View}:{scope.PlaylistId}:{scope.Generation}");
+        return false;
+    }
+
+    private async Task ObserveTmdbEnrichmentAsync(Task task, string key)
+    {
+        try
+        {
+            await task;
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected when navigation or playlist ownership changes.
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogDebug(ex, "TMDB enrichment failed for {Key}", key);
+        }
+    }
+
     private static string GetSeriesVisualEnrichmentKey(int seriesId)
         => $"series:{seriesId}";
 
     private void QueueVisibleChannelVisualEnrichment(IReadOnlyCollection<Channel> page)
     {
-        if (!ShouldUseTmdbVisualEnrichment())
+        if (!ShouldUseTmdbVisualEnrichment() ||
+            _tmdbEnrichmentScheduler == null ||
+            !TryGetCurrentTmdbVisualEnrichmentScope(out var scope))
         {
             return;
         }
 
         var candidates = page
-            .Where(c => c.Type == ChannelType.VOD && c.Id > 0 &&
+            .Where(c => c.PlaylistId == scope.PlaylistId &&
+                        c.Type == ChannelType.VOD && c.Id > 0 &&
                         !HasDisplayImage(c))
             .ToList();
 
@@ -3676,48 +3774,30 @@ public partial class MainViewModel : ObservableObject
             return;
         }
 
-
-        _ = Task.Run(async () =>
+        foreach (var channel in candidates)
         {
-            var token = _profileLoadCts?.Token ?? CancellationToken.None;
-            foreach (var channel in candidates)
-            {
-                var acquired = false;
-                try
-                {
-                    token.ThrowIfCancellationRequested();
-                    await _channelVisualEnrichmentSemaphore.WaitAsync(token);
-                    acquired = true;
-                    await EnrichChannelVisualAsync(channel, token);
-                }
-                catch (OperationCanceledException)
-                {
-                    break;
-                }
-                catch (Exception ex)
-                {
-                    _logger?.LogDebug(ex, "Lazy visual enrichment failed for VOD {Name}", channel.Name);
-                }
-                finally
-                {
-                    if (acquired)
-                    {
-                        _channelVisualEnrichmentSemaphore.Release();
-                    }
-                }
-            }
-        });
+            var key = $"vod-visual:{channel.PlaylistId}:{channel.Id}:g{scope.Generation}";
+            _ = ObserveTmdbEnrichmentAsync(
+                _tmdbEnrichmentScheduler.ScheduleAsync(
+                    key,
+                    token => EnrichChannelVisualAsync(channel, scope, token),
+                    scope.Token),
+                key);
+        }
     }
 
     private void QueueVisibleSeriesVisualEnrichment(IReadOnlyCollection<Series> page)
     {
-        if (!ShouldUseTmdbVisualEnrichment())
+        if (!ShouldUseTmdbVisualEnrichment() ||
+            _tmdbEnrichmentScheduler == null ||
+            !TryGetCurrentTmdbVisualEnrichmentScope(out var scope))
         {
             return;
         }
 
         var candidates = page
-            .Where(s => s.Id > 0 &&
+            .Where(s => s.PlaylistId == scope.PlaylistId &&
+                        s.Id > 0 &&
                         !HasDisplayImage(s) &&
                         !_seriesVisualNoPosterKeys.ContainsKey(GetSeriesVisualEnrichmentKey(s.Id)))
             .ToList();
@@ -3727,42 +3807,24 @@ public partial class MainViewModel : ObservableObject
             return;
         }
 
-
-        _ = Task.Run(async () =>
+        foreach (var series in candidates)
         {
-            var token = _profileLoadCts?.Token ?? CancellationToken.None;
-            foreach (var series in candidates)
-            {
-                var acquired = false;
-                try
-                {
-                    token.ThrowIfCancellationRequested();
-                    await _seriesVisualEnrichmentSemaphore.WaitAsync(token);
-                    acquired = true;
-                    await EnrichSeriesVisualAsync(series, token);
-                }
-                catch (OperationCanceledException)
-                {
-                    break;
-                }
-                catch (Exception ex)
-                {
-                    _logger?.LogDebug(ex, "Lazy visual enrichment failed for Series {Name}", series.Name);
-                }
-                finally
-                {
-                    if (acquired)
-                    {
-                        _seriesVisualEnrichmentSemaphore.Release();
-                    }
-                }
-            }
-        });
+            var key = $"series-visual:{series.PlaylistId}:{series.Id}:g{scope.Generation}";
+            _ = ObserveTmdbEnrichmentAsync(
+                _tmdbEnrichmentScheduler.ScheduleAsync(
+                    key,
+                    token => EnrichSeriesVisualAsync(series, scope, token),
+                    scope.Token),
+                key);
+        }
     }
 
-    private async Task EnrichChannelVisualAsync(Channel channel, CancellationToken cancellationToken)
+    private async Task EnrichChannelVisualAsync(
+        Channel channel,
+        TmdbVisualEnrichmentScope scope,
+        CancellationToken cancellationToken)
     {
-        var key = $"vod:{channel.Id}";
+        var key = $"vod:{channel.Id}:g{scope.Generation}";
         if (!_pendingVisualEnrichmentKeys.TryAdd(key, 1))
         {
             return;
@@ -3770,22 +3832,29 @@ public partial class MainViewModel : ObservableObject
 
         try
         {
-            if (HasDisplayImage(channel))
+            if (HasDisplayImage(channel) ||
+                !CanCommitTmdbVisualEnrichment(scope, cancellationToken))
             {
                 return;
             }
-            cancellationToken.ThrowIfCancellationRequested();
 
             var languageCode = SeriesInfoParser.ExtractLanguageCode(channel.GroupTitle ?? channel.Name);
-            var metadata = await _metadataService.FetchMetadataAsync(channel.Name, ChannelType.VOD, languageCode);
-            if (metadata == null || string.IsNullOrWhiteSpace(metadata.PosterUrl))
+            var metadata = await _metadataService.FetchMetadataAsync(
+                channel.Name,
+                ChannelType.VOD,
+                languageCode,
+                cancellationToken);
+            if (metadata == null ||
+                string.IsNullOrWhiteSpace(metadata.PosterUrl) ||
+                !CanCommitTmdbVisualEnrichment(scope, cancellationToken))
             {
                 return;
             }
 
-            using var db = await _contextFactory.CreateDbContextAsync();
+            using var db = await _contextFactory.CreateDbContextAsync(cancellationToken);
             var dbChannel = await db.Channels.FirstOrDefaultAsync(c => c.Id == channel.Id, cancellationToken);
-            if (dbChannel == null)
+            if (dbChannel == null ||
+                !CanCommitTmdbVisualEnrichment(scope, cancellationToken))
             {
                 return;
             }
@@ -3845,10 +3914,20 @@ public partial class MainViewModel : ObservableObject
 
             if (changed)
             {
+                if (!CanCommitTmdbVisualEnrichment(scope, cancellationToken))
+                {
+                    return;
+                }
+
                 await db.SaveChangesAsync(cancellationToken);
 
                 await _dispatcherService.InvokeAsync(() =>
                 {
+                    if (!CanCommitTmdbVisualEnrichment(scope, cancellationToken))
+                    {
+                        return Task.CompletedTask;
+                    }
+
                     channel.LogoUrl    = dbChannel.LogoUrl;
                     channel.BackdropUrl = dbChannel.BackdropUrl;
                     channel.Plot        = dbChannel.Plot;
@@ -3869,9 +3948,12 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
-    private async Task EnrichSeriesVisualAsync(Series series, CancellationToken cancellationToken)
+    private async Task EnrichSeriesVisualAsync(
+        Series series,
+        TmdbVisualEnrichmentScope scope,
+        CancellationToken cancellationToken)
     {
-        var key = GetSeriesVisualEnrichmentKey(series.Id);
+        var key = $"series:{series.Id}:g{scope.Generation}";
         if (!_pendingVisualEnrichmentKeys.TryAdd(key, 1))
         {
             return;
@@ -3879,23 +3961,32 @@ public partial class MainViewModel : ObservableObject
 
         try
         {
-            if (HasDisplayImage(series))
+            if (HasDisplayImage(series) ||
+                !CanCommitTmdbVisualEnrichment(scope, cancellationToken))
             {
-                return;
-            }
-            cancellationToken.ThrowIfCancellationRequested();
-
-            var languageCode = SeriesInfoParser.ExtractLanguageCode(series.GroupTitle ?? series.Genre ?? series.Name);
-            var metadata = await _metadataService.SearchSeriesAsync(series.Name, languageCode);
-            if (metadata == null || string.IsNullOrWhiteSpace(metadata.PosterUrl))
-            {
-                _seriesVisualNoPosterKeys.TryAdd(key, 1);
                 return;
             }
 
-            using var db = await _contextFactory.CreateDbContextAsync();
+            var languageCode = SeriesInfoParser.ExtractLanguageCode(series.GroupTitle ?? series.Genre ?? series.Name);
+            var metadata = await _metadataService.SearchSeriesAsync(
+                series.Name,
+                languageCode,
+                cancellationToken);
+            if (metadata == null ||
+                string.IsNullOrWhiteSpace(metadata.PosterUrl) ||
+                !CanCommitTmdbVisualEnrichment(scope, cancellationToken))
+            {
+                if (metadata != null && string.IsNullOrWhiteSpace(metadata.PosterUrl))
+                {
+                    _seriesVisualNoPosterKeys.TryAdd(GetSeriesVisualEnrichmentKey(series.Id), 1);
+                }
+                return;
+            }
+
+            using var db = await _contextFactory.CreateDbContextAsync(cancellationToken);
             var dbSeries = await db.Series.FirstOrDefaultAsync(s => s.Id == series.Id, cancellationToken);
-            if (dbSeries == null)
+            if (dbSeries == null ||
+                !CanCommitTmdbVisualEnrichment(scope, cancellationToken))
             {
                 return;
             }
@@ -3925,10 +4016,20 @@ public partial class MainViewModel : ObservableObject
 
             if (changed)
             {
+                if (!CanCommitTmdbVisualEnrichment(scope, cancellationToken))
+                {
+                    return;
+                }
+
                 await db.SaveChangesAsync(cancellationToken);
 
                 await _dispatcherService.InvokeAsync(() =>
                 {
+                    if (!CanCommitTmdbVisualEnrichment(scope, cancellationToken))
+                    {
+                        return Task.CompletedTask;
+                    }
+
                     series.CoverUrl = dbSeries.CoverUrl;
                     series.BackdropUrl = dbSeries.BackdropUrl;
                     series.TmdbId = dbSeries.TmdbId;

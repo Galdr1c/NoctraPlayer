@@ -87,6 +87,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IPlatformActionService, DesktopPlatformActionService>();
         services.AddSingleton<IStorageInfoService, DesktopStorageInfoService>();
         services.AddSingleton<EpgSourceResolver>();
+        services.AddSingleton(new TmdbEnrichmentSchedulerOptions());
+        services.AddSingleton<ITmdbEnrichmentScheduler, TmdbEnrichmentScheduler>();
         services.AddSingleton<ITmdbSyncService, TmdbSyncService>();
         services.AddSingleton<IProfileService, ProfileService>();
         services.AddSingleton<IProfileAccessService, ProfileAccessService>();
