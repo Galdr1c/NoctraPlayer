@@ -416,6 +416,66 @@ public sealed class VideoOverlayInputSurfaceTests
     }
 
     [Fact]
+    public void AndroidPlayer_DetachesManagedListenerBeforeSynchronousSessionReset()
+    {
+        var playerService = LoadProjectFile(
+            "Noctra.Android",
+            "Services",
+            "AndroidVideoPlayerService.cs");
+        var endSessionMethod = ExtractMethodBody(
+            playerService,
+            "public async Task EndSessionAsync(CancellationToken cancellationToken = default)");
+
+        var detachIndex = endSessionMethod.IndexOf(
+            "_exoPlayer.RemoveListener(_playerListener);",
+            StringComparison.Ordinal);
+        var stopIndex = endSessionMethod.IndexOf(
+            "_exoPlayer.Stop();",
+            StringComparison.Ordinal);
+        var clearIndex = endSessionMethod.IndexOf(
+            "_exoPlayer.ClearMediaItems();",
+            StringComparison.Ordinal);
+        var attachIndex = endSessionMethod.IndexOf(
+            "_exoPlayer.AddListener(_playerListener);",
+            StringComparison.Ordinal);
+
+        Assert.True(detachIndex >= 0, "EndSessionAsync must detach the managed listener before native reset.");
+        Assert.True(stopIndex > detachIndex, "The listener must be detached before Stop().");
+        Assert.True(clearIndex > stopIndex, "The native reset must stop before clearing media items.");
+        Assert.True(attachIndex > clearIndex, "The managed listener must be restored after the native reset.");
+    }
+
+    [Fact]
+    public void AndroidPlayer_DetachesManagedListenerBeforeReplacingMedia()
+    {
+        var playerService = LoadProjectFile(
+            "Noctra.Android",
+            "Services",
+            "AndroidVideoPlayerService.cs");
+        var playMethod = ExtractMethodBody(
+            playerService,
+            "public async Task PlayAsync(string url, double startTimeSeconds = 0)");
+
+        var detachIndex = playMethod.IndexOf(
+            "_exoPlayer.RemoveListener(_playerListener);",
+            StringComparison.Ordinal);
+        var stopIndex = playMethod.IndexOf(
+            "_exoPlayer.Stop();",
+            StringComparison.Ordinal);
+        var clearIndex = playMethod.IndexOf(
+            "_exoPlayer.ClearMediaItems();",
+            StringComparison.Ordinal);
+        var attachIndex = playMethod.IndexOf(
+            "_exoPlayer.AddListener(_playerListener);",
+            StringComparison.Ordinal);
+
+        Assert.True(detachIndex >= 0, "PlayAsync must detach the managed listener before replacing native media.");
+        Assert.True(stopIndex > detachIndex, "The listener must be detached before Stop().");
+        Assert.True(clearIndex > stopIndex, "The native reset must stop before clearing media items.");
+        Assert.True(attachIndex > clearIndex, "The managed listener must be restored after the media reset.");
+    }
+
+    [Fact]
     public void AndroidPlayer_PublishesPlaybackPositionWhileMediaIsPlaying()
     {
         var playerService = LoadProjectFile(

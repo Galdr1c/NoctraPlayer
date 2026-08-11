@@ -307,9 +307,29 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
                     throw new InvalidOperationException("ExoPlayer is not initialized.");
                 }
 
-                _exoPlayer.Stop();
-                _exoPlayer.ClearVideoSurface();
-                _exoPlayer.ClearMediaItems();
+                var listenerDetached = false;
+                try
+                {
+                    if (_playerListener is not null)
+                    {
+                        // Media3 can synchronously dispatch timeline/track callbacks from
+                        // Stop/ClearMediaItems. Detach the managed listener so those callbacks
+                        // cannot block the Android UI thread while replacing a source.
+                        _exoPlayer.RemoveListener(_playerListener);
+                        listenerDetached = true;
+                    }
+
+                    _exoPlayer.Stop();
+                    _exoPlayer.ClearVideoSurface();
+                    _exoPlayer.ClearMediaItems();
+                }
+                finally
+                {
+                    if (listenerDetached && _playerListener is not null)
+                    {
+                        _exoPlayer.AddListener(_playerListener);
+                    }
+                }
 
                 // Setup DataSource.Factory with headers
                 var httpDataSourceFactory = new DefaultHttpDataSource.Factory();
@@ -542,10 +562,30 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
 
                 if (_exoPlayer is not null)
                 {
-                    _exoPlayer.PlayWhenReady = false;
-                    _exoPlayer.Stop();
-                    _exoPlayer.ClearVideoSurface();
-                    _exoPlayer.ClearMediaItems();
+                    var listenerDetached = false;
+                    try
+                    {
+                        // Media3 dispatches timeline/track callbacks synchronously while
+                        // Stop/ClearMediaItems runs.  Detaching our managed listener keeps
+                        // that native teardown out of the Android input-dispatch path.
+                        if (_playerListener is not null)
+                        {
+                            _exoPlayer.RemoveListener(_playerListener);
+                            listenerDetached = true;
+                        }
+
+                        _exoPlayer.PlayWhenReady = false;
+                        _exoPlayer.Stop();
+                        _exoPlayer.ClearVideoSurface();
+                        _exoPlayer.ClearMediaItems();
+                    }
+                    finally
+                    {
+                        if (listenerDetached && _playerListener is not null)
+                        {
+                            _exoPlayer.AddListener(_playerListener);
+                        }
+                    }
                 }
 
                 _currentUrl = null;
