@@ -7,11 +7,12 @@ using Avalonia.Interactivity;
 using Avalonia.Input;
 using Avalonia.Media;
 using Noctra.Mobile.Localization;
+using Noctra.Mobile.Navigation;
 using Noctra.ViewModels;
 
 namespace Noctra.Mobile.Views;
 
-public partial class MobileSettingsView : UserControl
+public partial class MobileSettingsView : UserControl, IMobileNavigationStateParticipant
 {
     private SettingsViewModel? _viewModel;
 
@@ -73,6 +74,14 @@ public partial class MobileSettingsView : UserControl
     {
         InitializeComponent();
     }
+
+    bool IMobileNavigationStateParticipant.TryCaptureNavigationState(out MobilePageScrollState state)
+        => MobileNavigationScrollState.TryCapture(SettingsScrollViewer, out state);
+
+    bool IMobileNavigationStateParticipant.TryRestoreNavigationState(
+        MobilePageScrollState state,
+        bool allowClamping)
+        => MobileNavigationScrollState.TryRestore(SettingsScrollViewer, state, allowClamping);
 
     protected override void OnDataContextChanged(EventArgs e)
     {

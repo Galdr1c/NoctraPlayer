@@ -45,10 +45,6 @@ public class MainActivity : AvaloniaMainActivity
 
     protected override void OnCreate(Bundle? savedInstanceState)
     {
-#if DEBUG
-        ConfigurePerformanceProbe();
-#endif
-        PerformanceTrace.Mark("android.activity.create");
         AndroidX.Core.SplashScreen.SplashScreen.InstallSplashScreen(this);
 
         var applicationContext = ApplicationContext
@@ -63,6 +59,12 @@ public class MainActivity : AvaloniaMainActivity
         try
         {
             base.OnCreate(savedInstanceState);
+#if DEBUG
+            // Some Android vendors do not expose launch extras through Intent
+            // until the base Activity has completed creation.
+            ConfigurePerformanceProbe();
+#endif
+            PerformanceTrace.Mark("android.activity.create");
             ConfigureAvaloniaOverlaySurface();
         }
         catch (Exception ex)

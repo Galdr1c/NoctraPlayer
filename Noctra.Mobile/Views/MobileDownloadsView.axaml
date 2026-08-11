@@ -28,7 +28,7 @@
   </UserControl.Styles>
 
   <Grid>
-  <ScrollViewer>
+  <ScrollViewer x:Name="PrimaryScrollContent">
     <StackPanel Margin="24" Spacing="20">
 
       <!-- Title -->

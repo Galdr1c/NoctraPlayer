@@ -64,6 +64,7 @@
       </Button>
 
       <controls:MobileVirtualizingCardGrid Grid.Row="2"
+                                          x:Name="PrimaryScrollContent"
                                            SourceItems="{Binding SeriesViewItems}"
                                            CardKind="Series"
                                            ItemContainerTheme="{StaticResource TransparentListBoxItemTheme}"

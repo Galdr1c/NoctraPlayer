@@ -1,16 +1,25 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Input;
+using Noctra.Mobile.Navigation;
 using Noctra.ViewModels;
 
 namespace Noctra.Mobile.Views;
 
-public partial class MobileSearchView : UserControl
+public partial class MobileSearchView : UserControl, IMobileNavigationStateParticipant
 {
     public MobileSearchView()
     {
         InitializeComponent();
     }
+
+    bool IMobileNavigationStateParticipant.TryCaptureNavigationState(out MobilePageScrollState state)
+        => MobileNavigationScrollState.TryCapture(PrimaryScrollContent, out state);
+
+    bool IMobileNavigationStateParticipant.TryRestoreNavigationState(
+        MobilePageScrollState state,
+        bool allowClamping)
+        => MobileNavigationScrollState.TryRestore(PrimaryScrollContent, state, allowClamping);
 
     private void SearchInput_KeyDown(object? sender, KeyEventArgs e)
     {

@@ -109,6 +109,7 @@
     </StackPanel>
 
     <controls:MobileSectionedCardFeed Grid.Row="2"
+                                      x:Name="PrimaryScrollContent"
         Margin="20,0,20,0"
         ScrollChanged="SearchScrollViewer_ScrollChanged"
         ItemContainerTheme="{StaticResource TransparentListBoxItemTheme}">

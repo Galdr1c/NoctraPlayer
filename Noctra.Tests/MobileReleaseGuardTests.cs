@@ -433,8 +433,8 @@ public class MobileReleaseGuardTests
         Assert.Contains("Click=\"OpenDownloadSortSheet_Click\"", downloads);
         Assert.Contains("DownloadSortOrder.Latest", codeBehind);
         Assert.Contains("SelectionSheetHost.TryClose()", codeBehind);
-        Assert.Contains("MobileDownloadsContent.IsVisible && MobileDownloadsContent.TryHandleBack()", mainView);
-        Assert.Contains("destination != \"Downloads\"", mainView);
+        Assert.Contains("MobileDownloadsView downloads => downloads.TryHandleBack()", mainView);
+        Assert.Contains("ReleaseActiveCorePage(captureState: true)", mainView);
     }
 
     [Fact]
@@ -473,9 +473,9 @@ public class MobileReleaseGuardTests
             Assert.DoesNotContain("<ComboBox", view);
         }
 
-        Assert.Contains("MobileLiveContent.IsVisible && MobileLiveContent.TryHandleBack()", mainView);
-        Assert.Contains("MobileMoviesContent.IsVisible && MobileMoviesContent.TryHandleBack()", mainView);
-        Assert.Contains("MobileSeriesContent.IsVisible && MobileSeriesContent.TryHandleBack()", mainView);
+        Assert.Contains("MobileLiveView live => live.TryHandleBack()", mainView);
+        Assert.Contains("MobileMoviesView movies => movies.TryHandleBack()", mainView);
+        Assert.Contains("MobileSeriesView series => series.TryHandleBack()", mainView);
     }
 
     [Fact]

@@ -66,6 +66,25 @@ public sealed class AndroidPerformanceStabilityContractTests
     }
 
     [Fact]
+    public void AndroidActivity_ConfiguresPerformanceProbeAfterBaseOnCreate()
+    {
+        var activity = ReadProjectFile("Noctra.Android", "MainActivity.cs");
+        var onCreateStart = activity.IndexOf(
+            "protected override void OnCreate",
+            StringComparison.Ordinal);
+        var onCreateEnd = activity.IndexOf(
+            "protected override void OnStart",
+            onCreateStart,
+            StringComparison.Ordinal);
+        var onCreate = activity[onCreateStart..onCreateEnd];
+
+        var baseCreate = onCreate.IndexOf("base.OnCreate(savedInstanceState)", StringComparison.Ordinal);
+        var configureProbe = onCreate.IndexOf("ConfigurePerformanceProbe()", StringComparison.Ordinal);
+
+        Assert.True(baseCreate >= 0 && configureProbe > baseCreate);
+    }
+
+    [Fact]
     public void MobileGrid_ResumeRecoveryIsInactiveAware()
     {
         var grid = ReadProjectFile("Noctra.Mobile", "Controls", "MobileVirtualizingCardGrid.cs");
@@ -145,12 +164,13 @@ public sealed class AndroidPerformanceStabilityContractTests
         var attachMethod = mainView[attachStart..attachEnd];
 
         Assert.Contains("SetDescendantLoadsActive", image, StringComparison.Ordinal);
-        Assert.Contains("RemoteImage.SetDescendantLoadsActive(previousContent, false)", mainView, StringComparison.Ordinal);
+        Assert.Contains("RemoteImage.SetDescendantLoadsActive(active.Page, false)", mainView, StringComparison.Ordinal);
+        Assert.Contains("RemoteImage.SetDescendantLoadsActive(_activeCorePage?.Page, isActive)", mainView, StringComparison.Ordinal);
         Assert.Contains("MobileAppLifecycle.Paused += OnAppPaused", attachMethod, StringComparison.Ordinal);
         Assert.Contains("MobileAppLifecycle.Resumed += OnAppResumed", attachMethod, StringComparison.Ordinal);
         Assert.Contains("DispatcherPriority.Background", mainView, StringComparison.Ordinal);
-        Assert.Contains("SetCurrentContentImageLoadsActive(false)", mainView, StringComparison.Ordinal);
-        Assert.Contains("SetCurrentContentImageLoadsActive(true)", mainView, StringComparison.Ordinal);
+        Assert.Contains("SetActivePageImageLoadsActive(false)", mainView, StringComparison.Ordinal);
+        Assert.Contains("SetActivePageImageLoadsActive(true)", mainView, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -183,10 +203,8 @@ public sealed class AndroidPerformanceStabilityContractTests
         Assert.Contains("SetSurfaceLoadsActive", image, StringComparison.Ordinal);
         Assert.Contains("SetSourceOnUiThread(null, normalizedUrl)", image, StringComparison.Ordinal);
         Assert.Contains("TrySetSource(url, null, cancellationToken)", image, StringComparison.Ordinal);
-        Assert.Contains(
-            "SetCurrentContentImageLoadsActive(false)",
-            profileMethod,
-            StringComparison.Ordinal);
+        Assert.Contains("ReleaseActiveCorePage(captureState: true)", profileMethod, StringComparison.Ordinal);
+        Assert.Contains("ReleaseSeriesDetailView()", profileMethod, StringComparison.Ordinal);
     }
 
     [Fact]

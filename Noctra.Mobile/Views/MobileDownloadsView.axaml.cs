@@ -4,11 +4,12 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Noctra.Mobile.Localization;
+using Noctra.Mobile.Navigation;
 using Noctra.ViewModels;
 
 namespace Noctra.Mobile.Views;
 
-public partial class MobileDownloadsView : UserControl
+public partial class MobileDownloadsView : UserControl, IMobileNavigationStateParticipant
 {
     private MainViewModel? _viewModel;
 
@@ -16,6 +17,14 @@ public partial class MobileDownloadsView : UserControl
     {
         InitializeComponent();
     }
+
+    bool IMobileNavigationStateParticipant.TryCaptureNavigationState(out MobilePageScrollState state)
+        => MobileNavigationScrollState.TryCapture(PrimaryScrollContent, out state);
+
+    bool IMobileNavigationStateParticipant.TryRestoreNavigationState(
+        MobilePageScrollState state,
+        bool allowClamping)
+        => MobileNavigationScrollState.TryRestore(PrimaryScrollContent, state, allowClamping);
 
     protected override void OnDataContextChanged(EventArgs e)
     {

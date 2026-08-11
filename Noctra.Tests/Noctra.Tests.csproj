@@ -53,6 +53,8 @@
              Link="Services\MobileImageLoadPolicy.cs" />
     <Compile Include="..\Noctra.Mobile\Controls\MobileRemoteImage.cs"
              Link="Controls\MobileRemoteImage.cs" />
+    <Compile Include="..\Noctra.Mobile\Navigation\MobilePageNavigationStateStore.cs"
+             Link="Navigation\MobilePageNavigationStateStore.cs" />
   </ItemGroup>
 
 </Project>

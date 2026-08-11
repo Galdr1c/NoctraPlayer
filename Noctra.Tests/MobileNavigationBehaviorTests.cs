@@ -39,11 +39,13 @@ public sealed class MobileNavigationBehaviorTests
     {
         var mainView = ReadProjectFile("Noctra.Mobile", "Views", "MainView.axaml.cs");
 
-        // Must check version after releasing settings and after awaiting
+        // The lazy host validates both the shell version and page generation.
         var versionChecks = Regex.Matches(mainView,
-            @"if \(version != Volatile\.Read\(ref _navigationVersion\)\)").Count;
+            @"if \(!IsNavigationCurrent\(version, generation\)\)").Count;
         Assert.True(versionChecks >= 2,
-            $"Expected at least 2 version checks after awaits, found {versionChecks}");
+            $"Expected at least 2 navigation-generation checks, found {versionChecks}");
+        Assert.Contains("version == Volatile.Read(ref _navigationVersion)", mainView);
+        Assert.Contains("_pageNavigationState.IsCurrent(generation)", mainView);
     }
 
     [Fact]
@@ -281,7 +283,7 @@ public sealed class MobileNavigationBehaviorTests
     public void NavigateToDestination_CancelsAnyOverscrollSessionFromPreviousPage()
     {
         var mainView = ReadProjectFile("Noctra.Mobile", "Views", "MainView.axaml.cs");
-        var navigation = ExtractMethod(mainView, "NavigateToDestinationAsync");
+        var navigation = ExtractMethod(mainView, "NavigateToDestinationCoreAsync");
 
         Assert.Contains("_overscrollController.Hide()", navigation);
     }

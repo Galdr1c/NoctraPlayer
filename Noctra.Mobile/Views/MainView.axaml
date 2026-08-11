@@ -511,27 +511,8 @@
 
       <Grid x:Name="CoreContentHost"
             IsVisible="False">
-        <views:MobileHomeView x:Name="MobileHomeContent"
-                              IsVisible="False" />
-        <views:MobileLiveView x:Name="MobileLiveContent"
-                              IsVisible="False" />
-        <views:MobileMoviesView x:Name="MobileMoviesContent"
-                                IsVisible="False" />
-        <views:MobileSeriesView x:Name="MobileSeriesContent"
-                                IsVisible="False" />
-        <views:MobileSearchView x:Name="MobileSearchContent"
-                                IsVisible="False" />
-        <views:MobileFavoritesView x:Name="MobileFavoritesContent"
-                                   IsVisible="False" />
-        <views:MobileMyListView x:Name="MobileMyListContent"
-                                IsVisible="False" />
-        <views:MobileHistoryView x:Name="MobileHistoryContent"
-                                 IsVisible="False" />
-        <views:MobileDownloadsView x:Name="MobileDownloadsContent"
-                                   IsVisible="False" />
-        <views:MobileSettingsView x:Name="MobileSettingsContent"
-                                  IsVisible="False" />
-        <views:MobileSeriesDetailView x:Name="MobileSeriesDetailContent" />
+        <ContentControl x:Name="ActiveCorePageHost" />
+        <ContentControl x:Name="SeriesDetailHost" />
       </Grid>
 
       <Border x:Name="SelectedMediaHost"

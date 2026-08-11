@@ -4,12 +4,13 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Noctra.Mobile.Localization;
+using Noctra.Mobile.Navigation;
 using Noctra.Models;
 using Noctra.ViewModels;
 
 namespace Noctra.Mobile.Views;
 
-public partial class MobileSeriesView : UserControl
+public partial class MobileSeriesView : UserControl, IMobileNavigationStateParticipant
 {
     private MainViewModel? _sortViewModel;
 
@@ -17,6 +18,14 @@ public partial class MobileSeriesView : UserControl
     {
         InitializeComponent();
     }
+
+    bool IMobileNavigationStateParticipant.TryCaptureNavigationState(out MobilePageScrollState state)
+        => MobileNavigationScrollState.TryCapture(PrimaryScrollContent, out state);
+
+    bool IMobileNavigationStateParticipant.TryRestoreNavigationState(
+        MobilePageScrollState state,
+        bool allowClamping)
+        => MobileNavigationScrollState.TryRestore(PrimaryScrollContent, state, allowClamping);
 
     public event EventHandler<MobileCategorySelectionRequestedEventArgs>? CategorySelectionRequested;
 

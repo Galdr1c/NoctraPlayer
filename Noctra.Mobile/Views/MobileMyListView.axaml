@@ -30,6 +30,7 @@
     </Grid>
 
     <controls:MobileSectionedCardFeed Grid.Row="1"
+                                      x:Name="PrimaryScrollContent"
         Margin="20,0,20,0"
         ItemContainerTheme="{StaticResource TransparentListBoxItemTheme}">
       <controls:MobileSectionedCardFeed.Sections>

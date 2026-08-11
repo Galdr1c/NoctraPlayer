@@ -18,10 +18,12 @@ using HotAvalonia;
 
 using Microsoft.Extensions.DependencyInjection;
 using Material.Icons;
+using Noctra.Diagnostics;
 using Noctra.Mobile.Behaviors;
 using Noctra.Mobile.Controls;
 using Noctra.Models;
 using Noctra.Mobile.Localization;
+using Noctra.Mobile.Navigation;
 using Noctra.Mobile.Services;
 using Noctra.Services;
 using Noctra.Services.Interfaces;
@@ -36,6 +38,8 @@ public partial class MainView : UserControl
     private const double TabletBreakpoint = 720;
     private static readonly TimeSpan BackExitPromptWindow = TimeSpan.FromSeconds(2);
     private const int MaxProfileSelectionRetries = 20;
+    private const int PageRestoreAttempts = 3;
+    private const int PageRestoreDelayMilliseconds = 50;
     private CoreMainViewModel? _coreMainViewModel;
     private PlayerViewModel? _playerViewModel;
     private MobileViewModelResolver? _viewModelResolver;
@@ -55,6 +59,9 @@ public partial class MainView : UserControl
     private Thickness _lastSafeArea;
     private int _profileSelectionRetryCount;
     private bool _startupFlowStarted;
+    private bool _startupFlowCompleted;
+    private bool _isAttachedToVisualTree;
+    private long _attachmentGeneration;
     private readonly Stack<string> _navigationHistory = new();
     private bool _isNavigatingBack;
     private MobileCollapsibleNavigationRail? _navigationRailController;
@@ -62,6 +69,19 @@ public partial class MainView : UserControl
     private long _navigationVersion;
     private readonly object _settingsReleaseSync = new();
     private Task _pendingSettingsRelease = Task.CompletedTask;
+    private readonly MobilePageNavigationStateStore _pageNavigationState = new();
+    private ActiveCorePage? _activeCorePage;
+    private MobileSeriesDetailView? _seriesDetailView;
+    private static long _corePageCreated;
+    private static long _corePageReleased;
+    private static long _corePageRestoreRequested;
+    private static long _corePageRestoreCompleted;
+    private static long _corePageRestoreCancelled;
+    private static long _corePageRestoreFailed;
+    private static long _corePageStaleNavigationDropped;
+    private static long _corePageStaleCommit;
+    private static long _seriesDetailCreated;
+    private static long _seriesDetailReleased;
 
     // Holds the currently active profiles view model when showing the profiles overlay.
     private ProfilesViewModel? _activeProfilesViewModel;
@@ -79,7 +99,7 @@ public partial class MainView : UserControl
         // Event aboneliklerini yeniden kur (XAML reload sırasında kaybolabilir)
         OverlayProfileList.ProfileLoaded -= OverlayProfileList_ProfileLoaded;
         OverlayProfileList.ProfileLoaded += OverlayProfileList_ProfileLoaded;
-        WireCategorySelectionEvents();
+        WireCategorySelectionOverlayEvent();
 
         if (_navigationRailController is null ||
             !_navigationRailController.IsAttachedTo(NavigationRail))
@@ -97,15 +117,17 @@ public partial class MainView : UserControl
         _overscrollController.RefreshVisualTree();
 
         UpdateNavigationMode(Bounds.Width);
-        UpdateContentVisibility(_currentDestination);
+        InvalidatePageRestore();
+        ReleaseSeriesDetailView();
+        ReleaseActiveCorePage(captureState: true);
+        NavigateToDestination(_currentDestination);
         UpdatePlayerChromeState();
     }
 
     public MainView()
     {
         InitializeComponent();
-        WireCategorySelectionEvents();
-        MobileSettingsContent.BackToProfilesRequested += (_, _) => ShowProfileSelection();
+        WireCategorySelectionOverlayEvent();
         SizeChanged += OnSizeChanged;
         Loaded += OnLoaded;
         _backExitToastTimer = new DispatcherTimer { Interval = BackExitPromptWindow };
@@ -126,6 +148,13 @@ public partial class MainView : UserControl
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
+
+        _isAttachedToVisualTree = true;
+        Interlocked.Increment(ref _attachmentGeneration);
+        _startupFlowStarted = false;
+        PerformanceTrace.Mark(
+            "CorePageStaleCommit",
+            Volatile.Read(ref _corePageStaleCommit));
 
         RemoveHandler(
             MobileCardActions.RequestedEvent,
@@ -167,7 +196,14 @@ public partial class MainView : UserControl
             ApplySafeArea(insets.SafeAreaPadding);
         }
 
-        StartStartupFlow();
+        if (_startupFlowCompleted)
+        {
+            RestoreShellAfterReattach();
+        }
+        else
+        {
+            StartStartupFlow();
+        }
     }
 
     private void OnLoaded(object? sender, RoutedEventArgs e)
@@ -175,19 +211,31 @@ public partial class MainView : UserControl
 
     private void StartStartupFlow()
     {
-        if (_startupFlowStarted)
+        if (!_isAttachedToVisualTree || _startupFlowCompleted || _startupFlowStarted)
         {
             return;
         }
 
         _startupFlowStarted = true;
+        var attachmentGeneration = Volatile.Read(ref _attachmentGeneration);
         Dispatcher.UIThread.Post(
-            () => _ = RunStartupFlowAsync(),
+            () =>
+            {
+                if (IsAttachmentCurrent(attachmentGeneration))
+                {
+                    _ = RunStartupFlowAsync(attachmentGeneration);
+                }
+            },
             DispatcherPriority.Loaded);
     }
 
-    private async Task RunStartupFlowAsync()
+    private async Task RunStartupFlowAsync(long attachmentGeneration)
     {
+        if (!IsAttachmentCurrent(attachmentGeneration))
+        {
+            return;
+        }
+
         var resolver = GetViewModelResolver();
         var coreVm = resolver?.GetCoreMainViewModel();
         if (coreVm?.CurrentProfile is not null)
@@ -200,6 +248,11 @@ public partial class MainView : UserControl
 
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
+                if (!IsAttachmentCurrent(attachmentGeneration))
+                {
+                    return;
+                }
+
                 ProfilesOverlay.IsVisible = false;
                 ProfilesOverlay.DataContext = null;
                 HeaderBar.IsVisible = true;
@@ -213,22 +266,100 @@ public partial class MainView : UserControl
             // finishing.  Content queries start only after the schema is
             // ready, avoiding both a startup stall and a schema race.
             await WaitForDatabaseInitializationAsync();
-            await Dispatcher.UIThread.InvokeAsync(() => NavigateToDestination(destination));
+            if (!IsAttachmentCurrent(attachmentGeneration))
+            {
+                return;
+            }
+
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                if (IsAttachmentCurrent(attachmentGeneration))
+                {
+                    _startupFlowCompleted = true;
+                    NavigateToDestination(destination);
+                }
+            });
             return;
         }
 
         try
         {
             await ShowLegalConsentIfNeededAsync();
+            if (!IsAttachmentCurrent(attachmentGeneration))
+            {
+                return;
+            }
+
             await ShowPinSystemResetNoticeIfNeededAsync();
+            if (!IsAttachmentCurrent(attachmentGeneration))
+            {
+                return;
+            }
+
             await ShowChildModeRemovedNoticeIfNeededAsync();
 
-            await Dispatcher.UIThread.InvokeAsync(ShowProfileSelection);
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                if (IsAttachmentCurrent(attachmentGeneration))
+                {
+                    _startupFlowCompleted = true;
+                    ShowProfileSelection();
+                }
+            });
         }
         catch
         {
-            await Dispatcher.UIThread.InvokeAsync(ShowProfileSelection);
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                if (IsAttachmentCurrent(attachmentGeneration))
+                {
+                    _startupFlowCompleted = true;
+                    ShowProfileSelection();
+                }
+            });
         }
+    }
+
+    private bool IsAttachmentCurrent(long attachmentGeneration)
+        => _isAttachedToVisualTree &&
+           attachmentGeneration == Volatile.Read(ref _attachmentGeneration);
+
+    private void RestoreShellAfterReattach()
+    {
+        if (!_isAttachedToVisualTree)
+        {
+            return;
+        }
+
+        var resolver = GetViewModelResolver();
+        var coreVm = resolver?.GetCoreMainViewModel();
+        if (coreVm is null)
+        {
+            _startupFlowCompleted = false;
+            StartStartupFlow();
+            return;
+        }
+
+        if (coreVm.CurrentProfile is null)
+        {
+            ShowProfileSelection();
+            return;
+        }
+
+        _coreMainViewModel = coreVm;
+        AttachCoreMainViewModel(coreVm);
+        ProfilesOverlay.IsVisible = false;
+        ProfilesOverlay.DataContext = null;
+        HeaderBar.IsVisible = true;
+        HeaderProfileButton.DataContext = coreVm;
+        UpdateNavigationMode(Bounds.Width);
+        ShellContent.IsVisible = false;
+        CoreContentHost.IsVisible = true;
+
+        var destination = DataContext is MobileMainViewModel mobileViewModel
+            ? mobileViewModel.SelectedDestination
+            : _currentDestination;
+        NavigateToDestination(destination);
     }
 
     private async Task ShowLegalConsentIfNeededAsync()
@@ -467,6 +598,9 @@ public partial class MainView : UserControl
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
+        _isAttachedToVisualTree = false;
+        Interlocked.Increment(ref _attachmentGeneration);
+        _startupFlowStarted = false;
         RemoveHandler(InputElement.GotFocusEvent, TextBox_GotFocus);
         var topLevel = TopLevel.GetTopLevel(this);
         if (topLevel?.InsetsManager is { } insets)
@@ -493,6 +627,11 @@ public partial class MainView : UserControl
         CancelAndDisposePlaybackSelection(
             Interlocked.Exchange(ref _playbackSelectionCts, null));
         _fallbackHandler?.Unregister();
+        InvalidatePageRestore();
+        ReleaseSeriesDetailView();
+        ReleaseActiveCorePage(captureState: false);
+        DetachCoreMainViewModel();
+        CategorySelectionOverlay.CloseRequested -= CategorySelectionOverlay_CloseRequested;
         ReleaseSettingsViewModel();
 
         base.OnDetachedFromVisualTree(e);
@@ -605,28 +744,8 @@ public partial class MainView : UserControl
             return true;
         }
 
-        if (MobileLiveContent.IsVisible && MobileLiveContent.TryHandleBack())
-        {
-            return true;
-        }
-
-        if (MobileMoviesContent.IsVisible && MobileMoviesContent.TryHandleBack())
-        {
-            return true;
-        }
-
-        if (MobileSeriesContent.IsVisible && MobileSeriesContent.TryHandleBack())
-        {
-            return true;
-        }
-
-        if (MobileDownloadsContent.IsVisible && MobileDownloadsContent.TryHandleBack())
-        {
-            return true;
-        }
-
-        // Settings alt katmanlari (selection, upsell ve legal document) once kapanir.
-        if (MobileSettingsContent.IsVisible && MobileSettingsContent.TryHandleBack())
+        // The committed page is the only core surface allowed to consume Back.
+        if (TryHandleActivePageBack())
         {
             return true;
         }
@@ -637,9 +756,9 @@ public partial class MainView : UserControl
         }
 
         if (PlayerHost.IsVisible &&
-            _playerViewModel?.ActiveMobilePanelState != PlayerViewModel.MobilePanelState.None)
+            _playerViewModel is { ActiveMobilePanelState: not PlayerViewModel.MobilePanelState.None } panelViewModel)
         {
-            _playerViewModel.BackFromPlayerPanelCommand.Execute(null);
+            panelViewModel.BackFromPlayerPanelCommand.Execute(null);
             return true;
         }
         // 3) Oynatıcı görünürse -> oynatıcıyı kapat
@@ -752,70 +871,23 @@ public partial class MainView : UserControl
         CardActionsSheet.TryClose();
         CloseCategorySelection();
 
-        var previousContent = GetCoreContent(_currentDestination);
-        var nextContent = GetCoreContent(destination);
-        if (!ReferenceEquals(previousContent, nextContent))
-        {
-            RemoteImage.SetDescendantLoadsActive(previousContent, false);
-        }
-
-        if (destination != "Live")
-        {
-            MobileLiveContent.TryHandleBack();
-        }
-
-        if (destination != "Movies")
-        {
-            MobileMoviesContent.TryHandleBack();
-        }
-
-        if (destination != "Series")
-        {
-            MobileSeriesContent.TryHandleBack();
-        }
-
-        if (destination != "Downloads")
-        {
-            MobileDownloadsContent.TryHandleBack();
-        }
-
         _currentDestination = destination;
-        var showCoreContent = destination is "Home" or "Live" or "Movies" or "Series" or "Search" or "Favorites" or "MyList" or "History" or "Downloads" or "Settings";
+        var showCoreContent =
+            MobileCorePageFactory.IsCoreDestination(destination) &&
+            _activeCorePage is not null;
         ShellContent.IsVisible = !showCoreContent;
         CoreContentHost.IsVisible = showCoreContent;
-        MobileHomeContent.IsVisible = destination == "Home";
-        MobileLiveContent.IsVisible = destination == "Live";
-        MobileMoviesContent.IsVisible = destination == "Movies";
-        MobileSeriesContent.IsVisible = destination == "Series";
-        MobileSearchContent.IsVisible = destination == "Search";
-        MobileFavoritesContent.IsVisible = destination == "Favorites";
-        MobileMyListContent.IsVisible = destination == "MyList";
-        MobileHistoryContent.IsVisible = destination == "History";
-        MobileDownloadsContent.IsVisible = destination == "Downloads";
-        MobileSettingsContent.IsVisible = destination == "Settings";
-        SetCurrentContentImageLoadsActive(true);
         MobileSlideTransitionBehavior.SetTriggerValue(showCoreContent ? CoreContentHost : ShellContent, destination);
         UpdateNavigationSelection(destination);
     }
 
-    private Control? GetCoreContent(string destination)
-        => destination switch
-        {
-            "Home" => MobileHomeContent,
-            "Live" => MobileLiveContent,
-            "Movies" => MobileMoviesContent,
-            "Series" => MobileSeriesContent,
-            "Search" => MobileSearchContent,
-            "Favorites" => MobileFavoritesContent,
-            "MyList" => MobileMyListContent,
-            "History" => MobileHistoryContent,
-            "Downloads" => MobileDownloadsContent,
-            "Settings" => MobileSettingsContent,
-            _ => null
-        };
-
     private void OnAppPaused(object? sender, EventArgs e)
-        => SetCurrentContentImageLoadsActive(false);
+    {
+        CaptureActivePageNavigationState();
+        InvalidatePageRestore();
+        SetActivePageImageLoadsActive(false);
+        SetSeriesDetailImageLoadsActive(false);
+    }
 
     private void OnAppResumed(object? sender, EventArgs e)
     {
@@ -828,12 +900,27 @@ public partial class MainView : UserControl
                     return;
                 }
 
-                SetCurrentContentImageLoadsActive(true);
+                RestartActivePageRestore();
+                SetSeriesDetailImageLoadsActive(true);
             },
             DispatcherPriority.Background);
     }
 
-    private void SetCurrentContentImageLoadsActive(bool isActive)
+    private void RestartActivePageRestore()
+    {
+        var active = _activeCorePage;
+        if (active is null)
+        {
+            return;
+        }
+
+        SetActivePageImageLoadsActive(false);
+        var generation = _pageNavigationState.BeginNavigation();
+        _activeCorePage = active with { Generation = generation };
+        _ = RestoreActivePageStateAsync(generation);
+    }
+
+    private void SetActivePageImageLoadsActive(bool isActive)
     {
         if (isActive &&
             (!MobileAppLifecycle.IsForeground ||
@@ -844,7 +931,24 @@ public partial class MainView : UserControl
             return;
         }
 
-        RemoteImage.SetDescendantLoadsActive(GetCoreContent(_currentDestination), isActive);
+        RemoteImage.SetDescendantLoadsActive(_activeCorePage?.Page, isActive);
+    }
+
+    private void RestoreCurrentDestinationAfterCover()
+    {
+        if (PlayerHost.IsVisible || ProfilesOverlay.IsVisible)
+        {
+            return;
+        }
+
+        if (_activeCorePage is null &&
+            MobileCorePageFactory.IsCoreDestination(_currentDestination))
+        {
+            NavigateToDestination(_currentDestination);
+            return;
+        }
+
+        UpdateContentVisibility(_currentDestination);
     }
 
     private void UpdateNavigationSelection(string destination)
@@ -879,6 +983,8 @@ public partial class MainView : UserControl
     {
         CardActionsSheet.TryClose();
         CloseCategorySelection();
+        // Cover first so closing the player cannot recreate the page for one frame.
+        ProfilesOverlay.IsVisible = true;
 
         // Profil seçiminde oynatmayı durdur — profil değişimi playback context'ini sıfırlar.
         if (PlayerHost.IsVisible)
@@ -886,8 +992,9 @@ public partial class MainView : UserControl
             _playerViewModel?.ClosePlayerCommand.Execute(null);
         }
         CloseSeriesDetailIfOpen();
-
-        SetCurrentContentImageLoadsActive(false);
+        InvalidatePageRestore();
+        ReleaseSeriesDetailView();
+        ReleaseActiveCorePage(captureState: true);
 
         ProfilesOverlay.IsVisible = true;
         HeaderBar.IsVisible = false;
@@ -946,6 +1053,7 @@ public partial class MainView : UserControl
         CoreContentHost.IsVisible = true;
 
         // Navigate to the home screen by selecting the Home destination
+        _pageNavigationState.Clear();
         NavigateToDestination("Home");
         _ = TryShowReviewPromptAsync();
 
@@ -1047,7 +1155,22 @@ public partial class MainView : UserControl
 
     private async Task NavigateToDestinationAsync(string destination)
     {
-        if (DataContext is not MobileMainViewModel viewModel)
+        try
+        {
+            await NavigateToDestinationCoreAsync(destination);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine(
+                $"[MainView] Navigation to '{destination}' failed: {ex}");
+            SetActivePageImageLoadsActive(true);
+        }
+    }
+
+    private async Task NavigateToDestinationCoreAsync(string destination)
+    {
+        if (DataContext is not MobileMainViewModel viewModel ||
+            string.IsNullOrWhiteSpace(destination))
         {
             return;
         }
@@ -1057,6 +1180,7 @@ public partial class MainView : UserControl
         // visibility so the next page always starts from a clean gesture state.
         _overscrollController.Hide();
 
+        var previousDestination = _currentDestination;
         var version = Interlocked.Increment(ref _navigationVersion);
 
         // Navigation history management: push when navigating from More to a sub-page,
@@ -1086,6 +1210,29 @@ public partial class MainView : UserControl
             CloseSeriesDetailIfOpen();
         }
 
+        if (PlayerHost.IsVisible || ProfilesOverlay.IsVisible)
+        {
+            InvalidatePageRestore();
+            ReleaseSeriesDetailView();
+            ReleaseActiveCorePage(captureState: true);
+            _currentDestination = destination;
+            UpdateNavigationSelection(destination);
+            return;
+        }
+
+        if (MobileCorePageFactory.IsCoreDestination(destination) &&
+            string.Equals(_activeCorePage?.Destination, destination, StringComparison.Ordinal) &&
+            !PlayerHost.IsVisible &&
+            !ProfilesOverlay.IsVisible)
+        {
+            UpdateContentVisibility(destination);
+            SetActivePageImageLoadsActive(true);
+            return;
+        }
+
+        var generation = _pageNavigationState.BeginNavigation();
+
+        object? pageDataContext = null;
         if (string.Equals(destination, "Settings", StringComparison.Ordinal))
         {
             // Snapshot the current lease on the UI thread and join the serialized
@@ -1094,23 +1241,45 @@ public partial class MainView : UserControl
             // flushed and disposed.
             var settingsRelease = QueueSettingsRelease();
             await settingsRelease;
-            if (version != Volatile.Read(ref _navigationVersion))
+            if (!IsNavigationCurrent(version, generation))
             {
+                MarkCounter(
+                    "CorePageStaleNavigationDropped",
+                    ref _corePageStaleNavigationDropped);
                 return;
             }
 
-            _settingsViewModelLease = resolver.CreateSettingsViewModelScope();
-            MobileSettingsContent.DataContext = _settingsViewModelLease.Service;
+            try
+            {
+                _settingsViewModelLease = resolver.CreateSettingsViewModelScope();
+                pageDataContext = _settingsViewModelLease.Service;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine(
+                    $"[MainView] Failed to create Settings scope: {ex}");
+                _ = QueueSettingsRelease();
+                RollBackFailedNavigation(viewModel, previousDestination);
+                return;
+            }
         }
         else
         {
             // Non-Settings navigation does not block the page transition, but the
             // returned task remains in the release chain for a later Settings open.
-            QueueSettingsRelease();
+            // The active Settings lease is released atomically with its page.
         }
 
-        if (version != Volatile.Read(ref _navigationVersion))
+        if (!IsNavigationCurrent(version, generation))
         {
+            MarkCounter(
+                "CorePageStaleNavigationDropped",
+                ref _corePageStaleNavigationDropped);
+            if (string.Equals(destination, "Settings", StringComparison.Ordinal))
+            {
+                _ = QueueSettingsRelease();
+            }
+
             return;
         }
 
@@ -1120,45 +1289,315 @@ public partial class MainView : UserControl
         if (destination == "More")
         {
             _coreMainViewModel ??= resolver.GetCoreMainViewModel();
+            AttachCoreMainViewModel(_coreMainViewModel);
             HeaderProfileButton.DataContext = _coreMainViewModel;
             MoreProfileCard.DataContext = _coreMainViewModel;
             MoreDownloadsRow.DataContext = _coreMainViewModel;
         }
 
+        if (!MobileCorePageFactory.IsCoreDestination(destination))
+        {
+            ReleaseSeriesDetailView();
+            ReleaseActiveCorePage(captureState: true);
+            UpdateContentVisibility(destination);
+            return;
+        }
+
         if (destination is "Home" or "Live" or "Movies" or "Series" or "Search" or "Favorites" or "MyList" or "History" or "Downloads")
         {
             _coreMainViewModel ??= resolver.GetCoreMainViewModel();
+            AttachCoreMainViewModel(_coreMainViewModel);
             HeaderProfileButton.DataContext = _coreMainViewModel;
             DownloadsNavButton.DataContext = _coreMainViewModel;
-            _coreMainViewModel.OnMediaSelected -= CoreMainViewModel_OnMediaSelected;
-            _coreMainViewModel.OnMediaSelected += CoreMainViewModel_OnMediaSelected;
-            CoreContentHost.DataContext = _coreMainViewModel;
-            MobileHomeContent.DataContext = _coreMainViewModel;
-            MobileLiveContent.DataContext = _coreMainViewModel;
-            MobileMoviesContent.DataContext = _coreMainViewModel;
-            MobileSeriesContent.DataContext = _coreMainViewModel;
-            MobileSearchContent.DataContext = _coreMainViewModel;
-            MobileFavoritesContent.DataContext = _coreMainViewModel;
-            MobileMyListContent.DataContext = _coreMainViewModel;
-            MobileHistoryContent.DataContext = _coreMainViewModel;
-            MobileDownloadsContent.DataContext = _coreMainViewModel;
+            pageDataContext = _coreMainViewModel;
+        }
 
-            var targetView = destination switch
+        Control? prepared = null;
+        try
+        {
+            prepared = MobileCorePageFactory.Create(destination);
+            RemoteImage.SetDescendantLoadsActive(prepared, false);
+            prepared.DataContext = pageDataContext;
+            WireActivePageEvents(prepared);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine(
+                $"[MainView] Failed to prepare destination '{destination}': {ex}");
+            if (prepared is not null)
             {
-                "Live" => AppView.Live,
-                "Movies" => AppView.Movies,
-                "Series" => AppView.Series,
-                "Search" => AppView.Search,
-                "Favorites" => AppView.Favorites,
-                "MyList" => AppView.MyList,
-                "History" => AppView.History,
-                "Downloads" => AppView.Downloads,
-                _ => AppView.Home
-            };
-            _coreMainViewModel.NavigateCommand.Execute(targetView);
+                CleanupPreparedPage(destination, prepared);
+            }
+            else if (string.Equals(destination, "Settings", StringComparison.Ordinal))
+            {
+                _ = QueueSettingsRelease();
+            }
+
+            RollBackFailedNavigation(viewModel, previousDestination);
+            return;
+        }
+
+        if (!TryCommitActiveCorePage(destination, prepared, version, generation))
+        {
+            return;
+        }
+
+        if (pageDataContext is CoreMainViewModel coreMainViewModel)
+        {
+            coreMainViewModel.NavigateCommand.Execute(GetAppView(destination));
         }
 
         UpdateContentVisibility(destination);
+        UpdateSeriesDetailHost();
+        _ = RestoreActivePageStateAsync(generation);
+    }
+
+    private void RollBackFailedNavigation(
+        MobileMainViewModel viewModel,
+        string previousDestination)
+    {
+        viewModel.SelectDestination(previousDestination);
+        UpdateNavigationSelection(previousDestination);
+        SetActivePageImageLoadsActive(true);
+    }
+
+    private bool IsNavigationCurrent(long version, long generation)
+        => _isAttachedToVisualTree &&
+           version == Volatile.Read(ref _navigationVersion) &&
+           _pageNavigationState.IsCurrent(generation);
+
+    private static AppView GetAppView(string destination)
+        => destination switch
+        {
+            "Live" => AppView.Live,
+            "Movies" => AppView.Movies,
+            "Series" => AppView.Series,
+            "Search" => AppView.Search,
+            "Favorites" => AppView.Favorites,
+            "MyList" => AppView.MyList,
+            "History" => AppView.History,
+            "Downloads" => AppView.Downloads,
+            _ => AppView.Home
+        };
+
+    private bool TryCommitActiveCorePage(
+        string destination,
+        Control prepared,
+        long version,
+        long generation)
+    {
+        if (!IsNavigationCurrent(version, generation))
+        {
+            MarkCounter(
+                "CorePageStaleNavigationDropped",
+                ref _corePageStaleNavigationDropped);
+            CleanupPreparedPage(destination, prepared);
+            return false;
+        }
+
+        ReleaseActiveCorePage(captureState: true);
+        ActiveCorePageHost.Content = prepared;
+        _activeCorePage = new ActiveCorePage(destination, prepared, generation);
+        MarkCounter("CorePageCreated", ref _corePageCreated);
+        PerformanceTrace.Mark("CorePageActive", 1);
+        if (!IsNavigationCurrent(version, generation))
+        {
+            MarkCounter("CorePageStaleCommit", ref _corePageStaleCommit);
+            ReleaseActiveCorePage(captureState: false);
+            return false;
+        }
+
+        PerformanceTrace.Mark(
+            "CorePageStaleCommit",
+            Volatile.Read(ref _corePageStaleCommit));
+        return true;
+    }
+
+    private void ReleaseActiveCorePage(bool captureState)
+    {
+        var active = _activeCorePage;
+        if (active is null)
+        {
+            ActiveCorePageHost.Content = null;
+            PerformanceTrace.Mark("CorePageActive", 0);
+            return;
+        }
+
+        if (captureState)
+        {
+            CaptureActivePageNavigationState();
+        }
+
+        RemoteImage.SetDescendantLoadsActive(active.Page, false);
+        UnwireActivePageEvents(active.Page);
+        active.Page.DataContext = null;
+        if (ReferenceEquals(ActiveCorePageHost.Content, active.Page))
+        {
+            ActiveCorePageHost.Content = null;
+        }
+
+        _activeCorePage = null;
+        MarkCounter("CorePageReleased", ref _corePageReleased);
+        PerformanceTrace.Mark("CorePageActive", 0);
+
+        if (string.Equals(active.Destination, "Settings", StringComparison.Ordinal))
+        {
+            QueueSettingsRelease();
+        }
+    }
+
+    private void CaptureActivePageNavigationState()
+    {
+        var active = _activeCorePage;
+        if (active?.Page is IMobileNavigationStateParticipant participant &&
+            participant.TryCaptureNavigationState(out var state))
+        {
+            _pageNavigationState.Save(active.Destination, state);
+        }
+    }
+
+    private void CleanupPreparedPage(string destination, Control prepared)
+    {
+        RemoteImage.SetDescendantLoadsActive(prepared, false);
+        UnwireActivePageEvents(prepared);
+        prepared.DataContext = null;
+        if (string.Equals(destination, "Settings", StringComparison.Ordinal))
+        {
+            QueueSettingsRelease();
+        }
+    }
+
+    private void InvalidatePageRestore()
+        => _pageNavigationState.BeginNavigation();
+
+    private async Task RestoreActivePageStateAsync(long generation)
+    {
+        MarkCounter("CorePageRestoreRequested", ref _corePageRestoreRequested);
+        var active = _activeCorePage;
+        if (active is null || active.Generation != generation)
+        {
+            MarkCounter("CorePageRestoreCancelled", ref _corePageRestoreCancelled);
+            return;
+        }
+
+        var hasSavedState = _pageNavigationState.TryGet(active.Destination, out var state);
+        var participant = active.Page as IMobileNavigationStateParticipant;
+        if (!hasSavedState || participant is null)
+        {
+            var activated = await Dispatcher.UIThread.InvokeAsync(
+                () => TryActivatePageImagesIfCurrent(generation, active.Page),
+                DispatcherPriority.Background);
+            if (activated)
+            {
+                MarkCounter("CorePageRestoreCompleted", ref _corePageRestoreCompleted);
+            }
+            else
+            {
+                MarkCounter("CorePageRestoreCancelled", ref _corePageRestoreCancelled);
+            }
+
+            return;
+        }
+
+        try
+        {
+            for (var attempt = 0; attempt < PageRestoreAttempts; attempt++)
+            {
+                if (!_pageNavigationState.IsCurrent(generation) ||
+                    !MobileAppLifecycle.IsForeground)
+                {
+                    MarkCounter("CorePageRestoreCancelled", ref _corePageRestoreCancelled);
+                    return;
+                }
+
+                if (attempt > 0)
+                {
+                    await Task.Delay(PageRestoreDelayMilliseconds).ConfigureAwait(false);
+                }
+
+                var restored = await Dispatcher.UIThread.InvokeAsync(
+                    () =>
+                    {
+                        if (!_pageNavigationState.IsCurrent(generation) ||
+                            _activeCorePage is not { } current ||
+                            current.Generation != generation ||
+                            !ReferenceEquals(current.Page, active.Page) ||
+                            !CoreContentHost.IsEffectivelyVisible ||
+                            PlayerHost.IsVisible ||
+                            ProfilesOverlay.IsVisible)
+                        {
+                            return false;
+                        }
+
+                        return participant.TryRestoreNavigationState(
+                            state,
+                            allowClamping: attempt == PageRestoreAttempts - 1);
+                    },
+                    DispatcherPriority.Background);
+
+                if (restored)
+                {
+                    var activated = await Dispatcher.UIThread.InvokeAsync(
+                        () => TryActivatePageImagesIfCurrent(generation, active.Page),
+                        DispatcherPriority.Background);
+                    if (activated)
+                    {
+                        MarkCounter("CorePageRestoreCompleted", ref _corePageRestoreCompleted);
+                    }
+                    else
+                    {
+                        MarkCounter("CorePageRestoreCancelled", ref _corePageRestoreCancelled);
+                    }
+
+                    return;
+                }
+            }
+
+            var failedActivation = await Dispatcher.UIThread.InvokeAsync(
+                () => TryActivatePageImagesIfCurrent(generation, active.Page),
+                DispatcherPriority.Background);
+            if (failedActivation)
+            {
+                MarkCounter("CorePageRestoreFailed", ref _corePageRestoreFailed);
+            }
+            else
+            {
+                MarkCounter("CorePageRestoreCancelled", ref _corePageRestoreCancelled);
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[MainView] Page scroll restore failed: {ex}");
+            var activated = await Dispatcher.UIThread.InvokeAsync(
+                () => TryActivatePageImagesIfCurrent(generation, active.Page),
+                DispatcherPriority.Background);
+            if (activated)
+            {
+                MarkCounter("CorePageRestoreFailed", ref _corePageRestoreFailed);
+            }
+            else
+            {
+                MarkCounter("CorePageRestoreCancelled", ref _corePageRestoreCancelled);
+            }
+        }
+    }
+
+    private bool TryActivatePageImagesIfCurrent(long generation, Control expectedPage)
+    {
+        if (!_pageNavigationState.IsCurrent(generation) ||
+            _activeCorePage is not { } current ||
+            current.Generation != generation ||
+            !ReferenceEquals(current.Page, expectedPage) ||
+            !MobileAppLifecycle.IsForeground ||
+            !CoreContentHost.IsEffectivelyVisible ||
+            PlayerHost.IsVisible ||
+            ProfilesOverlay.IsVisible)
+        {
+            return false;
+        }
+
+        SetActivePageImageLoadsActive(true);
+        return true;
     }
 
     private Task QueueSettingsRelease()
@@ -1169,7 +1608,6 @@ public partial class MainView : UserControl
             // the Avalonia UI thread. The asynchronous continuation below never
             // touches UI.
             var lease = Interlocked.Exchange(ref _settingsViewModelLease, null);
-            MobileSettingsContent.DataContext = null;
 
             if (lease is null)
             {
@@ -1235,6 +1673,120 @@ public partial class MainView : UserControl
     private void OnProfilesClick(object? sender, RoutedEventArgs e)
     {
         ShowProfileSelection();
+    }
+
+    private void AttachCoreMainViewModel(CoreMainViewModel viewModel)
+    {
+        if (!ReferenceEquals(_coreMainViewModel, viewModel))
+        {
+            if (_coreMainViewModel is not null)
+            {
+                _coreMainViewModel.PropertyChanged -= CoreMainViewModel_PropertyChanged;
+                _coreMainViewModel.OnMediaSelected -= CoreMainViewModel_OnMediaSelected;
+            }
+
+            ReleaseSeriesDetailView();
+            _coreMainViewModel = viewModel;
+        }
+
+        viewModel.PropertyChanged -= CoreMainViewModel_PropertyChanged;
+        viewModel.PropertyChanged += CoreMainViewModel_PropertyChanged;
+        viewModel.OnMediaSelected -= CoreMainViewModel_OnMediaSelected;
+        viewModel.OnMediaSelected += CoreMainViewModel_OnMediaSelected;
+    }
+
+    private void DetachCoreMainViewModel()
+    {
+        if (_coreMainViewModel is null)
+        {
+            return;
+        }
+
+        _coreMainViewModel.PropertyChanged -= CoreMainViewModel_PropertyChanged;
+        _coreMainViewModel.OnMediaSelected -= CoreMainViewModel_OnMediaSelected;
+    }
+
+    private void CoreMainViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (!ReferenceEquals(sender, _coreMainViewModel) ||
+            e.PropertyName != nameof(CoreMainViewModel.IsSeriesDetailVisible))
+        {
+            return;
+        }
+
+        Dispatcher.UIThread.Post(UpdateSeriesDetailHost, DispatcherPriority.Background);
+    }
+
+    private void UpdateSeriesDetailHost()
+    {
+        var shouldShow =
+            _coreMainViewModel?.IsSeriesDetailVisible == true &&
+            _activeCorePage is not null &&
+            CoreContentHost.IsEffectivelyVisible &&
+            !PlayerHost.IsVisible &&
+            !ProfilesOverlay.IsVisible;
+        if (!shouldShow)
+        {
+            ReleaseSeriesDetailView();
+            return;
+        }
+
+        if (_seriesDetailView is not null)
+        {
+            SetSeriesDetailImageLoadsActive(true);
+            return;
+        }
+
+        try
+        {
+            var detail = new MobileSeriesDetailView();
+            RemoteImage.SetDescendantLoadsActive(detail, false);
+            detail.DataContext = _coreMainViewModel;
+            SeriesDetailHost.Content = detail;
+            _seriesDetailView = detail;
+            MarkCounter("SeriesDetailCreated", ref _seriesDetailCreated);
+            SetSeriesDetailImageLoadsActive(true);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[MainView] Series detail creation failed: {ex}");
+            ReleaseSeriesDetailView();
+            _coreMainViewModel?.CloseSeriesDetailCommand.Execute(null);
+        }
+    }
+
+    private void ReleaseSeriesDetailView()
+    {
+        var detail = _seriesDetailView;
+        if (detail is null)
+        {
+            SeriesDetailHost.Content = null;
+            return;
+        }
+
+        RemoteImage.SetDescendantLoadsActive(detail, false);
+        detail.DataContext = null;
+        if (ReferenceEquals(SeriesDetailHost.Content, detail))
+        {
+            SeriesDetailHost.Content = null;
+        }
+
+        _seriesDetailView = null;
+        MarkCounter("SeriesDetailReleased", ref _seriesDetailReleased);
+    }
+
+    private void SetSeriesDetailImageLoadsActive(bool isActive)
+    {
+        if (isActive &&
+            (!MobileAppLifecycle.IsForeground ||
+             !CoreContentHost.IsEffectivelyVisible ||
+             PlayerHost.IsVisible ||
+             ProfilesOverlay.IsVisible))
+        {
+            return;
+        }
+
+        RemoteImage.SetDescendantLoadsActive(_seriesDetailView, isActive);
     }
 
     private void CloseSeriesDetailIfOpen()
@@ -1358,7 +1910,9 @@ public partial class MainView : UserControl
         MobilePlayerContent.ChannelSelected += MobilePlayerContent_ChannelSelected;
 
         MobilePlayerContent.DataContext = _playerViewModel;
-        SetCurrentContentImageLoadsActive(false);
+        InvalidatePageRestore();
+        ReleaseSeriesDetailView();
+        ReleaseActiveCorePage(captureState: true);
         PlayerHost.IsVisible = true;
         
         // Mobilde player açıldığında otomatik tam ekran (immersive mode)
@@ -1422,8 +1976,8 @@ public partial class MainView : UserControl
             {
                 videoSurfaceService?.Hide();
                 PlayerHost.IsVisible = false;
-                SetCurrentContentImageLoadsActive(true);
                 UpdatePlayerChromeState();
+                RestoreCurrentDestinationAfterCover();
             }
         }
         catch (Exception ex)
@@ -1484,7 +2038,6 @@ public partial class MainView : UserControl
         platform?.GetVideoSurfaceService()?.Hide();
 
         PlayerHost.IsVisible = false;
-        SetCurrentContentImageLoadsActive(true);
 
         if (_playerViewModel is not null)
         {
@@ -1498,6 +2051,7 @@ public partial class MainView : UserControl
         window?.SetBrightness(-1);
 
         UpdatePlayerChromeState();
+        RestoreCurrentDestinationAfterCover();
         UpdatePictureInPictureState();
     }
 
@@ -1769,18 +2323,63 @@ public partial class MainView : UserControl
             _ => MaterialIconKind.DotsHorizontal
         };
 
-    private void WireCategorySelectionEvents()
+    private void WireCategorySelectionOverlayEvent()
     {
-        MobileLiveContent.CategorySelectionRequested -= Content_CategorySelectionRequested;
-        MobileMoviesContent.CategorySelectionRequested -= Content_CategorySelectionRequested;
-        MobileSeriesContent.CategorySelectionRequested -= Content_CategorySelectionRequested;
         CategorySelectionOverlay.CloseRequested -= CategorySelectionOverlay_CloseRequested;
-
-        MobileLiveContent.CategorySelectionRequested += Content_CategorySelectionRequested;
-        MobileMoviesContent.CategorySelectionRequested += Content_CategorySelectionRequested;
-        MobileSeriesContent.CategorySelectionRequested += Content_CategorySelectionRequested;
         CategorySelectionOverlay.CloseRequested += CategorySelectionOverlay_CloseRequested;
     }
+
+    private void WireActivePageEvents(Control page)
+    {
+        switch (page)
+        {
+            case MobileLiveView live:
+                live.CategorySelectionRequested += Content_CategorySelectionRequested;
+                break;
+            case MobileMoviesView movies:
+                movies.CategorySelectionRequested += Content_CategorySelectionRequested;
+                break;
+            case MobileSeriesView series:
+                series.CategorySelectionRequested += Content_CategorySelectionRequested;
+                break;
+            case MobileSettingsView settings:
+                settings.BackToProfilesRequested += Settings_BackToProfilesRequested;
+                break;
+        }
+    }
+
+    private void UnwireActivePageEvents(Control page)
+    {
+        switch (page)
+        {
+            case MobileLiveView live:
+                live.CategorySelectionRequested -= Content_CategorySelectionRequested;
+                break;
+            case MobileMoviesView movies:
+                movies.CategorySelectionRequested -= Content_CategorySelectionRequested;
+                break;
+            case MobileSeriesView series:
+                series.CategorySelectionRequested -= Content_CategorySelectionRequested;
+                break;
+            case MobileSettingsView settings:
+                settings.BackToProfilesRequested -= Settings_BackToProfilesRequested;
+                break;
+        }
+    }
+
+    private void Settings_BackToProfilesRequested(object? sender, EventArgs e)
+        => ShowProfileSelection();
+
+    private bool TryHandleActivePageBack()
+        => _activeCorePage?.Page switch
+        {
+            MobileLiveView live => live.TryHandleBack(),
+            MobileMoviesView movies => movies.TryHandleBack(),
+            MobileSeriesView series => series.TryHandleBack(),
+            MobileDownloadsView downloads => downloads.TryHandleBack(),
+            MobileSettingsView settings => settings.TryHandleBack(),
+            _ => false
+        };
 
     private void Content_CategorySelectionRequested(
         object? sender,
@@ -1836,4 +2435,12 @@ public partial class MainView : UserControl
                               !ReviewPromptOverlay.IsVisible;
         UpdateNavigationMode(Bounds.Width);
     }
+
+    private static void MarkCounter(string name, ref long counter)
+    {
+        var value = Interlocked.Increment(ref counter);
+        PerformanceTrace.Mark(name, value);
+    }
+
+    private sealed record ActiveCorePage(string Destination, Control Page, long Generation);
 }
