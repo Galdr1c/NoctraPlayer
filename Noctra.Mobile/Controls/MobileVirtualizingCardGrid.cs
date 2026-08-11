@@ -13,6 +13,7 @@ using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Threading;
 using Noctra.Core.Collections;
+using Noctra.Diagnostics;
 using Noctra.Mobile.Services;
 
 namespace Noctra.Mobile.Controls;
@@ -37,7 +38,7 @@ public sealed class MobileVirtualizingCardGrid : ListBox
     private const double CardGap = 16;
     private const double FallbackAvailableWidth = 720;
     private const double MinimumStableWidth = 120;
-    private const int ResumeRecoveryAttempts = 8;
+    private const int ResumeRecoveryAttempts = 3;
     private const int ResumeRecoveryDelayMilliseconds = 50;
 
     public static readonly StyledProperty<IEnumerable?> SourceItemsProperty =
@@ -54,6 +55,11 @@ public sealed class MobileVirtualizingCardGrid : ListBox
     private int _rebuildQueued;
     private int _fullRebuildRequired;
     private int _resumeRecoveryVersion;
+    private static long _gridResumeRequested;
+    private static long _gridResumeSkippedInactive;
+    private static long _gridResumeAttempted;
+    private static long _gridResumeCompleted;
+    private static long _gridResumeGenerationCancelled;
     private int _columns;
     private double _cardWidth;
     private double _lastStableWidth = FallbackAvailableWidth;
@@ -112,6 +118,13 @@ public sealed class MobileVirtualizingCardGrid : ListBox
     /// </summary>
     public void RefreshAfterResume()
     {
+        MarkCounter("GridResumeRequested", ref _gridResumeRequested);
+        if (!IsResumeRecoveryEligibleOnUiThread())
+        {
+            MarkCounter("GridResumeSkippedInactive", ref _gridResumeSkippedInactive);
+            return;
+        }
+
         // Force a full rebuild even if the width later returns to the same value.
         // Without this, a timeout (350 ms) followed by the same width would skip
         // rebuild and leave a corrupted or blank visual tree.
@@ -129,6 +142,7 @@ public sealed class MobileVirtualizingCardGrid : ListBox
         }
 
         MobileAppLifecycle.Resumed += OnAppResumed;
+        MobileAppLifecycle.Paused += OnAppPaused;
         _lifecycleSubscribed = true;
         QueueFullRebuild();
     }
@@ -141,12 +155,34 @@ public sealed class MobileVirtualizingCardGrid : ListBox
         }
 
         MobileAppLifecycle.Resumed -= OnAppResumed;
+        MobileAppLifecycle.Paused -= OnAppPaused;
         _lifecycleSubscribed = false;
         Interlocked.Increment(ref _resumeRecoveryVersion);
+        MarkCounter("GridResumeGenerationCancelled", ref _gridResumeGenerationCancelled);
     }
 
     private void OnAppResumed(object? sender, EventArgs e)
         => RefreshAfterResume();
+
+    private void OnAppPaused(object? sender, EventArgs e)
+    {
+        Interlocked.Increment(ref _resumeRecoveryVersion);
+        MarkCounter("GridResumeGenerationCancelled", ref _gridResumeGenerationCancelled);
+    }
+
+    private static bool IsResumeRecoveryGenerationCurrent(int version, int currentVersion)
+        => MobileAppLifecycle.IsForeground && version == currentVersion;
+
+    private bool IsResumeRecoveryEligibleOnUiThread(int? version = null)
+    {
+        Debug.Assert(Dispatcher.UIThread.CheckAccess());
+        if (!MobileAppLifecycle.IsForeground || !IsEffectivelyVisible || VisualRoot is null)
+        {
+            return false;
+        }
+
+        return !version.HasValue || version.Value == Volatile.Read(ref _resumeRecoveryVersion);
+    }
 
     private async Task RecoverAfterResumeAsync(int version)
     {
@@ -154,12 +190,21 @@ public sealed class MobileVirtualizingCardGrid : ListBox
         {
             for (var attempt = 0; attempt < ResumeRecoveryAttempts; attempt++)
             {
+                if (!IsResumeRecoveryGenerationCurrent(
+                        version,
+                        Volatile.Read(ref _resumeRecoveryVersion)))
+                {
+                    return;
+                }
+
                 if (attempt > 0)
                 {
                     await Task.Delay(ResumeRecoveryDelayMilliseconds).ConfigureAwait(false);
                 }
 
-                if (version != Volatile.Read(ref _resumeRecoveryVersion))
+                if (!IsResumeRecoveryGenerationCurrent(
+                        version,
+                        Volatile.Read(ref _resumeRecoveryVersion)))
                 {
                     return;
                 }
@@ -187,13 +232,16 @@ public sealed class MobileVirtualizingCardGrid : ListBox
         {
             try
             {
-                if (version != Volatile.Read(ref _resumeRecoveryVersion) || VisualRoot is null)
+                if (!IsResumeRecoveryEligibleOnUiThread(version))
                 {
+                    MarkCounter("GridResumeSkippedInactive", ref _gridResumeSkippedInactive);
                     completion.TrySetResult(false);
                     return;
                 }
 
-                InvalidateLayoutChain();
+                MarkCounter("GridResumeAttempted", ref _gridResumeAttempted);
+                InvalidateMeasure();
+                InvalidateArrange();
                 if (!TryGetStableAvailableWidth(out _))
                 {
                     completion.TrySetResult(false);
@@ -212,24 +260,22 @@ public sealed class MobileVirtualizingCardGrid : ListBox
                 }
 
                 Interlocked.Exchange(ref _fullRebuildRequired, 0);
+                MarkCounter("GridResumeCompleted", ref _gridResumeCompleted);
                 completion.TrySetResult(true);
             }
             catch (Exception ex)
             {
                 completion.TrySetException(ex);
             }
-        }, DispatcherPriority.Render);
+        }, DispatcherPriority.Loaded);
 
         return completion.Task;
     }
 
-    private void InvalidateLayoutChain()
+    private static void MarkCounter(string name, ref long counter)
     {
-        for (Control? control = this; control is not null; control = control.Parent as Control)
-        {
-            control.InvalidateMeasure();
-            control.InvalidateArrange();
-        }
+        var value = Interlocked.Increment(ref counter);
+        PerformanceTrace.Mark(name, value);
     }
 
     private void OnSourceItemsChanged(IEnumerable? oldValue, IEnumerable? newValue)

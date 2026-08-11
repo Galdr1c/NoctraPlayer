@@ -140,6 +140,10 @@ public partial class MainView : UserControl
         AddHandler(InputElement.GotFocusEvent, TextBox_GotFocus);
         OverlayProfileList.ProfileLoaded -= OverlayProfileList_ProfileLoaded;
         OverlayProfileList.ProfileLoaded += OverlayProfileList_ProfileLoaded;
+        MobileAppLifecycle.Paused -= OnAppPaused;
+        MobileAppLifecycle.Paused += OnAppPaused;
+        MobileAppLifecycle.Resumed -= OnAppResumed;
+        MobileAppLifecycle.Resumed += OnAppResumed;
 
         // Çentik / sistem çubukları (safe-area) padding'lerini uygula ve değişimleri dinle.
         var topLevel = TopLevel.GetTopLevel(this);
@@ -476,6 +480,8 @@ public partial class MainView : UserControl
         }
 
         OverlayProfileList.ProfileLoaded -= OverlayProfileList_ProfileLoaded;
+        MobileAppLifecycle.Paused -= OnAppPaused;
+        MobileAppLifecycle.Resumed -= OnAppResumed;
         _backExitToastTimer.Stop();
         _overscrollController.Hide();
         CardActionsSheet.TryClose();
@@ -746,6 +752,13 @@ public partial class MainView : UserControl
         CardActionsSheet.TryClose();
         CloseCategorySelection();
 
+        var previousContent = GetCoreContent(_currentDestination);
+        var nextContent = GetCoreContent(destination);
+        if (!ReferenceEquals(previousContent, nextContent))
+        {
+            RemoteImage.SetDescendantLoadsActive(previousContent, false);
+        }
+
         if (destination != "Live")
         {
             MobileLiveContent.TryHandleBack();
@@ -780,8 +793,58 @@ public partial class MainView : UserControl
         MobileHistoryContent.IsVisible = destination == "History";
         MobileDownloadsContent.IsVisible = destination == "Downloads";
         MobileSettingsContent.IsVisible = destination == "Settings";
+        SetCurrentContentImageLoadsActive(true);
         MobileSlideTransitionBehavior.SetTriggerValue(showCoreContent ? CoreContentHost : ShellContent, destination);
         UpdateNavigationSelection(destination);
+    }
+
+    private Control? GetCoreContent(string destination)
+        => destination switch
+        {
+            "Home" => MobileHomeContent,
+            "Live" => MobileLiveContent,
+            "Movies" => MobileMoviesContent,
+            "Series" => MobileSeriesContent,
+            "Search" => MobileSearchContent,
+            "Favorites" => MobileFavoritesContent,
+            "MyList" => MobileMyListContent,
+            "History" => MobileHistoryContent,
+            "Downloads" => MobileDownloadsContent,
+            "Settings" => MobileSettingsContent,
+            _ => null
+        };
+
+    private void OnAppPaused(object? sender, EventArgs e)
+        => SetCurrentContentImageLoadsActive(false);
+
+    private void OnAppResumed(object? sender, EventArgs e)
+    {
+        Dispatcher.UIThread.Post(
+            () =>
+            {
+                if (!MobileAppLifecycle.IsForeground ||
+                    !CoreContentHost.IsEffectivelyVisible)
+                {
+                    return;
+                }
+
+                SetCurrentContentImageLoadsActive(true);
+            },
+            DispatcherPriority.Background);
+    }
+
+    private void SetCurrentContentImageLoadsActive(bool isActive)
+    {
+        if (isActive &&
+            (!MobileAppLifecycle.IsForeground ||
+             !CoreContentHost.IsEffectivelyVisible ||
+             PlayerHost.IsVisible ||
+             ProfilesOverlay.IsVisible))
+        {
+            return;
+        }
+
+        RemoteImage.SetDescendantLoadsActive(GetCoreContent(_currentDestination), isActive);
     }
 
     private void UpdateNavigationSelection(string destination)
@@ -823,6 +886,8 @@ public partial class MainView : UserControl
             _playerViewModel?.ClosePlayerCommand.Execute(null);
         }
         CloseSeriesDetailIfOpen();
+
+        SetCurrentContentImageLoadsActive(false);
 
         ProfilesOverlay.IsVisible = true;
         HeaderBar.IsVisible = false;
@@ -1293,6 +1358,7 @@ public partial class MainView : UserControl
         MobilePlayerContent.ChannelSelected += MobilePlayerContent_ChannelSelected;
 
         MobilePlayerContent.DataContext = _playerViewModel;
+        SetCurrentContentImageLoadsActive(false);
         PlayerHost.IsVisible = true;
         
         // Mobilde player açıldığında otomatik tam ekran (immersive mode)
@@ -1356,6 +1422,7 @@ public partial class MainView : UserControl
             {
                 videoSurfaceService?.Hide();
                 PlayerHost.IsVisible = false;
+                SetCurrentContentImageLoadsActive(true);
                 UpdatePlayerChromeState();
             }
         }
@@ -1417,6 +1484,7 @@ public partial class MainView : UserControl
         platform?.GetVideoSurfaceService()?.Hide();
 
         PlayerHost.IsVisible = false;
+        SetCurrentContentImageLoadsActive(true);
 
         if (_playerViewModel is not null)
         {

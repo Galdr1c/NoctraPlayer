@@ -141,7 +141,10 @@ public sealed class MobileRecentRegressionTests
 
         Assert.Contains("DownloadGate = new(6, 6)", source, StringComparison.Ordinal);
         Assert.Contains("DecodeGate = new(2, 2)", source, StringComparison.Ordinal);
-        Assert.Contains("DecodeHttpBitmapAsync(memory, decodePixelWidth)", source, StringComparison.Ordinal);
+        Assert.Contains(
+            "DecodeHttpBitmapAsync(memory, decodePixelWidth, cancellationToken)",
+            source,
+            StringComparison.Ordinal);
     }
 
     [Fact]

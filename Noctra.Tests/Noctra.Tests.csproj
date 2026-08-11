@@ -45,6 +45,14 @@
              Link="ViewModels\MobileEpgGuidePresentation.cs" />
     <Compile Include="..\Noctra.Mobile\Services\MobileInputModeService.cs"
              Link="Services\MobileInputModeService.cs" />
+    <Compile Include="..\Noctra.Mobile\Services\MobileAppLifecycle.cs"
+             Link="Services\MobileAppLifecycle.cs" />
+    <Compile Include="..\Noctra.Mobile\Services\SharedImageLoadCoordinator.cs"
+             Link="Services\SharedImageLoadCoordinator.cs" />
+    <Compile Include="..\Noctra.Mobile\Services\MobileImageLoadPolicy.cs"
+             Link="Services\MobileImageLoadPolicy.cs" />
+    <Compile Include="..\Noctra.Mobile\Controls\MobileRemoteImage.cs"
+             Link="Controls\MobileRemoteImage.cs" />
   </ItemGroup>
 
 </Project>

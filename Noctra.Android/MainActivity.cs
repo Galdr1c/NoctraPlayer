@@ -333,20 +333,31 @@ public class MainActivity : AvaloniaMainActivity
             }
         }
 
-        QueueVisualTreeRecovery();
+        var resumeGeneration = MobileAppLifecycle.BeginResume();
+        QueueVisualTreeRecovery(resumeGeneration);
     }
 
-    private void QueueVisualTreeRecovery()
+    protected override void OnPause()
+    {
+        MobileAppLifecycle.NotifyPaused();
+        base.OnPause();
+    }
+
+    private void QueueVisualTreeRecovery(long resumeGeneration)
     {
         void NotifyVisualTree()
         {
+            if (!MobileAppLifecycle.TryNotifyResumed(resumeGeneration))
+            {
+                return;
+            }
+
             PerformanceTrace.Mark("android.activity.resume.visual_tree_recovery");
-            MobileAppLifecycle.NotifyResumed();
         }
 
         // OnResume itself is on the Android UI thread. Posting through DecorView lets
         // the surface/window transition enqueue first; the grid then performs its own
-        // bounded render-priority retries until a stable width is available.
+        // bounded loaded-priority retries until a stable width is available.
         if (Window?.DecorView is { } decorView)
         {
             decorView.Post(NotifyVisualTree);

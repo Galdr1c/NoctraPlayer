@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading;
@@ -13,8 +14,11 @@ using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using Noctra.Core.Collections;
 using Noctra.Core.Services;
+using Noctra.Diagnostics;
+using Noctra.Mobile.Services;
 
 namespace Noctra.Mobile.Controls;
 
@@ -24,6 +28,9 @@ public class RemoteImage : Image
     private const int MaxDecodePixelWidth = 2048;
     private const int MaxCacheEntries = 128;
     private const long MaxCacheBytes = 64L * 1024L * 1024L;
+    private const int MaxDistinctImageLoads = 48;
+    private const int ImageAdmissionAttempts = 2;
+    private const int ImageAdmissionRetryDelayMilliseconds = 100;
 
     public static readonly StyledProperty<string?> UrlProperty =
         AvaloniaProperty.Register<RemoteImage, string?>(nameof(Url));
@@ -34,12 +41,19 @@ public class RemoteImage : Image
     public static readonly StyledProperty<bool> IsImageLoadedProperty =
         AvaloniaProperty.Register<RemoteImage, bool>(nameof(IsImageLoaded), false);
 
+    internal static readonly AttachedProperty<bool> SurfaceLoadsActiveProperty =
+        AvaloniaProperty.RegisterAttached<RemoteImage, Control, bool>(
+            "SurfaceLoadsActive",
+            defaultValue: true,
+            inherits: true);
+
     private static readonly HttpClient HttpClient = CreateHttpClient();
     private static readonly ByteBudgetLruCache<string, Bitmap> Cache = new(
         MaxCacheBytes,
         MaxCacheEntries,
         StringComparer.OrdinalIgnoreCase);
-    private static readonly ConcurrentDictionary<string, Task<Bitmap?>> InFlightLoads = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly SharedImageLoadCoordinator<string, Bitmap?> ImageLoads =
+        new(MaxDistinctImageLoads, StringComparer.OrdinalIgnoreCase);
     private static readonly ConcurrentDictionary<string, DateTime> FailedUntilUtc = new(StringComparer.OrdinalIgnoreCase);
     private static readonly SemaphoreSlim DownloadGate = new(6, 6);
     private static readonly SemaphoreSlim DecodeGate = new(2, 2);
@@ -49,6 +63,7 @@ public class RemoteImage : Image
     private static readonly TimeSpan FailureCooldown = TimeSpan.FromMinutes(2);
 
     private CancellationTokenSource? _loadCts;
+    private static long _imageStaleCommitDropped;
 
     static RemoteImage()
     {
@@ -106,6 +121,32 @@ public class RemoteImage : Image
         base.OnDetachedFromVisualTree(e);
     }
 
+    internal static void SetDescendantLoadsActive(Control? root, bool isActive)
+    {
+        if (root is null)
+        {
+            return;
+        }
+
+        root.SetValue(SurfaceLoadsActiveProperty, isActive);
+        foreach (var image in root.GetVisualDescendants().OfType<RemoteImage>())
+        {
+            image.SetSurfaceLoadsActive(isActive);
+        }
+    }
+
+    private void SetSurfaceLoadsActive(bool isActive)
+    {
+        if (isActive)
+        {
+            StartImageLoad();
+            return;
+        }
+
+        CancelPendingLoad();
+        SetSourceOnUiThread(null);
+    }
+
     private void StartImageLoad()
     {
         CancelPendingLoad();
@@ -117,11 +158,19 @@ public class RemoteImage : Image
             return;
         }
 
+        if (!IsLoadEligible())
+        {
+            SetSourceOnUiThread(null, normalizedUrl);
+            return;
+        }
+
         var decodePixelWidth = NormalizeDecodePixelWidth(DecodePixelWidth);
         if (TryApplyCachedSource(normalizedUrl, decodePixelWidth))
         {
             return;
         }
+
+        SetSourceOnUiThread(null, normalizedUrl);
 
         if (IsRecentlyFailed(normalizedUrl))
         {
@@ -137,8 +186,28 @@ public class RemoteImage : Image
     {
         try
         {
-            var bitmap = await GetOrStartBitmapLoadAsync(url, decodePixelWidth, cancellationToken).ConfigureAwait(false);
-            TrySetSource(url, bitmap, cancellationToken);
+            for (var attempt = 0; attempt < ImageAdmissionAttempts; attempt++)
+            {
+                var result = await GetOrStartBitmapLoadAsync(url, decodePixelWidth, cancellationToken)
+                    .ConfigureAwait(false);
+                if (result.IsAdmitted)
+                {
+                    TrySetSource(url, result.Value, cancellationToken);
+                    return;
+                }
+
+                if (attempt == ImageAdmissionAttempts - 1)
+                {
+                    TrySetSource(url, null, cancellationToken);
+                    return;
+                }
+
+                await Task.Delay(ImageAdmissionRetryDelayMilliseconds, cancellationToken).ConfigureAwait(false);
+                if (!await IsLoadCurrentAndVisibleAsync(url, cancellationToken).ConfigureAwait(false))
+                {
+                    return;
+                }
+            }
         }
         catch (OperationCanceledException)
         {
@@ -149,7 +218,7 @@ public class RemoteImage : Image
         }
     }
 
-    private static async Task<Bitmap?> GetOrStartBitmapLoadAsync(
+    private static async Task<SharedImageLoadResult<Bitmap?>> GetOrStartBitmapLoadAsync(
         string url,
         int decodePixelWidth,
         CancellationToken cancellationToken)
@@ -157,25 +226,30 @@ public class RemoteImage : Image
         var cacheKey = CreateCacheKey(url, decodePixelWidth);
         if (Cache.TryGet(cacheKey, out var cached))
         {
-            return cached;
+            return new SharedImageLoadResult<Bitmap?>(true, cached);
         }
 
         if (IsRecentlyFailed(url))
         {
-            return null;
+            return new SharedImageLoadResult<Bitmap?>(true, null);
         }
 
-        var loadTask = InFlightLoads.GetOrAdd(
+        return await ImageLoads.GetOrLoadAsync(
             cacheKey,
-            _ => DownloadBitmapAsync(url, cacheKey, decodePixelWidth));
-        return await loadTask.WaitAsync(cancellationToken).ConfigureAwait(false);
+            token => DownloadBitmapAsync(url, cacheKey, decodePixelWidth, token),
+            cancellationToken).ConfigureAwait(false);
     }
 
-    private static async Task<Bitmap?> DownloadBitmapAsync(string url, string cacheKey, int decodePixelWidth)
+    private static async Task<Bitmap?> DownloadBitmapAsync(
+        string url,
+        string cacheKey,
+        int decodePixelWidth,
+        CancellationToken cancellationToken)
     {
-        await DownloadGate.WaitAsync().ConfigureAwait(false);
+        await DownloadGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
             {
                 return null;
@@ -184,7 +258,8 @@ public class RemoteImage : Image
             if (uri.Scheme.Equals(Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase) ||
                 uri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
             {
-                return await DownloadHttpBitmapAsync(url, cacheKey, uri, decodePixelWidth).ConfigureAwait(false);
+                return await DownloadHttpBitmapAsync(url, cacheKey, uri, decodePixelWidth, cancellationToken)
+                    .ConfigureAwait(false);
             }
 
             if (uri.Scheme.Equals(Uri.UriSchemeFile, StringComparison.OrdinalIgnoreCase))
@@ -204,6 +279,10 @@ public class RemoteImage : Image
 
             return null;
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
         catch
         {
             MarkFailureCooldown(url);
@@ -212,7 +291,6 @@ public class RemoteImage : Image
         finally
         {
             DownloadGate.Release();
-            InFlightLoads.TryRemove(cacheKey, out _);
         }
     }
 
@@ -220,7 +298,8 @@ public class RemoteImage : Image
         string normalizedUrl,
         string cacheKey,
         Uri uri,
-        int decodePixelWidth)
+        int decodePixelWidth,
+        CancellationToken cancellationToken)
     {
         foreach (var requestUri in BuildRequestUriCandidates(uri))
         {
@@ -228,7 +307,8 @@ public class RemoteImage : Image
                     normalizedUrl,
                     cacheKey,
                     requestUri,
-                    decodePixelWidth)
+                    decodePixelWidth,
+                    cancellationToken)
                 .ConfigureAwait(false);
             if (bitmap != null)
             {
@@ -243,7 +323,8 @@ public class RemoteImage : Image
         string normalizedUrl,
         string cacheKey,
         Uri uri,
-        int decodePixelWidth)
+        int decodePixelWidth,
+        CancellationToken cancellationToken)
     {
         for (var attempt = 0; attempt < HttpImageMaxAttempts; attempt++)
         {
@@ -251,7 +332,7 @@ public class RemoteImage : Image
             {
                 using var request = new HttpRequestMessage(HttpMethod.Get, uri);
                 using var response = await HttpClient
-                    .SendAsync(request, HttpCompletionOption.ResponseHeadersRead)
+                    .SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
                     .ConfigureAwait(false);
 
                 if (!response.IsSuccessStatusCode)
@@ -262,13 +343,14 @@ public class RemoteImage : Image
                         return null;
                     }
 
-                    await DelayBeforeRetryAsync(response, attempt).ConfigureAwait(false);
+                    await DelayBeforeRetryAsync(response, attempt, cancellationToken).ConfigureAwait(false);
                     continue;
                 }
 
-                await using var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
+                await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
                 using var memory = new MemoryStream();
-                using var bodyCts = new CancellationTokenSource(TimeSpan.FromSeconds(8));
+                using var bodyCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                bodyCts.CancelAfter(TimeSpan.FromSeconds(8));
                 await stream.CopyToAsync(memory, bodyCts.Token).ConfigureAwait(false);
 
                 if (memory.Length == 0)
@@ -288,14 +370,23 @@ public class RemoteImage : Image
                     return null;
                 }
 
-                var bitmap = await DecodeHttpBitmapAsync(memory, decodePixelWidth).ConfigureAwait(false);
+                var bitmap = await DecodeHttpBitmapAsync(memory, decodePixelWidth, cancellationToken)
+                    .ConfigureAwait(false);
+                cancellationToken.ThrowIfCancellationRequested();
                 AddToCache(cacheKey, bitmap);
                 return bitmap;
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
             }
             catch when (attempt < HttpImageMaxAttempts - 1)
             {
                 MarkFailureCooldown(normalizedUrl);
-                await Task.Delay(HttpRetryBaseDelayMs * (attempt + 1) * (attempt + 1)).ConfigureAwait(false);
+                await Task.Delay(
+                        HttpRetryBaseDelayMs * (attempt + 1) * (attempt + 1),
+                        cancellationToken)
+                    .ConfigureAwait(false);
             }
             catch
             {
@@ -314,16 +405,22 @@ public class RemoteImage : Image
             or HttpStatusCode.NotFound
             or HttpStatusCode.Gone;
 
-    private static async Task DelayBeforeRetryAsync(HttpResponseMessage response, int attempt)
+    private static async Task DelayBeforeRetryAsync(
+        HttpResponseMessage response,
+        int attempt,
+        CancellationToken cancellationToken)
     {
         var retryAfter = response.Headers.RetryAfter?.Delta;
         if (retryAfter is { } delay && delay > TimeSpan.Zero)
         {
-            await Task.Delay(delay).ConfigureAwait(false);
+            await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
             return;
         }
 
-        await Task.Delay(HttpRetryBaseDelayMs * (attempt + 1) * (attempt + 1)).ConfigureAwait(false);
+        await Task.Delay(
+                HttpRetryBaseDelayMs * (attempt + 1) * (attempt + 1),
+                cancellationToken)
+            .ConfigureAwait(false);
     }
 
     private static Bitmap? LoadFileBitmap(Uri uri, int decodePixelWidth)
@@ -435,12 +532,23 @@ public class RemoteImage : Image
             NormalizeDecodePixelWidth(decodePixelWidth),
             BitmapInterpolationMode.MediumQuality);
 
-    private static async Task<Bitmap> DecodeHttpBitmapAsync(Stream stream, int decodePixelWidth)
+    private static async Task<Bitmap> DecodeHttpBitmapAsync(
+        Stream stream,
+        int decodePixelWidth,
+        CancellationToken cancellationToken)
     {
-        await DecodeGate.WaitAsync().ConfigureAwait(false);
+        await DecodeGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            return DecodeBitmap(stream, decodePixelWidth);
+            cancellationToken.ThrowIfCancellationRequested();
+            var bitmap = DecodeBitmap(stream, decodePixelWidth);
+            if (cancellationToken.IsCancellationRequested)
+            {
+                bitmap.Dispose();
+                cancellationToken.ThrowIfCancellationRequested();
+            }
+
+            return bitmap;
         }
         finally
         {
@@ -458,6 +566,22 @@ public class RemoteImage : Image
     {
         void Apply()
         {
+            if (sourceUrl is not null &&
+                !string.Equals(
+                    NormalizeUrl(Url),
+                    sourceUrl,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                MarkStaleCommitDropped();
+                return;
+            }
+
+            if (bitmap is not null && !IsLoadEligible())
+            {
+                MarkStaleCommitDropped();
+                return;
+            }
+
             Source = bitmap;
             IsImageLoaded = bitmap != null;
         }
@@ -468,21 +592,23 @@ public class RemoteImage : Image
             return;
         }
 
-        Dispatcher.UIThread.Post(Apply, DispatcherPriority.Render);
+        Dispatcher.UIThread.Post(Apply, DispatcherPriority.Loaded);
     }
 
     private void TrySetSource(string sourceUrl, Bitmap? bitmap, CancellationToken cancellationToken)
     {
         void Apply()
         {
-            if (cancellationToken.IsCancellationRequested)
+            if (cancellationToken.IsCancellationRequested || !IsLoadEligible())
             {
+                MarkStaleCommitDropped();
                 return;
             }
 
             var currentUrl = NormalizeUrl(Url);
             if (!string.Equals(currentUrl, sourceUrl, StringComparison.OrdinalIgnoreCase))
             {
+                MarkStaleCommitDropped();
                 return;
             }
 
@@ -496,7 +622,50 @@ public class RemoteImage : Image
             return;
         }
 
-        Dispatcher.UIThread.Post(Apply, DispatcherPriority.Render);
+        Dispatcher.UIThread.Post(Apply, DispatcherPriority.Loaded);
+    }
+
+    private Task<bool> IsLoadCurrentAndVisibleAsync(
+        string sourceUrl,
+        CancellationToken cancellationToken)
+    {
+        bool IsCurrentAndVisible()
+        {
+            if (cancellationToken.IsCancellationRequested || !IsLoadEligible())
+            {
+                return false;
+            }
+
+            return string.Equals(
+                NormalizeUrl(Url),
+                sourceUrl,
+                StringComparison.OrdinalIgnoreCase);
+        }
+
+        if (Dispatcher.UIThread.CheckAccess())
+        {
+            return Task.FromResult(IsCurrentAndVisible());
+        }
+
+        var completion = new TaskCompletionSource<bool>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        Dispatcher.UIThread.Post(
+            () => completion.TrySetResult(IsCurrentAndVisible()),
+            DispatcherPriority.Loaded);
+        return completion.Task;
+    }
+
+    private bool IsLoadEligible()
+        => MobileImageLoadPolicy.CanStart(
+            MobileAppLifecycle.IsForeground,
+            GetValue(SurfaceLoadsActiveProperty),
+            VisualRoot is not null,
+            IsEffectivelyVisible);
+
+    private static void MarkStaleCommitDropped()
+    {
+        var value = Interlocked.Increment(ref _imageStaleCommitDropped);
+        PerformanceTrace.Mark("ImageStaleCommitDropped", value);
     }
 
     private void CancelPendingLoad()
