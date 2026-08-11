@@ -8,6 +8,7 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 Detailed historical engineering notes are archived in [`docs/history/legacy-changelog.md`](./docs/history/legacy-changelog.md).
 
 ## [Unreleased]
+## [1.2.0] - 2026-08-11
 
 ### Added
 
@@ -224,5 +225,6 @@ Detailed historical engineering notes are archived in [`docs/history/legacy-chan
 - Store packaging helper scripts exist for Free and Premium MSIX builds.
 
 [unreleased]: ./CHANGELOG.md
+[1.2.0]: ./CHANGELOG.md
 [1.1.0]: ./CHANGELOG.md
 [1.0.0]: ./CHANGELOG.md

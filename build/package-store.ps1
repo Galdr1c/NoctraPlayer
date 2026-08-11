@@ -143,8 +143,17 @@ function Ensure-SideloadCertificate {
 
     Export-PfxCertificate -Cert $cert -FilePath $pfxPath -Password $password -Force | Out-Null
     Export-Certificate -Cert $cert -FilePath $cerPath -Force | Out-Null
-    Import-Certificate -FilePath $cerPath -CertStoreLocation Cert:\CurrentUser\Root | Out-Null
-    Import-Certificate -FilePath $cerPath -CertStoreLocation Cert:\CurrentUser\TrustedPeople | Out-Null
+    foreach ($storeName in @("Cert:\CurrentUser\Root", "Cert:\CurrentUser\TrustedPeople")) {
+        $alreadyTrusted = Get-ChildItem $storeName -ErrorAction SilentlyContinue |
+            Where-Object { $_.Thumbprint -eq $cert.Thumbprint }
+        if (-not $alreadyTrusted) {
+            try {
+                Import-Certificate -FilePath $cerPath -CertStoreLocation $storeName | Out-Null
+            } catch {
+                Write-Host "[WARN] Certificate import to $storeName failed: $($_.Exception.Message)" -ForegroundColor Yellow
+            }
+        }
+    }
 
     [PSCustomObject]@{
         PfxPath = $pfxPath
@@ -275,9 +284,8 @@ foreach ($edition in $Editions) {
     if (Test-Path $appPackagesDir) {
         $packages = Get-ChildItem -Path $appPackagesDir -Recurse -Include "*.msix", "*.appx", "*.msixupload", "*.appxupload" | Sort-Object LastWriteTime -Descending
         foreach ($pkg in $packages) {
-            $destName = "$($profile.appDisplayName -replace ' ','_')_${VersionPrefix}_$($pkg.Extension.TrimStart('.'))"
-            # Keep original extension-based name if simpler
-            $dest = Join-Path $OutputDir $pkg.Name
+            $destName = "Noctra.$($profile.edition)_${packageVersion}_$Platform.$($pkg.Extension.TrimStart('.'))"
+            $dest = Join-Path $OutputDir $destName
             Copy-Item $pkg.FullName $dest -Force
             Write-Host "[OK] Package copied: $dest" -ForegroundColor Green
         }
@@ -298,7 +306,7 @@ if ($results.Status -notcontains "FAILED") {
         $newBadgeReplacement = "version-$VersionPrefix"
         $readmeContent = [regex]::Replace($readmeContent, $oldBadgePattern, $newBadgeReplacement)
         $oldAltPattern = 'alt="Version [0-9]+\.[0-9]+\.[0-9]+"'
-        $newAltReplacement = "alt=\"Version $VersionPrefix\""
+        $newAltReplacement = 'alt="Version ' + $VersionPrefix + '"'
         $readmeContent = [regex]::Replace($readmeContent, $oldAltPattern, $newAltReplacement)
         [System.IO.File]::WriteAllText($readmeFile, $readmeContent, [System.Text.UTF8Encoding]::new($false))
         Write-Host "[OK] README.md version badge updated to $VersionPrefix" -ForegroundColor Green
