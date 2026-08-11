@@ -93,7 +93,14 @@ public partial class MainViewModel : ObservableObject
     private readonly ILocalizationService _localizationService;
     private bool _suppressNavigationFilterRefresh;
     private bool _suppressSelectedPlaylistChanged;
-    private bool _isNavigationContentResetPending;
+    private long _navigationContentResetGeneration;
+    private NavigationContentResetOwner? _pendingNavigationContentReset;
+    private long _navigationResetsPrepared;
+    private long _preparedNavigationResetsConsumed;
+    private long _ordinaryFilterResets;
+    private long _staleNavigationResetCompletions;
+
+    private sealed record NavigationContentResetOwner(long Generation, AppView View, int FilterVersion);
 
     // Guards media-selection flows before they reach MainWindow playback.
     // This prevents rapid Live/VOD/Series clicks from completing out of order
@@ -296,7 +303,10 @@ public partial class MainViewModel : ObservableObject
 
     private int CurrentViewItemCount => ActiveView == AppView.Series ? SeriesViewItems.Count : FilteredChannels.CountedItemCount;
 
-    private bool IsContentStillLoading => IsLoading || IsChannelLoading || _isNavigationContentResetPending;
+    private bool IsContentStillLoading =>
+        IsLoading ||
+        IsChannelLoading ||
+        Volatile.Read(ref _pendingNavigationContentReset) != null;
 
     private bool IsSeriesAggregationPendingForCurrentView => ActiveView == AppView.Series && IsSeriesAggregationPending;
 
@@ -527,7 +537,7 @@ public partial class MainViewModel : ObservableObject
                         }
 
                         // Refresh content from DB (Aggregation finished)
-                        await LoadHomeContentAsync();
+                        await LoadHomeContentAsync(preserveEmptyVisibleSeriesItems: true);
                         if (!IsChannelLoading)
                         {
                             StatusMessage = _localizationService.GetString("Main.Status.ChannelsReady");
@@ -684,7 +694,7 @@ public partial class MainViewModel : ObservableObject
             {
                 try
                 {
-                    await LoadHomeContentAsync();
+                    await LoadHomeContentAsync(preserveEmptyVisibleSeriesItems: true);
                 }
                 catch (Exception ex)
                 {
@@ -934,7 +944,7 @@ public partial class MainViewModel : ObservableObject
                                                                 await LoadPlaylistsAsync();
                                                                 // Aggregation may have completed before SelectedPlaylist was set (race condition).
                                                                 // Explicitly reload home content so Series/VOD tabs are populated.
-                                                                await LoadHomeContentAsync();
+                                                                await LoadHomeContentAsync(preserveEmptyVisibleSeriesItems: true);
                                                                 StatusMessage = _localizationService.GetString("Main.Status.ChannelsReadyOrganizingSeries");
                                                                 IsChannelLoading = false;
                                                                 ChannelLoadingProgress = 100;
@@ -2350,6 +2360,7 @@ public partial class MainViewModel : ObservableObject
         }
 
         CancelPendingFilterRequests();
+        AbandonNavigationContentReset();
 
         if (value == null)
         {
@@ -2362,15 +2373,43 @@ public partial class MainViewModel : ObservableObject
 
     private void CancelPendingFilterRequests()
     {
-        Interlocked.Increment(ref _filterRequestVersion);
-        var filterCancellation = _filterCts;
-        _filterCts = null;
-        filterCancellation?.Cancel();
-        filterCancellation?.Dispose();
+        CancelActiveFilterRequest();
         Interlocked.Exchange(ref _pendingFilterRequest, 0);
         _pendingFilterReason = null;
         _pendingFilterCaller = null;
         _lastCompletedFilterSignature = null;
+    }
+
+    private FilterRequest InstallFilterRequest()
+    {
+        FilterRequest request;
+        FilterRequest? previous;
+        lock (_filterRequestGate)
+        {
+            var version = Interlocked.Increment(ref _filterRequestVersion);
+            var cancellation = new CancellationTokenSource();
+            request = new FilterRequest(version, cancellation, cancellation.Token);
+            previous = Volatile.Read(ref _activeFilterRequest);
+            Volatile.Write(ref _activeFilterRequest, request);
+            BindPreparedNavigationContentReset(ActiveView, version);
+        }
+
+        previous?.Cancellation.Cancel();
+        previous?.Cancellation.Dispose();
+        return request;
+    }
+
+    private void CancelActiveFilterRequest()
+    {
+        FilterRequest? previous;
+        lock (_filterRequestGate)
+        {
+            Interlocked.Increment(ref _filterRequestVersion);
+            previous = Interlocked.Exchange(ref _activeFilterRequest, null);
+        }
+
+        previous?.Cancellation.Cancel();
+        previous?.Cancellation.Dispose();
     }
 
     private async Task LoadChannelsAsync(
@@ -2547,7 +2586,9 @@ public partial class MainViewModel : ObservableObject
     private async Task LoadHomeContentAsync(
         CancellationToken cancellationToken = default,
         int? contentGeneration = null,
-        int? requestedPlaylistId = null)
+        int? requestedPlaylistId = null,
+        bool updateVisibleSeriesItems = true,
+        bool preserveEmptyVisibleSeriesItems = false)
     {
         try 
         {
@@ -2599,7 +2640,11 @@ public partial class MainViewModel : ObservableObject
 
             _isEpisodeContinueDirty = true;
             _cachedEpisodeContinue = null;
-            UpdateSeriesViewItems();
+            if (updateVisibleSeriesItems)
+            {
+                UpdateSeriesViewItems(
+                    resetVisibleItems: !preserveEmptyVisibleSeriesItems || SeriesViewItems.Count > 0);
+            }
 
             // Arka planda tüm dizi ilerlemelerini verimli şekilde yükle (Bulk sync).
             // Dikkat: rails işini UI thread'e taşıma! Her iki metod da içindeki
@@ -3063,7 +3108,12 @@ public partial class MainViewModel : ObservableObject
         await RefreshPersonalListsFromDatabaseAsync();
     }
 
-    private CancellationTokenSource? _filterCts;
+    private readonly object _filterRequestGate = new();
+    private FilterRequest? _activeFilterRequest;
+    private sealed record FilterRequest(
+        int Version,
+        CancellationTokenSource Cancellation,
+        CancellationToken Token);
     private CancellationTokenSource? _downloadsLandingRefreshCts;
     private int _isDownloadsLandingRefreshing;
     private readonly SemaphoreSlim _downloadsRefreshGate = new(1, 1);
@@ -3273,8 +3323,16 @@ public partial class MainViewModel : ObservableObject
         _currentPage = 0;
         _hasMoreChannels = true;
         _isLoadingMoreChannels = false;
-        Channels = new BatchObservableCollection<Channel>();
-        FilteredChannels = new BatchObservableCollection<Channel>(c => !IsDummyChannel(c));
+        if (ReferenceEquals(Channels, FilteredChannels))
+        {
+            Channels.Clear();
+        }
+        else
+        {
+            Channels.Clear();
+            FilteredChannels.Clear();
+        }
+
         NotifyContentStateChanged();
     }
 
@@ -3304,8 +3362,8 @@ public partial class MainViewModel : ObservableObject
         _currentSeriesPage = 0;
         _hasMoreSeriesItems = true;
         _isLoadingMoreSeriesItems = false;
-        _seriesFilteredSource = new List<Series>();
-        SeriesViewItems = new BatchObservableCollection<Series>();
+        _seriesFilteredSource.Clear();
+        SeriesViewItems.Clear();
         NotifyContentStateChanged();
     }
 
@@ -3900,9 +3958,8 @@ public partial class MainViewModel : ObservableObject
         if (trimmed.Length < MinSearchQueryLength)
         {
             // Cancel any pending filter from a previous valid query
-            _filterCts?.Cancel();
-            _filterCts?.Dispose();
-            _filterCts = null;
+            CancelActiveFilterRequest();
+            AbandonNavigationContentReset();
 
             // Clear results immediately for short queries
             IsSearching = false;
@@ -3920,23 +3977,19 @@ public partial class MainViewModel : ObservableObject
         }
 
         // Cancel previous debounce and start a new one
-        _filterCts?.Cancel();
-        _filterCts?.Dispose();
-        _filterCts = new CancellationTokenSource();
-        var token = _filterCts.Token;
-        var version = Interlocked.Increment(ref _filterRequestVersion);
+        var request = InstallFilterRequest();
 
         IsSearching = true;
         ShowSearchEmptyState = false;
         OnPropertyChanged(nameof(ShowSearchIdleState));
-        _ = ApplySearchWithCancellationHandlingAsync(token, version);
+        _ = ApplySearchWithCancellationHandlingAsync(request);
     }
 
-    private async Task ApplySearchWithCancellationHandlingAsync(CancellationToken token, int version)
+    private async Task ApplySearchWithCancellationHandlingAsync(FilterRequest request)
     {
         try
         {
-            await ApplyFiltersWithDelayAsync(token, version, "search", nameof(OnSearchTextChanged));
+            await ApplyFiltersWithDelayAsync(request, "search", nameof(OnSearchTextChanged));
         }
         catch (OperationCanceledException)
         {
@@ -4012,41 +4065,103 @@ public partial class MainViewModel : ObservableObject
 
     private void PrepareContentSurfaceForNavigation(AppView view)
     {
+        CancelPendingFilterRequests();
         BeginIncrementalContentGeneration();
 
         if (view is AppView.Live or AppView.Movies)
         {
-            _isNavigationContentResetPending = true;
-            _lastCompletedFilterSignature = null;
+            PrepareNavigationContentReset(view);
             ResetIncrementalState();
-            FilteredChannels = new BatchObservableCollection<Channel>(c => !IsDummyChannel(c));
-            NotifyContentStateChanged();
             return;
         }
 
         if (view == AppView.Series)
         {
-            _isNavigationContentResetPending = true;
-            _lastCompletedFilterSignature = null;
+            PrepareNavigationContentReset(view);
             ResetSeriesIncrementalState();
-            _seriesFilteredSource.Clear();
-            SeriesViewItems = new BatchObservableCollection<Series>();
-            NotifyContentStateChanged();
             return;
         }
 
-        CompleteNavigationContentReset();
+        AbandonNavigationContentReset();
     }
 
-    private void CompleteNavigationContentReset()
+    private void PrepareNavigationContentReset(AppView view)
     {
-        if (!_isNavigationContentResetPending)
+        var owner = new NavigationContentResetOwner(
+            Interlocked.Increment(ref _navigationContentResetGeneration),
+            view,
+            FilterVersion: 0);
+        Interlocked.Exchange(ref _pendingNavigationContentReset, owner);
+        PerformanceTrace.Mark(
+            "navigation.reset.prepared.count",
+            Interlocked.Increment(ref _navigationResetsPrepared),
+            view.ToString());
+    }
+
+    private void BindPreparedNavigationContentReset(AppView view, int filterVersion)
+    {
+        while (true)
+        {
+            var owner = Volatile.Read(ref _pendingNavigationContentReset);
+            if (owner == null ||
+                owner.View != view ||
+                owner.FilterVersion >= filterVersion)
+            {
+                return;
+            }
+
+            var boundOwner = owner with { FilterVersion = filterVersion };
+            if (ReferenceEquals(
+                    Interlocked.CompareExchange(
+                        ref _pendingNavigationContentReset,
+                        boundOwner,
+                        owner),
+                    owner))
+            {
+                return;
+            }
+        }
+    }
+
+    private NavigationContentResetOwner? GetPreparedNavigationContentReset(
+        AppView view,
+        int filterVersion)
+    {
+        var owner = Volatile.Read(ref _pendingNavigationContentReset);
+        return owner?.View == view && owner.FilterVersion == filterVersion ? owner : null;
+    }
+
+    private void CompleteNavigationContentReset(NavigationContentResetOwner? owner)
+    {
+        if (owner == null)
         {
             return;
         }
 
-        _isNavigationContentResetPending = false;
-        NotifyContentStateChanged();
+        var current = Interlocked.CompareExchange(
+            ref _pendingNavigationContentReset,
+            null,
+            owner);
+        if (ReferenceEquals(current, owner))
+        {
+            NotifyContentStateChanged();
+            return;
+        }
+
+        PerformanceTrace.Mark(
+            "navigation.reset.stale_completion.count",
+            Interlocked.Increment(ref _staleNavigationResetCompletions),
+            current == null
+                ? $"{owner.View}:abandoned"
+                : $"{owner.View}:superseded-by-{current.View}");
+    }
+
+    private void AbandonNavigationContentReset()
+    {
+        if (Interlocked.Exchange(ref _pendingNavigationContentReset, null) != null)
+        {
+            NotifyContentStateChanged();
+        }
     }
 
     partial void OnShowOnlyFavoritesChanged(bool value)
@@ -4274,21 +4389,17 @@ public partial class MainViewModel : ObservableObject
 
     public void ScheduleImmediateFilter(string reason = "immediate", [CallerMemberName] string caller = "")
     {
-        var version = Interlocked.Increment(ref _filterRequestVersion);
-        _filterCts?.Cancel();
-        _filterCts?.Dispose();
-        _filterCts = new CancellationTokenSource();
-        var token = _filterCts.Token;
+        var request = InstallFilterRequest();
 
-        _ = ApplyImmediateFilterAsync(token, version, reason, caller);
+        _ = ApplyImmediateFilterAsync(request, reason, caller);
     }
 
-    private async Task ApplyImmediateFilterAsync(CancellationToken token, int version, string reason, string caller)
+    private async Task ApplyImmediateFilterAsync(FilterRequest request, string reason, string caller)
     {
         try
         {
-            await Task.Delay(ImmediateFilterCoalesceDelayMs, token);
-            await RunCoalescedFilterAsync(token, version, reason, caller);
+            await Task.Delay(ImmediateFilterCoalesceDelayMs, request.Token);
+            await RunCoalescedFilterAsync(request, reason, caller);
         }
         catch (OperationCanceledException)
         {
@@ -4300,12 +4411,12 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
-    private async Task ApplyFiltersWithDelayAsync(CancellationToken token, int version, string reason, string caller)
+    private async Task ApplyFiltersWithDelayAsync(FilterRequest request, string reason, string caller)
     {
         try
         {
-            await Task.Delay(_filterDelayMs, token);
-            await RunCoalescedFilterAsync(token, version, reason, caller);
+            await Task.Delay(_filterDelayMs, request.Token);
+            await RunCoalescedFilterAsync(request, reason, caller);
         }
         catch (OperationCanceledException)
         {
@@ -4317,9 +4428,10 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
-    private async Task RunCoalescedFilterAsync(CancellationToken token, int version, string reason, string caller)
+    private async Task RunCoalescedFilterAsync(FilterRequest request, string reason, string caller)
     {
-        if (token.IsCancellationRequested)
+        if (request.Token.IsCancellationRequested ||
+            !ReferenceEquals(Volatile.Read(ref _activeFilterRequest), request))
         {
             return;
         }
@@ -4334,30 +4446,31 @@ public partial class MainViewModel : ObservableObject
 
         try
         {
-            var currentToken = token;
+            var currentRequest = request;
             var currentReason = reason;
             var currentCaller = caller;
 
             while (true)
             {
                 Interlocked.Exchange(ref _pendingFilterRequest, 0);
-                currentToken = _filterCts?.Token ?? currentToken;
-                var currentVersion = Volatile.Read(ref _filterRequestVersion);
-                if (currentToken.IsCancellationRequested)
+                if (currentRequest.Token.IsCancellationRequested ||
+                    !ReferenceEquals(
+                        Volatile.Read(ref _activeFilterRequest),
+                        currentRequest))
                 {
                     break;
                 }
 
                 var signature = BuildFilterSignature();
-                if (ShouldSkipDuplicateFilter(signature))
+                if (ShouldSkipDuplicateFilter(currentRequest, signature))
                 {
                 }
                 else
                 {
-                    var applied = await ApplyFiltersAsync(currentToken);
+                    var applied = await ApplyFiltersAsync(currentRequest);
                     if (applied)
                     {
-                        MarkCompletedFilter(signature);
+                        MarkCompletedFilter(currentRequest, signature);
                     }
                 }
 
@@ -4371,8 +4484,14 @@ public partial class MainViewModel : ObservableObject
                 _pendingFilterReason = null;
                 _pendingFilterCaller = null;
 
-                currentToken = _filterCts?.Token ?? currentToken;
-                await Task.Delay(ImmediateFilterCoalesceDelayMs, currentToken);
+                var nextRequest = Volatile.Read(ref _activeFilterRequest);
+                if (nextRequest == null)
+                {
+                    break;
+                }
+
+                currentRequest = nextRequest;
+                await Task.Delay(ImmediateFilterCoalesceDelayMs, currentRequest.Token);
             }
         }
         finally
@@ -4401,67 +4520,107 @@ public partial class MainViewModel : ObservableObject
             search);
     }
 
-    private bool ShouldSkipDuplicateFilter(string signature)
+    private bool ShouldSkipDuplicateFilter(FilterRequest request, string signature)
     {
-        return string.Equals(_lastCompletedFilterSignature, signature, StringComparison.Ordinal) &&
-               (DateTime.UtcNow - _lastCompletedFilterUtc).TotalMilliseconds <= DuplicateFilterSuppressWindowMs;
+        lock (_filterRequestGate)
+        {
+            if (request.Token.IsCancellationRequested ||
+                !ReferenceEquals(_activeFilterRequest, request))
+            {
+                return false;
+            }
+
+            var preparedOwner = Volatile.Read(ref _pendingNavigationContentReset);
+            if (preparedOwner?.View == ActiveView &&
+                preparedOwner.FilterVersion == request.Version)
+            {
+                return false;
+            }
+
+            return string.Equals(_lastCompletedFilterSignature, signature, StringComparison.Ordinal) &&
+                   (DateTime.UtcNow - _lastCompletedFilterUtc).TotalMilliseconds <= DuplicateFilterSuppressWindowMs;
+        }
     }
 
-    private void MarkCompletedFilter(string signature)
+    private void MarkCompletedFilter(FilterRequest request, string signature)
     {
-        _lastCompletedFilterSignature = signature;
-        _lastCompletedFilterUtc = DateTime.UtcNow;
+        lock (_filterRequestGate)
+        {
+            if (request.Token.IsCancellationRequested ||
+                !ReferenceEquals(_activeFilterRequest, request))
+            {
+                return;
+            }
+
+            _lastCompletedFilterSignature = signature;
+            _lastCompletedFilterUtc = DateTime.UtcNow;
+        }
     }
 
-    private async Task<bool> ApplyFiltersAsync(CancellationToken token)
+    private async Task<bool> ApplyFiltersAsync(FilterRequest request)
     {
+        var token = request.Token;
         if (token.IsCancellationRequested)
         {
-            CompleteNavigationContentReset();
             return false;
         }
 
-        var contentGeneration = BeginIncrementalContentGeneration();
-        if (SelectedPlaylist == null || token.IsCancellationRequested)
-        {
-            CompleteNavigationContentReset();
-            return false;
-        }
-
+        var contentGeneration = 0;
+        var requestedPlaylistId = 0;
+        var view = default(AppView);
+        var needsChannels = false;
+        var needsSeries = false;
+        NavigationContentResetOwner? preparedResetOwner = null;
         BeginLoading();
 
         try
         {
-            if (token.IsCancellationRequested) return false;
-            var requestedPlaylistId = SelectedPlaylist.Id;
-            var view = ActiveView;
-            var needsChannels = view is AppView.Home or AppView.Live or AppView.Movies or AppView.Search;
-            var needsSeries = view is AppView.Home or AppView.Series or AppView.Search;
+            lock (_filterRequestGate)
+            {
+                if (token.IsCancellationRequested ||
+                    !ReferenceEquals(_activeFilterRequest, request))
+                {
+                    return false;
+                }
 
+                var requestedPlaylist = SelectedPlaylist;
+                if (requestedPlaylist == null)
+                {
+                    AbandonNavigationContentReset();
+                    return false;
+                }
 
-            if (needsChannels)
-            {
-                ResetIncrementalState();
-            }
-            else
-            {
-                _hasMoreChannels = false;
-                _isLoadingMoreChannels = false;
-                FilteredChannels = new BatchObservableCollection<Channel>(c => !IsDummyChannel(c));
-                NotifyContentStateChanged();
-            }
+                contentGeneration = BeginIncrementalContentGeneration();
+                requestedPlaylistId = requestedPlaylist.Id;
+                view = ActiveView;
+                needsChannels = view is AppView.Home or AppView.Live or AppView.Movies or AppView.Search;
+                needsSeries = view is AppView.Home or AppView.Series or AppView.Search;
+                preparedResetOwner = GetPreparedNavigationContentReset(view, request.Version);
+                if (preparedResetOwner != null)
+                {
+                    PerformanceTrace.Mark(
+                        "navigation.reset.consumed.count",
+                        Interlocked.Increment(ref _preparedNavigationResetsConsumed),
+                        view.ToString());
+                }
 
-            if (needsSeries)
-            {
-                ResetSeriesIncrementalState();
-            }
-            else
-            {
-                _hasMoreSeriesItems = false;
-                _isLoadingMoreSeriesItems = false;
-                _seriesFilteredSource.Clear();
-                SeriesViewItems = new BatchObservableCollection<Series>();
-                NotifyContentStateChanged();
+                if (needsChannels && preparedResetOwner == null)
+                {
+                    ResetIncrementalState();
+                    PerformanceTrace.Mark(
+                        "navigation.reset.ordinary_filter.count",
+                        Interlocked.Increment(ref _ordinaryFilterResets),
+                        view.ToString());
+                }
+
+                if (needsSeries && preparedResetOwner == null)
+                {
+                    ResetSeriesIncrementalState();
+                    PerformanceTrace.Mark(
+                        "navigation.reset.ordinary_filter.count",
+                        Interlocked.Increment(ref _ordinaryFilterResets),
+                        view.ToString());
+                }
             }
 
             if (token.IsCancellationRequested) return false;
@@ -4484,7 +4643,8 @@ public partial class MainViewModel : ObservableObject
                     await LoadHomeContentAsync(
                         token,
                         contentGeneration,
-                        requestedPlaylistId);
+                        requestedPlaylistId,
+                        updateVisibleSeriesItems: false);
                 }
 
                 if (token.IsCancellationRequested ||
@@ -4493,7 +4653,7 @@ public partial class MainViewModel : ObservableObject
                     return false;
                 }
 
-                UpdateSeriesViewItems();
+                UpdateSeriesViewItems(resetVisibleItems: false);
             }
             else
             {
@@ -4523,7 +4683,7 @@ public partial class MainViewModel : ObservableObject
         }
         finally
         {
-            CompleteNavigationContentReset();
+            CompleteNavigationContentReset(preparedResetOwner);
             EndLoading();
         }
     }
@@ -6231,7 +6391,7 @@ public partial class MainViewModel : ObservableObject
             }
             else
             {
-                CompleteNavigationContentReset();
+                AbandonNavigationContentReset();
             }
 
             ActiveView = view;
@@ -8669,12 +8829,20 @@ public partial class MainViewModel : ObservableObject
 
     private void UpdateSeriesViewItems()
     {
+        UpdateSeriesViewItems(resetVisibleItems: true);
+    }
+
+    private void UpdateSeriesViewItems(bool resetVisibleItems)
+    {
+        if (resetVisibleItems)
+        {
+            ResetSeriesIncrementalState();
+        }
+
         var source = _allSeriesCache;
         if (source.Count == 0)
         {
-            ResetSeriesIncrementalState();
             _seriesFilteredSource.Clear();
-            SeriesViewItems.Clear();
             NotifyContentStateChanged();
             return;
         }
@@ -8690,7 +8858,6 @@ public partial class MainViewModel : ObservableObject
             _seriesFilteredSource = new List<Series>(GetOrBuildAllSeriesSort(source, SelectedSortOrder, s.HiddenSeriesGroups));
             _currentSeriesPage = 0;
             _hasMoreSeriesItems = true;
-            SeriesViewItems.Clear();
             _ = LoadMoreSeriesAsync();
             NotifyContentStateChanged();
             return;
@@ -8735,7 +8902,6 @@ public partial class MainViewModel : ObservableObject
         _seriesFilteredSource = filtered.ToList();
         _currentSeriesPage = 0;
         _hasMoreSeriesItems = true;
-        SeriesViewItems.Clear();
         _ = LoadMoreSeriesAsync();
         NotifyContentStateChanged();
     }

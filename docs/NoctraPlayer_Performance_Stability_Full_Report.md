@@ -292,6 +292,31 @@ yeniden değerlendirmeye zorlar.
 - `Clear + incremental load` veya identity-aware diff kullanılmalı.
 - `ResetIncrementalState` ve `ApplyFiltersAsync` ownership'i netleştirilmeli.
 
+### Uygulama durumu — 2026-08-11: Tamamlandı
+
+- `Channels`, `FilteredChannels` ve `SeriesViewItems` collection identity'si navigation ve
+  pagination boyunca korunuyor; hedef yüzey navigation başlangıcında yalnız bir kez yerinde
+  temizleniyor.
+- Navigation reset ownership'i view + generation + filter request ile eşleştirildi. İptal
+  edilen veya supersede edilen istekler yeni owner'ı tamamlayamıyor; eşleşen prepared owner
+  varken duplicate-filter suppression uygulanmıyor.
+- Deferred Series refresh, kısa Search iptali, eşzamanlı filter scheduling ve stale completion
+  yollarındaki reset/loading sızıntıları kapatıldı. İlk sayfa tek batch `Add`, sonraki sayfa
+  ilave `Reset` olmadan append ediliyor.
+- Otomatik kanıt: odaklı fixture `9/9`; 10 tekrar `90/90`; ilgili navigation/cancellation/
+  pagination regresyon grubu `85/85`. Tam takımda `1983` testin `1976` tanesi geçti; önceki
+  bağımsız 6 hata değişmedi, ayrıca tek seferlik bağımsız DownloadContentKey hatası izole
+  tekrarında geçti.
+- Build kanıtı: Core `0 warning / 0 error`, Mobile `1 mevcut warning / 0 error`, Android
+  `72 mevcut warning / 0 error`. İmzalı APK SHA-256:
+  `4AA52F116426D9D67451468C1F7AAE9CF6697F108F7D5CA718A543AF21D2309E`.
+- Android kabulü: veri silmeden `adb install -r`; `firstInstallTime` değişmedi
+  (`2026-08-10 17:51:36`). 50 tam `Live -> Movies -> Series -> Live` turu, 10 background/
+  resume turu ve 15 liste kaydırması tamamlandı. PID `13550` sabit kaldı; ANR/crash/OOM
+  eşleşmesi `0`; son ekran doğru `Canlı TV` içeriğini gösterdi.
+- Bellek gözlemi: başlangıç PSS `585161 KB`, ilk 50 tur sonrası `608401 KB`, yaşam döngüsü ve
+  kaydırma sonrası `597210 KB`. Test süresince monoton büyüme veya kilitlenme görülmedi.
+
 ---
 
 ## P0-07 — `RemoteImage.CancelPendingLoad()` gerçek HTTP/decode işini iptal etmiyor
@@ -1973,4 +1998,3 @@ En büyük mimari eksik tek cümleyle:
 > **Her subsystem kendi concurrency/caching/refresh politikasına sahip, fakat uygulama genelinde ortak bir workload budget ve generation-based cancellation sistemi yok.**
 
 Bu nedenle yalnız tek tek mikro-optimizasyon yapılması yeterli değildir. P0/P1 maddeleri birlikte ele alınırsa Live/Movies/Series/Search ekranlarının uzun kullanım davranışının ilk açılıştaki akıcılığa çok daha yakın kalması beklenir.
-
