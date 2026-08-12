@@ -1,5 +1,6 @@
 using System;
 using System.Globalization;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
@@ -248,22 +249,43 @@ public partial class App : Application
         {
             if (e.ExceptionObject is not Exception ex) return;
 
+            if (e.IsTerminating)
+            {
+                // Fatal: yalnızca local dosyaya yaz ve süreci OS/WER'e bırak.
+                // Terminating exception sırasında activity/mailto başlatmak
+                // crash yolunun kendisinin asılmasına yol açabilir.
+                WriteCrashLog(ex, "Global (Terminating)");
+                return;
+            }
+
             var reportService = Services?.GetService(typeof(IDiagnosticReportService)) as IDiagnosticReportService;
             if (reportService is null) return;
 
-            if (e.IsTerminating)
-            {
-                reportService.OpenCrashReport(ex, "Global (Terminating)");
-            }
-            else
-            {
-                Dispatcher.UIThread.Post(() => reportService.OpenCrashReport(ex, "Global"));
-            }
+            Dispatcher.UIThread.Post(() => reportService.OpenCrashReport(ex, "Global"));
         };
 
         TaskScheduler.UnobservedTaskException += (s, e) =>
         {
             e.SetObserved(); // Prevent process kill on unobserved Task exceptions
         };
+    }
+
+    private void WriteCrashLog(Exception ex, string context)
+    {
+        try
+        {
+            var pathService = Services?.GetService(typeof(IAppPathService)) as IAppPathService;
+            if (pathService is null) return;
+
+            pathService.EnsureUserDataDirectory();
+            var path = Path.Combine(pathService.LogsDirectory, "crash.log");
+            File.AppendAllText(
+                path,
+                $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] CRASH in {context}: {ex}" + Environment.NewLine);
+        }
+        catch
+        {
+            // Best-effort: Android Logcat / OS crash reporting zaten yakalar.
+        }
     }
 }

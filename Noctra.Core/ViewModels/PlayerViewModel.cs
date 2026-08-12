@@ -3228,15 +3228,25 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
             {
                 try
                 {
-                    if (Volatile.Read(ref _subtitleSaveInFlight) == 1 &&
-                        pendingSubtitleSaveTask is not null)
-                    {
-                        pendingSubtitleSaveTask.GetAwaiter().GetResult();
-                    }
-                    else
-                    {
-                        _settingsService.SaveAsync().GetAwaiter().GetResult();
-                    }
+                    // Shutdown path: UI thread'i DB/dosya I/O'su için sınırsız
+                    // bekletmek WER hang riskidir. Bekleyişi ~5s'lik yanıtsız
+                    // eşiğinin çok altında bir zamanla sınırla; altyazı ayarı
+                    // kaydı kritik değildir ve kaybolursa sonraki oturumda
+                    // tekrar uygulanır.
+                    Task saveTask = pendingSubtitleSaveTask is not null &&
+                                    Volatile.Read(ref _subtitleSaveInFlight) == 1
+                        ? pendingSubtitleSaveTask
+                        : _settingsService.SaveAsync();
+
+            if (!saveTask.Wait(TimeSpan.FromMilliseconds(1500)))
+            {
+                LogDebug("Subtitle settings flush exceeded the 1.5s shutdown budget; continuing without waiting.");
+            }
+            else
+            {
+                // Orijinal exception'ı (AggregateException sarmalı olmadan) logla.
+                saveTask.GetAwaiter().GetResult();
+            }
                 }
                 catch (Exception ex)
                 {

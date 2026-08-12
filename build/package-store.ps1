@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Builds Noctra MSIX Store packages for submission to the Microsoft Store.
 
@@ -162,6 +162,94 @@ function Ensure-SideloadCertificate {
     }
 }
 
+# ------------------------------------------------------------------
+# Partner Center symbol package
+# ------------------------------------------------------------------
+# Creates a ZIP of the .pdb/.dll/.exe files from the newest Release build
+# output. Upload it to Partner Center > Health > Failures > Upload symbols so
+# future crashes/hangs resolve to meaningful stack traces instead of
+# "Uncategorized". PDBs are produced by default (DebugType=portable) in
+# Release builds.
+function New-SymbolZip {
+    param(
+        [Parameter(Mandatory = $true)][string]$RepoRoot,
+        [Parameter(Mandatory = $true)][string]$EditionKey,
+        [Parameter(Mandatory = $true)][string]$Version,
+        [Parameter(Mandatory = $true)][string]$Platform,
+        [Parameter(Mandatory = $true)][string]$OutputDir
+    )
+
+    $debugLog = Join-Path $OutputDir "symbol-zip-debug.log"
+    $trace = @()
+    $trace += "EditionKey=$EditionKey Version=$Version"
+
+    $appBin = Join-Path $RepoRoot "Noctra.Avalonia\bin"
+    $trace += "appBin=$appBin"
+    $pdb = Get-ChildItem -Path $appBin -Recurse -Filter "Noctra.pdb" -ErrorAction SilentlyContinue |
+        Where-Object { $_.FullName -match "Release" } |
+        Sort-Object LastWriteTime -Descending |
+        Select-Object -First 1
+
+    if (-not $pdb) {
+        Write-Host "[WARN] Noctra.pdb not found under $appBin - symbols zip skipped." -ForegroundColor Yellow
+        try { [System.IO.File]::AppendAllText($debugLog, "[trace] $($trace -join ' | ') | NO_PDB`r`n") } catch { }
+        return $null
+    }
+    $trace += "pdb=$($pdb.FullName)"
+
+    # Windows PowerShell 5.1's Get-ChildItem -Include is unreliable without a
+    # wildcard in -Path (can emit $null/empty results even with -Recurse). Use an
+    # explicit glob and materialize a plain string list of symbol files.
+    $symbolGlob = Join-Path $pdb.DirectoryName '*'
+    $trace += "symbolGlob=$symbolGlob"
+    $symbols = @(
+        Get-ChildItem -Path $symbolGlob -Recurse -File -Include "*.pdb", "*.dll", "*.exe" -ErrorAction SilentlyContinue |
+            Where-Object { $null -ne $_ -and $null -ne $_.FullName }
+    )
+    $trace += "symbols.Count=$($symbols.Count)"
+    if ($symbols.Count -gt 0) {
+        $trace += "symbols0=$($symbols[0].GetType().FullName):$($symbols[0].FullName)"
+    }
+    if ($symbols.Count -eq 0) {
+        Write-Host "[WARN] No symbol candidates under $($pdb.DirectoryName) - symbols zip skipped." -ForegroundColor Yellow
+        try { [System.IO.File]::AppendAllText($debugLog, "[trace] $($trace -join ' | ') | NO_SYMBOLS`r`n") } catch { }
+        return $null
+    }
+
+    $fullNames = @($symbols | ForEach-Object { $_.FullName } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+    $trace += "fullNames.Count=$($fullNames.Count)"
+    if ($fullNames.Count -eq 0) {
+        Write-Host "[WARN] Symbol list is empty after filtering - symbols zip skipped." -ForegroundColor Yellow
+        try { [System.IO.File]::AppendAllText($debugLog, "[trace] $($trace -join ' | ') | EMPTY_AFTER_FILTER`r`n") } catch { }
+        return $null
+    }
+
+    $zipPath = Join-Path $OutputDir "Noctra.${EditionKey}_${Version}_${Platform}_Symbols.zip"
+    $trace += "zipPath=$zipPath"
+    if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
+
+    # Use System.IO.Compression directly: Compress-Archive in Windows PowerShell
+    # 5.1 has several quirks (ValidateNotNullOrEmpty failures on -Path, 2GB limit,
+    # large file-set issues) that make it unreliable for packaging runs.
+    Add-Type -AssemblyName System.IO.Compression
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    $zip = [System.IO.Compression.ZipFile]::Open($zipPath, [System.IO.Compression.ZipArchiveMode]::Create)
+    try {
+        $base = $pdb.DirectoryName
+        foreach ($file in $fullNames) {
+            $relative = $file.Substring($base.Length).TrimStart('\', '/').Replace('\', '/')
+            [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, $file, $relative, [System.IO.Compression.CompressionLevel]::Optimal) | Out-Null
+        }
+    }
+    finally {
+        $zip.Dispose()
+    }
+
+    $trace += "zipBytes=$((Get-Item $zipPath).Length)"
+    try { [System.IO.File]::AppendAllText($debugLog, "[trace] $($trace -join ' | ') | OK`r`n") } catch { }
+    return $zipPath
+}
+
 # Check profiles
 if (-not (Test-Path $ProfilesFile)) {
     Write-Host "[ERROR] Store profiles not found: $ProfilesFile" -ForegroundColor Red
@@ -289,6 +377,26 @@ foreach ($edition in $Editions) {
             Copy-Item $pkg.FullName $dest -Force
             Write-Host "[OK] Package copied: $dest" -ForegroundColor Green
         }
+    }
+
+    # Create Partner Center symbol package for this edition's Release build.
+    # Deliberately non-fatal: a symbol-zip hiccup must never block the MSIX packages.
+    try {
+        $symbolZip = New-SymbolZip `
+            -RepoRoot $RepoRoot `
+            -EditionKey $profile.edition `
+            -Version $packageVersion `
+            -Platform $Platform `
+            -OutputDir $OutputDir
+        if ($symbolZip) {
+            Write-Host "[OK] Partner Center symbols zip: $symbolZip" -ForegroundColor Green
+            Write-Host "     Upload at Partner Center > Health > Failures > Upload symbols." -ForegroundColor DarkGray
+        }
+    } catch {
+        $debugLog = Join-Path $OutputDir "symbol-zip-debug.log"
+        $details = "Edition=$edition Version=$packageVersion`r`n$($_.Exception.ToString())`r`n$($_.ScriptStackTrace)"
+        try { [System.IO.File]::AppendAllText($debugLog, "[$(Get-Date -Format o)] $details`r`n`r`n") } catch { }
+        Write-Host "[WARN] Partner Center symbols zip failed for $edition; package build continues. Details: $debugLog" -ForegroundColor Yellow
     }
 
     $results += [PSCustomObject]@{ Edition = $edition; Status = "SUCCESS" }

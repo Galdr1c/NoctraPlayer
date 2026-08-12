@@ -51,15 +51,13 @@ public partial class App : Application
             Services = services.BuildServiceProvider();
             StartupLogger.Log("Service provider built");
 
-            using var scope = Services.CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            db.Database.EnsureCreated();
-            StartupLogger.Log("Database ensured");
-            
-            // Schema fixups run later in the async warmup flow to avoid blocking startup.
-            
+            // DB creation (EnsureCreated) and schema fixups run later in the
+            // async warmup flow (Step 2) so startup never blocks on synchronous
+            // SQLite work — same pattern as the mobile app. Settings load from
+            // JSON files, so nothing here touches the database yet.
+            StartupLogger.Log("Database init deferred to async warmup");
 
-            var settings = scope.ServiceProvider.GetRequiredService<ISettingsService>();
+            var settings = Services.GetRequiredService<ISettingsService>();
             var themeService = Services.GetRequiredService<IThemeService>();
             var localizationService = Services.GetRequiredService<ILocalizationService>();
             StartupLogger.Log("Core services retrieved");
@@ -126,7 +124,12 @@ public partial class App : Application
                         using (var scope = Services.CreateScope())
                         {
                             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-                            
+
+                            // DB schema is created here (not in Initialize) so
+                            // startup never blocks on synchronous SQLite work.
+                            StartupLogger.Log("Step 2: Ensuring database schema...");
+                            await db.Database.EnsureCreatedAsync();
+
                             StartupLogger.Log("Step 2a: Applying schema fixups...");
                             var schemaFixups = Services.GetRequiredService<IDatabaseSchemaFixupService>();
                             var resetPinCount = await schemaFixups.ApplyAsync(db, DatabaseSchemaFixupProfile.Desktop);
@@ -168,6 +171,31 @@ public partial class App : Application
                         catch (Exception ex)
                         {
                             StartupLogger.LogError("Step 3 (profile purge)", ex);
+                        }
+
+                        // 3.5 ClearHistoryOnExit cleanup — moved here from the shutdown
+                        // path. Clearing per-profile history at exit used to block the
+                        // message pump with synchronous DB work (Task.Run(...).Wait()),
+                        // a prime suspect for WER hang reports. It now runs best-effort
+                        // at startup before any window is shown, so shutdown stays DB-free.
+                        StartupLogger.Log("Step 3.5: Clearing on-exit history...");
+                        try
+                        {
+                            var watchHistoryService = Services.GetRequiredService<IWatchHistoryService>();
+                            var profiles = await Services.GetRequiredService<IProfileService>().GetProfilesAsync();
+                            foreach (var profile in profiles)
+                            {
+                                var profileSettings = await settingsService.PeekProfileSettingsAsync(profile.Id);
+                                if (profileSettings?.ClearHistoryOnExit == true)
+                                {
+                                    await watchHistoryService.DeleteProfileHistoryAsync(profile.Id);
+                                }
+                            }
+                            StartupLogger.Log("Step 3.5: ✅ On-exit history cleared");
+                        }
+                        catch (Exception ex)
+                        {
+                            StartupLogger.LogError("Step 3.5 (clear on exit history)", ex);
                         }
 
                         // 2.5 TMDB Sync Service is now on-demand (no background processing)
@@ -250,36 +278,10 @@ public partial class App : Application
                 {
                     try
                     {
-                        var settingsService = Services.GetService<ISettingsService>();
-                        var profileService = Services.GetService<IProfileService>();
-                        var watchHistoryService = Services.GetService<IWatchHistoryService>();
-                        
-                        if (settingsService != null && profileService != null && watchHistoryService != null)
-                        {
-                            // 1. Tüm profilleri al
-                            // 2. Her birinin ayarlarını "dikizle" (peek)
-                            // 3. ClearHistoryOnExit aktifse temizle
-                            Task.Run(async () => 
-                            {
-                                try 
-                                {
-                                    var profiles = await profileService.GetProfilesAsync();
-                                    foreach (var profile in profiles)
-                                    {
-                                        var profileSettings = await settingsService.PeekProfileSettingsAsync(profile.Id);
-                                        if (profileSettings?.ClearHistoryOnExit == true)
-                                        {
-                                            await watchHistoryService.DeleteProfileHistoryAsync(profile.Id);
-                                        }
-                                    }
-                                }
-                                catch (Exception ex)
-                                {
-                                    StartupLogger.LogError("Shutdown clear history on exit", ex);
-                                }
-                            }).Wait();
-                        }
-
+                        // ClearHistoryOnExit cleanup was moved to the startup warmup
+                        // sequence (Step 3.5) — shutdown no longer performs any
+                        // database work, which was a prime suspect for WER hang
+                        // reports.
                         var video = Services.GetService<IVideoPlayerService>();
                         video?.Dispose();
                     }
@@ -468,25 +470,27 @@ public partial class App : Application
     {
         AppDomain.CurrentDomain.UnhandledException += (s, e) =>
         {
-            if (e.ExceptionObject is Exception ex)
+            if (e.ExceptionObject is not Exception ex)
             {
+                return;
+            }
 
-                
-                // Mailto penceresini açmayı dene
-                var reportService = Services?.GetService<IDiagnosticReportService>();
-                if (reportService != null)
-                {
-                    if (e.IsTerminating)
-                    {
-                        // Uygulama kapanmak üzere, doğrudan açmayı dene
-                        reportService.OpenCrashReport(ex, "Global (Terminating)");
-                    }
-                    else
-                    {
-                        // UI thread'ine post ederek aç
-                        Dispatcher.UIThread.Post(() => reportService.OpenCrashReport(ex, "Global"));
-                    }
-                }
+            if (e.IsTerminating)
+            {
+                // Fatal: yalnızca güvenli bir local log yaz ve süreci Windows
+                // Error Reporting'e bırak. Terminating exception sırasında
+                // UI/mailto penceresi açmaya çalışmak crash yolunun kendisinin
+                // asılmasına yol açabilir. LogCrash append-only crash.log'a
+                // yazar — startup_debug.log her açılışta silindiği için.
+                StartupLogger.LogCrash("Global (Terminating)", ex);
+                return;
+            }
+
+            // UI thread'ine post ederek aç
+            var reportService = Services?.GetService<IDiagnosticReportService>();
+            if (reportService != null)
+            {
+                Dispatcher.UIThread.Post(() => reportService.OpenCrashReport(ex, "Global"));
             }
         };
 

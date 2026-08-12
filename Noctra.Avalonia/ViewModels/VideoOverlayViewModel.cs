@@ -380,6 +380,10 @@ public partial class VideoOverlayViewModel : ObservableObject, IDisposable
     public void Dispose()
     {
         _localizationService.LanguageChanged -= OnLocalizationLanguageChanged;
+        // Player event abonelikleri de kaldırılmalı; aksi halde disposed VM'e
+        // callbacks (duplicate UI update / memory retention) yaşayabilir.
+        _playerService.PlayingChanged -= PlayerService_PlayingChanged;
+        _playerService.PositionChanged -= PlayerService_PositionChanged;
         _autoHideTimer?.Stop();
         _clockTimer?.Stop();
         _volumeToastTimer?.Stop();

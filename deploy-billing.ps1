@@ -1,4 +1,4 @@
-# ============================================================
+﻿# ============================================================
 # Noctra.Billing.Api → Google Cloud Run tek komut deploy (Windows)
 #
 # Backend STATELESS'tir: entitlement verisi saklanmaz, RTDN yoktur,
@@ -124,7 +124,7 @@ Invoke-Gcloud @DeployArgs
 # ---------- 6) URL'yi .env'e yaz ----------
 $Url = gcloud run services describe $ServiceName --region=$Region --project=$Project --format="value(status.url)" 2>$null
 if ([string]::IsNullOrWhiteSpace($Url)) {
-    Write-Host "⚠️  URL otomatik alınamadı — Cloud Console'dan kopyalayın." -ForegroundColor Yellow
+    Write-Host "⚠️  URL otomatik alınamadı - Cloud Console'dan kopyalayın." -ForegroundColor Yellow
     exit 0
 }
 
@@ -152,4 +152,4 @@ Write-Host "📝 .env dosyasına yazıldı: NOCTRA_BILLING_VERIFY_URL=$Url" -For
 
 Write-Host ""
 Write-Host "Sağlık kontrolü:"
-try { Invoke-RestMethod -Uri "$Url/health" -TimeoutSec 10 } catch { Write-Host "⚠️  /health yanıt vermedi — birkaç saniye sonra tekrar deneyin." }
+try { Invoke-RestMethod -Uri "$Url/health" -TimeoutSec 10 } catch { Write-Host "⚠️  /health yanıt vermedi - birkaç saniye sonra tekrar deneyin." }

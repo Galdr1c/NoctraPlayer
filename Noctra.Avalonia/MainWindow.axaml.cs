@@ -314,14 +314,36 @@ public partial class MainWindow : Window
         _reviewPromptCts.Cancel();
         _reviewPromptCts.Dispose();
 
-        // Flush watch position before closing
+        // Flush watch position before closing. The UI thread must never block
+        // indefinitely on database work here: a stalled SQLite write during
+        // shutdown is a prime suspect for WER "hang" reports. Use a bounded
+        // timeout (well below WER's ~5s unresponsive threshold); history is
+        // already flushed periodically during playback (5s tick + on stop).
+        // The elapsed-time log verifies the wait returns quickly in the common
+        // case — it should be a few ms, not ~1500ms (see
+        // docs/windows-store-crash-hang-debugging-*.md).
+        var flushStopwatch = System.Diagnostics.Stopwatch.StartNew();
         try
         {
-            _playerViewModel.FlushWatchHistoryAsync(force: true).GetAwaiter().GetResult();
+            var flushTask = _playerViewModel.FlushWatchHistoryAsync(force: true);
+            if (!flushTask.Wait(TimeSpan.FromMilliseconds(1500)))
+            {
+                StartupLogger.Log("Watch history flush exceeded the 1.5s shutdown budget; continuing without waiting.");
+            }
+            else
+            {
+                // Orijinal exception'ı (AggregateException sarmalı olmadan) logla.
+                flushTask.GetAwaiter().GetResult();
+            }
         }
         catch (Exception ex)
         {
-            StartupDiagnostics.LogException("Failed to flush watch history on window close", ex);
+            StartupLogger.LogError("Failed to flush watch history on window close", ex);
+        }
+        finally
+        {
+            flushStopwatch.Stop();
+            StartupLogger.Log($"Watch history flush on close took {flushStopwatch.ElapsedMilliseconds} ms.");
         }
 
         _mainViewModel.OnMediaSelected -= MainViewModel_OnMediaSelected;
