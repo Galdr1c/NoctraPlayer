@@ -40,9 +40,15 @@
     <Style Selector="controls|DesktopPressableCard.CardContainer:command-disabled">
       <Setter Property="Opacity" Value="0.55"/>
     </Style>
-    <Style Selector="Button.FavoriteBtn">
-      <Setter Property="Opacity" Value="0.55"/>
+    <Style Selector="Button.FavoriteBtn /template/ ContentPresenter">
       <Setter Property="CornerRadius" Value="8"/>
+      <Setter Property="Background" Value="Transparent"/>
+    </Style>
+    <Style Selector="Button.FavoriteBtn:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource InteractiveHoverBrush}"/>
+    </Style>
+    <Style Selector="Button.FavoriteBtn:pressed /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource InteractivePressedBrush}"/>
     </Style>
     <Style Selector="Button.FavoriteBtn:pointerover">
       
@@ -50,6 +56,7 @@
     <Style Selector="Button.FavoriteBtn.active">
       <Setter Property="Opacity" Value="1"/>
     </Style>
+    
   </UserControl.Styles>
   <controls:DesktopPressableCard Classes="CardContainer"
                                    CardRightTapped="OnCardRightTapped"
