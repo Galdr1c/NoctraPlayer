@@ -43,14 +43,23 @@ sonraki failure'lar anlamlı metod adlarına çevrilir (yansıması birkaç gün
    .\build\package-store.ps1 -Editions Free,Premium -VersionPrefix 1.2.1
    ```
 
-   Script artık her edition için `Noctra.Avalonia/bin/.../Release` çıktısından
-   otomatik olarak `artifacts/store/Noctra.<Edition>_<version>_<Platform>_Symbols.zip`
-   üretir (içinde `.pdb`, `.dll`, `.exe`).
+   İstersen lokal dump analizi için sembol ZIP'ini de üretebilirsin
+   (**varsayılan kapalı**, `-SymbolsZip` anahtarıyla açılır):
+
+   ```powershell
+   .\build\package-store.ps1 -Editions Free,Premium -VersionPrefix 1.2.1 -SymbolsZip
+   ```
+
+   Bu anahtar verildiğinde script, her edition için
+   `Noctra.Avalonia/bin/.../Release` çıktısından
+   `artifacts/store/Noctra.<Edition>_<version>_<Platform>_Symbols.zip` üretir
+   (içinde `.pdb`, `.dll`, `.exe`).
 
    > ℹ️ Bu ZIP **Partner Center'a yüklenmek zorunda değil** (semboller
    > `.msixupload` içindeki `.appxsym` ile zaten gidiyor). Faydası: **lokal
    > dump analizi** — ProcDump ile alınan `.dmp` dosyalarını WinDbg/Visual
-   > Studio'da açarken bu PDB'leri kullanırsın. Yedek olarak sakla.
+   > Studio'da açarken bu PDB'leri kullanırsın. Ayrıca yayınlanan build'in
+   > PDB arşividir (msixpublish klasörü her build'de ezildiği için).
 
 2. Sembol yükleme: **ayrıca bir şey yapmana gerek yok — doğrulandı.**
 

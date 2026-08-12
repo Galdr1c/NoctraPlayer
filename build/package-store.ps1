@@ -30,10 +30,19 @@
     Builds a locally installable signed MSIX using a self-signed test
     certificate. Store uploads should normally leave this off.
 
+.PARAMETER SymbolsZip
+    Also produces Noctra.<Edition>_<version>_<Platform>_Symbols.zip in the
+    output directory (.pdb/.dll/.exe from the Release build). Off by default:
+    symbols are already embedded in the .msixupload (as .appxsym), so this
+    ZIP is only needed for local dump analysis (ProcDump/WinDbg) or archiving
+    the shipped build's PDBs. Existing *Symbols.zip files are never deleted
+    (they are versioned archives); run with -SymbolsZip to refresh them.
+
 .EXAMPLE
     .\build\package-store.ps1
     .\build\package-store.ps1 -Editions Free
     .\build\package-store.ps1 -Editions Premium -VersionPrefix 2.1.0
+    .\build\package-store.ps1 -SymbolsZip
 #>
 
 param(
@@ -49,7 +58,9 @@ param(
 
     [string]$OutputDir = "",
 
-    [switch]$SignForSideload
+    [switch]$SignForSideload,
+
+    [switch]$SymbolsZip
 )
 
 $ErrorActionPreference = "Stop"
@@ -163,13 +174,14 @@ function Ensure-SideloadCertificate {
 }
 
 # ------------------------------------------------------------------
-# Partner Center symbol package
+# Symbol package (local dump analysis / archive)
 # ------------------------------------------------------------------
 # Creates a ZIP of the .pdb/.dll/.exe files from the newest Release build
-# output. Upload it to Partner Center > Health > Failures > Upload symbols so
-# future crashes/hangs resolve to meaningful stack traces instead of
-# "Uncategorized". PDBs are produced by default (DebugType=portable) in
-# Release builds.
+# output. Runs only when -SymbolsZip is passed (default off). Partner Center
+# symbols are already embedded in the .msixupload as .appxsym, so this ZIP is
+# for local ProcDump/WinDbg analysis and archiving the shipped build's PDBs
+# (the msixpublish folder is overwritten on every build). PDBs are produced
+# by default (DebugType=portable) in Release builds.
 function New-SymbolZip {
     param(
         [Parameter(Mandatory = $true)][string]$RepoRoot,
@@ -274,6 +286,7 @@ Write-Host "Platform:      $Platform" -ForegroundColor White
 Write-Host "Editions:      $($Editions -join ', ')" -ForegroundColor White
 Write-Host "Output:        $OutputDir" -ForegroundColor White
 Write-Host "README badge:  $readmeFile" -ForegroundColor White
+Write-Host "Symbols zip:   $(if ($SymbolsZip) { 'ON' } else { 'OFF (use -SymbolsZip)' })" -ForegroundColor White
 Write-Host ""
 
 # ------------------------------------------------------------------
@@ -379,24 +392,26 @@ foreach ($edition in $Editions) {
         }
     }
 
-    # Create Partner Center symbol package for this edition's Release build.
+    # Create the symbols zip only when explicitly requested (-SymbolsZip).
     # Deliberately non-fatal: a symbol-zip hiccup must never block the MSIX packages.
-    try {
-        $symbolZip = New-SymbolZip `
-            -RepoRoot $RepoRoot `
-            -EditionKey $profile.edition `
-            -Version $packageVersion `
-            -Platform $Platform `
-            -OutputDir $OutputDir
-        if ($symbolZip) {
-            Write-Host "[OK] Partner Center symbols zip: $symbolZip" -ForegroundColor Green
-            Write-Host "     Upload at Partner Center > Health > Failures > Upload symbols." -ForegroundColor DarkGray
+    if ($SymbolsZip) {
+        try {
+            $symbolZip = New-SymbolZip `
+                -RepoRoot $RepoRoot `
+                -EditionKey $profile.edition `
+                -Version $packageVersion `
+                -Platform $Platform `
+                -OutputDir $OutputDir
+            if ($symbolZip) {
+                Write-Host "[OK] Symbols zip: $symbolZip" -ForegroundColor Green
+                Write-Host "     For local dump analysis (ProcDump/WinDbg); not needed for Store submission." -ForegroundColor DarkGray
+            }
+        } catch {
+            $debugLog = Join-Path $OutputDir "symbol-zip-debug.log"
+            $details = "Edition=$edition Version=$packageVersion`r`n$($_.Exception.ToString())`r`n$($_.ScriptStackTrace)"
+            try { [System.IO.File]::AppendAllText($debugLog, "[$(Get-Date -Format o)] $details`r`n`r`n") } catch { }
+            Write-Host "[WARN] Symbols zip failed for $edition; package build continues. Details: $debugLog" -ForegroundColor Yellow
         }
-    } catch {
-        $debugLog = Join-Path $OutputDir "symbol-zip-debug.log"
-        $details = "Edition=$edition Version=$packageVersion`r`n$($_.Exception.ToString())`r`n$($_.ScriptStackTrace)"
-        try { [System.IO.File]::AppendAllText($debugLog, "[$(Get-Date -Format o)] $details`r`n`r`n") } catch { }
-        Write-Host "[WARN] Partner Center symbols zip failed for $edition; package build continues. Details: $debugLog" -ForegroundColor Yellow
     }
 
     $results += [PSCustomObject]@{ Edition = $edition; Status = "SUCCESS" }
