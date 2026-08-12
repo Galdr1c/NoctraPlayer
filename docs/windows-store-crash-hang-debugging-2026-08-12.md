@@ -47,8 +47,33 @@ sonraki failure'lar anlamlı metod adlarına çevrilir (yansıması birkaç gün
    otomatik olarak `artifacts/store/Noctra.<Edition>_<version>_<Platform>_Symbols.zip`
    üretir (içinde `.pdb`, `.dll`, `.exe`).
 
-2. Partner Center'da **Health > Failures** bölümüne gir, **Upload symbols**'ı seç,
-   ZIP'i yükle.
+   > ℹ️ Bu ZIP **Partner Center'a yüklenmek zorunda değil** (semboller
+   > `.msixupload` içindeki `.appxsym` ile zaten gidiyor). Faydası: **lokal
+   > dump analizi** — ProcDump ile alınan `.dmp` dosyalarını WinDbg/Visual
+   > Studio'da açarken bu PDB'leri kullanırsın. Yedek olarak sakla.
+
+2. Sembol yükleme: **ayrıca bir şey yapmana gerek yok — doğrulandı.**
+
+   `.msixupload` dosyası (Store'a yüklenen format) **`.appxsym`** adlı sembol
+   arşivini **içinde zaten taşır** (WAP build bunu otomatik üretir). Kontrol
+   edildi: `Noctra.Free_1.2.0.0_x64.msixupload` ve Premium karşılığı içinde
+   `Noctra.pdb` dahil 4 PDB bulunan `.appxsym` barındırıyor.
+
+   Partner Center'a **paketi (`.msixupload`) normal şekilde yüklemen yeterli** —
+   semboller otomatik alınır. Ayrı bir sembol yükleme adımı yok.
+
+   > ℹ️ Eski dokümanlarda geçen **"Upload symbols" düğmesi** (Health > Failures
+   > tablosunun üstü) **yeni Insights > Health arayüzünde kaldırılmıştır** —
+   > bu yüzden bulunamıyor. O düğme, sembolleri paketten ayrı göndermek
+   > isteyen eski akış içindi. Modern akışta semboller paketle gider.
+
+   > ⚠️ **Önemli sınırlar:**
+   > - Semboller yalnızca **eşleşen sürümdeki yeni failure'ları** çözer;
+   >   geçmiş `1.0.0.0` kayıtları geriye dönük çözülmez.
+   > - 1.2.0 yayınlandıktan sonra yeni failure'ların stack göstermesi birkaç
+   >   gün sürebilir.
+   > - Health verisi yalnızca **tanılama verisi paylaşmayı kabul eden
+   >   cihazlardan** gelir.
 
 3. Sonraki failure'larda şu eşleşmeleri arayın:
 
