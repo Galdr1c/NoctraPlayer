@@ -339,12 +339,6 @@
                                Height="48"
                                Stretch="Uniform"
                                VerticalAlignment="Center"/>
-                        <TextBlock Text="NOCTRA"
-                                   FontSize="{DynamicResource FTitleL}"
-                                   FontWeight="Bold"
-                                   Foreground="{DynamicResource AccentBrush}"
-                                   LetterSpacing="3.5"
-                                   VerticalAlignment="Center"/>
                     </StackPanel>
 
                     <!-- Sağ: Kalem (yönet modunu aç/kapa) -->

@@ -783,6 +783,33 @@ public partial class MainWindow : Window
             return;
         }
 
+        // Profil değiştirilirken aktif oynatıcı arka planda çalmaya devam
+        // etmesin — pencere gizlense bile video/audio akışı önce durdurulur.
+        if (PlayerArea.IsVisible)
+        {
+            _ = ClosePlayerAndOpenProfileSelectionAsync(desktop);
+            return;
+        }
+
+        ShowProfileSelectionWindow(desktop);
+    }
+
+    private async Task ClosePlayerAndOpenProfileSelectionAsync(IClassicDesktopStyleApplicationLifetime desktop)
+    {
+        try
+        {
+            await _playerViewModel.ClosePlayerCommand.ExecuteAsync(null);
+        }
+        catch (Exception ex)
+        {
+            StartupDiagnostics.LogException("Failed to close player before profile switch.", ex);
+        }
+
+        ShowProfileSelectionWindow(desktop);
+    }
+
+    private void ShowProfileSelectionWindow(IClassicDesktopStyleApplicationLifetime desktop)
+    {
         var profilesWindow = ((App)Application.Current!).Services.GetRequiredService<Views.ProfilesWindow>();
         profilesWindow.DisableAutoSelect = true;
         desktop.MainWindow = profilesWindow;

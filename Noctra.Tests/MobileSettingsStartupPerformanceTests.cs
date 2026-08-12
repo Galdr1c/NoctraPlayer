@@ -92,7 +92,7 @@ public sealed class MobileSettingsStartupPerformanceTests
             "public SettingsViewModel(");
         var propertyChanged = ExtractMethodByDeclaration(
             source,
-            "private void MainViewModel_PropertyChanged");
+            "private void MainViewModel_PropertyChangedCore");
 
         Assert.Contains(
             "SyncEpgProgressFromMain();",

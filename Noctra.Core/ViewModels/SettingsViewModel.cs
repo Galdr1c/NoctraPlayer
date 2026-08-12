@@ -1188,6 +1188,21 @@ public partial class SettingsViewModel : ObservableObject, IAsyncDisposable
 
     private void MainViewModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
+        // EpgProgress ve ChannelLoadingProgress gibi durumlar arka plan
+        // iş parçacığından bildirilebilir; PropertyChanged zinciri Button gibi
+        // UI nesnelerine (Örn: RefreshEpgNowCommand.NotifyCanExecuteChanged)
+        // dokunduğundan işleme UI iş parçacığına taşınmalıdır.
+        if (_dispatcherService is not null)
+        {
+            _dispatcherService.Invoke(() => MainViewModel_PropertyChangedCore(e));
+            return;
+        }
+
+        MainViewModel_PropertyChangedCore(e);
+    }
+
+    private void MainViewModel_PropertyChangedCore(System.ComponentModel.PropertyChangedEventArgs e)
+    {
         if (e.PropertyName == nameof(MainViewModel.CurrentProfile))
         {
             LoadProfileInfo();
