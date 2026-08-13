@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Noctra.Core.Services;
 using Noctra.Data;
@@ -20,11 +21,16 @@ public static class ServiceCollectionExtensions
             builder.AddProvider(new ConsoleErrorLoggerProvider());
         });
 
+        services.TryAddSingleton(SqliteConnectionTuningOptions.Desktop);
+        services.AddSingleton<SqliteConnectionPragmaInterceptor>();
+
         services.AddDbContextFactory<AppDbContext>((serviceProvider, options) =>
         {
             var appPaths = serviceProvider.GetRequiredService<IAppPathService>();
             appPaths.EnsureUserDataDirectory();
             options.UseSqlite($"Data Source={appPaths.DatabasePath}");
+            options.AddInterceptors(
+                serviceProvider.GetRequiredService<SqliteConnectionPragmaInterceptor>());
         });
 
         services.AddTransient<IM3UParser, M3UParser>();

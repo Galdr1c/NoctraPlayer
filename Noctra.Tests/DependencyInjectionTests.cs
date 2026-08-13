@@ -56,12 +56,31 @@ public sealed class DependencyInjectionTests
             "Database scheduler must stop before dependent services are disposed.");
     }
 
-    private static string ProjectSource(string project, string file)
+    [Fact]
+    public void AndroidRegistration_SelectsMobileSqliteProfileBeforeCoreServices()
+    {
+        var source = File.ReadAllText(ProjectSource(
+            "Noctra.Android",
+            "DependencyInjection",
+            "AndroidServiceCollectionExtensions.cs"));
+        var mobileProfile = source.IndexOf(
+            "services.AddSingleton(SqliteConnectionTuningOptions.Mobile)",
+            StringComparison.Ordinal);
+        var coreServices = source.IndexOf("services.AddNoctraCoreServices()", StringComparison.Ordinal);
+
+        Assert.True(mobileProfile >= 0, "Android DI must register the mobile SQLite profile.");
+        Assert.True(
+            coreServices > mobileProfile,
+            "The mobile SQLite profile must be registered before core services add the desktop default.");
+    }
+
+    private static string ProjectSource(params string[] segments)
         => Path.GetFullPath(Path.Combine(
-            AppContext.BaseDirectory,
-            "..", "..", "..", "..",
-            project,
-            file));
+            new[]
+            {
+                AppContext.BaseDirectory,
+                "..", "..", "..", ".."
+            }.Concat(segments).ToArray()));
 
     private sealed class TestDispatcherService : IDispatcherService
     {

@@ -1179,8 +1179,53 @@ Kodda tuning var görünür ancak gerçek paging/TMDB/EPG connection'ları varsa
 - Connection-open interceptor.
 - Her yeni connection için gerekli PRAGMA seti.
 - PRAGMA'ları gerçekten aktif connection'da telemetry ile doğrula.
-
 ---
+diff --git a/D:\IPTVPlayer\docs\NoctraPlayer_Performance_Stability_Full_Report.md b/D:\IPTVPlayer\docs\NoctraPlayer_Performance_Stability_Full_Report.md
+@@ -1182,2 +1182,44 @@
+ 
++### Uygulama durumu — 13 Ağustos 2026: TAMAMLANDI
++
++- `SqliteConnectionPragmaInterceptor`, EF Core `AddDbContextFactory<AppDbContext>` yoluna
++  singleton olarak bağlandı. Senkron ve asenkron her connection-open sonrasında
++  `foreign_keys=ON`, `synchronous=NORMAL`, `cache_size`, `temp_store=MEMORY` ve `mmap_size`
++  aynı aktif bağlantıda uygulanıyor.
++- Masaüstü profili `cache_size=-64000` / `mmap_size=268435456`; Android profili
++  `cache_size=-32000` / `mmap_size=134217728` olarak DI üzerinden seçiliyor. Core varsayılanı
++  masaüstü, Android kaydı core servislerinden önce mobil profili yerleştiriyor.
++- `journal_mode=WAL` dosya/veritabanı kapsamlı olduğu için yalnız idempotent schema-fixup
++  başlangıç yolunda bırakıldı. Connection-scope PRAGMA tekrarları schema servisinden çıkarıldı;
++  böylece iki farklı ayar kaynağının zamanla ayrışması engellendi.
++- PRAGMA apply veya gerçek-değer doğrulaması exception/cancellation ile kesilirse bağlantı
++  best-effort kapatılıyor ve özgün exception/token korunarak yeniden fırlatılıyor. Böylece kısmi
++  ayarlı açık connection aynı context'te interceptor atlanarak kullanılamıyor veya pool'a sessizce
++  dönemiyor.
++- Telemetri eklendi: her açılış için `sqlite.connection.pragmas.applied.count`; aynı gerçek aktif
++  bağlantıdan okunan `foreign_keys`, `synchronous`, `cache_size`, `temp_store`, `mmap_size`
++  değerleri ve `sqlite.connection.pragmas.verified.count`.
++- Otomatik kanıt: odaklı PRAGMA/DI/schema paketi `19/19`; 10 ardışık tekrarda `190/190`.
++  DB scheduler/content-query ile genişletilmiş paket `33/33`. Bağımsız son kod incelemesinde
++  Critical/Important bulgu kalmadı; reviewer'ın paketi `19/19` geçti ve değişiklik merge-ready
++  bulundu.
++- Tam regresyon `2123/2130` geçti. Kalan `7` hata P1-19 alanı dışındaki önceden bilinen mobil
++  seçim stili, download, promo formatter ve tek metadata cancellation testidir; SQLite/PRAGMA
++  testi başarısız olmadı.
++- Build: Mobile `0 warning / 0 error`; Android arm64 `0 error`, mevcut `NU1608` ve `XA0141`
++  uyarılarıyla tamamlandı. İmzalı APK `180624857` byte, SHA-256
++  `E5F69410022DDDCF8BA8C8F6B9016C55D11CB49E3C0A95E2121B71C2E3B0CB03`.
++- APK DBY_W09 cihazına veri silmeden `adb install --user 0 -r -d` ile kuruldu;
++  `firstInstallTime` `2026-08-10 17:51:36` olarak korundu. Gerçek cihaz telemetrisi ilk aktif
++  bağlantıda `foreign_keys=1`, `synchronous=1`, `cache_size=-32000`, `temp_store=2` ve
++  `mmap_size=134217728` okudu; test penceresinde `48` ayrı connection-open uygulaması kaydedildi.
++- Canlı kabulte `20` sayfa geçişi, `40` çift yönlü scroll ve `10/10` launcher
++  background/foreground turu tamamlandı. PID `18989` sabit; ANR/crash/OOM eşleşmesi `0`.
++  Son PSS `892714 KB`, RSS `1012956 KB`, Native Heap `274300 KB`, Graphics `158376 KB`.
++  Ham telemetri: `artifacts/p1-19-live/p1-19-final.jsonl` (SHA-256
++  `35490E0385914903FDA86B123A3EFEBF947368BEE43CDD13C58E8A4E666F2560`).
++
++Sonuç: P1-19 kapatıldı. Sıradaki DB/EPG maddesi **P1-20 — görünür EPG refresh kapsamını
++gerçek viewport ile sınırlama**.
++
+ ---
 
 ## P1-20 — EPG “visible refresh” gerçekte tüm loaded `Channels` koleksiyonunu işliyor
 

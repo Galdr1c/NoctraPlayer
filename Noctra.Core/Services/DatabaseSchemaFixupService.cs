@@ -262,12 +262,9 @@ public sealed class DatabaseSchemaFixupService : IDatabaseSchemaFixupService
             await recoveryTransaction.CommitAsync(cancellationToken).ConfigureAwait(false);
         }
 
-        await TryExecuteAsync(context, "PRAGMA foreign_keys = ON;", cancellationToken).ConfigureAwait(false);
+        // WAL is database/file scoped and persists. Connection-scoped tuning is
+        // applied on every factory connection by SqliteConnectionPragmaInterceptor.
         await TryExecuteAsync(context, "PRAGMA journal_mode=WAL;", cancellationToken).ConfigureAwait(false);
-        await TryExecuteAsync(context, "PRAGMA synchronous=NORMAL;", cancellationToken).ConfigureAwait(false);
-        await TryExecuteAsync(context, profile == DatabaseSchemaFixupProfile.Mobile ? "PRAGMA cache_size=-32000;" : "PRAGMA cache_size=-64000;", cancellationToken).ConfigureAwait(false);
-        await TryExecuteAsync(context, "PRAGMA temp_store=MEMORY;", cancellationToken).ConfigureAwait(false);
-        await TryExecuteAsync(context, profile == DatabaseSchemaFixupProfile.Mobile ? "PRAGMA mmap_size=134217728;" : "PRAGMA mmap_size=268435456;", cancellationToken).ConfigureAwait(false);
 
         return clearedLegacyPins;
     }

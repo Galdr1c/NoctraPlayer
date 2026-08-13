@@ -38,6 +38,7 @@ public static class AndroidServiceCollectionExtensions
             serviceProvider.GetRequiredService<AndroidFilePickerService>());
         services.AddSingleton<IDialogService, AndroidDialogService>();
         services.AddSingleton<IAppEditionService, AppEditionService>();
+        services.AddSingleton(SqliteConnectionTuningOptions.Mobile);
         services.AddNoctraCoreServices();
         services.AddSingleton<IAppVersionService, AndroidAppVersionService>();
         services.AddSingleton<GooglePlayUpdateService>();
