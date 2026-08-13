@@ -19,6 +19,7 @@ using System.Collections.Concurrent;
 using Noctra.Core.Collections;
 using System.Runtime.CompilerServices;
 using Noctra.Diagnostics;
+using Noctra.Search;
 using Noctra.Threading;
 
 namespace Noctra.ViewModels;
@@ -100,6 +101,17 @@ public partial class MainViewModel : ObservableObject
     private long _preparedNavigationResetsConsumed;
     private long _ordinaryFilterResets;
     private long _staleNavigationResetCompletions;
+    private readonly object _searchRankingGate = new();
+    private readonly SearchDocumentCache _searchDocumentCache = new();
+    private long _searchRankingGeneration;
+    private long _seriesSearchDatasetVersion;
+    private SearchRankingOwner? _searchRankingOwner;
+    private long _searchRankingItemsEvaluated;
+    private long _searchRankingItemsReused;
+    private long _searchRankingSessionsStarted;
+    private long _searchRankingSessionsCancelled;
+    private long _staleSearchRankingCommits;
+    private long _searchRankingCommits;
 
     private sealed record NavigationContentResetOwner(long Generation, AppView View, int FilterVersion);
 
@@ -109,6 +121,27 @@ public partial class MainViewModel : ObservableObject
         int? PlaylistId,
         CancellationTokenSource Cancellation,
         CancellationToken Token);
+
+    private sealed record SearchRankingOwner(
+        long Generation,
+        int ContentGeneration,
+        int PlaylistId,
+        string NormalizedQuery,
+        IncrementalSearchRankingSession Session,
+        CancellationTokenSource Cancellation,
+        SemaphoreSlim Processing)
+    {
+        public long ProcessedSeriesDatasetVersion { get; set; } = -1;
+    }
+
+    internal int SearchRankingChannelEvaluationCount
+        => Volatile.Read(ref _searchRankingOwner)?.Session.ChannelEvaluationCount ?? 0;
+
+    internal int SearchRankingSeriesEvaluationCount
+        => Volatile.Read(ref _searchRankingOwner)?.Session.SeriesEvaluationCount ?? 0;
+
+    internal int SearchRankingSeriesInputVisitCount
+        => Volatile.Read(ref _searchRankingOwner)?.Session.SeriesInputVisitCount ?? 0;
 
     // Guards media-selection flows before they reach MainWindow playback.
     // This prevents rapid Live/VOD/Series clicks from completing out of order
@@ -344,6 +377,7 @@ public partial class MainViewModel : ObservableObject
     partial void OnActiveViewChanged(AppView value)
     {
         ReplaceTmdbVisualEnrichmentScope(value, SelectedPlaylist?.Id, "view");
+        InvalidateSearchRankingSession("view");
 
         // Görünüm değiştiğinde kategori tipini de senkronize et
         SelectedChannelType = value switch
@@ -1412,6 +1446,7 @@ public partial class MainViewModel : ObservableObject
         _isLoadingMoreSeriesItems = false;
         _seriesFilteredSource.Clear();
         _allSeriesCache.Clear();
+        Interlocked.Increment(ref _seriesSearchDatasetVersion);
         _seriesCachePlaylistId = null;
         _seriesVisualNoPosterKeys.Clear();
         _allGroupsCache.Clear();
@@ -1488,6 +1523,7 @@ public partial class MainViewModel : ObservableObject
         _isLoadingMoreSeriesItems = false;
         _seriesFilteredSource.Clear();
         _allSeriesCache.Clear();
+        Interlocked.Increment(ref _seriesSearchDatasetVersion);
         _seriesCachePlaylistId = null;
         _seriesVisualNoPosterKeys.Clear();
         _allGroupsCache.Clear();
@@ -2364,6 +2400,8 @@ public partial class MainViewModel : ObservableObject
     partial void OnSelectedPlaylistChanged(Playlist? value)
     {
         ReplaceTmdbVisualEnrichmentScope(ActiveView, value?.Id, "playlist");
+        InvalidateSearchRankingSession("playlist");
+        _searchDocumentCache.Clear();
         IsSeriesAggregationPending = false;
 
         if (_suppressSelectedPlaylistChanged)
@@ -2475,6 +2513,15 @@ public partial class MainViewModel : ObservableObject
                 return;
             }
 
+            if (ActiveView == AppView.Search && !string.IsNullOrWhiteSpace(SearchText))
+            {
+                await UpdateSearchBucketsIncrementallyAsync(
+                    Array.Empty<Channel>(),
+                    contentGeneration,
+                    playlistId,
+                    cancellationToken);
+            }
+
             PerformanceTrace.Mark(
                 "profile.first_page.data_ready",
                 Math.Min(30, FilteredChannels.Count),
@@ -2518,6 +2565,7 @@ public partial class MainViewModel : ObservableObject
             Channels.Clear();
             FilteredChannels.Clear();
             _allSeriesCache.Clear();
+            Interlocked.Increment(ref _seriesSearchDatasetVersion);
             _seriesCachePlaylistId = null;
             _seriesFilteredSource.Clear();
             SeriesViewItems.Clear();
@@ -2648,6 +2696,7 @@ public partial class MainViewModel : ObservableObject
             }
 
             _allSeriesCache = series;
+            Interlocked.Increment(ref _seriesSearchDatasetVersion);
             _seriesCachePlaylistId = playlistId;
 
             _isEpisodeContinueDirty = true;
@@ -3382,6 +3431,8 @@ public partial class MainViewModel : ObservableObject
     partial void OnCurrentProfileChanged(Profile? value)
     {
         ReplaceTmdbVisualEnrichmentScope(ActiveView, SelectedPlaylist?.Id, "profile");
+        InvalidateSearchRankingSession("profile");
+        _searchDocumentCache.Clear();
     }
 
     public async Task LoadMoreChannelsAsync(
@@ -3492,12 +3543,33 @@ public partial class MainViewModel : ObservableObject
 
             if (page.Count == 0)
             {
-                _hasMoreChannels = false;
                 if (ActiveView == AppView.Search && !string.IsNullOrWhiteSpace(SearchText))
                 {
-                    UpdateSearchBuckets();
+                    var rankingApplied = await UpdateSearchBucketsIncrementallyAsync(
+                        Array.Empty<Channel>(),
+                        requestGeneration,
+                        requestPlaylist.Id,
+                        effectiveCancellationToken);
+                    if (!rankingApplied)
+                    {
+                        return;
+                    }
                 }
+                _hasMoreChannels = false;
                 return;
+            }
+
+            if (ActiveView == AppView.Search && !string.IsNullOrWhiteSpace(SearchText))
+            {
+                var rankingApplied = await UpdateSearchBucketsIncrementallyAsync(
+                    page,
+                    requestGeneration,
+                    requestPlaylist.Id,
+                    effectiveCancellationToken);
+                if (!rankingApplied)
+                {
+                    return;
+                }
             }
 
             var applied = false;
@@ -3535,11 +3607,6 @@ public partial class MainViewModel : ObservableObject
             if (!applied)
             {
                 return;
-            }
-
-            if (ActiveView == AppView.Search && !string.IsNullOrWhiteSpace(SearchText))
-            {
-                UpdateSearchBuckets();
             }
 
             QueueVisibleChannelVisualEnrichment(page);
@@ -4056,7 +4123,9 @@ public partial class MainViewModel : ObservableObject
 
         // Minimum query length check first — avoid allocating a CTS we won't use
         var trimmed = value?.Trim() ?? string.Empty;
-        if (trimmed.Length < MinSearchQueryLength)
+        InvalidateSearchRankingSession("query");
+        if (trimmed.Length < MinSearchQueryLength ||
+            SearchDocumentCache.Normalize(trimmed).Length == 0)
         {
             // Cancel any pending filter from a previous valid query
             CancelActiveFilterRequest();
@@ -4755,6 +4824,14 @@ public partial class MainViewModel : ObservableObject
                 }
 
                 UpdateSeriesViewItems(resetVisibleItems: false);
+                if (view == AppView.Search && !string.IsNullOrWhiteSpace(SearchText))
+                {
+                    await UpdateSearchBucketsIncrementallyAsync(
+                        Array.Empty<Channel>(),
+                        contentGeneration,
+                        requestedPlaylistId,
+                        token);
+                }
             }
             else
             {
@@ -8355,176 +8432,254 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
-    private void UpdateSearchBuckets()
+    private void InvalidateSearchRankingSession(string reason)
     {
-        if (string.IsNullOrWhiteSpace(SearchText))
+        SearchRankingOwner? previous;
+        lock (_searchRankingGate)
         {
-            SearchLiveChannels.Clear();
-            SearchSeriesChannels.Clear();
-            SearchVodChannels.Clear();
-            SearchSuggestion = string.Empty;
-            SearchSimilarLiveChannels.Clear();
-            SearchSimilarSeriesChannels.Clear();
-            SearchSimilarVodChannels.Clear();
-            ShowSearchSimilarSection = false;
-            ShowSearchEmptyState = false;
-            return;
+            previous = _searchRankingOwner;
+            _searchRankingOwner = null;
+            Interlocked.Increment(ref _searchRankingGeneration);
         }
 
-        var query = BuildSearchQuery(SearchText);
-        if (string.IsNullOrWhiteSpace(query.Normalized))
+        if (previous != null)
         {
-            return;
+            previous.Cancellation.Cancel();
+            PerformanceTrace.Mark(
+                "search.rank.sessions.cancelled.count",
+                Interlocked.Increment(ref _searchRankingSessionsCancelled),
+                reason);
         }
-
-        var channelsSnapshot = Channels.ToList();
-
-        var hiddenSeriesGroups = _settingsService.Settings.HiddenSeriesGroups;
-        var seriesSnapshot = _allSeriesCache
-            .Where(s => s.GroupTitle == null || !hiddenSeriesGroups.Contains(s.GroupTitle))
-            .ToList();
-
-        var rankedLive = channelsSnapshot
-            .Where(c => c.Type == ChannelType.Live)
-            .Select(c => new RankedChannel(c, ScoreChannelSearch(c, query)))
-            .Where(x => x.Score >= SearchPrimaryScoreThreshold)
-            .OrderByDescending(x => x.Score)
-            .ThenByDescending(x => HasDisplayImage(x.Item))
-            .ThenBy(x => x.Item.Name)
-            .Take(SearchPrimaryResultLimit)
-            .ToList();
-
-        var rankedSeries = seriesSnapshot
-            .Select(s => new RankedSeries(s, ScoreSeriesSearch(s, query, includeEpisodes: true)))
-            .Where(x => x.Score >= SearchPrimaryScoreThreshold)
-            .OrderByDescending(x => x.Score)
-            .ThenByDescending(x => HasDisplayImage(x.Item))
-            .ThenBy(x => x.Item.Name)
-            .Take(SearchPrimaryResultLimit)
-            .ToList();
-
-        var rankedVod = channelsSnapshot
-            .Where(c => c.Type == ChannelType.VOD)
-            .Select(c => new RankedChannel(c, ScoreChannelSearch(c, query)))
-            .Where(x => x.Score >= SearchPrimaryScoreThreshold)
-            .OrderByDescending(x => x.Score)
-            .ThenByDescending(x => HasDisplayImage(x.Item))
-            .ThenBy(x => x.Item.Name)
-            .Take(SearchPrimaryResultLimit)
-            .ToList();
-
-        SetItems(SearchLiveChannels, rankedLive.Select(x => x.Item));
-        SetItems(SearchSeriesChannels, rankedSeries.Select(x => x.Item));
-        SetItems(SearchVodChannels, rankedVod.Select(x => x.Item));
-
-        UpdateSearchSuggestionAndSimilar(query, channelsSnapshot, seriesSnapshot);
-
-        var hasAnyExact = SearchLiveChannels.Count > 0
-            || SearchSeriesChannels.Count > 0
-            || SearchVodChannels.Count > 0;
-
-        ShowSearchEmptyState = !hasAnyExact && !ShowSearchSimilarSection;
-        IsSearching = false;
-        OnPropertyChanged(nameof(ShowSearchIdleState));
-
-        QueueVisibleChannelVisualEnrichment(SearchVodChannels.ToList());
-        QueueVisibleSeriesVisualEnrichment(SearchSeriesChannels.ToList());
     }
 
-    private void UpdateSearchSuggestionAndSimilar(SearchQueryParts query, List<Channel> channelsSnapshot, List<Series> seriesSnapshot)
+    private SearchRankingOwner GetOrCreateSearchRankingOwner(
+        int contentGeneration,
+        int playlistId,
+        string normalizedQuery)
     {
-        if (string.IsNullOrWhiteSpace(query.Normalized))
+        SearchRankingOwner? previous;
+        SearchRankingOwner owner;
+        lock (_searchRankingGate)
         {
-            SearchSuggestion = string.Empty;
-            SearchSimilarLiveChannels.Clear();
-            SearchSimilarSeriesChannels.Clear();
-            SearchSimilarVodChannels.Clear();
-            ShowSearchSimilarSection = false;
-            return;
+            if (_searchRankingOwner is { } existing &&
+                existing.ContentGeneration == contentGeneration &&
+                existing.PlaylistId == playlistId &&
+                string.Equals(existing.NormalizedQuery, normalizedQuery, StringComparison.Ordinal))
+            {
+                return existing;
+            }
+
+            previous = _searchRankingOwner;
+            owner = new SearchRankingOwner(
+                Interlocked.Increment(ref _searchRankingGeneration),
+                contentGeneration,
+                playlistId,
+                normalizedQuery,
+                new IncrementalSearchRankingSession(normalizedQuery, _searchDocumentCache),
+                new CancellationTokenSource(),
+                new SemaphoreSlim(1, 1));
+            _searchRankingOwner = owner;
         }
 
-        SearchSuggestion = ComputeBestSuggestion(query, channelsSnapshot, seriesSnapshot);
+        if (previous != null)
+        {
+            previous.Cancellation.Cancel();
+            PerformanceTrace.Mark(
+                "search.rank.sessions.cancelled.count",
+                Interlocked.Increment(ref _searchRankingSessionsCancelled),
+                "replaced");
+        }
 
-        var liveIds = new HashSet<int>(SearchLiveChannels.Select(x => x.Id));
-        var seriesIds = new HashSet<int>(SearchSeriesChannels.Select(x => x.Id));
-        var vodIds = new HashSet<int>(SearchVodChannels.Select(x => x.Id));
-
-        var similarLive = channelsSnapshot
-            .Where(c => c.Type == ChannelType.Live)
-            .Where(c => !liveIds.Contains(c.Id))
-            .Select(c => new RankedChannel(c, ScoreChannelSearch(c, query)))
-            .Where(IsSimilarSearchScore)
-            .OrderByDescending(x => x.Score)
-            .ThenByDescending(x => HasDisplayImage(x.Item))
-            .ThenBy(x => x.Item.Name)
-            .Take(SearchSimilarResultLimit)
-            .Select(x => x.Item)
-            .ToList();
-
-        var similarSeries = seriesSnapshot
-            .Where(s => !seriesIds.Contains(s.Id))
-            .Select(s => new RankedSeries(s, ScoreSeriesSearch(s, query, includeEpisodes: false)))
-            .Where(IsSimilarSearchScore)
-            .OrderByDescending(x => x.Score)
-            .ThenByDescending(x => HasDisplayImage(x.Item))
-            .ThenBy(x => x.Item.Name)
-            .Take(SearchSimilarResultLimit)
-            .Select(x => x.Item)
-            .ToList();
-
-        var similarVod = channelsSnapshot
-            .Where(c => c.Type == ChannelType.VOD)
-            .Where(c => !vodIds.Contains(c.Id))
-            .Select(c => new RankedChannel(c, ScoreChannelSearch(c, query)))
-            .Where(IsSimilarSearchScore)
-            .OrderByDescending(x => x.Score)
-            .ThenByDescending(x => HasDisplayImage(x.Item))
-            .ThenBy(x => x.Item.Name)
-            .Take(SearchSimilarResultLimit)
-            .Select(x => x.Item)
-            .ToList();
-
-        SetItems(SearchSimilarLiveChannels, similarLive);
-        SetItems(SearchSimilarSeriesChannels, similarSeries);
-        SetItems(SearchSimilarVodChannels, similarVod);
-        ShowSearchSimilarSection = similarLive.Count > 0 || similarSeries.Count > 0 || similarVod.Count > 0;
-
-        QueueVisibleChannelVisualEnrichment(similarVod);
-        QueueVisibleSeriesVisualEnrichment(similarSeries);
+        PerformanceTrace.Mark(
+            "search.rank.sessions.started.count",
+            Interlocked.Increment(ref _searchRankingSessionsStarted));
+        return owner;
     }
 
-    private string ComputeBestSuggestion(SearchQueryParts query, IEnumerable<Channel> channels, IEnumerable<Series> series)
+    private bool IsSearchRankingOwnerCurrent(SearchRankingOwner owner, CancellationToken token)
     {
-        if (query.Normalized.Length < 3)
+        lock (_searchRankingGate)
         {
-            return string.Empty;
+            return !token.IsCancellationRequested &&
+                   !owner.Cancellation.IsCancellationRequested &&
+                   ReferenceEquals(_searchRankingOwner, owner) &&
+                   ActiveView == AppView.Search &&
+                   SelectedPlaylist?.Id == owner.PlaylistId &&
+                   _incrementalContentCancellation.IsCurrent(owner.ContentGeneration) &&
+                   string.Equals(
+                       SearchDocumentCache.Normalize(SearchText),
+                       owner.NormalizedQuery,
+                       StringComparison.Ordinal);
+        }
+    }
+
+    private async Task<bool> UpdateSearchBucketsIncrementallyAsync(
+        IReadOnlyCollection<Channel> newChannels,
+        int contentGeneration,
+        int playlistId,
+        CancellationToken cancellationToken)
+    {
+        var normalizedQuery = SearchDocumentCache.Normalize(SearchText);
+        if (normalizedQuery.Length == 0)
+        {
+            return true;
         }
 
-        var best = channels
-            .Where(c => c.Type is ChannelType.Live or ChannelType.VOD)
-            .Select(c => new SearchSuggestionCandidate(c.Name, ScoreTitleForSuggestion(c.Name, query), HasDisplayImage(c)))
-            .Concat(series.Select(s => new SearchSuggestionCandidate(s.Name, ScoreTitleForSuggestion(s.Name, query), HasDisplayImage(s))))
-            .Where(x => x.Score >= SearchSuggestionScoreThreshold)
-            .OrderByDescending(x => x.Score)
-            .ThenByDescending(x => x.HasImage)
-            .ThenBy(x => x.Title)
-            .FirstOrDefault();
+        var owner = GetOrCreateSearchRankingOwner(contentGeneration, playlistId, normalizedQuery);
+        using var linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(
+            cancellationToken,
+            owner.Cancellation.Token);
+        var token = linkedCancellation.Token;
 
-        if (best is null || string.IsNullOrWhiteSpace(best.Title))
+        var enteredProcessing = false;
+        var evaluated = 0;
+        var reused = 0;
+        var workCountersCaptured = false;
+        var workEvaluationsBefore = 0;
+        var workReusesBefore = 0;
+        try
         {
-            return string.Empty;
-        }
+            await owner.Processing.WaitAsync(token);
+            enteredProcessing = true;
+            workEvaluationsBefore = owner.Session.WorkItemEvaluationCount;
+            workReusesBefore = owner.Session.WorkItemReuseCount;
+            workCountersCaptured = true;
+            IReadOnlyCollection<Channel> pendingChannels = newChannels;
+            while (true)
+            {
+                token.ThrowIfCancellationRequested();
+                var seriesDatasetVersion = Volatile.Read(ref _seriesSearchDatasetVersion);
+                var seriesDatasetChanged = owner.ProcessedSeriesDatasetVersion != seriesDatasetVersion;
+                if (pendingChannels.Count == 0 && !seriesDatasetChanged)
+                {
+                    return true;
+                }
 
-        var normalizedBest = NormalizeFuzzyText(best.Title);
-        if (normalizedBest == query.Normalized
-            || SearchSeriesChannels.Any(s => NormalizeFuzzyText(s.Name) == normalizedBest)
-            || SearchLiveChannels.Any(c => NormalizeFuzzyText(c.Name) == normalizedBest)
-            || SearchVodChannels.Any(c => NormalizeFuzzyText(c.Name) == normalizedBest))
+                IReadOnlyCollection<Series> seriesSnapshot = Array.Empty<Series>();
+                if (seriesDatasetChanged)
+                {
+                    var hiddenGroups = _settingsService.Settings.HiddenSeriesGroups;
+                    seriesSnapshot = _allSeriesCache
+                        .Where(series => series.PlaylistId == playlistId)
+                        .Where(series => series.GroupTitle == null || !hiddenGroups.Contains(series.GroupTitle))
+                        .ToList();
+                }
+
+                var snapshot = await Task.Run(() =>
+                {
+                    owner.Session.AppendChannels(pendingChannels, token);
+                    if (seriesDatasetChanged)
+                    {
+                        owner.Session.ReplaceSeries(seriesSnapshot, token);
+                    }
+                    token.ThrowIfCancellationRequested();
+                    return owner.Session.CreateSnapshot();
+                }, token);
+                pendingChannels = Array.Empty<Channel>();
+
+                if (Volatile.Read(ref _seriesSearchDatasetVersion) != seriesDatasetVersion)
+                {
+                    continue;
+                }
+
+                owner.ProcessedSeriesDatasetVersion = seriesDatasetVersion;
+                if (!IsSearchRankingOwnerCurrent(owner, token))
+                {
+                    PerformanceTrace.Mark(
+                        "search.rank.stale_commit_rejected.count",
+                        Interlocked.Increment(ref _staleSearchRankingCommits));
+                    return false;
+                }
+
+                var committed = false;
+                var seriesChangedBeforeCommit = false;
+                await _dispatcherService.InvokeAsync(() =>
+                {
+                    if (!IsSearchRankingOwnerCurrent(owner, token))
+                    {
+                        PerformanceTrace.Mark(
+                            "search.rank.stale_commit_rejected.count",
+                            Interlocked.Increment(ref _staleSearchRankingCommits));
+                        return Task.CompletedTask;
+                    }
+
+                    if (Volatile.Read(ref _seriesSearchDatasetVersion) != seriesDatasetVersion)
+                    {
+                        seriesChangedBeforeCommit = true;
+                        return Task.CompletedTask;
+                    }
+
+                    SetItems(SearchLiveChannels, snapshot.LivePrimary);
+                    SetItems(SearchSeriesChannels, snapshot.SeriesPrimary);
+                    SetItems(SearchVodChannels, snapshot.VodPrimary);
+                    SearchSuggestion = snapshot.Suggestion;
+                    SetItems(SearchSimilarLiveChannels, snapshot.LiveSimilar);
+                    SetItems(SearchSimilarSeriesChannels, snapshot.SeriesSimilar);
+                    SetItems(SearchSimilarVodChannels, snapshot.VodSimilar);
+                    ShowSearchSimilarSection = snapshot.LiveSimilar.Count > 0 ||
+                                               snapshot.SeriesSimilar.Count > 0 ||
+                                               snapshot.VodSimilar.Count > 0;
+                    ShowSearchEmptyState = snapshot.LivePrimary.Count == 0 &&
+                                           snapshot.SeriesPrimary.Count == 0 &&
+                                           snapshot.VodPrimary.Count == 0 &&
+                                           !ShowSearchSimilarSection;
+                    IsSearching = false;
+                    OnPropertyChanged(nameof(ShowSearchIdleState));
+                    committed = true;
+                    return Task.CompletedTask;
+                });
+
+                if (seriesChangedBeforeCommit ||
+                    Volatile.Read(ref _seriesSearchDatasetVersion) != seriesDatasetVersion)
+                {
+                    continue;
+                }
+
+                if (!committed)
+                {
+                    return false;
+                }
+
+                PerformanceTrace.Mark(
+                    "search.rank.commit.count",
+                    Interlocked.Increment(ref _searchRankingCommits));
+                QueueVisibleChannelVisualEnrichment(snapshot.VodPrimary.ToList());
+                QueueVisibleSeriesVisualEnrichment(snapshot.SeriesPrimary.ToList());
+                QueueVisibleChannelVisualEnrichment(snapshot.VodSimilar.ToList());
+                QueueVisibleSeriesVisualEnrichment(snapshot.SeriesSimilar.ToList());
+                return true;
+            }
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested)
         {
-            return string.Empty;
+            return false;
         }
+        finally
+        {
+            if (workCountersCaptured)
+            {
+                evaluated = owner.Session.WorkItemEvaluationCount - workEvaluationsBefore;
+                reused = owner.Session.WorkItemReuseCount - workReusesBefore;
+                if (evaluated > 0)
+                {
+                    PerformanceTrace.Mark(
+                        "search.rank.items.evaluated.count",
+                        Interlocked.Add(ref _searchRankingItemsEvaluated, evaluated));
+                }
 
-        return best.Title;
+                if (reused > 0)
+                {
+                    PerformanceTrace.Mark(
+                        "search.rank.items.reused.count",
+                        Interlocked.Add(ref _searchRankingItemsReused, reused));
+                }
+            }
+
+            if (enteredProcessing)
+            {
+                owner.Processing.Release();
+            }
+        }
     }
 
     private const int SearchPrimaryScoreThreshold = 55;

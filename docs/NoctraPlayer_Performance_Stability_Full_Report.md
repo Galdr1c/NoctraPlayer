@@ -470,6 +470,45 @@ Yeni page yalnız kendi item'larını değerlendirmek yerine önceki dataset de 
 - Mevcut Top-K ile merge et.
 - Query değişmediyse eski skorları tekrar hesaplama.
 
+### P0-09 / P0-10 uygulama durumu — 2026-08-13: Tamamlandı
+
+- Query-scope sahibi `IncrementalSearchRankingSession` eklendi. Kanal, film ve dizi alanları
+  bir kez normalize ediliyor; aynı query ve playlist içinde önceki sayfalar yeniden score
+  edilmiyor. Ana sonuçlar `96`, benzer sonuçlar `18` öğelik bounded bucket'larda tutuluyor;
+  tüm aday listesini tekrar tekrar sıralayan eski yaklaşım kaldırıldı.
+- Fuzzy eşleme ArrayPool tabanlı Damerau-Levenshtein ile allocation kontrollü hale getirildi.
+  Item, episode, fuzzy loop ve bounded merge boyunca gerçek `CancellationToken` taşınıyor.
+  Hazırlama/merge işlemleri scratch bucket üzerinde yapılıp yalnız başarılı terminal durumda
+  atomik olarak yayınlanıyor; iptal edilen page numarası ilerlemiyor ve tekrar denenebiliyor.
+- Query, navigation/view generation, playlist/profile ve Series dataset version commit öncesi
+  yeniden doğrulanıyor. Aynı owner içindeki işlem ve UI commit sıralandı; eski snapshot'ın yeni
+  sonucu ezmesi, stale Series datasının yayınlanması ve stale-signature/owner yarışları kapatıldı.
+- Sıralama davranışı eski uygulamayla eş tutuldu: desteklenen image URL doğrulaması korunuyor,
+  Series için yalnız `CoverUrl` kullanılıyor; sonradan gelen kanal/dizi görsel enrichment'i
+  mevcut bounded bucket'ların image tie-break sırasını yeniden değerlendiriyor.
+- Telemetri eklendi: `search.rank.sessions.started.count`,
+  `search.rank.sessions.cancelled.count`, `search.rank.items.evaluated.count`,
+  `search.rank.items.reused.count`, `search.rank.stale_commit_rejected.count` ve
+  `search.rank.commit.count`.
+- Otomatik doğrulama: geniş Search/navigation/content-query paketi `88/88`; yarış koşulu odaklı
+  paket 10 tekrarda `440/440`. Tam paket `2022/2042`; kalan 20 hata Search değişiklik alanı
+  dışındaki mevcut lisans/promosyon, download ve mobil seçim testlerindeydi. P0-09/P0-10 testi
+  başarısız olmadı. Bağımsız son kod incelemesinde Critical/Important bulgu kalmadı.
+- Android arm64 Debug kabul APK'sı: `studio.kynora.noctra-Signed.apk`, `180974023` byte,
+  SHA-256 `798E4C319EAA8FA287125912744A005E77C21D1B01A92576091D48BFD575C3AF`.
+  Paket DBY_W09 cihazına veri silmeden kuruldu; `firstInstallTime`
+  `2026-08-10 17:51:36` olarak değişmeden kaldı.
+- Son APK canlı kabulü: 15 hızlı query değişimi, 40 çift yönlü Search kaydırması, 10
+  background/resume turu ve Live/Movies/Series/More/Search arasında 52 geçiş tamamlandı. PID
+  `29189` sabit kaldı; ANR/crash/OOM eşleşmesi `0`; son PSS `609546 KB`, RSS `677292 KB`.
+- Son APK canlı telemetrisi: ilk geniş query `9851` öğe değerlendirdi; aynı query'nin sonraki
+  sayfaları `30, 30, 30, 30, 30, 30, 21, 2` yeni öğe değerlendirdi. Query replacement sonrası
+  session sayısı `2`, expected cancellation `1`, stale commit `0` oldu. Ham kanıt:
+  `artifacts/p0-09-p0-10-live/p0_09_p0_10_final.jsonl` (SHA-256
+  `01E8A754ED678F8A920F57FB4E61BEAE03D79DD2E8C386AF6BA4118A7680040E`). Android `gfxinfo`
+  Avalonia/Skia yüzeyinde frame yakalamadığı (`Total frames rendered: 0`) için yanıltıcı bir
+  jank yüzdesi raporlanmadı.
+
 ---
 
 ## P0-11 — TMDB enrichment işleri scroll ile birikiyor ve navigation lifetime'a bağlı değil
@@ -521,6 +560,38 @@ Teorik eşzamanlılık 12'ye çıkabilir.
 - Semaphore servis seviyesinde singleton/global olmalı,
 - veya daha iyisi tek bounded metadata worker queue kullanılmalı.
 
+### Uygulama durumu — 2026-08-11: Tamamlandı
+
+- `ITmdbEnrichmentScheduler` ve singleton `TmdbEnrichmentScheduler` eklendi. Uygulama genelinde
+  tek kuyruk kullanılıyor; varsayılan aktif iş sınırı `3`, bekleyen iş kapasitesi `64` ve taşma
+  politikası `drop-oldest`.
+- Movies/Series/Search görünür içerik zenginleştirmesi ile `TmdbSyncService` aynı scheduler'a
+  bağlandı. Eski batch-local semaphore ve sayfa başına `Task.Run` fan-out kaldırıldı.
+- İş sahipliği immutable view generation + aktif view + playlist + cancellation token ile
+  sınırlandı. Navigation, playlist/profile değişimi ve uygulama kapanışı eski kapsamı iptal
+  ediyor; HTTP, EF Core, kayıt ve UI commit öncesinde kapsam yeniden doğrulanıyor.
+- Caller cancellation artık `MetadataService` içindeki fallback, detail, genre-cache ve search
+  yollarında genel TMDB hatası olarak yutulmuyor. Scheduler admission/dispose, dequeue/cancel ve
+  aynı-key replacement yarışları kilit dışında terminal completion/registration cleanup ile
+  kapatıldı.
+- Otomatik doğrulama: odaklı scheduler/TMDB/scope/cancellation paketi `19/19`; 10 tekrarda
+  `190/190`; navigation/search/profile/DI regresyon paketi `125/125`. Tam paket `1995/2002`;
+  kalan 7 hata TMDB değişiklik alanı dışındaki önceden bilinen download, promo-code, mobile
+  selection ve store-timer testlerindeydi. TMDB/zamanlayıcı testi başarısız olmadı.
+- Derleme: `Noctra.Core` ve `Noctra.Mobile` `0` hata / `0` uyarı; Android `0` hata / mevcut
+  `72` uyarı. Bağımsız son kod incelemesi Critical/Important bulgu olmadığını ve değişikliğin
+  birleştirmeye hazır olduğunu doğruladı.
+- APK: `studio.kynora.noctra-Signed.apk`, `353711198` byte, SHA-256
+  `415D8BE76E3AA7C59B23367F3CAFAB7C8963AD568046B98115AD5582E27A86D3`.
+- Android kabulü: DBY_W09 cihazına veri silmeden `adb install -r`; `firstInstallTime`
+  `2026-08-10 17:51:36` olarak değişmeden kaldı. 50 Movies/Series/Search/Live geçişi ve yoğun
+  çift yönlü kaydırma, 10 background/resume turu ve gerçek M3U kuyruk yükü altında 30 ek geçiş
+  tamamlandı. PID `18937` sabit kaldı; ANR/crash/OOM eşleşmesi `0`.
+- Canlı M3U telemetrisi: `35` schedule, `23` start, `11` complete, navigation kaynaklı `24`
+  expected cancellation; `tmdb.queue.active.high_water=3` ve
+  `tmdb.queue.pending.high_water=6`. Böylece `active <= 3` ve `pending <= 64` kabul sınırları
+  gerçek cihazda doğrulandı.
+
 ---
 
 # 4. P1 — YÜKSEK ÖNCELİKLİ SORUNLAR
@@ -534,6 +605,13 @@ Debounce eski request'i iptal edebiliyor ancak ağır ranking başladıktan sonr
 - Scoring loop'larına token taşı.
 - Belirli item/token aralıklarında cancellation check.
 - Sonuç commit öncesi query generation doğrula.
+
+### Uygulama durumu — 2026-08-13: Tamamlandı (P0-09 / P0-10 ile birlikte)
+
+`CancellationToken` item, episode, fuzzy distance ve bounded merge döngülerinin tamamına
+taşındı. İptal edilen batch scratch state'i yayınlamıyor; page ve query owner tekrar denenebilir
+kalıyor. Query/navigation/view/playlist/dataset generation kontrolleri UI commit öncesi yeniden
+yapılıyor. Ayrıntılı test ve canlı cihaz kanıtı P0-09/P0-10 uygulama durumu bölümündedir.
 
 ---
 

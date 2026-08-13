@@ -8,6 +8,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
 using Microsoft.EntityFrameworkCore;
+using Noctra.Core.Services;
 using Noctra.Data;
 using Noctra.Diagnostics;
 using Noctra.Mobile.Localization;
