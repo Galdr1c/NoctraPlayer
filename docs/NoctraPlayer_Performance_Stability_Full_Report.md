@@ -799,6 +799,42 @@ Backdrop
 Avatar
 ```
 
+### Uygulama durumu (2026-08-13) — Tamamlandı
+
+- `MobileImageDecodePolicy` ile kart rolü ve gerçek render yoğunluğuna göre bucket seçimi
+  eklendi: `LiveLogo=64–96 px`, `PosterSmall=160–384 px`, `Backdrop=256–768 px`.
+  Varsayılan/ayrıntı görsellerinin açık `DecodePixelWidth` davranışı korunuyor.
+- `MobileLiveTvCard`, `MobileVodCard`, `MobileSeriesCard` ve
+  `MobileContinueWatchingCard` ilgili profile bağlandı. DBY_W09 cihazında 36 DIP Live logosu
+  `36 × 2,5 = 90` fiziksel piksel hedefinden `96 px` bucket'a çözülüyor; eski `384 px`
+  decode'a göre yaklaşık `%94` daha az decode piksel alanı kullanıyor.
+- `RemoteImage`, URL + çözülmüş bucket kimliğini birlikte izliyor. URL değişimi, recycle,
+  detach, surface pasifleştirme, boyut değişimi ve `TopLevel.RenderScaling` değişimi yarışları
+  stale commit üretmeden ele alınıyor; aynı etkili URL/bucket için gereksiz iptal/yeniden indirme
+  yapılmıyor.
+- Android canlı A/B testi ilk uygulamada bir self-sizing döngüsü yakaladı: kaynak henüz yokken
+  poster `RemoteImage.Bounds.Width=0`, `RenderScaling=2,5` ve çözülmüş genişlik `0` kalıyordu.
+  Önceki APK aynı veriyle posterleri yüklerken ilk profil APK'sı gri kalıyordu. Resolver artık
+  ilk ölçülmüş visual ancestor genişliğini kullanıyor; tüm genişlikler başlangıçta sıfırsa
+  `LayoutUpdated` yalnız henüz aktif istek yokken yeniden değerlendiriyor. Geçici ölçüm kodu
+  final kaynaktan kaldırıldı. Final APK'da Movies, Series ve Search posterleri ile Live logoları
+  dolu ve net olarak doğrulandı.
+- Otomatik kanıt: image/Android odaklı paket `63/63`; 10 tekrar `630/630`. Tam takımda
+  `2079` testin `2060` tanesi geçti. Kalan `19` hata image değişiklik alanı dışındaki mevcut
+  lisans/promosyon, download ve mobil seçim testleridir; P1-08/P1-09 testi başarısız olmadı.
+- Bağımsız son kod incelemesinde Critical/Important bulgu kalmadı; reviewer'ın kendi odaklı
+  paketi `37/37` geçti ve değişiklik birleştirmeye hazır bulundu.
+- Android arm64 Debug publish `0` hata ile tamamlandı; bilinen `NU1608`, `XA0141` ve platform
+  uyarıları devam ediyor. İmzalı APK `181002695` byte, SHA-256
+  `662D5A8EF5F39A8A5D45096A9FEBEF8BC8A3C26ACD529A6C319DB120D4E73FCA`.
+- APK veri silmeden `adb install --user 0 -r -d` ile kuruldu; `firstInstallTime`
+  `2026-08-10 17:51:36` olarak korundu. Final APK üzerinde Movies/Series/Live/Search'te toplam
+  `80` çift yönlü kaydırma, `30` sayfa geçişi ve `10` gerçek launcher background/resume turu
+  tamamlandı. PID `15373` her kontrolde sabit; ANR/crash/OOM eşleşmesi `0`.
+- Bellek kanıtı: görseller yüklü Movies başlangıcında PSS `632391 KB`, RSS `702192 KB`,
+  Graphics `95856 KB`; final stres ve 10 resume sonrasında PSS `583590 KB`, RSS `651652 KB`,
+  Graphics `48516 KB`. Monoton büyüme veya foreground dönüşünde birikme görülmedi.
+
 ---
 
 ## P1-10 — Image response tamamen `MemoryStream`e kopyalanıp sonra decode ediliyor

@@ -51,6 +51,8 @@
              Link="Services\SharedImageLoadCoordinator.cs" />
     <Compile Include="..\Noctra.Mobile\Services\MobileImageLoadPolicy.cs"
              Link="Services\MobileImageLoadPolicy.cs" />
+    <Compile Include="..\Noctra.Mobile\Services\MobileImageDecodePolicy.cs"
+             Link="Services\MobileImageDecodePolicy.cs" />
     <Compile Include="..\Noctra.Mobile\Controls\MobileRemoteImage.cs"
              Link="Controls\MobileRemoteImage.cs" />
     <Compile Include="..\Noctra.Mobile\Navigation\MobilePageNavigationStateStore.cs"

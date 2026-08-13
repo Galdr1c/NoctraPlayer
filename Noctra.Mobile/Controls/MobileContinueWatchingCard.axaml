@@ -47,6 +47,7 @@
 
         <controls:RemoteImage x:Name="BackdropImage"
                               Url="{Binding CoverUrl}"
+                              DecodeProfile="Backdrop"
                               Stretch="UniformToFill"
                               RenderOptions.BitmapInterpolationMode="MediumQuality" />
 

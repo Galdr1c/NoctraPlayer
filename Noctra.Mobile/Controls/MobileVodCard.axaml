@@ -45,6 +45,7 @@
         </Border>
         <controls:RemoteImage x:Name="PosterImage"
                               Url="{Binding CoverUrl}"
+                              DecodeProfile="PosterSmall"
                               Stretch="UniformToFill"
                               RenderOptions.BitmapInterpolationMode="MediumQuality" />
         

@@ -81,6 +81,7 @@
               <controls:RemoteImage x:Name="ChannelLogo"
                                     Url="{Binding CoverUrl}"
                                     Width="36" Height="36"
+                                    DecodeProfile="LiveLogo"
                                     Stretch="Uniform"
                                     RenderOptions.BitmapInterpolationMode="MediumQuality" />
             </Grid>

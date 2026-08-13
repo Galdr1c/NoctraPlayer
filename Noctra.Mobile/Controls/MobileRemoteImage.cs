@@ -38,6 +38,9 @@ public class RemoteImage : Image
     public static readonly StyledProperty<int> DecodePixelWidthProperty =
         AvaloniaProperty.Register<RemoteImage, int>(nameof(DecodePixelWidth), DefaultDecodePixelWidth);
 
+    public static readonly StyledProperty<MobileImageDecodeProfile> DecodeProfileProperty =
+        AvaloniaProperty.Register<RemoteImage, MobileImageDecodeProfile>(nameof(DecodeProfile));
+
     public static readonly StyledProperty<bool> IsImageLoadedProperty =
         AvaloniaProperty.Register<RemoteImage, bool>(nameof(IsImageLoaded), false);
 
@@ -63,12 +66,15 @@ public class RemoteImage : Image
     private static readonly TimeSpan FailureCooldown = TimeSpan.FromMinutes(2);
 
     private CancellationTokenSource? _loadCts;
+    private MobileImageDecodeRequestState _profileRequestState;
+    private TopLevel? _subscribedTopLevel;
     private static long _imageStaleCommitDropped;
 
     static RemoteImage()
     {
         UrlProperty.Changed.AddClassHandler<RemoteImage>((control, _) => control.StartImageLoad());
-        DecodePixelWidthProperty.Changed.AddClassHandler<RemoteImage>((control, _) => control.StartImageLoad());
+        DecodePixelWidthProperty.Changed.AddClassHandler<RemoteImage>((control, _) => control.ReevaluateDecodeRequest());
+        DecodeProfileProperty.Changed.AddClassHandler<RemoteImage>((control, _) => control.ReevaluateDecodeRequest());
         IsImageLoadedProperty.Changed.AddClassHandler<RemoteImage>((control, e) =>
         {
             if (e.NewValue is bool isLoaded)
@@ -81,6 +87,8 @@ public class RemoteImage : Image
     public RemoteImage()
     {
         Opacity = 0;
+        SizeChanged += OnImageSizeChanged;
+        LayoutUpdated += OnImageLayoutUpdated;
         Transitions = new Transitions
         {
             new DoubleTransition
@@ -103,6 +111,12 @@ public class RemoteImage : Image
         set => SetValue(DecodePixelWidthProperty, value);
     }
 
+    public MobileImageDecodeProfile DecodeProfile
+    {
+        get => GetValue(DecodeProfileProperty);
+        set => SetValue(DecodeProfileProperty, value);
+    }
+
     public bool IsImageLoaded
     {
         get => GetValue(IsImageLoadedProperty);
@@ -112,11 +126,14 @@ public class RemoteImage : Image
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
+        SubscribeToTopLevelScalingChanges();
         StartImageLoad();
     }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
+        UnsubscribeFromTopLevelScalingChanges();
+        _profileRequestState.Invalidate();
         CancelPendingLoad();
         base.OnDetachedFromVisualTree(e);
     }
@@ -143,6 +160,7 @@ public class RemoteImage : Image
             return;
         }
 
+        _profileRequestState.Invalidate();
         CancelPendingLoad();
         SetSourceOnUiThread(null);
     }
@@ -150,6 +168,7 @@ public class RemoteImage : Image
     private void StartImageLoad()
     {
         CancelPendingLoad();
+        _profileRequestState.Invalidate();
 
         var normalizedUrl = NormalizeUrl(Url);
         if (string.IsNullOrWhiteSpace(normalizedUrl))
@@ -164,7 +183,14 @@ public class RemoteImage : Image
             return;
         }
 
-        var decodePixelWidth = NormalizeDecodePixelWidth(DecodePixelWidth);
+        var decodePixelWidth = ResolveDecodePixelWidth();
+        if (decodePixelWidth <= 0)
+        {
+            SetSourceOnUiThread(null, normalizedUrl);
+            return;
+        }
+
+        _profileRequestState.SetCurrent(normalizedUrl, decodePixelWidth);
         if (TryApplyCachedSource(normalizedUrl, decodePixelWidth))
         {
             return;
@@ -558,6 +584,96 @@ public class RemoteImage : Image
 
     private static int NormalizeDecodePixelWidth(int decodePixelWidth)
         => Math.Clamp(decodePixelWidth, 64, MaxDecodePixelWidth);
+
+    private int ResolveDecodePixelWidth()
+    {
+        var logicalWidth = MobileImageDecodePolicy.FirstUsableWidth(Width, Bounds.Width);
+        for (var ancestor = this.GetVisualParent();
+             logicalWidth <= 0 && ancestor is not null;
+             ancestor = ancestor.GetVisualParent())
+        {
+            logicalWidth = MobileImageDecodePolicy.FirstUsableWidth(
+                logicalWidth,
+                ancestor.Bounds.Width);
+        }
+
+        var renderScaling = TopLevel.GetTopLevel(this)?.RenderScaling ?? 0;
+        return MobileImageDecodePolicy.ResolvePixelWidth(
+            DecodeProfile,
+            logicalWidth,
+            renderScaling,
+            DecodePixelWidth);
+    }
+
+    private void OnImageSizeChanged(object? sender, SizeChangedEventArgs e)
+    {
+        if (DecodeProfile != MobileImageDecodeProfile.Default)
+        {
+            ReevaluateDecodeRequest();
+        }
+    }
+
+    private void OnImageLayoutUpdated(object? sender, EventArgs e)
+    {
+        if (DecodeProfile != MobileImageDecodeProfile.Default &&
+            !_profileRequestState.HasCurrent)
+        {
+            ReevaluateDecodeRequest();
+        }
+    }
+
+    private void OnTopLevelScalingChanged(object? sender, EventArgs e)
+    {
+        if (DecodeProfile != MobileImageDecodeProfile.Default)
+        {
+            ReevaluateDecodeRequest();
+        }
+    }
+
+    private void ReevaluateDecodeRequest()
+    {
+        var normalizedUrl = NormalizeUrl(Url);
+        if (string.IsNullOrWhiteSpace(normalizedUrl))
+        {
+            return;
+        }
+
+        var isEligible = IsLoadEligible();
+        var resolvedWidth = isEligible ? ResolveDecodePixelWidth() : 0;
+        if (!_profileRequestState.ShouldRestart(normalizedUrl, resolvedWidth, isEligible))
+        {
+            return;
+        }
+
+        StartImageLoad();
+    }
+
+    private void SubscribeToTopLevelScalingChanges()
+    {
+        var topLevel = TopLevel.GetTopLevel(this);
+        if (ReferenceEquals(_subscribedTopLevel, topLevel))
+        {
+            return;
+        }
+
+        UnsubscribeFromTopLevelScalingChanges();
+        _subscribedTopLevel = topLevel;
+        if (topLevel is not null)
+        {
+            topLevel.ScalingChanged += OnTopLevelScalingChanged;
+        }
+    }
+
+    private void UnsubscribeFromTopLevelScalingChanges()
+    {
+        if (_subscribedTopLevel is null)
+        {
+            return;
+        }
+
+        _subscribedTopLevel.ScalingChanged -= OnTopLevelScalingChanged;
+        _subscribedTopLevel = null;
+    }
 
     private static string CreateCacheKey(string normalizedUrl, int decodePixelWidth)
         => $"{NormalizeDecodePixelWidth(decodePixelWidth)}|{normalizedUrl}";
