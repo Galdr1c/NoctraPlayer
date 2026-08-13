@@ -14,8 +14,8 @@ public sealed record SectionedCollectionRow<TSection, TItem>(
 
 /// <summary>
 /// Flattens independently grouped sections into one header/row stream. A
-/// contiguous append mutates only the affected section tail and inserts new
-/// rows before the next section without rebuilding unrelated rows.
+/// contiguous append or identity-preserving section update mutates only the
+/// affected rows without rebuilding unrelated sections.
 /// </summary>
 public sealed class SectionedIncrementalRowCollection<TSection, TItem>
     where TSection : notnull
@@ -75,7 +75,8 @@ public sealed class SectionedIncrementalRowCollection<TSection, TItem>
         TSection section,
         int startingIndex,
         IEnumerable<TItem> appendedItems,
-        int columns)
+        int columns,
+        Func<TSection, TSection, bool>? shouldRefreshFollowingHeader = null)
     {
         ArgumentNullException.ThrowIfNull(appendedItems);
         ArgumentOutOfRangeException.ThrowIfLessThan(columns, 1);
@@ -135,6 +136,80 @@ public sealed class SectionedIncrementalRowCollection<TSection, TItem>
         }
 
         state.ItemCount += additions.Count;
+        if (oldRowCount == 0)
+        {
+            RefreshFollowingHeaderPresentation(state, shouldRefreshFollowingHeader);
+        }
+
+        return true;
+    }
+
+    public bool TrySynchronizeSection(
+        TSection section,
+        IEnumerable<TItem> items,
+        int columns,
+        Func<TSection, TSection, bool>? shouldRefreshFollowingHeader = null)
+    {
+        ArgumentNullException.ThrowIfNull(items);
+        ArgumentOutOfRangeException.ThrowIfLessThan(columns, 1);
+
+        if (!_states.TryGetValue(section, out var state) || state.Columns != columns)
+        {
+            return false;
+        }
+
+        var nextItems = items as IReadOnlyList<TItem> ?? items.ToList();
+        if (SectionItemsEqual(state, nextItems))
+        {
+            return true;
+        }
+
+        var nextRows = GroupRows(section, nextItems, columns).ToList();
+        var headerIndex = GetFlatSectionIndex(state);
+        var oldRowCount = state.ItemRows.Count;
+        var visibilityChanged = (oldRowCount == 0) != (nextRows.Count == 0);
+        var sharedCount = Math.Min(oldRowCount, nextRows.Count);
+        for (var index = 0; index < sharedCount; index++)
+        {
+            if (RowItemsEqual(state.ItemRows[index], nextRows[index]))
+            {
+                continue;
+            }
+
+            state.ItemRows[index] = nextRows[index];
+            Rows[headerIndex + 1 + index] = nextRows[index];
+        }
+
+        if (nextRows.Count > oldRowCount)
+        {
+            var addedRows = nextRows.Skip(oldRowCount).ToArray();
+            state.ItemRows.AddRange(addedRows);
+            if (oldRowCount == 0)
+            {
+                Rows.InsertRange(headerIndex, new[] { state.Header }.Concat(addedRows));
+            }
+            else
+            {
+                Rows.InsertRange(headerIndex + 1 + oldRowCount, addedRows);
+            }
+        }
+        else if (nextRows.Count < oldRowCount)
+        {
+            var removeCount = oldRowCount - nextRows.Count;
+            state.ItemRows.RemoveRange(nextRows.Count, removeCount);
+            Rows.RemoveRange(headerIndex + 1 + nextRows.Count, removeCount);
+            if (nextRows.Count == 0)
+            {
+                Rows.RemoveAt(headerIndex);
+            }
+        }
+
+        state.ItemCount = nextItems.Count;
+        if (visibilityChanged)
+        {
+            RefreshFollowingHeaderPresentation(state, shouldRefreshFollowingHeader);
+        }
+
         return true;
     }
 
@@ -162,6 +237,34 @@ public sealed class SectionedIncrementalRowCollection<TSection, TItem>
         return index;
     }
 
+    private void RefreshFollowingHeaderPresentation(
+        SectionState changed,
+        Func<TSection, TSection, bool>? shouldRefresh)
+    {
+        if (shouldRefresh is null)
+        {
+            return;
+        }
+
+        var changedIndex = _orderedStates.IndexOf(changed);
+        for (var index = changedIndex + 1; index < _orderedStates.Count; index++)
+        {
+            var following = _orderedStates[index];
+            if (following.ItemRows.Count == 0)
+            {
+                continue;
+            }
+
+            if (shouldRefresh(changed.Section, following.Section))
+            {
+                following.Header = CreateHeader(following.Section);
+                Rows[GetFlatSectionIndex(following)] = following.Header;
+            }
+
+            return;
+        }
+    }
+
     private static IEnumerable<SectionedCollectionRow<TSection, TItem>> GroupRows(
         TSection section,
         IEnumerable<TItem> items,
@@ -186,10 +289,55 @@ public sealed class SectionedIncrementalRowCollection<TSection, TItem>
         }
     }
 
+    private static bool SectionItemsEqual(SectionState state, IReadOnlyList<TItem> next)
+    {
+        if (state.ItemCount != next.Count)
+        {
+            return false;
+        }
+
+        var itemIndex = 0;
+        foreach (var row in state.ItemRows)
+        {
+            foreach (var item in row.Items)
+            {
+                if (!EqualityComparer<TItem>.Default.Equals(item, next[itemIndex++]))
+                {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    private static bool RowItemsEqual(
+        SectionedCollectionRow<TSection, TItem> current,
+        SectionedCollectionRow<TSection, TItem> next)
+    {
+        if (current.Items.Count != next.Items.Count)
+        {
+            return false;
+        }
+
+        for (var index = 0; index < current.Items.Count; index++)
+        {
+            if (!EqualityComparer<TItem>.Default.Equals(current.Items[index], next.Items[index]))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     private static SectionedCollectionRow<TSection, TItem> CreateItemRow(
         TSection section,
         IEnumerable<TItem> items)
         => new(section, IsHeader: false, items.ToArray());
+
+    private static SectionedCollectionRow<TSection, TItem> CreateHeader(TSection section)
+        => new(section, IsHeader: true, Array.Empty<TItem>());
 
     private sealed class SectionState
     {
@@ -197,16 +345,13 @@ public sealed class SectionedIncrementalRowCollection<TSection, TItem>
         {
             Section = section;
             Columns = columns;
-            Header = new SectionedCollectionRow<TSection, TItem>(
-                section,
-                IsHeader: true,
-                Array.Empty<TItem>());
+            Header = CreateHeader(section);
         }
 
         public TSection Section { get; }
         public int Columns { get; }
         public int ItemCount { get; set; }
-        public SectionedCollectionRow<TSection, TItem> Header { get; }
+        public SectionedCollectionRow<TSection, TItem> Header { get; set; }
         public List<SectionedCollectionRow<TSection, TItem>> ItemRows { get; } = new();
     }
 }

@@ -130,7 +130,10 @@ public sealed class AndroidPerformanceStabilityContractTests
         var image = ReadProjectFile("Noctra.Mobile", "Controls", "MobileRemoteImage.cs");
 
         Assert.Contains("MaxDistinctImageLoads = 48", image, StringComparison.Ordinal);
-        Assert.Contains("SharedImageLoadCoordinator<string, Bitmap?>", image, StringComparison.Ordinal);
+        Assert.Contains(
+            "SharedImageLoadCoordinator<string, SharedImageResource<Bitmap>?>",
+            image,
+            StringComparison.Ordinal);
         Assert.DoesNotContain("ConcurrentDictionary<string, Task<Bitmap?>> InFlightLoads", image, StringComparison.Ordinal);
     }
 
@@ -201,8 +204,8 @@ public sealed class AndroidPerformanceStabilityContractTests
         Assert.Contains("inherits: true", image, StringComparison.Ordinal);
         Assert.Contains("MobileImageLoadPolicy.CanStart", image, StringComparison.Ordinal);
         Assert.Contains("SetSurfaceLoadsActive", image, StringComparison.Ordinal);
-        Assert.Contains("SetSourceOnUiThread(null, normalizedUrl)", image, StringComparison.Ordinal);
-        Assert.Contains("TrySetSource(url, null, cancellationToken)", image, StringComparison.Ordinal);
+        Assert.Contains("ClearSourceAndReleaseLease", image, StringComparison.Ordinal);
+        Assert.Contains("ClearFailedLoadIfCurrentAsync", image, StringComparison.Ordinal);
         Assert.Contains("ReleaseActiveCorePage(captureState: true)", profileMethod, StringComparison.Ordinal);
         Assert.Contains("ReleaseSeriesDetailView()", profileMethod, StringComparison.Ordinal);
     }

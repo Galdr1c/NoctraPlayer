@@ -234,7 +234,11 @@ public sealed class MobileRecentRegressionTests
             ProjectFile("Noctra.Mobile", "Controls", "MobileRemoteImage.cs"));
 
         Assert.Contains("64L * 1024L * 1024L", source, StringComparison.Ordinal);
-        Assert.Contains("ByteBudgetLruCache<string, Bitmap>", source, StringComparison.Ordinal);
+        Assert.Contains(
+            "ByteBudgetLruCache<string, SharedImageResource<Bitmap>>",
+            source,
+            StringComparison.Ordinal);
+        Assert.Contains("resource => resource.Dispose()", source, StringComparison.Ordinal);
         Assert.Contains("EstimateBitmapBytes", source, StringComparison.Ordinal);
         Assert.DoesNotContain(
             "ConcurrentDictionary<string, Bitmap> Cache",

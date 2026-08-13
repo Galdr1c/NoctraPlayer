@@ -96,6 +96,44 @@ public class BatchObservableCollection<T> : ObservableCollection<T>
     }
 
     /// <summary>
+    /// Removes a contiguous range and publishes one indexed Remove event.
+    /// </summary>
+    public void RemoveRange(int index, int count)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(index);
+        ArgumentOutOfRangeException.ThrowIfNegative(count);
+        if (index > Items.Count)
+        {
+            throw new ArgumentOutOfRangeException(nameof(index));
+        }
+
+        if (count > Items.Count - index)
+        {
+            throw new ArgumentOutOfRangeException(nameof(count));
+        }
+
+        if (count == 0)
+        {
+            return;
+        }
+
+        var removed = new List<T>(count);
+        for (var offset = 0; offset < count; offset++)
+        {
+            var item = Items[index];
+            removed.Add(item);
+            Items.RemoveAt(index);
+            UpdateCountedCountOnRemove(item);
+        }
+
+        RaiseCountNotifications();
+        OnCollectionChanged(new NotifyCollectionChangedEventArgs(
+            NotifyCollectionChangedAction.Remove,
+            (System.Collections.IList)removed,
+            index));
+    }
+
+    /// <summary>
     /// Replaces all items in the collection and fires a single Reset notification.
     /// Use this instead of Clear() + foreach Add to avoid N+1 UI layout passes.
     /// </summary>

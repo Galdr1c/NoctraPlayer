@@ -172,6 +172,206 @@ public sealed class SharedImageLoadCoordinatorTests
         Assert.True(admitted.IsAdmitted);
     }
 
+    [Fact]
+    public async Task CancelledLastConsumer_DoesNotProjectLateResultAndReleasesProducerOnce()
+    {
+        var coordinator = new SharedImageLoadCoordinator<string, string>(capacity: 1);
+        var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseLoader = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var projected = 0;
+        var released = 0;
+        using var cancellation = new CancellationTokenSource();
+
+        async Task<string> CancellationInsensitiveLoader(CancellationToken _)
+        {
+            started.TrySetResult();
+            await releaseLoader.Task;
+            return "bitmap";
+        }
+
+        var load = coordinator.GetOrLoadAsync(
+            "poster",
+            CancellationInsensitiveLoader,
+            value =>
+            {
+                Interlocked.Increment(ref projected);
+                return value;
+            },
+            _ => Interlocked.Increment(ref released),
+            cancellation.Token);
+        await started.Task.WaitAsync(TimeSpan.FromSeconds(2));
+
+        cancellation.Cancel();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => load);
+        releaseLoader.SetResult();
+
+        await WaitUntilAsync(() => coordinator.ActiveLoadCount == 0 && Volatile.Read(ref released) == 1);
+        Assert.Equal(0, projected);
+        Assert.Equal(1, released);
+    }
+
+    [Fact]
+    public async Task SuccessfulSharedConsumers_ProjectBeforeProducerIsReleased()
+    {
+        var coordinator = new SharedImageLoadCoordinator<string, string>(capacity: 1);
+        var completion = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var released = 0;
+        var projected = 0;
+
+        string Project(string value)
+        {
+            Assert.Equal(0, Volatile.Read(ref released));
+            Interlocked.Increment(ref projected);
+            return value + "-lease";
+        }
+
+        var first = coordinator.GetOrLoadAsync(
+            "poster",
+            _ => completion.Task,
+            Project,
+            _ => Interlocked.Increment(ref released),
+            CancellationToken.None);
+        var second = coordinator.GetOrLoadAsync(
+            "poster",
+            _ => completion.Task,
+            Project,
+            _ => Interlocked.Increment(ref released),
+            CancellationToken.None);
+
+        completion.SetResult("bitmap");
+        var results = await Task.WhenAll(first, second);
+
+        Assert.All(results, result => Assert.Equal("bitmap-lease", result.Value));
+        Assert.Equal(2, projected);
+        Assert.Equal(1, released);
+    }
+
+    [Fact]
+    public async Task AsyncProjection_KeepsProducedValueAliveUntilProjectionTerminates()
+    {
+        var coordinator = new SharedImageLoadCoordinator<string, string>(capacity: 1);
+        var projectionStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseProjection = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var released = 0;
+
+        async Task<string> Project(string value, CancellationToken _)
+        {
+            projectionStarted.TrySetResult();
+            await releaseProjection.Task;
+            Assert.Equal(0, Volatile.Read(ref released));
+            return value + "-applied";
+        }
+
+        var load = coordinator.GetOrLoadAsync(
+            "poster",
+            _ => Task.FromResult("bitmap"),
+            Project,
+            _ => Interlocked.Increment(ref released),
+            CancellationToken.None);
+        await projectionStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
+
+        Assert.Equal(0, released);
+        releaseProjection.SetResult();
+
+        var result = await load;
+        Assert.Equal("bitmap-applied", result.Value);
+        Assert.Equal(1, released);
+    }
+
+    [Fact]
+    public async Task CancellationDuringAsyncProjection_WaitsForSafeProjectionTerminalThenReleases()
+    {
+        var coordinator = new SharedImageLoadCoordinator<string, string>(capacity: 1);
+        var projectionStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var inspectCancellation = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var released = 0;
+        using var cancellation = new CancellationTokenSource();
+
+        async Task<string> Project(string value, CancellationToken token)
+        {
+            projectionStarted.TrySetResult();
+            await inspectCancellation.Task;
+            Assert.Equal(0, Volatile.Read(ref released));
+            token.ThrowIfCancellationRequested();
+            return value;
+        }
+
+        var load = coordinator.GetOrLoadAsync(
+            "poster",
+            _ => Task.FromResult("bitmap"),
+            Project,
+            _ => Interlocked.Increment(ref released),
+            cancellation.Token);
+        await projectionStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
+
+        cancellation.Cancel();
+        Assert.False(load.IsCompleted);
+        inspectCancellation.SetResult();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => load);
+        Assert.Equal(1, released);
+    }
+
+    [Fact]
+    public async Task CompletedLoad_RemainsJoinableUntilExistingProjectionTerminates()
+    {
+        var coordinator = new SharedImageLoadCoordinator<string, string>(capacity: 2);
+        var firstProjectionStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseFirstProjection = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var loaderCalls = 0;
+        var projectionCalls = 0;
+
+        Task<string> Loader(CancellationToken _)
+        {
+            Interlocked.Increment(ref loaderCalls);
+            return Task.FromResult("bitmap");
+        }
+
+        async Task<string> Project(string value, CancellationToken _)
+        {
+            if (Interlocked.Increment(ref projectionCalls) == 1)
+            {
+                firstProjectionStarted.TrySetResult();
+                await releaseFirstProjection.Task;
+            }
+
+            return value + "-lease";
+        }
+
+        var first = coordinator.GetOrLoadAsync(
+            "poster",
+            Loader,
+            Project,
+            _ => { },
+            CancellationToken.None);
+        await firstProjectionStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
+
+        var second = coordinator.GetOrLoadAsync(
+            "poster",
+            Loader,
+            Project,
+            _ => { },
+            CancellationToken.None);
+        var secondResult = await second.WaitAsync(TimeSpan.FromSeconds(2));
+
+        Assert.Equal("bitmap-lease", secondResult.Value);
+        Assert.Equal(1, loaderCalls);
+
+        releaseFirstProjection.SetResult();
+        Assert.Equal("bitmap-lease", (await first).Value);
+    }
+
+    [Fact]
+    public void LifetimeState_DefersDisposalWhileLastConsumerCancellationIsInProgress()
+    {
+        var state = new SharedImageLifetimeState();
+
+        Assert.True(state.BeginCancellation());
+        Assert.False(state.MarkLoaderCompleted());
+        Assert.True(state.FinishCancellation());
+        Assert.False(state.FinishCancellation());
+    }
+
     private static async Task WaitUntilAsync(Func<bool> condition)
     {
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(2));

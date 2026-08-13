@@ -96,8 +96,51 @@ internal sealed class SharedImageLoadCoordinator<TKey, TValue>
         TKey key,
         Func<CancellationToken, Task<TValue>> loader,
         CancellationToken consumerToken)
+        => await GetOrLoadCoreAsync(
+                key,
+                loader,
+                static (value, _) => Task.FromResult(value),
+                releaseValue: null,
+                consumerToken)
+            .ConfigureAwait(false);
+
+    public async Task<SharedImageLoadResult<TResult>> GetOrLoadAsync<TResult>(
+        TKey key,
+        Func<CancellationToken, Task<TValue>> loader,
+        Func<TValue, TResult> projector,
+        Action<TValue> releaseValue,
+        CancellationToken consumerToken)
+        => await GetOrLoadCoreAsync(
+                key,
+                loader,
+                (value, _) => Task.FromResult(projector(value)),
+                releaseValue,
+                consumerToken)
+            .ConfigureAwait(false);
+
+    public async Task<SharedImageLoadResult<TResult>> GetOrLoadAsync<TResult>(
+        TKey key,
+        Func<CancellationToken, Task<TValue>> loader,
+        Func<TValue, CancellationToken, Task<TResult>> projector,
+        Action<TValue> releaseValue,
+        CancellationToken consumerToken)
+        => await GetOrLoadCoreAsync(
+                key,
+                loader,
+                projector,
+                releaseValue,
+                consumerToken)
+            .ConfigureAwait(false);
+
+    private async Task<SharedImageLoadResult<TResult>> GetOrLoadCoreAsync<TResult>(
+        TKey key,
+        Func<CancellationToken, Task<TValue>> loader,
+        Func<TValue, CancellationToken, Task<TResult>> projector,
+        Action<TValue>? releaseValue,
+        CancellationToken consumerToken)
     {
         ArgumentNullException.ThrowIfNull(loader);
+        ArgumentNullException.ThrowIfNull(projector);
         consumerToken.ThrowIfCancellationRequested();
 
         Entry? entry = null;
@@ -108,6 +151,11 @@ internal sealed class SharedImageLoadCoordinator<TKey, TValue>
             if (_entries.TryGetValue(key, out var existing))
             {
                 entry = existing;
+                if ((entry.ReleaseValue is null) != (releaseValue is null))
+                {
+                    throw new InvalidOperationException(
+                        "Consumers for one shared key must use the same value-lifetime mode.");
+                }
             }
             else
             {
@@ -117,7 +165,7 @@ internal sealed class SharedImageLoadCoordinator<TKey, TValue>
                 }
                 else
                 {
-                    entry = new Entry();
+                    entry = new Entry(releaseValue);
                     _entries.Add(key, entry);
                     _activeLoadCount++;
                     _queuedLoadCount++;
@@ -136,7 +184,7 @@ internal sealed class SharedImageLoadCoordinator<TKey, TValue>
         {
             var count = Interlocked.Increment(ref _overflowRejectionCount);
             PerformanceTrace.Mark("ImageOverflowRejected", count);
-            return new SharedImageLoadResult<TValue>(false, default);
+            return new SharedImageLoadResult<TResult>(false, default);
         }
 
         if (shouldStart)
@@ -152,7 +200,9 @@ internal sealed class SharedImageLoadCoordinator<TKey, TValue>
             var value = await acquiredEntry.Completion.Task
                 .WaitAsync(consumerToken)
                 .ConfigureAwait(false);
-            return new SharedImageLoadResult<TValue>(true, value);
+            consumerToken.ThrowIfCancellationRequested();
+            var projected = await projector(value, consumerToken).ConfigureAwait(false);
+            return new SharedImageLoadResult<TResult>(true, projected);
         }
         catch (OperationCanceledException) when (consumerToken.IsCancellationRequested)
         {
@@ -175,7 +225,23 @@ internal sealed class SharedImageLoadCoordinator<TKey, TValue>
         {
             TransitionToRunning();
             var value = await loader(entry.Lifetime.Token).ConfigureAwait(false);
+            var releaseImmediately = false;
+            lock (_sync)
+            {
+                entry.ProducedValue = value;
+                entry.HasProducedValue = true;
+                if (entry.ConsumerCount == 0 && entry.ReleaseValue is not null)
+                {
+                    entry.ValueReleased = true;
+                    releaseImmediately = true;
+                }
+            }
+
             entry.Completion.TrySetResult(value);
+            if (releaseImmediately)
+            {
+                ReleaseValueSafely(entry, value);
+            }
         }
         catch (OperationCanceledException) when (entry.Lifetime.IsCancellationRequested)
         {
@@ -188,13 +254,18 @@ internal sealed class SharedImageLoadCoordinator<TKey, TValue>
         finally
         {
             CompleteEntry(key, entry);
-            entry.Lifetime.Dispose();
+            if (entry.LifetimeState.MarkLoaderCompleted())
+            {
+                entry.Lifetime.Dispose();
+            }
         }
     }
 
     private void ReleaseConsumer(TKey key, Entry entry)
     {
         var cancelUnderlying = false;
+        var releaseProducedValue = false;
+        TValue? producedValue = default;
         lock (_sync)
         {
             if (entry.ConsumerCount <= 0)
@@ -203,21 +274,46 @@ internal sealed class SharedImageLoadCoordinator<TKey, TValue>
             }
 
             entry.ConsumerCount--;
-            if (entry.ConsumerCount == 0 &&
-                !entry.Completion.Task.IsCompleted &&
-                _entries.TryGetValue(key, out var current) &&
-                ReferenceEquals(current, entry))
+            if (entry.ConsumerCount == 0)
             {
-                _entries.Remove(key);
-                cancelUnderlying = true;
+                if (_entries.TryGetValue(key, out var current) &&
+                    ReferenceEquals(current, entry))
+                {
+                    _entries.Remove(key);
+                    cancelUnderlying = !entry.Completion.Task.IsCompleted;
+                }
+
+                if (entry.HasProducedValue &&
+                    !entry.ValueReleased &&
+                    entry.ReleaseValue is not null)
+                {
+                    entry.ValueReleased = true;
+                    producedValue = entry.ProducedValue;
+                    releaseProducedValue = true;
+                }
             }
         }
 
-        if (cancelUnderlying)
+        if (cancelUnderlying && entry.LifetimeState.BeginCancellation())
         {
             var count = Interlocked.Increment(ref _underlyingCancellationCount);
             PerformanceTrace.Mark("ImageUnderlyingCancelled", count);
-            entry.Lifetime.Cancel();
+            try
+            {
+                entry.Lifetime.Cancel();
+            }
+            finally
+            {
+                if (entry.LifetimeState.FinishCancellation())
+                {
+                    entry.Lifetime.Dispose();
+                }
+            }
+        }
+
+        if (releaseProducedValue)
+        {
+            ReleaseValueSafely(entry, producedValue!);
         }
     }
 
@@ -236,7 +332,9 @@ internal sealed class SharedImageLoadCoordinator<TKey, TValue>
     {
         lock (_sync)
         {
-            if (_entries.TryGetValue(key, out var current) && ReferenceEquals(current, entry))
+            if (entry.ConsumerCount == 0 &&
+                _entries.TryGetValue(key, out var current) &&
+                ReferenceEquals(current, entry))
             {
                 _entries.Remove(key);
             }
@@ -262,11 +360,85 @@ internal sealed class SharedImageLoadCoordinator<TKey, TValue>
         PerformanceTrace.Mark("ImageDistinctQueued", queued);
     }
 
+    private static void ReleaseValueSafely(Entry entry, TValue value)
+    {
+        try
+        {
+            entry.ReleaseValue?.Invoke(value);
+        }
+        catch
+        {
+            // Resource cleanup must not fault a successful consumer or a
+            // fire-and-forget loader completion.
+        }
+    }
+
     private sealed class Entry
     {
+        public Entry(Action<TValue>? releaseValue)
+        {
+            ReleaseValue = releaseValue;
+        }
+
         public CancellationTokenSource Lifetime { get; } = new();
+        public SharedImageLifetimeState LifetimeState { get; } = new();
         public TaskCompletionSource<TValue> Completion { get; } =
             new(TaskCreationOptions.RunContinuationsAsynchronously);
         public int ConsumerCount { get; set; }
+        public Action<TValue>? ReleaseValue { get; }
+        public TValue? ProducedValue { get; set; }
+        public bool HasProducedValue { get; set; }
+        public bool ValueReleased { get; set; }
+    }
+}
+
+internal sealed class SharedImageLifetimeState
+{
+    private readonly object _sync = new();
+    private bool _loaderCompleted;
+    private bool _cancellationInProgress;
+    private bool _disposed;
+
+    public bool BeginCancellation()
+    {
+        lock (_sync)
+        {
+            if (_loaderCompleted || _disposed)
+            {
+                return false;
+            }
+
+            _cancellationInProgress = true;
+            return true;
+        }
+    }
+
+    public bool MarkLoaderCompleted()
+    {
+        lock (_sync)
+        {
+            _loaderCompleted = true;
+            return TryClaimDisposeLocked();
+        }
+    }
+
+    public bool FinishCancellation()
+    {
+        lock (_sync)
+        {
+            _cancellationInProgress = false;
+            return TryClaimDisposeLocked();
+        }
+    }
+
+    private bool TryClaimDisposeLocked()
+    {
+        if (!_loaderCompleted || _cancellationInProgress || _disposed)
+        {
+            return false;
+        }
+
+        _disposed = true;
+        return true;
     }
 }

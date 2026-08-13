@@ -113,6 +113,118 @@ public sealed class SectionedIncrementalRowCollectionTests
         Assert.Equal(rows, projection.Rows);
     }
 
+    [Fact]
+    public void TrySynchronizeSection_ReordersAndRemovesOnlyTargetSectionRows()
+    {
+        var projection = new SectionedIncrementalRowCollection<string, int>();
+        projection.Rebuild([
+            new SectionedRowSource<string, int>("live", [1, 2, 3, 4], 2),
+            new SectionedRowSource<string, int>("vod", [10, 11], 2)
+        ]);
+        var liveHeader = projection.Rows[0];
+        var vodHeader = projection.Rows[3];
+        var vodRow = projection.Rows[4];
+        var changes = new List<System.Collections.Specialized.NotifyCollectionChangedEventArgs>();
+        projection.Rows.CollectionChanged += (_, change) => changes.Add(change);
+
+        Assert.True(projection.TrySynchronizeSection("live", [4, 1, 3], columns: 2));
+
+        Assert.Same(liveHeader, projection.Rows[0]);
+        Assert.Equal([4, 1], AssertItems(projection.Rows[1], "live"));
+        Assert.Equal([3], AssertItems(projection.Rows[2], "live"));
+        Assert.Same(vodHeader, projection.Rows[3]);
+        Assert.Same(vodRow, projection.Rows[4]);
+        Assert.Equal(1, projection.FullRebuildCount);
+        Assert.DoesNotContain(
+            changes,
+            change => change.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Reset);
+    }
+
+    [Fact]
+    public void TrySynchronizeSection_UnchangedItems_EmitsNoRowEvents()
+    {
+        var projection = new SectionedIncrementalRowCollection<string, int>();
+        projection.Rebuild([
+            new SectionedRowSource<string, int>("live", [1, 2, 3], 2)
+        ]);
+        var changes = new List<System.Collections.Specialized.NotifyCollectionChangedEventArgs>();
+        projection.Rows.CollectionChanged += (_, change) => changes.Add(change);
+
+        Assert.True(projection.TrySynchronizeSection("live", [1, 2, 3], columns: 2));
+
+        Assert.Empty(changes);
+        Assert.Equal(1, projection.FullRebuildCount);
+    }
+
+    [Fact]
+    public void TrySynchronizeSection_OneChangedTailPreservesUnaffectedRowReference()
+    {
+        var projection = new SectionedIncrementalRowCollection<string, int>();
+        projection.Rebuild([
+            new SectionedRowSource<string, int>("live", [1, 2, 3, 4], 2)
+        ]);
+        var firstRow = projection.Rows[1];
+
+        Assert.True(projection.TrySynchronizeSection("live", [1, 2, 3, 5], columns: 2));
+
+        Assert.Same(firstRow, projection.Rows[1]);
+        Assert.Equal([3, 5], AssertItems(projection.Rows[2], "live"));
+    }
+
+    [Fact]
+    public void TryAppend_EmptyToVisible_RefreshesFollowingMatchingGroupHeader()
+    {
+        var projection = new SectionedIncrementalRowCollection<string, int>();
+        projection.Rebuild([
+            new SectionedRowSource<string, int>("similar-live", [], 2),
+            new SectionedRowSource<string, int>("similar-series", [10], 2)
+        ]);
+        var oldSeriesHeader = projection.Rows[0];
+        var seriesRow = projection.Rows[1];
+        var changes = new List<System.Collections.Specialized.NotifyCollectionChangedEventArgs>();
+        projection.Rows.CollectionChanged += (_, change) => changes.Add(change);
+
+        Assert.True(projection.TryAppend(
+            "similar-live",
+            startingIndex: 0,
+            [1],
+            columns: 2,
+            shouldRefreshFollowingHeader: static (changed, following) =>
+                changed.StartsWith("similar", StringComparison.Ordinal) &&
+                following.StartsWith("similar", StringComparison.Ordinal)));
+
+        AssertHeader(projection.Rows[0], "similar-live");
+        Assert.Equal([1], AssertItems(projection.Rows[1], "similar-live"));
+        AssertHeader(projection.Rows[2], "similar-series");
+        Assert.NotSame(oldSeriesHeader, projection.Rows[2]);
+        Assert.Same(seriesRow, projection.Rows[3]);
+        Assert.DoesNotContain(
+            changes,
+            change => change.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Reset);
+    }
+
+    [Fact]
+    public void TrySynchronizeSection_VisibleToEmpty_RefreshesFollowingMatchingGroupHeader()
+    {
+        var projection = new SectionedIncrementalRowCollection<string, int>();
+        projection.Rebuild([
+            new SectionedRowSource<string, int>("similar-live", [1], 2),
+            new SectionedRowSource<string, int>("similar-series", [10], 2)
+        ]);
+        var oldSeriesHeader = projection.Rows[2];
+        var seriesRow = projection.Rows[3];
+
+        Assert.True(projection.TrySynchronizeSection(
+            "similar-live",
+            [],
+            columns: 2,
+            shouldRefreshFollowingHeader: static (_, _) => true));
+
+        AssertHeader(projection.Rows[0], "similar-series");
+        Assert.NotSame(oldSeriesHeader, projection.Rows[0]);
+        Assert.Same(seriesRow, projection.Rows[1]);
+    }
+
     private static void AssertHeader(
         SectionedCollectionRow<string, int> row,
         string expectedSection)

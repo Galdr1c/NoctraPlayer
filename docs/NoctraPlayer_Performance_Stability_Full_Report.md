@@ -636,6 +636,59 @@ Downloads tarafındaki `Set...IfChanged` yaklaşımına benzer:
 - aynı sıra/ID ise hiç dokunmama,
 - incremental insert/remove.
 
+### P1-02 uygulama durumu — 2026-08-13: Tamamlandı
+
+Altı Search sonuç koleksiyonunun normal commit, kısa sorgu ve profil temizleme yolları
+`ReplaceAll/Clear` yerine `(PlaylistId, Id)` kimliğiyle çalışan artımlı senkronizasyona geçirildi.
+Aynı kimlik ve aynı nesne sırası hiçbir collection olayı üretmiyor; ekleme, taşıma,
+nesne yenileme ve aralık silme yalnız değişen indeksleri bildiriyor. Böylece mevcut kart
+nesneleri ve sanallaştırılmış container'lar korunuyor.
+
+Mobil ve masaüstü section feed'leri de `Move/Replace/Remove` olaylarında tüm satır akışını
+yeniden kurmak yerine yalnız etkilenen bölümün satırlarını senkronize ediyor. Aynı diff'in
+art arda ürettiği collection olayları bölüm başına tek UI işi olarak birleştiriliyor; ilgisiz
+bölümlerin header ve row referansları değişmiyor. Geometri/section yapısı uyumsuzsa mevcut
+tam-rebuild yolu güvenli fallback olarak korunuyor.
+
+Kabul kanıtı:
+
+- P1-02 odak paketi: **66/66 başarılı**.
+- Nihai kararlılık tekrarı: **10/10 tur, toplam 660/660 başarılı**.
+- Gerçek `MainViewModel` ikinci Search sayfası testi mevcut kart referansını korudu,
+  Series koleksiyonuna gereksiz olay göndermedi ve Search koleksiyonlarında `Reset`
+  üretmedi.
+- Kimlik eşitliği, no-op, append, middle insert, move, replacement, range remove,
+  section-local row koruma, boş↔dolu durumda izleyen grup header'ını hedefli yenileme
+  ve contract testleri başarılı.
+- `Noctra.Mobile` gerçek `net10.0` hedefiyle derlendi: **0 hata**; görülen 21 uyarı
+  mevcut nullable/deprecated kod uyarılarıdır ve P1-02 kaynaklı değildir.
+- Bağımsız production re-review sonrası Critical/Important bulgu kalmadı; reviewer
+  odak paketi **35/35** geçti ve değişiklik merge-ready bulundu.
+
+Android canlı kabul:
+
+- Nihai arm64 APK **0 hata** ile üretildi ve `adb install --user 0 -r -d` ile eski
+  uygulama verisi silinmeden kuruldu; `firstInstallTime` değişmedi ve profiller korundu.
+- Gerçek `bein` ve geniş `be` sorgularında sonuç kartları yüklendi. Similar-Series-only
+  geçişinde `Benzer Sonuçlar` başlığı tam **1** kez göründü; normal sonuçlara dönüşte
+  stale/tekrarlı grup başlığı kalmadı.
+- Search sonuçlarında **30** kontrollü kaydırma ve ardından **8/8** Home/launcher
+  arka plan–ön plan turu aynı Android PID (`6679`) ile tamamlandı.
+- PSS: başlangıç `381469 KB`, yüklü sonuçlarda `619541 KB`, kaydırma sonrası
+  `586708 KB`, lifecycle sonrası `547175 KB`; monoton büyüme görülmedi.
+- Temiz logcat penceresinde ANR/crash/OOM/fatal-process eşleşmesi **0**; yeni crash/ANR
+  exit-info kaydı oluşmadı.
+- Tam `Noctra.Tests` koşusu: **2103/2112 başarılı**. Kalan 9 hata download,
+  promo-code, mevcut mobil selection contract'ı ve tek metadata timeout testindeydi;
+  P1-02 odak/contract testi başarısız olmadı.
+- APK SHA-256:
+  `020E17385110538CBBE0945BB2A0EC9ABBC7E7C39ED08EE34588FA864AB6EEED`.
+- Ayrıntılı kanıt: `artifacts/p1-02-live-20260813/acceptance-summary.md`.
+
+Tasarım ve uygulama planı:
+`docs/superpowers/specs/2026-08-13-search-collection-diff-design.md` ve
+`docs/superpowers/plans/2026-08-13-search-collection-diff-plan.md`.
+
 ---
 
 ## P1-03 — Gizli Search ekranı collection değişikliklerini işlemeye devam edebiliyor
@@ -934,6 +987,54 @@ URL generation değiştiği anda:
 ### Çözüm
 
 View/card inactivity ve image cache ownership ayrı tutulmalı.
+
+### P1-07 / P1-12 / P1-13 / P1-14 uygulama durumu — 2026-08-13: Tamamlandı
+
+- `SharedImageResource<T>` ile producer, cache ve görünür consumer sahipliği tek bir
+  ref-count yaşam döngüsünde birleştirildi. Cache eviction/clear, `Image.Source` değişimi ve
+  son consumer bırakımı aynı native bitmap'i tam bir kez dispose ediyor. Owned native byte,
+  peak byte, resource ve consumer lease sayaçları telemetriye eklendi.
+- `ByteBudgetLruCache` eviction callback'i ve kilit altında atomik projected lookup kazandı;
+  cache hit sırasında consumer lease alınması ile eşzamanlı eviction arasındaki pencere
+  kapatıldı. Callback'ler cache kilidi dışında çalışıyor.
+- İndirilen/decode edilen bitmap artık loader içinde doğrudan cache'e yazılmıyor. Yalnız
+  generation, URL, decode bucket, foreground/surface ve görünürlük kontrollerini geçen UI
+  terminal consumer sonucu cache'e publish edebiliyor. Son consumer kalmamışsa geç gelen
+  sonuç cache'i kirletmeden bırakılıyor.
+- Shared loader tamamlandıktan sonra cache publish/UI projection bitene kadar aynı key entry
+  join edilebilir kalıyor; aynı poster için ikinci download penceresi kapatıldı. Son-consumer
+  cancellation ile loader completion arasındaki `CancellationTokenSource.Cancel/Dispose`
+  yarışı ayrı terminal-state bariyeriyle exact-once hale getirildi.
+- URL/effective cache key değiştiğinde eski `Source` ve lease hemen bırakılıyor; aynı effective
+  key için flicker üretmeyen preserve istisnası korunuyor. Detach, surface inactive, geçersiz
+  ölçü ve boş URL yolları kaynağı serbest bırakıyor. Tüm kuyruğa alınmış source apply/clear
+  işlemleri monoton mutation generation doğruluyor; eski UI clear callback'i daha yeni source'u
+  veya same-key preserve kararını silemiyor.
+- Otomatik kanıt: final image/ownership paketi `94/94`; 10 tekrar `940/940`. Tam takım
+  `2080/2099`; kalan `19` hata image değişiklik alanı dışındaki mevcut lisans/promosyon,
+  download, mobil seçim ve tek metadata timeout testindeydi. P1-07/P1-12/P1-13/P1-14 testi
+  başarısız olmadı. `git diff --check` temizdi.
+- Bağımsız son kod incelemesinde Critical/Important bulgu kalmadı. Reviewer; same-key source
+  mutation, completed-entry join ve cancellation/dispose bariyerlerini yeniden inceledi,
+  kendi genişletilmiş paketini `35/35` geçirip değişikliği merge-ready olarak onayladı.
+- Android arm64 Debug build `0` hata ile tamamlandı; bilinen `NU1608`, `XA0141`, nullable ve
+  platform uyarıları devam ediyor. İmzalı APK `180575705` byte, SHA-256
+  `B9E4D5C7A2E9B85D4DE0BD750EA842D27C7FC6A11232DA4A04D0D241EF62E0EB`.
+- APK DBY_W09 cihazına veri silmeden `adb install --user 0 -r -d` ile kuruldu;
+  `firstInstallTime` `2026-08-10 17:51:36` olarak korundu, `lastUpdateTime`
+  `2026-08-13 15:21:06` oldu.
+- Final APK'da gerçek logolu/posterli Live, Movies, Series ve Search sonuç yüzeyleri arasında
+  geçiş ve toplam `73` kontrollü çift yönlü scroll gesture uygulandı. Doğrulanmış `8`
+  launcher background/resume turunda ve testin tamamında PID `31363` sabit kaldı;
+  ANR/crash/OOM eşleşmesi `0`, test penceresine ait yeni process exit kaydı `0` oldu.
+- Bellek kanıtı: içerik ısınma/kaydırma zirvesinde PSS `749247 KB`, Graphics `128016 KB` idi.
+  Inactive/background source bırakımı sonrası Graphics `63696 KB`; son foreground settle'da
+  PSS `662287 KB`, Graphics `48516 KB` oldu. Görsel kaynaklarda monoton retention görülmedi.
+  Native Heap son settle'da `316476 KB` kaldı; bu aşama bitmap/source ownership sorununu
+  kapatıyor fakat uygulamanın yüksek native taban tüketimi sonraki memory/DB/render maddeleri
+  için izlenmeye devam etmeli.
+- Ham ekran/UI kanıtları:
+  `artifacts/p1-07-p1-14-live-20260813/`.
 
 ---
 

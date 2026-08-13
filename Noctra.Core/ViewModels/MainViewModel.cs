@@ -1485,12 +1485,12 @@ public partial class MainViewModel : ObservableObject
         SetItems(DownloadedVodChannels, Enumerable.Empty<Channel>());
 
         // Search Results
-        SetItems(SearchLiveChannels, Enumerable.Empty<Channel>());
-        SetItems(SearchSeriesChannels, Enumerable.Empty<Series>());
-        SetItems(SearchVodChannels, Enumerable.Empty<Channel>());
-        SetItems(SearchSimilarLiveChannels, Enumerable.Empty<Channel>());
-        SetItems(SearchSimilarSeriesChannels, Enumerable.Empty<Series>());
-        SetItems(SearchSimilarVodChannels, Enumerable.Empty<Channel>());
+        SynchronizeSearchItems(SearchLiveChannels, Enumerable.Empty<Channel>());
+        SynchronizeSearchItems(SearchSeriesChannels, Enumerable.Empty<Series>());
+        SynchronizeSearchItems(SearchVodChannels, Enumerable.Empty<Channel>());
+        SynchronizeSearchItems(SearchSimilarLiveChannels, Enumerable.Empty<Channel>());
+        SynchronizeSearchItems(SearchSimilarSeriesChannels, Enumerable.Empty<Series>());
+        SynchronizeSearchItems(SearchSimilarVodChannels, Enumerable.Empty<Channel>());
 
         // Explicitly reset search state (SearchText setter may be suppressed)
         IsSearching = false;
@@ -4133,13 +4133,13 @@ public partial class MainViewModel : ObservableObject
 
             // Clear results immediately for short queries
             IsSearching = false;
-            SearchLiveChannels.Clear();
-            SearchSeriesChannels.Clear();
-            SearchVodChannels.Clear();
+            SynchronizeSearchItems(SearchLiveChannels, Enumerable.Empty<Channel>());
+            SynchronizeSearchItems(SearchSeriesChannels, Enumerable.Empty<Series>());
+            SynchronizeSearchItems(SearchVodChannels, Enumerable.Empty<Channel>());
             SearchSuggestion = string.Empty;
-            SearchSimilarLiveChannels.Clear();
-            SearchSimilarSeriesChannels.Clear();
-            SearchSimilarVodChannels.Clear();
+            SynchronizeSearchItems(SearchSimilarLiveChannels, Enumerable.Empty<Channel>());
+            SynchronizeSearchItems(SearchSimilarSeriesChannels, Enumerable.Empty<Series>());
+            SynchronizeSearchItems(SearchSimilarVodChannels, Enumerable.Empty<Channel>());
             ShowSearchSimilarSection = false;
             ShowSearchEmptyState = false;
             OnPropertyChanged(nameof(ShowSearchIdleState));
@@ -8609,13 +8609,13 @@ public partial class MainViewModel : ObservableObject
                         return Task.CompletedTask;
                     }
 
-                    SetItems(SearchLiveChannels, snapshot.LivePrimary);
-                    SetItems(SearchSeriesChannels, snapshot.SeriesPrimary);
-                    SetItems(SearchVodChannels, snapshot.VodPrimary);
+                    SynchronizeSearchItems(SearchLiveChannels, snapshot.LivePrimary);
+                    SynchronizeSearchItems(SearchSeriesChannels, snapshot.SeriesPrimary);
+                    SynchronizeSearchItems(SearchVodChannels, snapshot.VodPrimary);
                     SearchSuggestion = snapshot.Suggestion;
-                    SetItems(SearchSimilarLiveChannels, snapshot.LiveSimilar);
-                    SetItems(SearchSimilarSeriesChannels, snapshot.SeriesSimilar);
-                    SetItems(SearchSimilarVodChannels, snapshot.VodSimilar);
+                    SynchronizeSearchItems(SearchSimilarLiveChannels, snapshot.LiveSimilar);
+                    SynchronizeSearchItems(SearchSimilarSeriesChannels, snapshot.SeriesSimilar);
+                    SynchronizeSearchItems(SearchSimilarVodChannels, snapshot.VodSimilar);
                     ShowSearchSimilarSection = snapshot.LiveSimilar.Count > 0 ||
                                                snapshot.SeriesSimilar.Count > 0 ||
                                                snapshot.VodSimilar.Count > 0;
@@ -11907,6 +11907,24 @@ public partial class MainViewModel : ObservableObject
             onComplete?.Invoke();
         });
     }
+
+    private void SynchronizeSearchItems(
+        BatchObservableCollection<Channel> collection,
+        IEnumerable<Channel> items)
+        => _dispatcherService.Invoke(() =>
+            IdentityCollectionSynchronizer.Synchronize(
+                collection,
+                items,
+                static item => (item.PlaylistId, item.Id)));
+
+    private void SynchronizeSearchItems(
+        BatchObservableCollection<Series> collection,
+        IEnumerable<Series> items)
+        => _dispatcherService.Invoke(() =>
+            IdentityCollectionSynchronizer.Synchronize(
+                collection,
+                items,
+                static item => (item.PlaylistId, item.Id)));
 
     private void SetDownloadItemsIfChanged(
         BatchObservableCollection<DownloadItem> collection,

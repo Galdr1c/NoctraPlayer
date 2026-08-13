@@ -59,4 +59,20 @@ public sealed class BatchObservableCollectionTests
 
         Assert.Equal(2, collection.CountedItemCount);
     }
+
+    [Fact]
+    public void RemoveRange_EmitsOneIndexedRangeRemoveWithoutReset()
+    {
+        var collection = new BatchObservableCollection<int>([1, 2, 3, 4]);
+        var changes = new List<NotifyCollectionChangedEventArgs>();
+        collection.CollectionChanged += (_, args) => changes.Add(args);
+
+        collection.RemoveRange(index: 1, count: 2);
+
+        var change = Assert.Single(changes);
+        Assert.Equal(NotifyCollectionChangedAction.Remove, change.Action);
+        Assert.Equal(1, change.OldStartingIndex);
+        Assert.Equal([2, 3], change.OldItems!.Cast<int>());
+        Assert.Equal([1, 4], collection);
+    }
 }

@@ -67,8 +67,8 @@ public sealed class MobileCardSection : AvaloniaObject
 /// <summary>
 /// Flattens multiple named card sections into one vertically virtualized list.
 /// Each realized item is either a section heading or a small responsive card row.
-/// Contiguous source appends are applied as indexed range additions so unrelated
-/// section rows keep their identity while history/search paging continues.
+/// Source appends and identity-preserving diffs are projected into only the
+/// affected section so unrelated rows keep their identity during paging.
 /// </summary>
 public sealed class MobileSectionedCardFeed : ListBox
 {
@@ -77,6 +77,8 @@ public sealed class MobileSectionedCardFeed : ListBox
     private readonly SectionedIncrementalRowCollection<MobileCardSection, object> _rowCollection = new();
     private readonly Dictionary<MobileCardSection, INotifyCollectionChanged> _observedSources = new();
     private readonly Queue<PendingAppend> _pendingAppends = new();
+    private readonly Queue<MobileCardSection> _pendingSynchronizations = new();
+    private readonly HashSet<MobileCardSection> _pendingSynchronizationSet = new();
     private readonly object _pendingAppendsLock = new();
     private int _rebuildQueued;
     private int _fullRebuildRequired;
@@ -146,8 +148,13 @@ public sealed class MobileSectionedCardFeed : ListBox
     private void Source_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
         var section = _observedSources.FirstOrDefault(pair => ReferenceEquals(pair.Value, sender)).Key;
-        if (section != null &&
-            e.Action == NotifyCollectionChangedAction.Add &&
+        if (section is null)
+        {
+            QueueFullRebuild();
+            return;
+        }
+
+        if (e.Action == NotifyCollectionChangedAction.Add &&
             e.NewItems is { Count: > 0 } &&
             e.NewStartingIndex >= 0)
         {
@@ -168,7 +175,14 @@ public sealed class MobileSectionedCardFeed : ListBox
             }
         }
 
-        QueueFullRebuild();
+        lock (_pendingAppendsLock)
+        {
+            if (_pendingSynchronizationSet.Add(section))
+            {
+                _pendingSynchronizations.Enqueue(section);
+            }
+        }
+        QueueRefresh();
     }
 
     private void OnInnerScrollChanged(object? sender, ScrollChangedEventArgs e)
@@ -235,7 +249,7 @@ public sealed class MobileSectionedCardFeed : ListBox
             var requiresFullRebuild = Interlocked.Exchange(ref _fullRebuildRequired, 0) == 1;
             if (requiresFullRebuild)
             {
-                ClearPendingAppends();
+                ClearPendingChanges();
                 RebuildRows();
                 return;
             }
@@ -243,12 +257,33 @@ public sealed class MobileSectionedCardFeed : ListBox
             while (TryDequeuePendingAppend(out var append))
             {
                 var columns = CalculateMetrics(GetAvailableWidth(), append.Section.CardKind).Columns;
-                if (_rowCollection.TryAppend(append.Section, append.StartingIndex, append.Items, columns))
+                if (_rowCollection.TryAppend(
+                        append.Section,
+                        append.StartingIndex,
+                        append.Items,
+                        columns,
+                        ShouldRefreshFollowingGroupHeader))
                 {
                     continue;
                 }
 
-                ClearPendingAppends();
+                if (!TrySynchronizeSection(append.Section, columns))
+                {
+                    ClearPendingChanges();
+                    RebuildRows();
+                    return;
+                }
+            }
+
+            while (TryDequeuePendingSynchronization(out var section))
+            {
+                var columns = CalculateMetrics(GetAvailableWidth(), section.CardKind).Columns;
+                if (TrySynchronizeSection(section, columns))
+                {
+                    continue;
+                }
+
+                ClearPendingChanges();
                 RebuildRows();
                 return;
             }
@@ -278,11 +313,40 @@ public sealed class MobileSectionedCardFeed : ListBox
         }
     }
 
-    private void ClearPendingAppends()
+    private bool TryDequeuePendingSynchronization(out MobileCardSection section)
+    {
+        lock (_pendingAppendsLock)
+        {
+            if (!_pendingSynchronizations.TryDequeue(out section!))
+            {
+                return false;
+            }
+
+            _pendingSynchronizationSet.Remove(section);
+            return true;
+        }
+    }
+
+    private bool TrySynchronizeSection(MobileCardSection section, int columns)
+    {
+        var items = section.SourceItems?
+            .Cast<object?>()
+            .Where(item => item != null)
+            .Cast<object>() ?? Enumerable.Empty<object>();
+        return _rowCollection.TrySynchronizeSection(
+            section,
+            items,
+            columns,
+            ShouldRefreshFollowingGroupHeader);
+    }
+
+    private void ClearPendingChanges()
     {
         lock (_pendingAppendsLock)
         {
             _pendingAppends.Clear();
+            _pendingSynchronizations.Clear();
+            _pendingSynchronizationSet.Clear();
         }
     }
 
@@ -343,6 +407,11 @@ public sealed class MobileSectionedCardFeed : ListBox
 
         return true;
     }
+
+    private static bool ShouldRefreshFollowingGroupHeader(
+        MobileCardSection _,
+        MobileCardSection following)
+        => !string.IsNullOrWhiteSpace(following.GroupHeader);
 
     private readonly record struct GridProfile(double MinWidth, double MaxWidth, int MaxColumns);
     private readonly record struct GridMetrics(int Columns, double CardWidth);

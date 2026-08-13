@@ -49,6 +49,8 @@ public sealed class DesktopSectionedCardFeed : ListBox
     private readonly HashSet<DesktopCardSection> _observedSections = new();
     private readonly Dictionary<DesktopCardSection, INotifyCollectionChanged> _observedSources = new();
     private readonly Queue<PendingAppend> _pendingAppends = new();
+    private readonly Queue<DesktopCardSection> _pendingSynchronizations = new();
+    private readonly HashSet<DesktopCardSection> _pendingSynchronizationSet = new();
     private readonly object _pendingLock = new();
     private int _refreshQueued;
     private int _fullRebuildRequired;
@@ -146,9 +148,14 @@ public sealed class DesktopSectionedCardFeed : ListBox
 
     private void Source_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
-        var section = _observedSources.FirstOrDefault(x => ReferenceEquals(x.Value, sender)).Key;
-        if (section is not null &&
-            e.Action == NotifyCollectionChangedAction.Add &&
+        var observed = _observedSources.FirstOrDefault(x => ReferenceEquals(x.Value, sender));
+        if (observed.Key is not { } section)
+        {
+            QueueFullRebuild();
+            return;
+        }
+
+        if (e.Action == NotifyCollectionChangedAction.Add &&
             e.NewItems is { Count: > 0 } &&
             e.NewStartingIndex >= 0)
         {
@@ -164,7 +171,14 @@ public sealed class DesktopSectionedCardFeed : ListBox
             }
         }
 
-        QueueFullRebuild();
+        lock (_pendingLock)
+        {
+            if (_pendingSynchronizationSet.Add(section))
+            {
+                _pendingSynchronizations.Enqueue(section);
+            }
+        }
+        QueueRefresh();
     }
 
     private void OnInnerScrollChanged(object? sender, ScrollChangedEventArgs e)
@@ -231,7 +245,7 @@ public sealed class DesktopSectionedCardFeed : ListBox
             Interlocked.Exchange(ref _refreshQueued, 0);
             if (Interlocked.Exchange(ref _fullRebuildRequired, 0) == 1)
             {
-                ClearPendingAppends();
+                ClearPendingChanges();
                 if (!TryRebuildRows())
                 {
                     Interlocked.Exchange(ref _fullRebuildRequired, 1);
@@ -249,12 +263,40 @@ public sealed class DesktopSectionedCardFeed : ListBox
 
                 var columns = DesktopVirtualizingCardGrid.CalculateMetrics(
                     width, append.Section.CardKind).Columns;
-                if (_rows.TryAppend(append.Section, append.StartingIndex, append.Items, columns))
+                if (_rows.TryAppend(
+                        append.Section,
+                        append.StartingIndex,
+                        append.Items,
+                        columns,
+                        ShouldRefreshFollowingGroupHeader))
                 {
                     continue;
                 }
 
-                ClearPendingAppends();
+                if (!TrySynchronizeSection(append.Section, columns))
+                {
+                    ClearPendingChanges();
+                    TryRebuildRows();
+                    return;
+                }
+            }
+
+            while (TryDequeueSynchronization(out var section))
+            {
+                if (!TryGetStableWidth(out var width))
+                {
+                    Interlocked.Exchange(ref _fullRebuildRequired, 1);
+                    return;
+                }
+
+                var columns = DesktopVirtualizingCardGrid.CalculateMetrics(
+                    width, section.CardKind).Columns;
+                if (TrySynchronizeSection(section, columns))
+                {
+                    continue;
+                }
+
+                ClearPendingChanges();
                 TryRebuildRows();
                 return;
             }
@@ -332,6 +374,11 @@ public sealed class DesktopSectionedCardFeed : ListBox
         return true;
     }
 
+    private static bool ShouldRefreshFollowingGroupHeader(
+        DesktopCardSection _,
+        DesktopCardSection following)
+        => !string.IsNullOrWhiteSpace(following.GroupHeader);
+
     private bool TryDequeue(out PendingAppend append)
     {
         lock (_pendingLock)
@@ -340,11 +387,38 @@ public sealed class DesktopSectionedCardFeed : ListBox
         }
     }
 
-    private void ClearPendingAppends()
+    private bool TryDequeueSynchronization(out DesktopCardSection section)
+    {
+        lock (_pendingLock)
+        {
+            if (!_pendingSynchronizations.TryDequeue(out section!))
+            {
+                return false;
+            }
+
+            _pendingSynchronizationSet.Remove(section);
+            return true;
+        }
+    }
+
+    private bool TrySynchronizeSection(DesktopCardSection section, int columns)
+    {
+        var items = section.SourceItems?.Cast<object?>().Where(x => x is not null).Cast<object>()
+            ?? Enumerable.Empty<object>();
+        return _rows.TrySynchronizeSection(
+            section,
+            items,
+            columns,
+            ShouldRefreshFollowingGroupHeader);
+    }
+
+    private void ClearPendingChanges()
     {
         lock (_pendingLock)
         {
             _pendingAppends.Clear();
+            _pendingSynchronizations.Clear();
+            _pendingSynchronizationSet.Clear();
         }
     }
 

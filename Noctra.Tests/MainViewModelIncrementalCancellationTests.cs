@@ -72,10 +72,16 @@ public sealed class MainViewModelIncrementalCancellationTests
         viewModel.SelectedPlaylist = new Playlist { Id = 7, Name = "Search" };
         await WaitForAsync(() =>
             viewModel.SearchRankingChannelEvaluationCount == 30 &&
-            viewModel.SearchRankingSeriesEvaluationCount == 1);
+            viewModel.SearchRankingSeriesEvaluationCount == 1 &&
+            viewModel.SearchVodChannels.Any(channel => channel.Id == 1));
         Assert.Equal(1, viewModel.SearchRankingSeriesInputVisitCount);
         var vodCollection = viewModel.SearchVodChannels;
         var seriesCollection = viewModel.SearchSeriesChannels;
+        var existingVod = viewModel.SearchVodChannels.First(channel => channel.Id == 1);
+        var vodChanges = new List<System.Collections.Specialized.NotifyCollectionChangedEventArgs>();
+        var seriesChanges = new List<System.Collections.Specialized.NotifyCollectionChangedEventArgs>();
+        vodCollection.CollectionChanged += (_, change) => vodChanges.Add(change);
+        seriesCollection.CollectionChanged += (_, change) => seriesChanges.Add(change);
 
         await viewModel.LoadMoreChannelsAsync();
         await WaitForAsync(() => viewModel.SearchRankingChannelEvaluationCount == 31);
@@ -85,7 +91,12 @@ public sealed class MainViewModelIncrementalCancellationTests
         Assert.Equal(1, viewModel.SearchRankingSeriesInputVisitCount);
         Assert.Same(vodCollection, viewModel.SearchVodChannels);
         Assert.Same(seriesCollection, viewModel.SearchSeriesChannels);
+        Assert.Same(existingVod, viewModel.SearchVodChannels.First(channel => channel.Id == 1));
         Assert.Contains(viewModel.SearchVodChannels, channel => channel.Id == 31);
+        Assert.DoesNotContain(
+            vodChanges,
+            change => change.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Reset);
+        Assert.Empty(seriesChanges);
     }
 
     [Fact]

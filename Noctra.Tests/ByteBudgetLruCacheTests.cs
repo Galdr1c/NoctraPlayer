@@ -59,4 +59,67 @@ public sealed class ByteBudgetLruCacheTests
         Assert.True(cache.TryGet("same", out var value));
         Assert.Equal("first", value);
     }
+
+    [Fact]
+    public void Eviction_ReleasesRemovedValueAfterCacheMutation()
+    {
+        var released = new List<string>();
+        var cache = new ByteBudgetLruCache<string, string>(
+            maxBytes: 4,
+            maxEntries: 1,
+            onValueRemoved: value => released.Add(value));
+
+        Assert.True(cache.TryAdd("old", "old-value", sizeBytes: 4));
+        Assert.True(cache.TryAdd("new", "new-value", sizeBytes: 4));
+
+        Assert.Equal(["old-value"], released);
+        Assert.Equal(["new"], cache.Keys);
+    }
+
+    [Fact]
+    public void ProjectedLookup_AcquiresConsumerBeforeEvictionReleasesCacheOwner()
+    {
+        var releases = 0;
+        var resource = new SharedImageResource<string>("bitmap", 4, _ => releases++);
+        var cacheLease = resource.AcquireCacheLease();
+        var cache = new ByteBudgetLruCache<string, SharedImageLease<string>>(
+            maxBytes: 4,
+            maxEntries: 1,
+            onValueRemoved: lease => lease.Dispose());
+        Assert.True(cache.TryAdd("image", cacheLease, 4));
+        resource.Dispose();
+
+        Assert.True(cache.TryGet(
+            "image",
+            cached => resource.AcquireConsumerLease(),
+            out var consumer));
+
+        Assert.True(cache.TryAdd(
+            "replacement",
+            new SharedImageResource<string>("other", 4, _ => { }).AcquireCacheLease(),
+            4));
+
+        Assert.Equal(0, releases);
+        Assert.Equal("bitmap", consumer.Value);
+
+        consumer.Dispose();
+        Assert.Equal(1, releases);
+    }
+
+    [Fact]
+    public void RemovalCallbackFailure_DoesNotMisreportCompletedCacheMutation()
+    {
+        var cache = new ByteBudgetLruCache<string, string>(
+            maxBytes: 1,
+            maxEntries: 1,
+            onValueRemoved: _ => throw new InvalidOperationException("cleanup failed"));
+        Assert.True(cache.TryAdd("old", "old-value", 1));
+
+        var added = cache.TryAdd("new", "new-value", 1);
+
+        Assert.True(added);
+        Assert.False(cache.TryGet("old", out _));
+        Assert.True(cache.TryGet("new", out var current));
+        Assert.Equal("new-value", current);
+    }
 }
