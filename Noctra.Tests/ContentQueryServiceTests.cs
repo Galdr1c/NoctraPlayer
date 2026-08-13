@@ -11,25 +11,41 @@ public sealed class ContentQueryServiceTests
     public async Task GetChannelGroupMetadataAsync_ForwardsCancellationToken()
     {
         using var cancellationSource = new CancellationTokenSource();
+        await using var scheduler = new DatabaseWorkScheduler();
         var playlistService = new Mock<IPlaylistService>();
+        var providerStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        CancellationToken observedToken = default;
         playlistService
-            .Setup(service => service.GetChannelGroupMetadataAsync(42, cancellationSource.Token))
-            .ReturnsAsync((0, new List<string>(), new List<string>(), new List<string>(), new List<string>()));
+            .Setup(service => service.GetChannelGroupMetadataAsync(42, It.IsAny<CancellationToken>()))
+            .Returns<int, CancellationToken>(async (_, token) =>
+            {
+                observedToken = token;
+                providerStarted.TrySetResult();
+                await Task.Delay(Timeout.InfiniteTimeSpan, token);
+                return (0, new List<string>(), new List<string>(), new List<string>(), new List<string>());
+            });
         var service = new ContentQueryService(
             playlistService.Object,
             Mock.Of<IMediaService>(),
             Mock.Of<ISettingsService>(),
-            Mock.Of<Microsoft.EntityFrameworkCore.IDbContextFactory<Noctra.Data.AppDbContext>>());
+            Mock.Of<Microsoft.EntityFrameworkCore.IDbContextFactory<Noctra.Data.AppDbContext>>(),
+            scheduler);
 
-        await service.GetChannelGroupMetadataAsync(42, cancellationSource.Token);
+        var query = service.GetChannelGroupMetadataAsync(42, cancellationSource.Token);
+        await providerStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        cancellationSource.Cancel();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => query);
 
         playlistService.VerifyAll();
+        Assert.True(observedToken.CanBeCanceled);
+        Assert.True(observedToken.IsCancellationRequested);
     }
 
     [Fact]
     public async Task GetChannelPageAsync_AppliesHiddenGroupsForRequestedContentType()
     {
         using var cancellationSource = new CancellationTokenSource();
+        await using var scheduler = new DatabaseWorkScheduler();
         var playlistService = new Mock<IPlaylistService>();
         var mediaService = new Mock<IMediaService>();
         var settingsService = new Mock<ISettingsService>();
@@ -50,7 +66,7 @@ public sealed class ContentQueryServiceTests
                 true,
                 ChannelSortOrder.NameAsc,
                 It.Is<List<string>>(groups => groups.SequenceEqual(new[] { "Hidden live" })),
-                cancellationSource.Token))
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync([
                 new Channel
                 {
@@ -63,7 +79,8 @@ public sealed class ContentQueryServiceTests
             playlistService.Object,
             mediaService.Object,
             settingsService.Object,
-            Mock.Of<Microsoft.EntityFrameworkCore.IDbContextFactory<Noctra.Data.AppDbContext>>());
+            Mock.Of<Microsoft.EntityFrameworkCore.IDbContextFactory<Noctra.Data.AppDbContext>>(),
+            scheduler);
 
         var result = await service.GetChannelPageAsync(new ContentPageRequest(
             PlaylistId: 42,

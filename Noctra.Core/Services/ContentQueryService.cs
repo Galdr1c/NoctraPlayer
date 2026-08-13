@@ -11,17 +11,20 @@ public sealed class ContentQueryService : IContentQueryService
     private readonly IMediaService _mediaService;
     private readonly ISettingsService _settingsService;
     private readonly IDbContextFactory<AppDbContext> _contextFactory;
+    private readonly IDatabaseWorkScheduler _databaseWorkScheduler;
 
     public ContentQueryService(
         IPlaylistService playlistService,
         IMediaService mediaService,
         ISettingsService settingsService,
-        IDbContextFactory<AppDbContext> contextFactory)
+        IDbContextFactory<AppDbContext> contextFactory,
+        IDatabaseWorkScheduler databaseWorkScheduler)
     {
         _playlistService = playlistService;
         _mediaService = mediaService;
         _settingsService = settingsService;
         _contextFactory = contextFactory;
+        _databaseWorkScheduler = databaseWorkScheduler;
     }
 
     public Task<(int TotalCount, List<string> AllGroups, List<string> LiveGroups, List<string> VodGroups, List<string> SeriesGroups)>
@@ -29,7 +32,7 @@ public sealed class ContentQueryService : IContentQueryService
             int playlistId,
             CancellationToken cancellationToken = default)
         => RunQueryAsync(
-            () => _playlistService.GetChannelGroupMetadataAsync(playlistId, cancellationToken),
+            token => _playlistService.GetChannelGroupMetadataAsync(playlistId, token),
             cancellationToken);
 
     public Task<List<Channel>> GetChannelPageAsync(
@@ -41,7 +44,7 @@ public sealed class ContentQueryService : IContentQueryService
             : null;
 
         return RunQueryAsync(
-            () => _playlistService.GetChannelsFilteredPageAsync(
+            token => _playlistService.GetChannelsFilteredPageAsync(
                 request.PlaylistId,
                 request.Skip,
                 request.Take,
@@ -51,7 +54,7 @@ public sealed class ContentQueryService : IContentQueryService
                 request.OnlyFavorites,
                 request.SortOrder,
                 hiddenGroups,
-                cancellationToken),
+                token),
             cancellationToken);
     }
 
@@ -59,14 +62,14 @@ public sealed class ContentQueryService : IContentQueryService
         int playlistId,
         CancellationToken cancellationToken = default)
         => RunQueryAsync(
-            () => _mediaService.GetSeriesListAsync(playlistId, cancellationToken),
+            token => _mediaService.GetSeriesListAsync(playlistId, token),
             cancellationToken);
 
     public Task<List<int>> GetProfilePlaylistIdsAsync(
         int profileId,
         CancellationToken cancellationToken = default)
         => RunQueryAsync(
-            () => GetProfilePlaylistIdsCoreAsync(profileId, cancellationToken),
+            token => GetProfilePlaylistIdsCoreAsync(profileId, token),
             cancellationToken);
 
     private async Task<List<int>> GetProfilePlaylistIdsCoreAsync(
@@ -99,12 +102,12 @@ public sealed class ContentQueryService : IContentQueryService
         int take,
         CancellationToken cancellationToken = default)
         => RunQueryAsync(
-            () => GetHistoryPageCoreAsync(
+            token => GetHistoryPageCoreAsync(
                 profileId,
                 profilePlaylistIds,
                 skip,
                 take,
-                cancellationToken),
+                token),
             cancellationToken);
 
     private async Task<List<Channel>> GetHistoryPageCoreAsync(
@@ -180,8 +183,8 @@ public sealed class ContentQueryService : IContentQueryService
         return result;
     }
 
-    private static Task<T> RunQueryAsync<T>(
-        Func<Task<T>> query,
+    private Task<T> RunQueryAsync<T>(
+        Func<CancellationToken, Task<T>> query,
         CancellationToken cancellationToken)
     {
         if (cancellationToken.IsCancellationRequested)
@@ -190,9 +193,14 @@ public sealed class ContentQueryService : IContentQueryService
         }
 
         // Microsoft.Data.Sqlite executes substantial portions of its async API
-        // synchronously. Establish an explicit worker boundary so a COUNT/GROUP BY
-        // or first-page query cannot monopolize the Avalonia UI thread.
-        return Task.Run(query, cancellationToken);
+        // synchronously. The shared scheduler establishes a worker boundary and
+        // bounds app-wide read pressure so navigation cannot create an unbounded
+        // ThreadPool/SQLite backlog.
+        return _databaseWorkScheduler.ScheduleAsync(
+            DatabaseWorkLane.Read,
+            DatabaseWorkPriority.Interactive,
+            query,
+            cancellationToken);
     }
 
     private List<string> GetHiddenGroups(ChannelType? type)

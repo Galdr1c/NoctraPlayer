@@ -33,7 +33,35 @@ public sealed class DependencyInjectionTests
         Assert.NotNull(provider.GetRequiredService<IEpgService>());
         Assert.NotNull(provider.GetRequiredService<IMetadataService>());
         Assert.NotNull(provider.GetRequiredService<ISettingsService>());
+        Assert.Same(
+            provider.GetRequiredService<IDatabaseWorkScheduler>(),
+            provider.GetRequiredService<IDatabaseWorkScheduler>());
+        Assert.Same(
+            DatabaseWorkScheduler.Shared,
+            provider.GetRequiredService<IDatabaseWorkScheduler>());
+        Assert.NotNull(provider.GetRequiredService<IContentQueryService>());
     }
+
+    [Fact]
+    public void DesktopExit_StopsDatabaseSchedulerBeforeDisposingServiceProvider()
+    {
+        var appSource = File.ReadAllText(ProjectSource("Noctra.Avalonia", "App.axaml.cs"));
+        var exitHandler = appSource[appSource.IndexOf("desktop.Exit +=", StringComparison.Ordinal)..];
+        var schedulerDispose = exitHandler.IndexOf("databaseWorkScheduler.Dispose()", StringComparison.Ordinal);
+        var providerDispose = exitHandler.IndexOf("disposableServices.Dispose()", StringComparison.Ordinal);
+
+        Assert.True(schedulerDispose >= 0, "Desktop exit must stop the process database scheduler.");
+        Assert.True(
+            providerDispose > schedulerDispose,
+            "Database scheduler must stop before dependent services are disposed.");
+    }
+
+    private static string ProjectSource(string project, string file)
+        => Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory,
+            "..", "..", "..", "..",
+            project,
+            file));
 
     private sealed class TestDispatcherService : IDispatcherService
     {

@@ -162,7 +162,8 @@ public sealed class ContentQueryServiceHistoryTests : IDisposable
             Mock.Of<IPlaylistService>(),
             Mock.Of<IMediaService>(),
             settingsService.Object,
-            contextFactory.Object);
+            contextFactory.Object,
+            DatabaseWorkScheduler.Shared);
     }
 
     private static void SeedProfile(AppDbContext db, int profileId)

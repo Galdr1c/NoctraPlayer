@@ -278,6 +278,23 @@ public partial class App : Application
                 {
                     try
                     {
+                        // The process-wide scheduler is registered as an existing
+                        // instance so DI and compatibility fallbacks share one pool.
+                        // Existing instances are not container-owned; explicitly
+                        // stop admission and cancel DB work before dependent services
+                        // are disposed. Dispose is intentionally non-blocking here.
+                        if (Services.GetService<IDatabaseWorkScheduler>() is IDisposable databaseWorkScheduler)
+                        {
+                            databaseWorkScheduler.Dispose();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        StartupLogger.LogError("Database scheduler shutdown", ex);
+                    }
+
+                    try
+                    {
                         // ClearHistoryOnExit cleanup was moved to the startup warmup
                         // sequence (Step 3.5) — shutdown no longer performs any
                         // database work, which was a prime suspect for WER hang

@@ -1124,6 +1124,46 @@ DB write lane: 1
 interactive query priority > background
 ```
 
+### Uygulama durumu — 13 Ağustos 2026: TAMAMLANDI
+
+- Process genelinde tek `IDatabaseWorkScheduler` oluşturuldu; DI ve `MainViewModel`
+  uyumluluk yolu aynı process-owned örneği kullanıyor.
+- Kuyruk kapasitesi sınırlandı. Okuma lane'i en fazla `3`, yazma lane'i en fazla `1`
+  eşzamanlı iş çalıştırıyor.
+- Interactive/background öncelik kuyrukları eklendi; bounded interactive burst ile
+  background işlerin starvation'a uğramaması sağlandı.
+- `ContentQueryService` içindeki sorgu başına `Task.Run` kaldırıldı. Paging, Search,
+  History, seri listesi ve grup metadata sorguları interactive read lane üzerinden
+  çalışıyor; scheduler token'ı EF/provider çağrısına kadar taşınıyor.
+- Bekleyen iptal, aktif iptal, hata yayılımı, kapasite reddi, çift/concurrent dispose,
+  Schedule/Cancel/Dispose yarışları ve exception fırlatan cancellation callback'i için
+  exact-terminal garantisi eklendi.
+- Masaüstü çıkışında scheduler yeni admission'ı kapatıp bekleyen/aktif DB işlerini
+  provider disposal'dan önce non-blocking olarak iptal ediyor.
+- Telemetry: `db.queue.pending.high_water`, `db.queue.read.active.high_water`,
+  `db.queue.write.active.high_water`, scheduled/completed/cancelled/failed/rejected ve
+  shutdown-callback-failure sayaçları eklendi.
+
+Doğrulama:
+
+- Odaklı scheduler + ContentQuery + DI + shutdown paketi: `16/16` geçti.
+- Yarış stresi: `30/30` tekrar, sıfır hata.
+- Bağımsız production review: kalan Critical/Important yok; kod merge-ready.
+- Tüm regresyon: `2113/2120` geçti. Kalan `7` hata P1-18 dosyalarının dışında,
+  önceden bilinen promo-code, mobile selection, download ve entitlement testleri.
+- `Noctra.Mobile` net10 derlemesi: `0` hata (`21` mevcut uyarı).
+- Android arm64 APK derlemesi: `0` hata (`92` mevcut paket/nullable/platform uyarısı).
+- APK mevcut veri silinmeden `adb install -r` ile kuruldu; `firstInstallTime`
+  `2026-08-10 17:51:36` olarak korundu.
+- Gerçek katalogla `36` hızlı Live/Movies/Series geçişi, `25` paging scroll ve `20`
+  background/foreground döngüsü tamamlandı; Android PID `12816` boyunca değişmedi.
+- Son bellek örneği: PSS `587165 KB`, native heap `311744 KB`, graphics `64596 KB`.
+- Temiz logcat taramasında ANR/crash/OOM/fatal-process: `0`; exit-info'da yeni ANR/crash
+  kaydı yok, yalnız beklenen paket kurulumuna ait `USER REQUESTED` stop mevcut.
+
+Sonuç: P1-18 kapatıldı. DB/EPG aşamasındaki sıradaki açık madde **P1-19 — SQLite
+PRAGMA connection-open standardizasyonu**.
+
 ---
 
 ## P1-19 — SQLite PRAGMA tuning'in bir kısmı yalnız schema-fixup connection'ında uygulanıyor olabilir

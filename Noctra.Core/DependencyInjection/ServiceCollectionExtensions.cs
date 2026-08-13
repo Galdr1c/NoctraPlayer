@@ -67,6 +67,10 @@ public static class ServiceCollectionExtensions
                 serviceProvider.GetService<ILogger<PlaylistService>>()));
         services.AddSingleton<IPlaylistOrganizerService, PlaylistOrganizerService>();
         services.AddSingleton<IMediaService, MediaService>();
+        // Register the process-owned instance directly. MainViewModel's compatibility
+        // fallback resolves the same object, so no second read/write pool can bypass
+        // the global concurrency limits. Instance registrations are not container-owned.
+        services.AddSingleton<IDatabaseWorkScheduler>(DatabaseWorkScheduler.Shared);
         services.AddSingleton<IContentQueryService, ContentQueryService>();
         services.AddSingleton<IChannelService, ChannelService>();
         services.AddSingleton<IWatchHistoryService, WatchHistoryService>();

@@ -470,7 +470,8 @@ public partial class MainViewModel : ObservableObject
         IStorageInfoService? storageInfo = null,
         ReviewPromptTracker? reviewPromptTracker = null,
         StartupWorkCoordinator? startupWorkCoordinator = null,
-        ITmdbEnrichmentScheduler? tmdbEnrichmentScheduler = null)
+        ITmdbEnrichmentScheduler? tmdbEnrichmentScheduler = null,
+        IDatabaseWorkScheduler? databaseWorkScheduler = null)
     {
         _localizationService = localizationService;
         _settingsService = settingsService;
@@ -483,7 +484,12 @@ public partial class MainViewModel : ObservableObject
         _channelService = channelService;
         _mediaService = mediaService;
         _contentQueryService = contentQueryService ??
-            new ContentQueryService(playlistService, mediaService, settingsService, contextFactory);
+            new ContentQueryService(
+                playlistService,
+                mediaService,
+                settingsService,
+                contextFactory,
+                databaseWorkScheduler ?? DatabaseWorkScheduler.Shared);
         _epgService = epgService;
         _playlistService = playlistService;
         _importJobStatusCoordinator = new ImportJobStatusCoordinator(importJobService, logger);
