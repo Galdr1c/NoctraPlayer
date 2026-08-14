@@ -64,7 +64,7 @@
          EPG segment from covering the next segment on the timeline. -->
     <Style Selector="Button.epgProgramHitTarget">
       <Setter Property="FocusAdorner" Value="{x:Null}" />
-      <Setter Property="Height" Value="52" />
+      <Setter Property="Height" Value="56" />
       <Setter Property="MinWidth" Value="0" />
       <Setter Property="Padding" Value="0" />
       <Setter Property="HorizontalContentAlignment" Value="Left" />
@@ -214,7 +214,7 @@
               <Border Classes="AccentBadge"
                       IsVisible="{Binding Guide.SelectedProgram.IsCurrentProgram, ElementName=EpgPanelRoot}">
                 <TextBlock Text="{loc:Translate Player.Epg.Live}"
-                           FontSize="{DynamicResource FOverline}"                           FontWeight="Bold"
+                           FontSize="{DynamicResource FOverline}" FontWeight="Bold"
                            Foreground="{DynamicResource TextPrimaryBrush}" />
               </Border>
             </StackPanel>
@@ -500,7 +500,7 @@
                         <Grid Width="{Binding CanvasWidth}"
                               Height="{Binding RowHeight}"
                               ClipToBounds="True">
-                          <Border Background="{DynamicResource TextSelectionBrush}"
+                          <Border Background="Transparent"
                                   Opacity="0.26"
                                   IsVisible="{Binding IsPlayingChannel}" />
                           <Border BorderBrush="{DynamicResource BorderBrush}"

@@ -198,7 +198,7 @@
               Command="{Binding OpenActionsPanelCommand}"
               ToolTip.Tip="{loc:Translate Mobile.Nav.More}"
               AutomationProperties.Name="{loc:Translate Mobile.Nav.More}">
-        <icons:MaterialIcon Kind="DotsHorizontal"
+        <icons:MaterialIcon Kind="Tune"
                             Width="24" Height="24"
                             Foreground="{DynamicResource PlayerOverlayTextBrush}" />
       </Button>

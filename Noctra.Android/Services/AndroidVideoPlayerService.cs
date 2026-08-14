@@ -36,6 +36,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
 
     private IExoPlayer? _exoPlayer;
     private PlayerListener? _playerListener;
+    private FrameFpsListener? _fpsListener;
     private string? _currentUrl;
     private PlaybackMediaMetadata _mediaMetadata = new("Noctra");
     private bool _isDisposed;
@@ -204,6 +205,8 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
         builder.SetAudioAttributes(audioAttributes, true);
         
         _exoPlayer = builder.Build();
+        _fpsListener = new FrameFpsListener(this);
+        _exoPlayer.SetVideoFrameMetadataListener(_fpsListener);
         _playerListener = new PlayerListener(this);
         _exoPlayer.AddListener(_playerListener);
         PlayerChanged?.Invoke(_exoPlayer);
@@ -390,6 +393,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
                 {
                     var mediaSource = mediaSourceFactory.CreateMediaSource(mediaItem);
                     _exoPlayer.SetMediaSource(mediaSource);
+                    _fpsListener?.Reset();
                 }
                 catch (Exception ex) when (IsMissingMedia3SourceModuleException(ex))
                 {
@@ -934,6 +938,10 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
                 _playerListener = null;
             }
 
+            _exoPlayer.SetVideoFrameMetadataListener(null);
+            _fpsListener?.Dispose();
+            _fpsListener = null;
+
             _exoPlayer.ClearVideoSurface();
             _exoPlayer.Release();
             _exoPlayer.Dispose();
@@ -1344,6 +1352,10 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
             {
                 quality.Fps = (int)Math.Round(videoFormat.FrameRate);
             }
+            else if (_fpsListener?.MeasuredFps > 0)
+            {
+                quality.Fps = _fpsListener.MeasuredFps;
+            }
         }
 
         if (audioFormat is not null)
@@ -1364,6 +1376,23 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
         }
 
         QualityDetected?.Invoke(this, quality);
+    }
+
+    /// <summary>
+    /// Runtime FPS ölçümü güncellenince kalite bildirimini yeniden yayınlar.
+    /// </summary>
+    private void OnMeasuredFpsChanged(int fps)
+    {
+        RunOnMainThread(() =>
+        {
+            if (_exoPlayer is null || _isDisposed)
+            {
+                return;
+            }
+
+            LogDebug($"Measured runtime FPS: {fps}");
+            UpdateStreamQuality();
+        });
     }
 
     private static string MimeToCodecName(string mime)
@@ -1645,6 +1674,10 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
         public void OnIsPlayingChanged(bool isPlaying)
         {
             _service._isPlaying = isPlaying;
+            if (!isPlaying)
+            {
+                _service._fpsListener?.CompletePartialMeasurement();
+            }
             if (_service._state != PlaybackState.Buffering)
             {
                 _service._state = isPlaying ? PlaybackState.Playing : PlaybackState.Paused;
@@ -1748,6 +1781,118 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
             {
                 _service._videoSurfaceService.SetVideoSize(videoSize.Width, videoSize.Height);
             }
+        }
+    }
+
+    // ── Runtime FPS Measurement ─────────────────────────────────────────────
+    /// <summary>
+    /// ExoPlayer metadata'da kare hızı bildirmediğinde (HLS/TS akışlarında yaygın)
+    /// gerçek kare hızını ölçmek için her işlenen karede sayaç tutar ve saniyelik
+    /// pencere dolunca tahmini FPS'i hesaplar.
+    /// </summary>
+    private sealed class FrameFpsListener : Java.Lang.Object, AndroidX.Media3.ExoPlayer.Video.IVideoFrameMetadataListener
+    {
+        private readonly AndroidVideoPlayerService _service;
+        private const int RequiredStableWindows = 3;
+        private long _frameCount;
+        private long _windowStartNs;
+        private int _measuredFps;
+        private int _lastWindowFps;
+        private int _stableWindowCount;
+        private bool _isMeasured;
+
+        public int MeasuredFps => _measuredFps;
+
+        public FrameFpsListener(AndroidVideoPlayerService service)
+        {
+            _service = service;
+            Reset();
+        }
+
+        public void OnVideoFrameAboutToBeRendered(long presentationTimeUs, long releaseTimeNs, AndroidX.Media3.Common.Format? format, global::Android.Media.MediaFormat? mediaFormat)
+        {
+            if (_isMeasured)
+            {
+                return;
+            }
+
+            _frameCount++;
+
+            var nowNs = SystemClock.ElapsedRealtimeNanos();
+            var elapsedNs = nowNs - _windowStartNs;
+            if (elapsedNs < 1_000_000_000L)
+            {
+                return;
+            }
+
+            var fps = (int)Math.Round(_frameCount * 1_000_000_000.0 / elapsedNs);
+            _frameCount = 0;
+            _windowStartNs = nowNs;
+
+            if (fps <= 0)
+            {
+                _measuredFps = 0;
+                _lastWindowFps = 0;
+                _stableWindowCount = 0;
+                return;
+            }
+
+            if (fps != _lastWindowFps)
+            {
+                _lastWindowFps = fps;
+                _stableWindowCount = 1;
+                return;
+            }
+
+            _stableWindowCount++;
+            if (_stableWindowCount < RequiredStableWindows)
+            {
+                return;
+            }
+
+            _measuredFps = fps;
+            _isMeasured = true;
+            _service.OnMeasuredFpsChanged(fps);
+        }
+
+        /// <summary>
+        /// Oynatma durdurulduğunda henüz tam pencere dolmamışsa, o ana kadar
+        /// işlenen karelerden kısmi bir tahmin üretir. Video hiç oynamadıysa
+        /// (hiç kare işlenmediyse) ölçüm yapılamaz ve mevcut değer korunur.
+        /// </summary>
+        public void CompletePartialMeasurement()
+        {
+            if (_isMeasured || _frameCount <= 0)
+            {
+                return;
+            }
+
+            var nowNs = SystemClock.ElapsedRealtimeNanos();
+            var elapsedNs = nowNs - _windowStartNs;
+            if (elapsedNs < 300_000_000L)
+            {
+                return;
+            }
+
+            var fps = (int)Math.Round(_frameCount * 1_000_000_000.0 / elapsedNs);
+            if (fps <= 0)
+            {
+                return;
+            }
+
+            _measuredFps = fps;
+            _isMeasured = true;
+            _service.OnMeasuredFpsChanged(fps);
+        }
+
+        public void Reset()
+        {
+            _frameCount = 0;
+            _windowStartNs = SystemClock.ElapsedRealtimeNanos();
+            _measuredFps = 0;
+            _lastWindowFps = 0;
+            _stableWindowCount = 0;
+            _isMeasured = false;
         }
     }
 }
