@@ -163,20 +163,6 @@
                    Foreground="{DynamicResource PlayerOverlaySecondaryTextBrush}"
                    Opacity="0.70"
                    VerticalAlignment="Center" />
-        <Button Background="{DynamicResource ErrorBrush}"
-                CornerRadius="3"
-                Padding="6,1,6,2"
-                VerticalAlignment="Center"
-                BorderThickness="0"
-                IsVisible="{Binding CanShowGoToLiveButton}"
-                Command="{Binding GoToLiveCommand}"
-                ToolTip.Tip="{loc:Translate Player.Mobile.GoToLive}"
-                AutomationProperties.Name="{loc:Translate Player.Accessibility.GoToLive}">
-          <TextBlock Text="{loc:Translate Player.Mobile.GoToLive}"
-                     Foreground="{DynamicResource PlayerOverlayTextBrush}"
-                     FontSize="11"
-                     FontWeight="Bold" />
-        </Button>
       </StackPanel>
 
       <Button Grid.Column="6"

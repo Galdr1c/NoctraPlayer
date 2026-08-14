@@ -121,7 +121,6 @@ public class LocalizationServiceTests
             "Player.Accessibility.RemoveFavorite",
             "Player.Accessibility.Lock",
             "Player.Accessibility.Unlock",
-            "Player.Accessibility.GoToLive",
             "Player.Accessibility.Timeline.Progress",
             "Player.Accessibility.Timeline.UnknownDuration",
             "Player.Accessibility.Timeline.LiveProgress",

@@ -1150,9 +1150,8 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     private string _downloadStatusMessage = string.Empty;
 
-    public bool CanShowDownloadButton => CurrentChannel != null && !IsLiveContent && !IsDownloadedPlayback;
+public bool CanShowDownloadButton => CurrentChannel != null && !IsLiveContent && !IsDownloadedPlayback;
     public bool CanShowInfoButton => !IsDownloadedPlayback;
-    public bool CanShowGoToLiveButton => IsLiveContent && Duration > 0;
 
     public bool CanDownloadCurrentContent =>
         CanShowDownloadButton &&
@@ -1900,28 +1899,6 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         RememberManualTrackSelection(isAudio: false, id);
         RestartAutoHideTimer();
     }
-
-    /// <summary>
-    /// Canlı yayında kullanıcının şimdiki zamana (live edge) atlaması.
-    /// Stream gecikince pozisyon duration'a yaklaşır; bu komut doğrudan live edge'e götürür.
-    /// </summary>
-    [RelayCommand(CanExecute = nameof(CanGoToLive))]
-    private async Task GoToLiveAsync()
-    {
-        if (!IsLiveContent || Duration <= 0)
-        {
-            return;
-        }
-
-        LogDebug("UI Action: GoToLive clicked");
-        // Live edge: duration'dan birkaç saniye geri (tam uca gitmek buffer'ı sıfırlayıp takılabilir).
-        var liveEdge = Math.Max(0, Duration - 3);
-        await _videoPlayerService.HardSeekAsync(liveEdge);
-        Position = liveEdge;
-        RestartAutoHideTimer();
-    }
-
-    private bool CanGoToLive() => IsLiveContent && Duration > 0;
 
     /// <summary>
     /// Altyazı hızlı aç/kapat: track seçiliyse kapat (-1), kapalıysa son seçili track'i geri yükle.
@@ -2841,8 +2818,6 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
     partial void OnDurationChanged(double value)
     {
-        OnPropertyChanged(nameof(CanShowGoToLiveButton));
-        GoToLiveCommand.NotifyCanExecuteChanged();
     }
 
     partial void OnCurrentProgramChanged(EpgProgram? value)
@@ -2868,10 +2843,8 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(IsBufferShieldVisible));
         OnPropertyChanged(nameof(CanShowDownloadButton));
         OnPropertyChanged(nameof(CanDownloadCurrentContent));
-        OnPropertyChanged(nameof(CanShowGoToLiveButton));
         RaiseInfoPanelMetadataChanged();
         DownloadCurrentContentCommand.NotifyCanExecuteChanged();
-        GoToLiveCommand.NotifyCanExecuteChanged();
     }
 
     partial void OnIsSeriesContentChanged(bool value)
