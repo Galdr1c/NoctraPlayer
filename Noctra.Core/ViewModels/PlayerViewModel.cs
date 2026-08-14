@@ -62,7 +62,6 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     public event EventHandler<SkipOverlayEventArgs>? SkipOverlayRequested;
 
     public enum SleepTimerOption { Off, Minutes15, Minutes30, Minutes60, EndOfEpisode }
-    public enum FillMode { Fit, Fill, Stretch, Original }
     public enum MobilePanelState { None, Actions, Audio, Quality, Info, Episodes, Sleep, Epg, Resume, NextEpisode, SubtitleAppearance }
 
     // ── Controllers / Subclasses (Decomposition Pattern) ────────────────────
@@ -712,7 +711,8 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     private int _volume = 100;
 
     [ObservableProperty]
-    private FillMode _videoFillMode = FillMode.Fit;
+    [NotifyPropertyChangedFor(nameof(VideoFillModeText))]
+    private Noctra.Models.VideoScaleMode _videoFillMode = Noctra.Models.VideoScaleMode.Fit;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsSubtitleSizeSmall))]
@@ -1061,6 +1061,8 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
     [ObservableProperty]
     private StreamQualityInfo? _streamQuality;
+
+    public string VideoFillModeText => SettingsAdapter.GetFillModeText(VideoFillMode);
 
     public string QualityResolutionText => StreamQuality?.Height > 0
         ? StreamQuality.ResolutionLabel
@@ -3119,19 +3121,8 @@ public bool CanShowDownloadButton => CurrentChannel != null && !IsLiveContent &&
     {
         try
         {
-            var aspectRatio = VideoFillMode switch
-            {
-                FillMode.Fill => "16:9",
-                FillMode.Stretch => "16:9",
-                FillMode.Original => (StreamQuality != null && StreamQuality.Width > 0 && StreamQuality.Height > 0)
-                    ? $"{StreamQuality.Width}:{StreamQuality.Height}"
-                    : null,
-                _ => null
-            };
-            _videoPlayerService.SetVideoLayout(
-                aspectRatio,
-                VideoFillMode == FillMode.Fill ? "16:9" : null);
-            
+            _videoPlayerService.SetVideoLayout(VideoFillMode);
+
             LogDebug($"VM: VideoFillMode applied: {VideoFillMode}");
         }
         catch (Exception ex)

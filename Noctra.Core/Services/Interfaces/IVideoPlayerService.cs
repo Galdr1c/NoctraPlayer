@@ -59,7 +59,7 @@ public interface IVideoPlayerService : IDisposable
 
     void SeekToTime(long milliseconds);
     void PlayLoadedMedia();
-    void SetVideoLayout(string? aspectRatio, string? cropGeometry);
+    void SetVideoLayout(Noctra.Models.VideoScaleMode scaleMode);
 
     Noctra.Models.StreamQualityInfo? StreamQuality { get; }
     event EventHandler<Noctra.Models.StreamQualityInfo>? QualityDetected;

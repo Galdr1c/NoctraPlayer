@@ -58,27 +58,30 @@ public class PlayerSettingsAdapter
         var current = _vm.VideoFillMode;
         var next = current switch
         {
-            PlayerViewModel.FillMode.Fit => PlayerViewModel.FillMode.Fill,
-            PlayerViewModel.FillMode.Fill => PlayerViewModel.FillMode.Stretch,
-            PlayerViewModel.FillMode.Stretch => PlayerViewModel.FillMode.Original,
-            _ => PlayerViewModel.FillMode.Fit
+            Noctra.Models.VideoScaleMode.Fit => Noctra.Models.VideoScaleMode.Fill,
+            Noctra.Models.VideoScaleMode.Fill => Noctra.Models.VideoScaleMode.Stretch,
+            _ => Noctra.Models.VideoScaleMode.Fit
         };
 
         _vm.LogDebug($"UI Action: CycleVideoFillMode clicked (Current={current} -> Next={next})");
         _vm.VideoFillMode = next;
         _vm.ApplyVideoFillMode();
-        
-        var messageKey = next switch
-        {
-            PlayerViewModel.FillMode.Fit => "Player.FillMode.Fit",
-            PlayerViewModel.FillMode.Fill => "Player.FillMode.Fill",
-            PlayerViewModel.FillMode.Stretch => "Player.FillMode.Stretch",
-            PlayerViewModel.FillMode.Original => "Player.FillMode.Original",
-            _ => "Player.FillMode.Fit"
-        };
+
+        var messageKey = GetFillModeKey(next);
         _ = _vm.OverlayManager.ShowOverlayMessageAsync(_vm.LocalizationService.GetString(messageKey));
         _vm.RestartAutoHideTimer();
     }
+
+    public string GetFillModeText(Noctra.Models.VideoScaleMode mode)
+        => _vm.LocalizationService.GetString(GetFillModeKey(mode));
+
+    private static string GetFillModeKey(Noctra.Models.VideoScaleMode mode) => mode switch
+    {
+        Noctra.Models.VideoScaleMode.Fit => "Player.FillMode.Fit",
+        Noctra.Models.VideoScaleMode.Fill => "Player.FillMode.Fill",
+        Noctra.Models.VideoScaleMode.Stretch => "Player.FillMode.Stretch",
+        _ => "Player.FillMode.Fit"
+    };
 
     public void OnSettingsChanged()
     {

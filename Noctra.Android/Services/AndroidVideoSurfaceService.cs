@@ -25,11 +25,11 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurface
     private int _boundsW = -1;
     private int _boundsH = -1;
 
-    // Video layout state (aspect ratio / crop geometry)
-    private string? _aspectRatio;
-    private string? _cropGeometry;
+    // Video layout state (scale mode / video dimensions)
+    private Noctra.Models.VideoScaleMode _scaleMode = Noctra.Models.VideoScaleMode.Fit;
     private int _videoWidth;
     private int _videoHeight;
+    private float _pixelWidthHeightRatio = 1f;
     private float _userZoom = 1f;
     private float _userPanX;
     private float _userPanY;
@@ -139,10 +139,9 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurface
         activity.RunOnUiThread(ApplyBounds);
     }
 
-    public void SetVideoLayout(string? aspectRatio, string? cropGeometry)
+    public void SetVideoLayout(Noctra.Models.VideoScaleMode scaleMode)
     {
-        _aspectRatio = aspectRatio;
-        _cropGeometry = cropGeometry;
+        _scaleMode = scaleMode;
         ResetInteractionTransformState();
 
         var activity = _activityProvider.CurrentActivity;
@@ -185,11 +184,15 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurface
     /// <summary>
     /// Sets the native video dimensions (from stream metadata) so the transform
     /// matrix can be calculated before the first frame arrives on the TextureView.
+    /// <paramref name="pixelWidthHeightRatio"/> accounts for anamorphic content
+    /// (non-square pixels); the display aspect ratio is
+    /// (width × ratio) / height.
     /// </summary>
-    public void SetVideoSize(int width, int height)
+    public void SetVideoSize(int width, int height, float pixelWidthHeightRatio = 1f)
     {
         _videoWidth = width;
         _videoHeight = height;
+        _pixelWidthHeightRatio = pixelWidthHeightRatio > 0 ? pixelWidthHeightRatio : 1f;
 
         var activity = _activityProvider.CurrentActivity;
         if (activity is null)
@@ -231,7 +234,7 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurface
 
     /// <summary>
     /// Computes and applies a Matrix transform on the TextureView to achieve the
-    /// desired aspect ratio / crop behaviour.
+    /// desired scale mode behaviour.
     /// </summary>
     private void ApplyVideoTransform()
     {
@@ -250,7 +253,8 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurface
         var matrix = CalculateTransformMatrix(
             viewW, viewH,
             _videoWidth, _videoHeight,
-            _aspectRatio, _cropGeometry);
+            _pixelWidthHeightRatio,
+            _scaleMode);
 
         ApplyInteractionTransform(matrix, viewW, viewH);
         _textureView.SetTransform(matrix);
@@ -281,20 +285,24 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurface
 
     /// <summary>
     /// Builds a Matrix that maps the video's natural rectangle into the view's
-    /// rectangle, honouring the requested aspect-ratio and crop-geometry strings.
+    /// rectangle, honouring the requested scale mode.
     /// <para>
-    /// <b>aspectRatio</b> – forces the display aspect ratio (e.g. "16:9").
-    /// Null means "use the video's own aspect ratio".<br/>
-    /// <b>cropGeometry</b> – when set (e.g. "16:9"), the video is centre-cropped
-    /// so the visible area matches this ratio. Null means no cropping (fit or
-    /// stretch depending on <paramref name="aspectRatio"/>).
+    /// <b>Fit</b> – preserves the video's display aspect ratio and fits it inside
+    /// the view (letterbox/pillarbox).<br/>
+    /// <b>Fill</b> – preserves the display aspect ratio and covers the view
+    /// completely (centre-crop: the video is scaled up until it fills the view,
+    /// overflowing content is cropped).<br/>
+    /// <b>Stretch</b> – ignores the aspect ratio entirely and maps the video onto
+    /// the full view rectangle (distortion is expected).
     /// </para>
+    /// <paramref name="pixelWidthHeightRatio"/> is applied to the source width so
+    /// anamorphic content (non-square pixels) gets its correct display ratio.
     /// </summary>
     internal static Matrix CalculateTransformMatrix(
         int viewW, int viewH,
         int videoW, int videoH,
-        string? aspectRatio,
-        string? cropGeometry)
+        float pixelWidthHeightRatio,
+        Noctra.Models.VideoScaleMode scaleMode)
     {
         var matrix = new Matrix();
 
@@ -303,59 +311,47 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurface
             return matrix;
         }
 
-        // 1. Determine the effective video display aspect ratio.
-        float darW, darH;
-        if (aspectRatio is { Length: > 0 } && TryParseAspect(aspectRatio, out var aw, out var ah))
-        {
-            darW = aw;
-            darH = ah;
-        }
-        else
-        {
-            darW = videoW;
-            darH = videoH;
-        }
-
-        var videoAr = darW / darH;
+        // Display aspect ratio of the source (accounts for anamorphic pixels).
+        var darW = videoW * (pixelWidthHeightRatio > 0 ? pixelWidthHeightRatio : 1f);
+        var videoAr = darW / videoH;
         var viewAr = (float)viewW / viewH;
 
-        // 2. Crop geometry specified → centre-cover to that ratio.
-        if (cropGeometry is { Length: > 0 } && TryParseAspect(cropGeometry, out var cw, out var ch))
+        if (scaleMode == Noctra.Models.VideoScaleMode.Stretch)
         {
-            var cropAr = cw / ch;
-
-            // Centre-cover: scale uniformly so the video *covers* the view, then
-            // the view is sized to the crop AR by the caller (EPG split etc.).
-            float scale;
-            if (cropAr > viewAr)
-            {
-                // Crop area is wider than view → scale on width
-                scale = (float)viewH * cropAr / viewW;
-            }
-            else
-            {
-                // Crop area is taller than view → scale on height
-                scale = (float)viewW / (cropAr * viewH);
-            }
-
-            matrix.PostScale(scale, scale, viewW / 2f, viewH / 2f);
+            // Identity: TextureView maps the texture onto the full view rectangle,
+            // which is exactly what "stretch" means.
             return matrix;
         }
 
-        // 3. No crop → fit the video inside the view while preserving the
-        //    effective aspect ratio (letterbox / pillarbox as needed).
         if (Math.Abs(videoAr - viewAr) < 0.001f)
         {
             // Aspect ratios match → identity (video fills view perfectly).
             return matrix;
         }
 
+        if (scaleMode == Noctra.Models.VideoScaleMode.Fill)
+        {
+            // Centre-cover: scale uniformly so the video *covers* the view, then
+            // the overflowing part is cropped by the view bounds.
+            if (videoAr > viewAr)
+            {
+                // Video is wider than the view → scale to width, crop left/right.
+                matrix.PostScale(videoAr / viewAr, 1f, viewW / 2f, viewH / 2f);
+            }
+            else
+            {
+                // Video is taller than the view → scale to height, crop top/bottom.
+                matrix.PostScale(1f, viewAr / videoAr, viewW / 2f, viewH / 2f);
+            }
+
+            return matrix;
+        }
+
+        // Fit: fit the video inside the view while preserving the effective
+        // aspect ratio (letterbox / pillarbox as needed).
         if (videoAr > viewAr)
         {
             // Video is wider than the view → fit to width, pillarbox top/bottom.
-            // The identity matrix already maps texture X to view X correctly
-            // (both are full-width). We only need to correct the Y axis so the
-            // video isn't stretched vertically.
             var sy = viewAr / videoAr;
             matrix.PostScale(1f, sy, viewW / 2f, viewH / 2f);
         }
@@ -367,28 +363,6 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurface
         }
 
         return matrix;
-    }
-
-    private static bool TryParseAspect(string aspect, out float w, out float h)
-    {
-        w = h = 0;
-        if (string.IsNullOrWhiteSpace(aspect))
-        {
-            return false;
-        }
-
-        var parts = aspect.Split(':');
-        if (parts.Length == 2 &&
-            float.TryParse(parts[0].Trim(), System.Globalization.NumberStyles.Float,
-                System.Globalization.CultureInfo.InvariantCulture, out w) &&
-            float.TryParse(parts[1].Trim(), System.Globalization.NumberStyles.Float,
-                System.Globalization.CultureInfo.InvariantCulture, out h) &&
-            w > 0 && h > 0)
-        {
-            return true;
-        }
-
-        return false;
     }
 
     internal async Task<Surface?> WaitForSurfaceAsync(TimeSpan timeout)
@@ -463,8 +437,8 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurface
 
     public void OnSurfaceTextureUpdated(SurfaceTexture surface)
     {
-        // İlk kare geldiğinde view boyutlarıyla transform'u uygula.
-        _activityProvider.CurrentActivity?.RunOnUiThread(ApplyVideoTransform);
+        // Video ölçekleme matrisi yalnızca boyut/mode/view geometrisi değiştiğinde
+        // güncellenir; her karede hesaplamak gereksiz UI-thread yüküdür.
     }
 
     private void ReplaceSurface(SurfaceTexture texture)

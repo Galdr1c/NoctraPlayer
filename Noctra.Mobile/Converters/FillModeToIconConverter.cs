@@ -2,7 +2,7 @@ using System;
 using System.Globalization;
 using Avalonia.Data.Converters;
 using Material.Icons;
-using Noctra.ViewModels;
+using Noctra.Models;
 
 namespace Noctra.Mobile.Converters;
 
@@ -10,14 +10,13 @@ public sealed class FillModeToIconConverter : IValueConverter
 {
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
-        if (value is PlayerViewModel.FillMode mode)
+        if (value is VideoScaleMode mode)
         {
             return mode switch
             {
-                PlayerViewModel.FillMode.Fit => MaterialIconKind.AspectRatio,
-                PlayerViewModel.FillMode.Fill => MaterialIconKind.CropFree,
-                PlayerViewModel.FillMode.Stretch => MaterialIconKind.ArrowExpandAll,
-                PlayerViewModel.FillMode.Original => MaterialIconKind.ImageSizeSelectActual,
+                VideoScaleMode.Fit => MaterialIconKind.AspectRatio,
+                VideoScaleMode.Fill => MaterialIconKind.CropFree,
+                VideoScaleMode.Stretch => MaterialIconKind.ArrowExpandAll,
                 _ => MaterialIconKind.AspectRatio
             };
         }

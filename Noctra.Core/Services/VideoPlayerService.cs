@@ -525,15 +525,32 @@ public class VideoPlayerService : IVideoPlayerService
         _mediaPlayer?.Play();
     }
 
-    public void SetVideoLayout(string? aspectRatio, string? cropGeometry)
+    public void SetVideoLayout(Noctra.Models.VideoScaleMode scaleMode)
     {
         if (_mediaPlayer == null)
         {
             return;
         }
 
-        _mediaPlayer.AspectRatio = aspectRatio;
-        _mediaPlayer.CropGeometry = cropGeometry;
+        switch (scaleMode)
+        {
+            // Fill (cover): oranı koruyarak görünümü kapla — LibVLC crop ile
+            // videoyu 16:9'a kırpar, taşan kısımlar kesilir.
+            case Noctra.Models.VideoScaleMode.Fill:
+                _mediaPlayer.AspectRatio = null;
+                _mediaPlayer.CropGeometry = "16:9";
+                break;
+            // Stretch: oranı yok say, görünümü doldur.
+            case Noctra.Models.VideoScaleMode.Stretch:
+                _mediaPlayer.AspectRatio = "16:9";
+                _mediaPlayer.CropGeometry = null;
+                break;
+            // Fit: doğal oran, letterbox/pillarbox.
+            default:
+                _mediaPlayer.AspectRatio = null;
+                _mediaPlayer.CropGeometry = null;
+                break;
+        }
     }
 
     public async Task PlayAsync(string url, double startTimeSeconds = 0)

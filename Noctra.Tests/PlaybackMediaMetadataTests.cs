@@ -350,7 +350,7 @@ public class PlaybackMediaMetadataTests
         public void PlayLoadedMedia() => Resume();
         public void SetAudioTrack(int trackId) { }
         public void SetSubtitleTrack(int trackId) { }
-        public void SetVideoLayout(string? aspectRatio, string? cropGeometry) { }
+        public void SetVideoLayout(Noctra.Models.VideoScaleMode scaleMode) { }
         public void Dispose() { }
     }
 }

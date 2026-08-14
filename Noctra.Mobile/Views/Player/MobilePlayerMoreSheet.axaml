@@ -120,7 +120,7 @@
                    FontWeight="SemiBold"
                    VerticalAlignment="Center" />
         <TextBlock Grid.Column="2"
-                   Text="{Binding VideoFillMode}"
+                   Text="{Binding VideoFillModeText}"
                    Foreground="{DynamicResource PlayerOverlaySheetSecondaryTextBrush}"
                    FontSize="13"
                    VerticalAlignment="Center" />

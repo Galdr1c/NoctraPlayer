@@ -113,7 +113,7 @@ namespace Noctra.Tests
         public void SetSubtitleTrack(int trackId) { LastSubtitleTrackId = trackId; }
         public void SeekToTime(long milliseconds) => Position = milliseconds / 1000.0;
         public void PlayLoadedMedia() => Resume();
-        public void SetVideoLayout(string? aspectRatio, string? cropGeometry) { }
+        public void SetVideoLayout(Noctra.Models.VideoScaleMode scaleMode) { }
         public void Dispose() { }
 
         public void SimulatePositionChanged(double pos) => PositionChanged?.Invoke(this, pos);

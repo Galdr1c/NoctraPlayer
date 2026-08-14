@@ -1415,14 +1415,13 @@ public class FillModeToIconConverter : IValueConverter
 {
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
-        if (value is PlayerViewModel.FillMode mode)
+        if (value is Noctra.Models.VideoScaleMode mode)
         {
             return mode switch
             {
-                PlayerViewModel.FillMode.Fit => MaterialIconKind.AspectRatio,
-                PlayerViewModel.FillMode.Fill => MaterialIconKind.CropFree,
-                PlayerViewModel.FillMode.Stretch => MaterialIconKind.ArrowExpandAll,
-                PlayerViewModel.FillMode.Original => MaterialIconKind.ImageSizeSelectActual,
+                Noctra.Models.VideoScaleMode.Fit => MaterialIconKind.AspectRatio,
+                Noctra.Models.VideoScaleMode.Fill => MaterialIconKind.CropFree,
+                Noctra.Models.VideoScaleMode.Stretch => MaterialIconKind.ArrowExpandAll,
                 _ => MaterialIconKind.AspectRatio
             };
         }

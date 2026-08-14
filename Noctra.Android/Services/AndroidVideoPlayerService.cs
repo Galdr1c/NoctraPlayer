@@ -731,13 +731,13 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
         });
     }
 
-    public void SetVideoLayout(string? aspectRatio, string? cropGeometry)
+    public void SetVideoLayout(Noctra.Models.VideoScaleMode scaleMode)
     {
         if (StreamQuality is { Width: > 0, Height: > 0 })
         {
             _videoSurfaceService.SetVideoSize(StreamQuality.Width, StreamQuality.Height);
         }
-        _videoSurfaceService.SetVideoLayout(aspectRatio, cropGeometry);
+        _videoSurfaceService.SetVideoLayout(scaleMode);
     }
 
     protected override void Dispose(bool disposing)
@@ -1779,7 +1779,12 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
         {
             if (videoSize.Width > 0 && videoSize.Height > 0)
             {
-                _service._videoSurfaceService.SetVideoSize(videoSize.Width, videoSize.Height);
+                // Anamorphic içerikte piksel oranı 1'den farklıdır; display aspect
+                // ratio = (width × ratio) / height olarak hesaplanır.
+                _service._videoSurfaceService.SetVideoSize(
+                    videoSize.Width,
+                    videoSize.Height,
+                    videoSize.PixelWidthHeightRatio);
             }
         }
     }
