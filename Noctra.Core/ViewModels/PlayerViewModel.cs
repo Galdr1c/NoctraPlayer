@@ -505,6 +505,13 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
             if (CurrentProgram is null)
                 return 0;
 
+            var isFallback = string.Equals(
+                CurrentProgram.Title,
+                _localizationService.GetString("Player.Epg.NoInfo"),
+                StringComparison.OrdinalIgnoreCase);
+            if (isFallback)
+                return 0;
+
             var duration = (CurrentProgram.EndTime - CurrentProgram.StartTime).TotalSeconds;
             if (duration <= 0)
                 return 0;

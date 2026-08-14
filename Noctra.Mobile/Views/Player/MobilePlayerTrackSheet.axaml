@@ -39,6 +39,24 @@
       </Button>
     </Grid>
 
+    <!-- Subtitle Appearance Quick Setting -->
+    <Button Classes="SelectionSheetOption"
+            Command="{Binding OpenSubtitleAppearanceSettingsCommand}">
+      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" IsHitTestVisible="False">
+        <TextBlock Text="{loc:Translate Player.Settings.SubtitleAppearance}"
+                   Foreground="{DynamicResource PlayerOverlaySheetTextBrush}"
+                   FontSize="{DynamicResource FBodyL}"
+                   FontWeight="Normal"
+                   VerticalAlignment="Center" />
+        <icons:MaterialIcon Grid.Column="1"
+                            Kind="ChevronRight"
+                            Width="22"
+                            Height="22"
+                            Foreground="{DynamicResource PlayerOverlaySheetMutedTextBrush}"
+                            VerticalAlignment="Center" />
+      </Grid>
+    </Button>
+
     <StackPanel Spacing="8">
       <TextBlock Text="{loc:Translate Player.Settings.Audio}"
                  FontSize="11" FontWeight="Bold"
@@ -142,23 +160,5 @@
         </ItemsControl.ItemTemplate>
       </ItemsControl>
     </StackPanel>
-
-    <!-- Subtitle Appearance Quick Setting -->
-    <Button Classes="SelectionSheetOption"
-            Command="{Binding OpenSubtitleAppearanceSettingsCommand}">
-      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" IsHitTestVisible="False">
-        <TextBlock Text="{loc:Translate Player.Settings.SubtitleAppearance}"
-                   Foreground="{DynamicResource PlayerOverlaySheetTextBrush}"
-                   FontSize="{DynamicResource FBodyL}"
-                   FontWeight="Normal"
-                   VerticalAlignment="Center" />
-        <icons:MaterialIcon Grid.Column="1"
-                            Kind="ChevronRight"
-                            Width="22"
-                            Height="22"
-                            Foreground="{DynamicResource PlayerOverlaySheetMutedTextBrush}"
-                            VerticalAlignment="Center" />
-      </Grid>
-    </Button>
   </StackPanel>
 </UserControl>

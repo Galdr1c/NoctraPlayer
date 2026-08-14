@@ -25,7 +25,7 @@
   </UserControl.Styles>
 
   <StackPanel Spacing="12">
-    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+    <Grid ColumnDefinitions="Auto,*,Auto">
       <TextBlock Grid.Column="1"
                  Text="{loc:Translate Player.Settings.SubtitleAppearance}"
                  FontSize="16" FontWeight="SemiBold"
@@ -40,8 +40,8 @@
       </Button>
     </Grid>
 
-    <ScrollViewer MaxHeight="400" Padding="0,0,0,20">
-      <StackPanel Spacing="20">
+    <ScrollViewer MaxHeight="{DynamicResource SheetMaxHeight}">
+      <StackPanel Spacing="12">
         <!-- Preview -->
         <StackPanel Spacing="8">
           <TextBlock Text="{loc:Translate Player.Settings.SubtitleAppearance.Preview}"
@@ -49,19 +49,17 @@
                      Foreground="{DynamicResource PlayerOverlaySheetSecondaryTextBrush}"
                      LetterSpacing="1" />
           <Border MinHeight="150"
-                  MaxHeight="190"
-                  CornerRadius="14"
-                  ClipToBounds="True"
-                  BorderBrush="{DynamicResource PlayerOverlaySheetBorderBrush}"
-                  BorderThickness="1">
+                  MaxHeight="270"
+                  CornerRadius="0"
+                  ClipToBounds="True">
             <Grid>
               <!-- Video hissi veren gradient arka plan -->
               <Border>
                 <Border.Background>
                   <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
-                    <GradientStop Offset="0" Color="#202633" />
-                    <GradientStop Offset="0.48" Color="#394052" />
-                    <GradientStop Offset="1" Color="#151821" />
+                    <GradientStop Offset="0" Color="#2A2640" />
+                    <GradientStop Offset="0.48" Color="#363252" />
+                    <GradientStop Offset="1" Color="#1E1636" />
                   </LinearGradientBrush>
                 </Border.Background>
               </Border>
@@ -73,17 +71,6 @@
                        VerticalAlignment="Top"
                        Margin="0,-70,-45,0"
                        Fill="#26FFFFFF" />
-
-              <!-- Alt video gradient -->
-              <Border VerticalAlignment="Bottom"
-                      Height="70">
-                <Border.Background>
-                  <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
-                    <GradientStop Offset="0" Color="#00000000" />
-                    <GradientStop Offset="1" Color="#99000000" />
-                  </LinearGradientBrush>
-                </Border.Background>
-              </Border>
 
               <!-- Altyazı önizleme katmanı -->
               <player:MobileSubtitlePreviewOverlay
