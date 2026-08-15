@@ -422,6 +422,9 @@ public class MainActivity : AvaloniaMainActivity
     {
         base.OnUserLeaveHint();
 
+        // Arka plana geçerken otomatik PiP yalnızca premium kullanıcılarda
+        // tetiklenir; ücretsiz kullanıcıda OnStop video'yu duraklatır
+        // (CanEnterPictureInPicture, MainView tarafında premium ile gated).
         if (Avalonia.Application.Current is Noctra.Mobile.App app)
         {
             _ = app.Services?

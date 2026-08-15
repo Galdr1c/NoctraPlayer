@@ -394,7 +394,8 @@ public partial class App : Application
                 sp.GetRequiredService<MainViewModel>(),
                 sp.GetService<IWatchHistoryService>(),
                 sp.GetRequiredService<Noctra.Services.Interfaces.IStalkerPortalService>(),
-                sp.GetService<ReviewPromptTracker>()
+                sp.GetService<ReviewPromptTracker>(),
+                sp.GetService<IDialogService>()
             ));
         
         services.AddTransient<SettingsViewModel>();

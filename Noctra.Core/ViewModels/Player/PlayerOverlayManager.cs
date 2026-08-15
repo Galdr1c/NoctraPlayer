@@ -145,18 +145,22 @@ public class PlayerOverlayManager
     public void ShowSleepTimerMenu()
     {
         _vm.LogDebug("UI Action: ShowSleepTimerMenu clicked");
+        if (!_vm.IsPremium)
+        {
+            _vm.RequestPremiumUpgradeCommand.Execute(null);
+            return;
+        }
+
         _vm.OpenChildPanel(MobilePanelState.Sleep);
     }
 
     public void SetSleepTimer(PlayerViewModel.SleepTimerOption mode)
     {
-        if (mode != PlayerViewModel.SleepTimerOption.Off && _vm.IsLiveContent)
+        if (mode != PlayerViewModel.SleepTimerOption.Off && !_vm.IsPremium)
         {
-            _ = ShowOverlayMessageAsync(_vm.LocalizationService.GetString("Player.Error.SleepTimerLive"));
+            _vm.RequestPremiumUpgradeCommand.Execute(null);
             return;
         }
-
-        if (mode != PlayerViewModel.SleepTimerOption.Off && !_vm.IsPremium) return;
 
         CancelSleepTimer();
 

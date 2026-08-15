@@ -182,6 +182,7 @@
     </Button>
 
     <Button Classes="moreSheetRow"
+            IsVisible="{Binding !IsLiveContent}"
             Command="{Binding ShowSleepTimerMenuCommand}">
       <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="14">
         <icons:MaterialIcon Kind="WeatherNight" Width="22" Height="22"

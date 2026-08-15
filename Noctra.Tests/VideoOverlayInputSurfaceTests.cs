@@ -355,27 +355,42 @@ public sealed class VideoOverlayInputSurfaceTests
     }
 
     [Fact]
-    public void AndroidPictureInPicture_AutoEnterKeepsManualFallbackOnModernAndroid()
+    public void AndroidPictureInPicture_AutoEnterGatedByPremium()
     {
-        var pictureInPictureService = LoadProjectFile(
+        var mainActivity = LoadProjectFile(
             "Noctra.Android",
-            "Services",
-            "AndroidPictureInPictureService.cs");
-        var autoEnterMethod = ExtractMethodBody(
-            pictureInPictureService,
-            "public Task<bool> TryEnterAutoPictureInPictureAsync()");
+            "MainActivity.cs");
+        var onUserLeaveHint = ExtractMethodBody(
+            mainActivity,
+            "protected override void OnUserLeaveHint()");
 
-        Assert.DoesNotContain(
-            "Build.VERSION.SdkInt >= BuildVersionCodes.S",
-            autoEnterMethod,
+        // Arka plana geçerken otomatik PiP hâlâ tetiklenir...
+        Assert.Contains(
+            "TryEnterAutoPictureInPictureAsync",
+            onUserLeaveHint,
             StringComparison.Ordinal);
         Assert.Contains(
-            "if (IsInPictureInPictureMode)",
-            autoEnterMethod,
+            "base.OnUserLeaveHint();",
+            onUserLeaveHint,
+            StringComparison.Ordinal);
+
+        // ...ama premium ile gated edilir: MainView state güncellerken
+        // CanEnterPictureInPicture yalnızca IsPremium iken true olur.
+        var mainView = LoadProjectFile(
+            "Noctra.Mobile",
+            "Views",
+            "MainView.axaml.cs");
+        var updateState = ExtractMethodBody(
+            mainView,
+            "private void UpdatePictureInPictureState()");
+
+        Assert.Contains(
+            "vm.IsPremium",
+            updateState,
             StringComparison.Ordinal);
         Assert.Contains(
-            "return EnterPictureInPictureAsync();",
-            autoEnterMethod,
+            "CanEnterPictureInPicture",
+            updateState,
             StringComparison.Ordinal);
     }
 

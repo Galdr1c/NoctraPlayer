@@ -120,6 +120,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     private readonly IWatchHistoryService? _watchHistoryService;
     private readonly IStalkerPortalService _stalkerPortalService;
     private readonly IDispatcherService _dispatcherService;
+    private readonly IDialogService? _dialogService;
 
     // ── State Fields ────────────────────────────────────────────────────────
     internal int _playRequestVersion;
@@ -1271,7 +1272,8 @@ public bool CanShowDownloadButton => CurrentChannel != null && !IsLiveContent &&
         MainViewModel mainViewModel,
         IWatchHistoryService? watchHistoryService,
         IStalkerPortalService stalkerPortalService,
-        ReviewPromptTracker? reviewPromptTracker = null)
+        ReviewPromptTracker? reviewPromptTracker = null,
+        IDialogService? dialogService = null)
     {
         _videoPlayerService = videoPlayerService;
         _epgService = epgService;
@@ -1287,6 +1289,7 @@ public bool CanShowDownloadButton => CurrentChannel != null && !IsLiveContent &&
         _watchHistoryService = watchHistoryService;
         _stalkerPortalService = stalkerPortalService;
         _reviewPromptTracker = reviewPromptTracker;
+        _dialogService = dialogService;
 
         // Initialize Controllers
         PlaybackController = new PlayerPlaybackController(this);
@@ -1875,11 +1878,30 @@ public bool CanShowDownloadButton => CurrentChannel != null && !IsLiveContent &&
         }
     }
 
-    [RelayCommand]
+[RelayCommand]
     private void OpenPremiumUpsell() => PremiumUpsellRequested?.Invoke(this, EventArgs.Empty);
 
     [RelayCommand]
-    private void EnterPiP() => PiPRequested?.Invoke(this, EventArgs.Empty);
+    private async Task RequestPremiumUpgrade()
+    {
+        if (_dialogService is not null)
+        {
+            await _dialogService.ShowUpsellAsync();
+        }
+    }
+
+    [RelayCommand]
+    private void EnterPiP()
+    {
+        if (!_licenseService.IsFeatureAvailable(Noctra.Services.LicenseService.Features.PictureInPicture))
+        {
+            LogDebug("UI Action: EnterPiP blocked (premium feature)");
+            RequestPremiumUpgradeCommand.Execute(null);
+            return;
+        }
+
+PiPRequested?.Invoke(this, EventArgs.Empty);
+    }
 
     [RelayCommand]
     private void ToggleFullScreen()

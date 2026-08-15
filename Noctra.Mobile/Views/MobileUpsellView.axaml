@@ -96,6 +96,10 @@
                     <icons:MaterialIcon Kind="CheckCircle" Width="17" Height="17" Foreground="{DynamicResource AccentBrush}" />
                     <TextBlock Text="{loc:Translate Upsell.Premium.Feature8}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" TextWrapping="Wrap" FontSize="{DynamicResource FCaption}" />
                   </StackPanel>
+                  <StackPanel Orientation="Horizontal" Spacing="8">
+                    <icons:MaterialIcon Kind="CheckCircle" Width="17" Height="17" Foreground="{DynamicResource AccentBrush}" />
+                    <TextBlock Text="{loc:Translate Upsell.Premium.Feature9}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" TextWrapping="Wrap" FontSize="{DynamicResource FCaption}" />
+                  </StackPanel>
                 </UniformGrid>
               </StackPanel>
             </Border>

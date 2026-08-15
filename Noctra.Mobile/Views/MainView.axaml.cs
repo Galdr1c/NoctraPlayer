@@ -2155,10 +2155,10 @@ public partial class MainView : UserControl
 
         pictureInPictureService.UpdatePictureInPictureState(new PictureInPicturePlaybackState
         {
-            // Manual PiP must also work for paused, already-loaded media so the
-            // PiP play action can resume it. Auto-enter remains playing-only in
-            // AndroidPictureInPictureService.
+            // PiP premium özelliktir: ücretsiz tier'da hem buton hem otomatik
+            // geçiş (arka plan) kapalıdır → video arka planda duraklar.
             CanEnterPictureInPicture =
+                vm.IsPremium &&
                 PlayerHost.IsVisible &&
                 vm.CurrentChannel is not null &&
                 (vm.IsPlaying || vm.VideoPlayerService.HasLoadedMedia),

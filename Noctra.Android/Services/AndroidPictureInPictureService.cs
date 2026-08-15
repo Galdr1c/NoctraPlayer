@@ -110,6 +110,9 @@ public sealed class AndroidPictureInPictureService : IPictureInPictureService
             return;
         }
 
+        // Auto-enter yalnızca premium kullanıcılarda aktiftir; CanEnterPictureInPicture
+        // MainView tarafında premium kontrolüyle gated edilir (ücretsiz tier'da
+        // false gelir, SetAutoEnterEnabled(false) kalır → video arka planda durur).
         var parameters = BuildParams(autoEnterEnabled: _state.CanEnterPictureInPicture && _state.IsPlaying);
         if (parameters is null)
         {

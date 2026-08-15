@@ -165,6 +165,7 @@ public class LicenseService : ObservableObject, ILicenseService, IDisposable
         public const string EpgAutoRefresh = "epg_auto_refresh";
         public const string ResumePlayback = "resume_playback";
         public const string SleepTimer = "sleep_timer";
+        public const string PictureInPicture = "picture_in_picture";
     }
 
     // ==========================================
@@ -1257,6 +1258,7 @@ public class LicenseService : ObservableObject, ILicenseService, IDisposable
             Features.EpgAutoRefresh => tier == SubscriptionTier.Premium,
             Features.ResumePlayback => tier == SubscriptionTier.Premium,
             Features.SleepTimer => tier == SubscriptionTier.Premium,
+            Features.PictureInPicture => tier == SubscriptionTier.Premium,
             _ => false
         };
     }
