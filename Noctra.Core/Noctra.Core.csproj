@@ -34,7 +34,7 @@
       <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute"
                          Condition="$([System.String]::Copy('%(_PromoEnvLine.Identity)').StartsWith('NOCTRA_PROMO_CODES_URL='))">
         <_Parameter1>Noctra.PromoEndpoint</_Parameter1>
-        <_Parameter2>$([System.String]::Copy('%(_PromoEnvLine.Identity)').Split('=')[1].Trim())</_Parameter2>
+        <_Parameter2>$([System.String]::Copy('%(_PromoEnvLine.Identity)').Remove(0, 23))</_Parameter2>
       </AssemblyAttribute>
     </ItemGroup>
   </Target>
@@ -47,12 +47,12 @@
       <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute"
                          Condition="$([System.String]::Copy('%(_BillingEnvLine.Identity)').StartsWith('NOCTRA_BILLING_VERIFY_URL='))">
         <_Parameter1>Noctra.BillingVerifyUrl</_Parameter1>
-        <_Parameter2>$([System.String]::Copy('%(_BillingEnvLine.Identity)').Split('=')[1].Trim())</_Parameter2>
+        <_Parameter2>$([System.String]::Copy('%(_BillingEnvLine.Identity)').Remove(0, 26))</_Parameter2>
       </AssemblyAttribute>
       <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute"
                          Condition="$([System.String]::Copy('%(_BillingEnvLine.Identity)').StartsWith('NOCTRA_BILLING_API_KEY='))">
         <_Parameter1>Noctra.BillingApiKey</_Parameter1>
-        <_Parameter2>$([System.String]::Copy('%(_BillingEnvLine.Identity)').Split('=')[1].Trim())</_Parameter2>
+        <_Parameter2>$([System.String]::Copy('%(_BillingEnvLine.Identity)').Remove(0, 23))</_Parameter2>
       </AssemblyAttribute>
     </ItemGroup>
   </Target>
@@ -65,7 +65,7 @@
       <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute"
                          Condition="$([System.String]::Copy('%(_AdConfigEnvLine.Identity)').StartsWith('NOCTRA_ADVERTISING_CONFIG_URL='))">
         <_Parameter1>Noctra.AdvertisingConfigUrl</_Parameter1>
-        <_Parameter2>$([System.String]::Copy('%(_AdConfigEnvLine.Identity)').Split('=')[1].Trim())</_Parameter2>
+        <_Parameter2>$([System.String]::Copy('%(_AdConfigEnvLine.Identity)').Remove(0, 30))</_Parameter2>
       </AssemblyAttribute>
     </ItemGroup>
   </Target>
