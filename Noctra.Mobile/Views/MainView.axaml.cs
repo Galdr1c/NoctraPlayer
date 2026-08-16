@@ -18,6 +18,7 @@ using HotAvalonia;
 
 using Microsoft.Extensions.DependencyInjection;
 using Material.Icons;
+using Noctra.Core.Advertising;
 using Noctra.Diagnostics;
 using Noctra.Mobile.Behaviors;
 using Noctra.Mobile.Controls;
@@ -50,6 +51,13 @@ public partial class MainView : UserControl
     private CancellationTokenSource? _playbackSelectionCts;
     private MobileBackNavigationService? _backNavigationService;
     private ReviewPromptFallbackHandler? _fallbackHandler;
+    private readonly DateTimeOffset _adSessionStartedAt = DateTimeOffset.UtcNow;
+    private TimeSpan _adPlaybackAccumulated;
+    private DateTimeOffset? _adPlaybackPlayingSince;
+    private bool _adPlaybackEstablished;
+    private bool _adPlaybackIsLive;
+    private bool _adPlaybackFailed;
+    private bool _adPlaybackWasPiP;
     private bool _isPlayerFullScreen;
     private string _currentDestination = "Home";
     private DateTime _lastBackExitPromptUtc = DateTime.MinValue;
@@ -1834,6 +1842,7 @@ public partial class MainView : UserControl
     private async Task PlaySelectedChannelAsync(Channel channel)
     {
         CardActionsSheet.TryClose();
+        ResetPlaybackAdTracking();
         var resolver = GetViewModelResolver();
         if (resolver is null)
         {
@@ -1968,6 +1977,10 @@ public partial class MainView : UserControl
                 return;
             }
 
+            _adPlaybackEstablished = true;
+            _adPlaybackIsLive = _playerViewModel.IsLiveContent;
+            UpdatePlaybackAdClock(_playerViewModel.IsPlaying);
+            MobileAdvertisingServices.TryGet()?.PrimeInterstitial();
             UpdatePictureInPictureState();
         }
         catch (OperationCanceledException)
@@ -1984,6 +1997,7 @@ public partial class MainView : UserControl
         {
             if (_playerViewModel.IsPlaybackIntentCurrent(playbackIntent))
             {
+                _adPlaybackFailed = true;
                 ShowPlaybackStartupError(channel, ex);
             }
         }
@@ -2029,8 +2043,11 @@ public partial class MainView : UserControl
         await PlaySelectedChannelAsync(channel);
     }
 
-    private void PlayerViewModel_CloseRequested(object? sender, EventArgs e)
+    private async void PlayerViewModel_CloseRequested(object? sender, EventArgs e)
     {
+        UpdatePlaybackAdClock(isPlaying: false);
+        var adContext = CreatePlaybackExitAdContext();
+
         var platform = GetPlatformServiceResolver();
         var window = GetPlayerWindowService();
 
@@ -2053,6 +2070,24 @@ public partial class MainView : UserControl
         UpdatePlayerChromeState();
         RestoreCurrentDestinationAfterCover();
         UpdatePictureInPictureState();
+
+        try
+        {
+            var ads = MobileAdvertisingServices.TryGet();
+            if (ads is not null)
+            {
+                await ads.TryShowInterstitialAsync(adContext);
+            }
+        }
+        catch
+        {
+            // Ads are best-effort. Closing playback must never fail or block because
+            // a provider/mediation SDK rejected presentation.
+        }
+        finally
+        {
+            ResetPlaybackAdTracking();
+        }
     }
 
     private void PlayerViewModel_NextLiveChannelRequested(object? sender, EventArgs e)
@@ -2115,6 +2150,10 @@ public partial class MainView : UserControl
         }
         else if (e.PropertyName == nameof(PlayerViewModel.IsPiPMode))
         {
+            if (_playerViewModel?.IsPiPMode == true)
+            {
+                _adPlaybackWasPiP = true;
+            }
             UpdatePlayerWatermarkInsets();
         }
         else if (e.PropertyName == nameof(PlayerViewModel.IsVisible) ||
@@ -2126,7 +2165,9 @@ public partial class MainView : UserControl
         else if (e.PropertyName == nameof(PlayerViewModel.IsPlaying))
         {
             // Oynatma sürerken ekranı uyanık tut.
-            GetPlayerWindowService()?.SetKeepScreenOn(_playerViewModel?.IsPlaying == true);
+            var isPlaying = _playerViewModel?.IsPlaying == true;
+            GetPlayerWindowService()?.SetKeepScreenOn(isPlaying);
+            UpdatePlaybackAdClock(isPlaying);
             UpdatePictureInPictureState();
         }
         else if (e.PropertyName == nameof(PlayerViewModel.CurrentChannel) ||
@@ -2137,6 +2178,51 @@ public partial class MainView : UserControl
         {
             UpdatePictureInPictureState();
         }
+    }
+
+    private void ResetPlaybackAdTracking()
+    {
+        _adPlaybackAccumulated = TimeSpan.Zero;
+        _adPlaybackPlayingSince = null;
+        _adPlaybackEstablished = false;
+        _adPlaybackIsLive = false;
+        _adPlaybackFailed = false;
+        _adPlaybackWasPiP = false;
+    }
+
+    private void UpdatePlaybackAdClock(bool isPlaying)
+    {
+        var now = DateTimeOffset.UtcNow;
+
+        if (_adPlaybackPlayingSince is { } started)
+        {
+            _adPlaybackAccumulated += now - started;
+            _adPlaybackPlayingSince = null;
+        }
+
+        if (isPlaying && _adPlaybackEstablished)
+        {
+            _adPlaybackPlayingSince = now;
+        }
+    }
+
+    private InterstitialAdContext CreatePlaybackExitAdContext()
+    {
+        var duration = _adPlaybackAccumulated;
+        if (_adPlaybackPlayingSince is { } started)
+        {
+            duration += DateTimeOffset.UtcNow - started;
+        }
+
+        return new InterstitialAdContext(
+            Now: DateTimeOffset.UtcNow,
+            SessionStartedAt: _adSessionStartedAt,
+            PlaybackDuration: duration,
+            PlaybackEstablished: _adPlaybackEstablished,
+            IsLiveContent: _adPlaybackIsLive,
+            PlaybackFailed: _adPlaybackFailed,
+            WasPictureInPicture: _adPlaybackWasPiP,
+            HasBlockingOverlay: MobileNativeAdSurfaceCoordinator.IsSuppressed);
     }
 
     private void UpdatePictureInPictureState()

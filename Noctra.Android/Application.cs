@@ -107,7 +107,8 @@ public class Application : AvaloniaAndroidApplication<App>
     {
         "NOCTRA_PROMO_CODES_URL" or
         "NOCTRA_BILLING_VERIFY_URL" or
-        "NOCTRA_BILLING_API_KEY" => true,
+        "NOCTRA_BILLING_API_KEY" or
+        "NOCTRA_ADVERTISING_CONFIG_URL" => true,
         _ => false
     };
 #endif

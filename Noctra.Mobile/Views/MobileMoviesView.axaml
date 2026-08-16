@@ -67,6 +67,7 @@
                                           x:Name="PrimaryScrollContent"
                                            SourceItems="{Binding FilteredChannels}"
                                            CardKind="Vod"
+                                           AdPlacement="MoviesFeed"
                                            ItemContainerTheme="{StaticResource TransparentListBoxItemTheme}"
                                            IsVisible="{Binding !IsContentLoading}"
                                            ScrollChanged="MoviesScrollViewer_ScrollChanged" />
@@ -98,6 +99,7 @@
     </Grid>
     <views:MobileSelectionSheet x:Name="SelectionSheetHost"
                                 ZIndex="{x:Static controls:MobileZIndex.SelectionSheet}"
+                                controls:MobileNativeAdOverlayGuard.IsEnabled="True"
                                 IsVisible="False" />
   </Grid>
 </UserControl>

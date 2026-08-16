@@ -63,6 +63,28 @@ public class MainActivity : AvaloniaMainActivity
             // Some Android vendors do not expose launch extras through Intent
             // until the base Activity has completed creation.
             ConfigurePerformanceProbe();
+            var previewRequested =
+                Intent?.GetBooleanExtra("noctra.ads.preview", false) == true ||
+                Intent?.GetBooleanExtra("noctra_ads_preview", false) == true;
+            if (previewRequested)
+            {
+                try
+                {
+                    System.IO.File.WriteAllText(
+                        System.IO.Path.Combine(FilesDir!.AbsolutePath, "ads_preview_enabled"),
+                        "1");
+                }
+                catch
+                {
+                }
+            }
+
+            var previewPersisted = System.IO.File.Exists(
+                System.IO.Path.Combine(FilesDir!.AbsolutePath, "ads_preview_enabled"));
+            PreviewMobileAdvertisingService.DebugOverrideEnabled =
+                previewRequested || previewPersisted;
+            global::Android.Util.Log.Info("NoctraAds",
+                $"noctra_ads_preview extra={previewRequested} persisted={previewPersisted}");
 #endif
             PerformanceTrace.Mark("android.activity.create");
             ConfigureAvaloniaOverlaySurface();

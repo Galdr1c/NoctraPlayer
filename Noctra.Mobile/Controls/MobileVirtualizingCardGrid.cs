@@ -12,6 +12,7 @@ using Avalonia.Controls.Templates;
 using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Threading;
+using Noctra.Core.Advertising;
 using Noctra.Core.Collections;
 using Noctra.Diagnostics;
 using Noctra.Mobile.Services;
@@ -26,7 +27,12 @@ public enum MobileCardGridKind
     ContinueWatching
 }
 
-public sealed record MobileCardGridRow(IReadOnlyList<object> Items);
+public sealed record MobileCardGridRow(
+    IReadOnlyList<object> Items,
+    MobileNativeAdSlot? AdSlot = null)
+{
+    public bool IsNativeAd => AdSlot.HasValue;
+}
 
 /// <summary>
 /// Turns a responsive card grid into virtualized rows. Avalonia's built-in WrapPanel
@@ -47,8 +53,13 @@ public sealed class MobileVirtualizingCardGrid : ListBox
     public static readonly StyledProperty<MobileCardGridKind> CardKindProperty =
         AvaloniaProperty.Register<MobileVirtualizingCardGrid, MobileCardGridKind>(nameof(CardKind));
 
-    private readonly IncrementalRowCollection<object, MobileCardGridRow> _rowCollection =
-        new(items => new MobileCardGridRow(items));
+    public static readonly StyledProperty<AdPlacement> AdPlacementProperty =
+        AvaloniaProperty.Register<MobileVirtualizingCardGrid, AdPlacement>(
+            nameof(AdPlacement),
+            AdPlacement.None);
+
+    private readonly string _adOwnerKey = $"grid:{Guid.NewGuid():N}";
+    private readonly AdAwareIncrementalRowCollection<object, MobileCardGridRow> _rowCollection;
     private readonly Queue<PendingAppend> _pendingAppends = new();
     private readonly object _pendingAppendsLock = new();
     private INotifyCollectionChanged? _observableSource;
@@ -64,6 +75,7 @@ public sealed class MobileVirtualizingCardGrid : ListBox
     private double _cardWidth;
     private double _lastStableWidth = FallbackAvailableWidth;
     private bool _lifecycleSubscribed;
+    private IMobileAdvertisingService? _advertisingService;
 
     protected override Type StyleKeyOverride => typeof(ListBox);
 
@@ -73,10 +85,18 @@ public sealed class MobileVirtualizingCardGrid : ListBox
             (control, args) => control.OnSourceItemsChanged(args.OldValue as IEnumerable, args.NewValue as IEnumerable));
         CardKindProperty.Changed.AddClassHandler<MobileVirtualizingCardGrid>(
             (control, _) => control.QueueFullRebuild());
+        AdPlacementProperty.Changed.AddClassHandler<MobileVirtualizingCardGrid>(
+            (control, _) => control.QueueFullRebuild());
     }
 
     public MobileVirtualizingCardGrid()
     {
+        _rowCollection = new AdAwareIncrementalRowCollection<object, MobileCardGridRow>(
+            items => new MobileCardGridRow(items),
+            ordinal => new MobileCardGridRow(
+                Array.Empty<object>(),
+                new MobileNativeAdSlot(_adOwnerKey, AdPlacement, ordinal)));
+
         HorizontalAlignment = HorizontalAlignment.Stretch;
         Background = null;
         BorderThickness = new Thickness(0);
@@ -112,6 +132,12 @@ public sealed class MobileVirtualizingCardGrid : ListBox
         set => SetValue(CardKindProperty, value);
     }
 
+    public AdPlacement AdPlacement
+    {
+        get => GetValue(AdPlacementProperty);
+        set => SetValue(AdPlacementProperty, value);
+    }
+
     /// <summary>
     /// Revalidates layout after Android recreates or reconnects the render surface.
     /// Transient resume widths are ignored and retried for a bounded number of frames.
@@ -143,6 +169,13 @@ public sealed class MobileVirtualizingCardGrid : ListBox
 
         MobileAppLifecycle.Resumed += OnAppResumed;
         MobileAppLifecycle.Paused += OnAppPaused;
+        _advertisingService = MobileAdvertisingServices.TryGet();
+        if (_advertisingService is not null)
+        {
+            _advertisingService.EligibilityChanged -= AdvertisingService_EligibilityChanged;
+            _advertisingService.EligibilityChanged += AdvertisingService_EligibilityChanged;
+        }
+
         _lifecycleSubscribed = true;
         QueueFullRebuild();
     }
@@ -156,10 +189,20 @@ public sealed class MobileVirtualizingCardGrid : ListBox
 
         MobileAppLifecycle.Resumed -= OnAppResumed;
         MobileAppLifecycle.Paused -= OnAppPaused;
+        if (_advertisingService is not null)
+        {
+            _advertisingService.EligibilityChanged -= AdvertisingService_EligibilityChanged;
+            _advertisingService.ReleaseOwner(_adOwnerKey);
+            _advertisingService = null;
+        }
+
         _lifecycleSubscribed = false;
         Interlocked.Increment(ref _resumeRecoveryVersion);
         MarkCounter("GridResumeGenerationCancelled", ref _gridResumeGenerationCancelled);
     }
+
+    private void AdvertisingService_EligibilityChanged(object? sender, EventArgs e)
+        => Dispatcher.UIThread.Post(QueueFullRebuild);
 
     private void OnAppResumed(object? sender, EventArgs e)
         => RefreshAfterResume();
@@ -404,7 +447,11 @@ public sealed class MobileVirtualizingCardGrid : ListBox
             {
                 if (_columns > 0 &&
                     _cardWidth >= 2 &&
-                    _rowCollection.TryAppend(append.StartingIndex, append.Items, _columns))
+                    _rowCollection.TryAppend(
+                        append.StartingIndex,
+                        append.Items,
+                        _columns,
+                        GetAdAnchors()))
                 {
                     continue;
                 }
@@ -435,8 +482,32 @@ public sealed class MobileVirtualizingCardGrid : ListBox
             .Cast<object?>()
             .Where(item => item != null)
             .Cast<object>() ?? Enumerable.Empty<object>();
-        _rowCollection.Rebuild(items, _columns);
+        _rowCollection.Rebuild(items, _columns, GetAdAnchors());
         return true;
+    }
+
+    private IReadOnlyList<int> GetAdAnchors()
+    {
+        var service = _advertisingService ??= MobileAdvertisingServices.TryGet();
+        PerformanceTrace.Mark("Ads.CanServe",
+            service?.CanServeAds == true ? 1 : 0);
+        PerformanceTrace.Mark("Ads.Placement", (int)AdPlacement);
+        if (service is null ||
+            !service.CanServeAds ||
+            AdPlacement == AdPlacement.None)
+        {
+            return Array.Empty<int>();
+        }
+
+        var policy = service.Options.GetNative(AdPlacement);
+        var anchors = AdPlacementPlanner.GetContentAnchors(_columns, policy);
+        PerformanceTrace.Mark("Ads.Anchors", anchors.Count);
+        if (anchors.Count > 0)
+        {
+            service.PrimeNative(_adOwnerKey, AdPlacement, anchors.Count);
+        }
+
+        return anchors;
     }
 
     private bool TryDequeuePendingAppend(out PendingAppend append)
@@ -457,6 +528,13 @@ public sealed class MobileVirtualizingCardGrid : ListBox
 
     private void PopulateRow(MobileCardGridRowControl panel, MobileCardGridRow? row)
     {
+        if (row?.AdSlot is { } adSlot)
+        {
+            panel.ShowAd(adSlot);
+            return;
+        }
+
+        panel.ShowCards();
         panel.RowPresenter.Populate(
             CardKind,
             MobileCardPresentationMode.Standard,
@@ -512,6 +590,7 @@ public sealed class MobileVirtualizingCardGrid : ListBox
     private sealed class MobileCardGridRowControl : ContentControl
     {
         private readonly MobileVirtualizingCardGrid _owner;
+        private readonly MobileNativeAdHost _adHost = new();
 
         public MobileCardGridRowControl(MobileVirtualizingCardGrid owner)
         {
@@ -522,6 +601,18 @@ public sealed class MobileVirtualizingCardGrid : ListBox
         }
 
         public MobileCardRowPresenter RowPresenter { get; }
+
+        public void ShowCards()
+        {
+            _adHost.Clear();
+            Content = RowPresenter;
+        }
+
+        public void ShowAd(MobileNativeAdSlot slot)
+        {
+            _adHost.Bind(slot);
+            Content = _adHost;
+        }
 
         protected override void OnDataContextChanged(EventArgs e)
         {

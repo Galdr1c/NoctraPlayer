@@ -12,7 +12,9 @@ using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
+using Noctra.Core.Advertising;
 using Noctra.Core.Collections;
+using Noctra.Mobile.Services;
 
 namespace Noctra.Mobile.Controls;
 
@@ -62,6 +64,12 @@ public sealed class MobileCardSection : AvaloniaObject
         get => GetValue(PresentationModeProperty);
         set => SetValue(PresentationModeProperty, value);
     }
+
+    /// <summary>
+    /// Internal presentation marker used by MobileSectionedCardFeed. Domain/view-model
+    /// sections never set this; the feed owns synthetic advertising sections.
+    /// </summary>
+    public bool IsNativeAd { get; set; }
 }
 
 /// <summary>
@@ -74,17 +82,45 @@ public sealed class MobileSectionedCardFeed : ListBox
 {
     private const double CardGap = 16;
     private const double FallbackAvailableWidth = 720;
+
+    public static readonly StyledProperty<AdPlacement> AdPlacementProperty =
+        AvaloniaProperty.Register<MobileSectionedCardFeed, AdPlacement>(
+            nameof(AdPlacement),
+            AdPlacement.None);
+
+    public static readonly StyledProperty<int> NativeAdInsertAfterSectionProperty =
+        AvaloniaProperty.Register<MobileSectionedCardFeed, int>(
+            nameof(NativeAdInsertAfterSection),
+            0);
+
     private readonly SectionedIncrementalRowCollection<MobileCardSection, object> _rowCollection = new();
     private readonly Dictionary<MobileCardSection, INotifyCollectionChanged> _observedSources = new();
     private readonly Queue<PendingAppend> _pendingAppends = new();
     private readonly Queue<MobileCardSection> _pendingSynchronizations = new();
     private readonly HashSet<MobileCardSection> _pendingSynchronizationSet = new();
     private readonly object _pendingAppendsLock = new();
+    private readonly string _adOwnerKey = $"sectioned:{Guid.NewGuid():N}";
+    private readonly MobileCardSection _nativeAdSection = new()
+    {
+        IsNativeAd = true,
+        CardKind = MobileCardGridKind.Vod,
+        PresentationMode = MobileCardPresentationMode.Standard
+    };
     private int _rebuildQueued;
     private int _fullRebuildRequired;
     private double _lastAvailableWidth;
+    private bool _hasNativeAdSection;
+    private IMobileAdvertisingService? _advertisingService;
 
     protected override Type StyleKeyOverride => typeof(ListBox);
+
+    static MobileSectionedCardFeed()
+    {
+        AdPlacementProperty.Changed.AddClassHandler<MobileSectionedCardFeed>(
+            (control, _) => control.QueueFullRebuild());
+        NativeAdInsertAfterSectionProperty.Changed.AddClassHandler<MobileSectionedCardFeed>(
+            (control, _) => control.QueueFullRebuild());
+    }
 
     public MobileSectionedCardFeed()
     {
@@ -105,12 +141,54 @@ public sealed class MobileSectionedCardFeed : ListBox
         Sections.CollectionChanged += Sections_CollectionChanged;
         SelectionChanged += ClearTransientSelection;
         SizeChanged += (_, _) => QueueRebuildIfMetricsChanged();
+        AttachedToVisualTree += (_, _) => SubscribeAdvertising();
+        DetachedFromVisualTree += (_, _) => UnsubscribeAdvertising();
         AddHandler(ScrollViewer.ScrollChangedEvent, OnInnerScrollChanged);
     }
 
     public AvaloniaList<MobileCardSection> Sections { get; } = new();
 
+    public AdPlacement AdPlacement
+    {
+        get => GetValue(AdPlacementProperty);
+        set => SetValue(AdPlacementProperty, value);
+    }
+
+    /// <summary>
+    /// Search uses 3: the ad is inserted after the three exact-result sections
+    /// and before the three "similar" sections.
+    /// </summary>
+    public int NativeAdInsertAfterSection
+    {
+        get => GetValue(NativeAdInsertAfterSectionProperty);
+        set => SetValue(NativeAdInsertAfterSectionProperty, value);
+    }
+
     public event EventHandler<ScrollChangedEventArgs>? ScrollChanged;
+
+    private void SubscribeAdvertising()
+    {
+        _advertisingService = MobileAdvertisingServices.TryGet();
+        if (_advertisingService is null)
+            return;
+
+        _advertisingService.EligibilityChanged -= AdvertisingService_EligibilityChanged;
+        _advertisingService.EligibilityChanged += AdvertisingService_EligibilityChanged;
+        QueueFullRebuild();
+    }
+
+    private void UnsubscribeAdvertising()
+    {
+        if (_advertisingService is null)
+            return;
+
+        _advertisingService.EligibilityChanged -= AdvertisingService_EligibilityChanged;
+        _advertisingService.ReleaseOwner(_adOwnerKey);
+        _advertisingService = null;
+    }
+
+    private void AdvertisingService_EligibilityChanged(object? sender, EventArgs e)
+        => QueueFullRebuild();
 
     private void Sections_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
@@ -256,6 +334,15 @@ public sealed class MobileSectionedCardFeed : ListBox
 
             while (TryDequeuePendingAppend(out var append))
             {
+                // The first append that makes Search eligible for its native slot must
+                // add the synthetic section in the correct exact/similar boundary.
+                if (!_hasNativeAdSection && IsNativeAdThresholdReached())
+                {
+                    ClearPendingChanges();
+                    RebuildRows();
+                    return;
+                }
+
                 var columns = CalculateMetrics(GetAvailableWidth(), append.Section.CardKind).Columns;
                 if (_rowCollection.TryAppend(
                         append.Section,
@@ -293,6 +380,7 @@ public sealed class MobileSectionedCardFeed : ListBox
     private void RebuildRows()
     {
         _lastAvailableWidth = GetAvailableWidth();
+
         var sources = Sections.Select(section =>
         {
             var columns = CalculateMetrics(_lastAvailableWidth, section.CardKind).Columns;
@@ -300,9 +388,85 @@ public sealed class MobileSectionedCardFeed : ListBox
                 .Cast<object?>()
                 .Where(item => item != null)
                 .Cast<object>() ?? Enumerable.Empty<object>();
-            return new SectionedRowSource<MobileCardSection, object>(section, items, columns);
-        });
+            return new SectionedRowSource<MobileCardSection, object>(
+                section,
+                items,
+                columns);
+        }).ToList();
+
+        _hasNativeAdSection = false;
+        var insertAfter = Math.Clamp(NativeAdInsertAfterSection, 0, Sections.Count);
+        if (TryGetSearchNativeAdSlot(insertAfter, out var slot))
+        {
+            _nativeAdSection.SourceItems = new object[] { slot };
+            sources.Insert(
+                insertAfter,
+                new SectionedRowSource<MobileCardSection, object>(
+                    _nativeAdSection,
+                    new object[] { slot },
+                    1));
+            _hasNativeAdSection = true;
+        }
+        else
+        {
+            _nativeAdSection.SourceItems = null;
+        }
+
         _rowCollection.Rebuild(sources);
+    }
+
+    private bool IsNativeAdThresholdReached()
+    {
+        var insertAfter = Math.Clamp(NativeAdInsertAfterSection, 0, Sections.Count);
+        var service = _advertisingService ??= MobileAdvertisingServices.TryGet();
+        if (service is null ||
+            !service.CanServeAds ||
+            AdPlacement == AdPlacement.None)
+        {
+            return false;
+        }
+
+        var policy = service.Options.GetNative(AdPlacement);
+        return AdPlacementPlanner.IsEligibleContentCount(
+            CountItemsBeforeSection(insertAfter),
+            policy);
+    }
+
+    private bool TryGetSearchNativeAdSlot(
+        int insertAfter,
+        out MobileNativeAdSlot slot)
+    {
+        slot = default;
+        if (!IsNativeAdThresholdReached())
+            return false;
+
+        var service = _advertisingService ??= MobileAdvertisingServices.TryGet();
+        if (service is null)
+            return false;
+
+        // Search intentionally has one slot. The eligibility count uses only the
+        // sections before insertAfter (the three exact-result groups in XAML).
+        service.PrimeNative(_adOwnerKey, AdPlacement, 1);
+        slot = new MobileNativeAdSlot(_adOwnerKey, AdPlacement, 0);
+        return true;
+    }
+
+    private int CountItemsBeforeSection(int exclusiveSectionIndex)
+    {
+        var count = 0;
+        for (var index = 0; index < exclusiveSectionIndex; index++)
+        {
+            if (Sections[index].SourceItems is not IEnumerable source)
+                continue;
+
+            foreach (var item in source)
+            {
+                if (item is not null)
+                    count++;
+            }
+        }
+
+        return count;
     }
 
     private bool TryDequeuePendingAppend(out PendingAppend append)
@@ -425,6 +589,7 @@ public sealed class MobileSectionedCardFeed : ListBox
         private readonly MobileSectionedCardFeed _owner;
         private MobileSectionHeaderControl? _header;
         private MobileCardRowPresenter? _cards;
+        private MobileNativeAdHost? _adHost;
 
         public MobileSectionFeedRowControl(MobileSectionedCardFeed owner)
         {
@@ -441,6 +606,33 @@ public sealed class MobileSectionedCardFeed : ListBox
                 return;
             }
 
+            if (row.Section.IsNativeAd)
+            {
+                if (row.IsHeader)
+                {
+                    _adHost?.Clear();
+                    Height = 0;
+                    Content = null;
+                    return;
+                }
+
+                Height = double.NaN;
+                _adHost ??= new MobileNativeAdHost();
+                if (row.Items.Count > 0 && row.Items[0] is MobileNativeAdSlot slot)
+                {
+                    _adHost.Bind(slot);
+                    Content = _adHost;
+                }
+                else
+                {
+                    _adHost.Clear();
+                    Content = null;
+                }
+                return;
+            }
+
+            Height = double.NaN;
+            _adHost?.Clear();
             if (row.IsHeader)
             {
                 _header ??= new MobileSectionHeaderControl();

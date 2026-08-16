@@ -9,7 +9,7 @@
 
              xmlns:loc="using:Noctra.Mobile.Localization"
              xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
-             mc:Ignorable="d" d:DesignWidth="390" d:DesignHeight="844"
+             mc:Ignorable="d"
              x:Class="Noctra.Mobile.Views.MainView"
              x:DataType="vm:MainViewModel"
              Background="Transparent">
@@ -617,6 +617,7 @@
                                        Grid.RowSpan="3"
                                        Grid.ColumnSpan="2"
                                        ZIndex="{x:Static controls:MobileZIndex.ShellCategorySelection}"
+                                       controls:MobileNativeAdOverlayGuard.IsEnabled="True"
                                        IsVisible="False" />
 
     </Grid>
@@ -625,6 +626,7 @@
                                   Grid.RowSpan="3"
                                   Grid.ColumnSpan="2"
                                   ZIndex="{x:Static controls:MobileZIndex.ShellCardActions}"
+                                  controls:MobileNativeAdOverlayGuard.IsEnabled="True"
                                   IsVisible="False" />
 
     <Border x:Name="PlayerHost"
@@ -670,6 +672,7 @@
                                   Grid.RowSpan="3"
                                   Grid.ColumnSpan="2"
                                   ZIndex="{x:Static controls:MobileZIndex.ShellLegalConsent}"
+                                  controls:MobileNativeAdOverlayGuard.IsEnabled="True"
                                   IsVisible="False" />
 
     <!-- Review Prompt Overlay (Avalonia bottom sheet) -->
@@ -677,6 +680,7 @@
                                   Grid.RowSpan="3"
                                   Grid.ColumnSpan="2"
                                   ZIndex="{x:Static controls:MobileZIndex.ShellReviewPrompt}"
+                                  controls:MobileNativeAdOverlayGuard.IsEnabled="True"
                                   IsVisible="False" />
 
     <!-- Profiles Overlay -->
@@ -713,6 +717,7 @@
             Grid.ColumnSpan="2"
             Background="{DynamicResource Bg0Brush}"
             ZIndex="{x:Static controls:MobileZIndex.ShellProfiles}"
+            controls:MobileNativeAdOverlayGuard.IsEnabled="True"
             IsVisible="False">
       <!--
         ProfileListView kendi başlığını içeriyor:
