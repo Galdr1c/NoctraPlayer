@@ -35,18 +35,14 @@ public interface IMobileAdvertisingService
     Task<bool> TryShowInterstitialAsync(
         InterstitialAdContext context,
         CancellationToken cancellationToken = default);
-}
 
-public static class MobileAdvertisingServices
-{
-    public static IMobileAdvertisingService? TryGet()
-    {
-        if (Application.Current is not App app)
-            return null;
-
-        return app.EnsureServices()?.GetService(typeof(IMobileAdvertisingService))
-            as IMobileAdvertisingService;
-    }
+    /// <summary>
+    /// Runs once at startup after the remote config refresh and only when
+    /// <see cref="CanServeAds"/> is true. A production provider runs the
+    /// consent flow (UMP) and Mobile Ads SDK initialization here; no-op
+    /// providers return immediately.
+    /// </summary>
+    Task InitializeAsync(CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -77,6 +73,9 @@ public sealed class NoOpMobileAdvertisingService : IMobileAdvertisingService
         InterstitialAdContext context,
         CancellationToken cancellationToken = default)
         => Task.FromResult(false);
+
+    public Task InitializeAsync(CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
 }
 
 /// <summary>
@@ -86,16 +85,20 @@ public sealed class NoOpMobileAdvertisingService : IMobileAdvertisingService
 public sealed class PreviewMobileAdvertisingService : IMobileAdvertisingService
 {
     private readonly ILicenseService _licenseService;
-    private readonly RemoteAdvertisingConfigService? _remoteConfig;
+    private readonly IRemoteAdvertisingConfigService? _remoteConfig;
     private readonly HashSet<MobileNativeAdSlot> _primedSlots = new();
 
     public PreviewMobileAdvertisingService(
         ILicenseService licenseService,
-        RemoteAdvertisingConfigService? remoteConfig = null)
+        IRemoteAdvertisingConfigService? remoteConfig = null)
     {
         _licenseService = licenseService ?? throw new ArgumentNullException(nameof(licenseService));
         _remoteConfig = remoteConfig;
         _licenseService.SubscriptionChanged += OnSubscriptionChanged;
+        if (_remoteConfig is not null)
+        {
+            _remoteConfig.OptionsChanged += OnRemoteConfigChanged;
+        }
     }
 
     public static bool IsPreviewEnabled =>
@@ -211,6 +214,12 @@ public sealed class PreviewMobileAdvertisingService : IMobileAdvertisingService
         CancellationToken cancellationToken = default)
         => Task.FromResult(false);
 
+    public Task InitializeAsync(CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
+
     private void OnSubscriptionChanged()
+        => EligibilityChanged?.Invoke(this, EventArgs.Empty);
+
+    private void OnRemoteConfigChanged(object? sender, EventArgs e)
         => EligibilityChanged?.Invoke(this, EventArgs.Empty);
 }

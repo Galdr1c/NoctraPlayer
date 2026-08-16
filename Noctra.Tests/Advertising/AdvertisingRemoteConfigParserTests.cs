@@ -46,6 +46,161 @@ public sealed class AdvertisingRemoteConfigParserTests
         Assert.Equal(new NativeAdPlacementOptions(false, 10, 5), options.Live);
     }
 
+    [Fact]
+    public void MissingEnabled_KeepsFallbackEnabledState_FailClosed()
+    {
+        const string json = """{ "home": { "spacing": 6, "max": 1 } }""";
+
+        Assert.True(RemoteAdvertisingConfigService.TryParse(json, out var options));
+
+        Assert.Equal(
+            new NativeAdPlacementOptions(false, 6, 1),
+            options.Home);
+    }
+
+    [Theory]
+    [InlineData("""{ "home": { "enabled": "yes", "spacing": 6, "max": 1 } }""")]
+    [InlineData("""{ "home": { "enabled": 1, "spacing": 6, "max": 1 } }""")]
+    [InlineData("""{ "home": { "enabled": null, "spacing": 6, "max": 1 } }""")]
+    public void NonBooleanEnabled_KeepsFallbackEnabledState_FailClosed(string json)
+    {
+        Assert.True(RemoteAdvertisingConfigService.TryParse(json, out var options));
+
+        Assert.Equal(
+            new NativeAdPlacementOptions(false, 6, 1),
+            options.Home);
+    }
+
+    [Fact]
+    public void ExplicitEnabledTrue_OverridesDisabledFallback()
+    {
+        const string json = """{ "home": { "enabled": true, "spacing": 6, "max": 1 } }""";
+
+        Assert.True(RemoteAdvertisingConfigService.TryParse(json, out var options));
+
+        Assert.Equal(
+            new NativeAdPlacementOptions(true, 6, 1),
+            options.Home);
+    }
+
+    [Fact]
+    public void KillSwitchPayload_DisabledWithoutSpacingOrMax()
+    {
+        const string json = """{ "movies": { "enabled": false } }""";
+
+        Assert.True(RemoteAdvertisingConfigService.TryParse(json, out var options));
+
+        Assert.Equal(
+            new NativeAdPlacementOptions(false, 14, 2),
+            options.Movies);
+    }
+
+    [Fact]
+    public void KillSwitchPayload_InterstitialDisabledWithDefaultTimings()
+    {
+        const string json = """{ "playbackExit": { "enabled": false } }""";
+
+        Assert.True(RemoteAdvertisingConfigService.TryParse(json, out var options));
+
+        Assert.Equal(
+            AdvertisingOptions.ConservativeDefault.PlaybackExit with { Enabled = false },
+            options.PlaybackExit);
+    }
+
+    [Fact]
+    public void InvalidSpacing_DoesNotOverrideKillSwitch()
+    {
+        const string json = """{ "movies": { "enabled": false, "spacing": 0, "max": 3 } }""";
+
+        Assert.True(RemoteAdvertisingConfigService.TryParse(json, out var options));
+
+        Assert.Equal(new NativeAdPlacementOptions(false, 14, 3), options.Movies);
+    }
+
+    [Theory]
+    [InlineData("""{ "movies": { "spacing": 5000, "max": 2 } }""")]
+    [InlineData("""{ "movies": { "spacing": 3, "max": 2 } }""")]
+    [InlineData("""{ "movies": { "spacing": 14, "max": 2000000000 } }""")]
+    [InlineData("""{ "movies": { "spacing": 14, "max": 9 } }""")]
+    public void OutOfEnvelopeValues_FallBackToDefault(string json)
+    {
+        Assert.True(RemoteAdvertisingConfigService.TryParse(json, out var options));
+
+        Assert.Equal(AdvertisingOptions.ConservativeDefault.Movies, options.Movies);
+    }
+
+    [Fact]
+    public void EnvelopeBoundaryValues_AreAccepted()
+    {
+        const string json = """
+            {
+              "movies": { "spacing": 100, "max": 8 },
+              "home": { "spacing": 6, "max": 0 }
+            }
+            """;
+
+        Assert.True(RemoteAdvertisingConfigService.TryParse(json, out var options));
+
+        Assert.Equal(new NativeAdPlacementOptions(true, 100, 8), options.Movies);
+        Assert.Equal(new NativeAdPlacementOptions(false, 6, 0), options.Home);
+    }
+
+    [Theory]
+    [InlineData("""{ "playbackExit": { "minPlaybackDurationMinutes": 200 } }""")]
+    [InlineData("""{ "playbackExit": { "cooldownMinutes": 5 } }""")]
+    [InlineData("""{ "playbackExit": { "maxPerDay": 100 } }""")]
+    [InlineData("""{ "playbackExit": { "maxPerHour": 50 } }""")]
+    [InlineData("""{ "playbackExit": { "minSessionAgeMinutes": 0 } }""")]
+    public void OutOfEnvelopeInterstitialValues_FallBackToDefault(string json)
+    {
+        Assert.True(RemoteAdvertisingConfigService.TryParse(json, out var options));
+
+        Assert.Equal(
+            AdvertisingOptions.ConservativeDefault.PlaybackExit,
+            options.PlaybackExit);
+    }
+
+    [Fact]
+    public void PartialSection_MergesFieldByField()
+    {
+        const string json = """
+            {
+              "movies": { "spacing": 30 },
+              "series": { "max": 5 },
+              "home": { "enabled": true }
+            }
+            """;
+
+        Assert.True(RemoteAdvertisingConfigService.TryParse(json, out var options));
+
+        Assert.Equal(new NativeAdPlacementOptions(true, 30, 2), options.Movies);
+        Assert.Equal(new NativeAdPlacementOptions(true, 14, 5), options.Series);
+        Assert.Equal(new NativeAdPlacementOptions(true, 6, 1), options.Home);
+    }
+
+    [Fact]
+    public void PartialInterstitial_MergesFieldByField()
+    {
+        const string json = """
+            {
+              "playbackExit": {
+                "allowLive": true,
+                "minSessionAgeMinutes": 12
+              }
+            }
+            """;
+
+        Assert.True(RemoteAdvertisingConfigService.TryParse(json, out var options));
+
+        Assert.Equal(
+            AdvertisingOptions.ConservativeDefault.PlaybackExit with
+            {
+                AllowLiveContent = true,
+                MinSessionAge = TimeSpan.FromMinutes(12)
+            },
+            options.PlaybackExit);
+    }
+
     [Theory]
     [InlineData("""{ "movies": { "spacing": 0, "max": 2 } }""")]
     [InlineData("""{ "movies": { "spacing": -5, "max": 2 } }""")]
@@ -149,6 +304,47 @@ public sealed class AdvertisingRemoteConfigParserTests
     public void MissingInterstitialSection_KeepsDefault()
     {
         const string json = """{ "movies": { "spacing": 14, "max": 2 } }""";
+
+        Assert.True(RemoteAdvertisingConfigService.TryParse(json, out var options));
+
+        Assert.Equal(
+            AdvertisingOptions.ConservativeDefault.PlaybackExit,
+            options.PlaybackExit);
+    }
+
+    [Fact]
+    public void ZeroCaps_AreAcceptedAndMapped()
+    {
+        const string json = """
+            {
+              "playbackExit": {
+                "maxPerHour": 0,
+                "maxPerDay": 0
+              }
+            }
+            """;
+
+        Assert.True(RemoteAdvertisingConfigService.TryParse(json, out var options));
+
+        Assert.Equal(0, options.PlaybackExit.MaxPerHour);
+        Assert.Equal(0, options.PlaybackExit.MaxPerDay);
+    }
+
+    [Fact]
+    public void MissingAllowLive_KeepsFallbackState_FailClosed()
+    {
+        const string json = """
+            {
+              "playbackExit": {
+                "enabled": true,
+                "minSessionAgeMinutes": 5,
+                "minPlaybackDurationMinutes": 10,
+                "cooldownMinutes": 18,
+                "maxPerHour": 2,
+                "maxPerDay": 4
+              }
+            }
+            """;
 
         Assert.True(RemoteAdvertisingConfigService.TryParse(json, out var options));
 

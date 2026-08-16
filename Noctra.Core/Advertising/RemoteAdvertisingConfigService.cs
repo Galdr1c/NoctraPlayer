@@ -19,7 +19,10 @@ namespace Noctra.Core.Advertising;
 /// AssemblyMetadata, see Noctra.Core.csproj); DEBUG honors the runtime
 /// environment variable so tests and local runs stay deterministic.
 ///
-/// Expected JSON (all sections optional; missing sections keep defaults):
+/// Expected JSON (all sections and fields optional; parsing merges
+/// field-by-field — a missing or invalid field keeps the in-app default for
+/// that field only, so a minimal { "enabled": false } payload acts as an
+/// emergency kill switch without breaking the other placements):
 /// {
 ///   "schemaVersion": 1,
 ///   "movies":  { "enabled": true,  "spacing": 14, "max": 2 },
@@ -38,7 +41,7 @@ namespace Noctra.Core.Advertising;
 ///   }
 /// }
 /// </summary>
-public sealed class RemoteAdvertisingConfigService
+public sealed class RemoteAdvertisingConfigService : IRemoteAdvertisingConfigService
 {
     private const long MaxConfigBytes = 16 * 1024;
     private static readonly TimeSpan RequestTimeout = TimeSpan.FromSeconds(8);
@@ -50,6 +53,8 @@ public sealed class RemoteAdvertisingConfigService
     {
         _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
     }
+
+    public event EventHandler? OptionsChanged;
 
     public AdvertisingOptions CurrentOptions => _current;
 
@@ -98,6 +103,7 @@ public sealed class RemoteAdvertisingConfigService
             if (TryParse(json, out var parsed))
             {
                 _current = parsed;
+                OptionsChanged?.Invoke(this, EventArgs.Empty);
                 Noctra.Diagnostics.PerformanceTrace.Mark(
                     "Ads.RemoteConfig",
                     parsed.Movies.MinContentSpacing * 100 + parsed.Movies.MaxSlots,
@@ -161,23 +167,31 @@ public sealed class RemoteAdvertisingConfigService
             return fallback;
         }
 
-        var enabled = true;
+        var enabled = fallback.Enabled;
         if (section.TryGetProperty("enabled", out var enabledProperty) &&
-            enabledProperty.ValueKind == JsonValueKind.False)
+            enabledProperty.ValueKind is JsonValueKind.True or JsonValueKind.False)
         {
-            enabled = false;
+            enabled = enabledProperty.ValueKind == JsonValueKind.True;
         }
 
-        if (!section.TryGetProperty("spacing", out var spacingProperty) ||
-            spacingProperty.ValueKind != JsonValueKind.Number ||
-            !spacingProperty.TryGetInt32(out var spacing) ||
-            spacing <= 0 ||
-            !section.TryGetProperty("max", out var maxProperty) ||
-            maxProperty.ValueKind != JsonValueKind.Number ||
-            !maxProperty.TryGetInt32(out var max) ||
-            max < 0)
+        var spacing = fallback.MinContentSpacing;
+        if (section.TryGetProperty("spacing", out var spacingProperty) &&
+            spacingProperty.ValueKind == JsonValueKind.Number &&
+            spacingProperty.TryGetInt32(out var parsedSpacing) &&
+            parsedSpacing >= RemoteAdvertisingLimits.NativeMinSpacing &&
+            parsedSpacing <= RemoteAdvertisingLimits.NativeMaxSpacing)
         {
-            return fallback;
+            spacing = parsedSpacing;
+        }
+
+        var max = fallback.MaxSlots;
+        if (section.TryGetProperty("max", out var maxProperty) &&
+            maxProperty.ValueKind == JsonValueKind.Number &&
+            maxProperty.TryGetInt32(out var parsedMax) &&
+            parsedMax >= 0 &&
+            parsedMax <= RemoteAdvertisingLimits.NativeMaxSlots)
+        {
+            max = parsedMax;
         }
 
         return new NativeAdPlacementOptions(enabled, spacing, max);
@@ -193,71 +207,103 @@ public sealed class RemoteAdvertisingConfigService
             return fallback;
         }
 
-        var enabled = true;
+        var enabled = fallback.Enabled;
         if (section.TryGetProperty("enabled", out var enabledProperty) &&
-            enabledProperty.ValueKind == JsonValueKind.False)
+            enabledProperty.ValueKind is JsonValueKind.True or JsonValueKind.False)
         {
-            enabled = false;
+            enabled = enabledProperty.ValueKind == JsonValueKind.True;
         }
 
-        if (!TryGetPositiveMinutes(section, "minSessionAgeMinutes", out var sessionAge) ||
-            !TryGetPositiveMinutes(section, "minPlaybackDurationMinutes", out var playbackDuration) ||
-            !TryGetPositiveMinutes(section, "cooldownMinutes", out var cooldown) ||
-            !TryGetNonNegative(section, "maxPerHour", out var maxPerHour) ||
-            !TryGetNonNegative(section, "maxPerDay", out var maxPerDay))
+        var sessionAge = fallback.MinSessionAge;
+        if (TryGetIntInRange(
+                section,
+                "minSessionAgeMinutes",
+                RemoteAdvertisingLimits.InterstitialMinSessionAgeMinutes,
+                RemoteAdvertisingLimits.InterstitialMaxSessionAgeMinutes,
+                out var parsedSessionAge))
         {
-            return fallback;
+            sessionAge = TimeSpan.FromMinutes(parsedSessionAge);
         }
 
-        var allowLive = false;
+        var playbackDuration = fallback.MinPlaybackDuration;
+        if (TryGetIntInRange(
+                section,
+                "minPlaybackDurationMinutes",
+                RemoteAdvertisingLimits.InterstitialMinPlaybackMinutes,
+                RemoteAdvertisingLimits.InterstitialMaxPlaybackMinutes,
+                out var parsedPlaybackDuration))
+        {
+            playbackDuration = TimeSpan.FromMinutes(parsedPlaybackDuration);
+        }
+
+        var cooldown = fallback.Cooldown;
+        if (TryGetIntInRange(
+                section,
+                "cooldownMinutes",
+                RemoteAdvertisingLimits.InterstitialMinCooldownMinutes,
+                RemoteAdvertisingLimits.InterstitialMaxCooldownMinutes,
+                out var parsedCooldown))
+        {
+            cooldown = TimeSpan.FromMinutes(parsedCooldown);
+        }
+
+        var maxPerHour = fallback.MaxPerHour;
+        if (TryGetIntInRange(
+                section,
+                "maxPerHour",
+                0,
+                RemoteAdvertisingLimits.InterstitialMaxPerHour,
+                out var parsedMaxPerHour))
+        {
+            maxPerHour = parsedMaxPerHour;
+        }
+
+        var maxPerDay = fallback.MaxPerDay;
+        if (TryGetIntInRange(
+                section,
+                "maxPerDay",
+                0,
+                RemoteAdvertisingLimits.InterstitialMaxPerDay,
+                out var parsedMaxPerDay))
+        {
+            maxPerDay = parsedMaxPerDay;
+        }
+
+        var allowLive = fallback.AllowLiveContent;
         if (section.TryGetProperty("allowLive", out var allowLiveProperty) &&
-            allowLiveProperty.ValueKind == JsonValueKind.True)
+            allowLiveProperty.ValueKind is JsonValueKind.True or JsonValueKind.False)
         {
-            allowLive = true;
+            allowLive = allowLiveProperty.ValueKind == JsonValueKind.True;
         }
 
         return new InterstitialAdOptions(
             enabled,
-            TimeSpan.FromMinutes(sessionAge),
-            TimeSpan.FromMinutes(playbackDuration),
-            TimeSpan.FromMinutes(cooldown),
+            sessionAge,
+            playbackDuration,
+            cooldown,
             maxPerHour,
             maxPerDay,
             allowLive);
     }
 
-    private static bool TryGetPositiveMinutes(
+    private static bool TryGetIntInRange(
         JsonElement section,
         string propertyName,
-        out int minutes)
-    {
-        minutes = 0;
-        if (!section.TryGetProperty(propertyName, out var property) ||
-            property.ValueKind != JsonValueKind.Number ||
-            !property.TryGetInt32(out var value) ||
-            value <= 0)
-        {
-            return false;
-        }
-
-        minutes = value;
-        return true;
-    }
-
-    private static bool TryGetNonNegative(
-        JsonElement section,
-        string propertyName,
+        int min,
+        int max,
         out int value)
     {
         value = 0;
         if (!section.TryGetProperty(propertyName, out var property) ||
             property.ValueKind != JsonValueKind.Number ||
-            !property.TryGetInt32(out value) ||
-            value < 0)
+            !property.TryGetInt32(out var parsed) ||
+            parsed < min ||
+            parsed > max)
         {
             return false;
         }
 
+        value = parsed;
         return true;
     }
 

@@ -84,4 +84,77 @@ public sealed class AdPlacementPlannerTests
         Assert.Equal(10, search.MinContentSpacing);
         Assert.Equal(1, search.MaxSlots);
     }
+
+    [Fact]
+    public void HugeSpacing_DoesNotOverflow()
+    {
+        var policy = new NativeAdPlacementOptions(true, int.MaxValue, 1);
+
+        var anchors = AdPlacementPlanner.GetContentAnchors(6, policy);
+
+        Assert.Single(anchors);
+        Assert.Equal(int.MaxValue, anchors[0]);
+    }
+
+    [Fact]
+    public void HugeMaxSlots_IsCapped_NotAllocated()
+    {
+        var policy = new NativeAdPlacementOptions(true, 14, int.MaxValue);
+
+        var anchors = AdPlacementPlanner.GetContentAnchors(6, policy);
+
+        Assert.True(anchors.Count <= 8);
+        Assert.Equal(new[] { 18, 36 }, anchors.Take(2));
+    }
+
+    [Fact]
+    public void MaxSlotsZero_ReturnsNoAnchors()
+    {
+        var policy = new NativeAdPlacementOptions(true, 14, 0);
+
+        var anchors = AdPlacementPlanner.GetContentAnchors(6, policy);
+
+        Assert.Empty(anchors);
+    }
+
+    [Theory]
+    [InlineData(new[] { 24, 48 }, 0, 0)]
+    [InlineData(new[] { 24, 48 }, 1, 0)]
+    [InlineData(new[] { 24, 48 }, 13, 0)]
+    [InlineData(new[] { 24, 48 }, 23, 0)]
+    [InlineData(new[] { 24, 48 }, 24, 1)]
+    [InlineData(new[] { 24, 48 }, 30, 1)]
+    [InlineData(new[] { 24, 48 }, 47, 1)]
+    [InlineData(new[] { 24, 48 }, 48, 2)]
+    [InlineData(new[] { 24, 48 }, 500, 2)]
+    [InlineData(new int[0], 100, 0)]
+    public void GetReachableSlotCount_OnlyCountsReachableAnchors(
+        int[] anchors,
+        int realContentCount,
+        int expected)
+    {
+        Assert.Equal(
+            expected,
+            AdPlacementPlanner.GetReachableSlotCount(anchors, realContentCount));
+    }
+
+    [Fact]
+    public void GetReachableSlotCount_SingleMovie_PrimesNothing()
+    {
+        var policy = new NativeAdPlacementOptions(true, 14, 2);
+        var anchors = AdPlacementPlanner.GetContentAnchors(6, policy);
+
+        Assert.Equal(0, AdPlacementPlanner.GetReachableSlotCount(anchors, 1));
+    }
+
+    [Fact]
+    public void GetReachableSlotCount_FifteenItemsThreeColumns_PrimesFirstSlotOnly()
+    {
+        var policy = new NativeAdPlacementOptions(true, 14, 2);
+        var anchors = AdPlacementPlanner.GetContentAnchors(3, policy);
+
+        Assert.Equal(new[] { 15, 30 }, anchors);
+        Assert.Equal(1, AdPlacementPlanner.GetReachableSlotCount(anchors, 15));
+        Assert.Equal(2, AdPlacementPlanner.GetReachableSlotCount(anchors, 30));
+    }
 }

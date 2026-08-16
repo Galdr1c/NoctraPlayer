@@ -81,18 +81,17 @@ public static class AndroidServiceCollectionExtensions
                 serviceProvider.GetRequiredService<IPlatformActionService>(),
                 serviceProvider.GetRequiredService<IStorePurchaseService>(),
                 serviceProvider.GetRequiredService<IDispatcherService>()));
-        services.AddSingleton<RemoteAdvertisingConfigService>();
+        services.AddSingleton<IRemoteAdvertisingConfigService, RemoteAdvertisingConfigService>();
+        services.AddSingleton<MobileAdvertisingBootstrapper>();
         services.AddSingleton<IMobileAdvertisingService>(serviceProvider =>
         {
 #if DEBUG
             if (PreviewMobileAdvertisingService.IsEnabled)
             {
                 global::Android.Util.Log.Info("NoctraAds", "registered=PreviewMobileAdvertisingService");
-                var remoteConfig = serviceProvider.GetRequiredService<RemoteAdvertisingConfigService>();
-                _ = Task.Run(() => remoteConfig.RefreshAsync());
                 return new PreviewMobileAdvertisingService(
                     serviceProvider.GetRequiredService<ILicenseService>(),
-                    remoteConfig);
+                    serviceProvider.GetRequiredService<IRemoteAdvertisingConfigService>());
             }
 #endif
             global::Android.Util.Log.Info("NoctraAds", "registered=NoOpMobileAdvertisingService");

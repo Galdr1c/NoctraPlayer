@@ -504,7 +504,18 @@ public sealed class MobileVirtualizingCardGrid : ListBox
         PerformanceTrace.Mark("Ads.Anchors", anchors.Count);
         if (anchors.Count > 0)
         {
-            service.PrimeNative(_adOwnerKey, AdPlacement, anchors.Count);
+            // Only prime slots the current content can actually reach; a row
+            // with 1 movie must not preload 2 native ads it can never render.
+            var realContentCount = SourceItems?
+                .Cast<object?>()
+                .Count(item => item != null) ?? 0;
+            var reachableSlots = AdPlacementPlanner.GetReachableSlotCount(
+                anchors,
+                realContentCount);
+            if (reachableSlots > 0)
+            {
+                service.PrimeNative(_adOwnerKey, AdPlacement, reachableSlots);
+            }
         }
 
         return anchors;

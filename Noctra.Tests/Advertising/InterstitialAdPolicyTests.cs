@@ -162,6 +162,87 @@ public sealed class InterstitialAdPolicyTests
         Assert.Equal(AdDecisionReason.DailyCap, decision.Reason);
     }
 
+    [Fact]
+    public void ZeroMaxPerHour_DeniesAll_EvenWithEmptyHistory()
+    {
+        var options = AdvertisingOptions.ConservativeDefault.PlaybackExit with
+        {
+            MaxPerHour = 0
+        };
+
+        var decision = InterstitialAdPolicy.Evaluate(
+            EligibleContext(),
+            EligibleRuntime(),
+            options,
+            InterstitialAdHistory.Empty);
+
+        Assert.False(decision.ShouldShow);
+        Assert.Equal(AdDecisionReason.HourlyCap, decision.Reason);
+    }
+
+    [Fact]
+    public void ZeroMaxPerDay_DeniesAll_EvenWithEmptyHistory()
+    {
+        var options = AdvertisingOptions.ConservativeDefault.PlaybackExit with
+        {
+            MaxPerDay = 0
+        };
+
+        var decision = InterstitialAdPolicy.Evaluate(
+            EligibleContext(),
+            EligibleRuntime(),
+            options,
+            InterstitialAdHistory.Empty);
+
+        Assert.False(decision.ShouldShow);
+        Assert.Equal(AdDecisionReason.DailyCap, decision.Reason);
+    }
+
+    [Fact]
+    public void NegativeCaps_DenyAll_FailClosed()
+    {
+        var options = AdvertisingOptions.ConservativeDefault.PlaybackExit with
+        {
+            MaxPerHour = -3,
+            MaxPerDay = -3
+        };
+
+        var decision = InterstitialAdPolicy.Evaluate(
+            EligibleContext(),
+            EligibleRuntime(),
+            options,
+            InterstitialAdHistory.Empty);
+
+        Assert.False(decision.ShouldShow);
+        Assert.Equal(AdDecisionReason.HourlyCap, decision.Reason);
+    }
+
+    [Fact]
+    public void ZeroCaps_DoNotAffectOtherPlacements()
+    {
+        var zeroCaps = AdvertisingOptions.ConservativeDefault.PlaybackExit with
+        {
+            MaxPerHour = 0,
+            MaxPerDay = 0
+        };
+        var decision = InterstitialAdPolicy.Evaluate(
+            EligibleContext(),
+            EligibleRuntime(),
+            zeroCaps,
+            InterstitialAdHistory.Empty);
+
+        Assert.Equal(AdDecisionReason.HourlyCap, decision.Reason);
+
+        var normal = AdvertisingOptions.ConservativeDefault.PlaybackExit;
+        var allowed = InterstitialAdPolicy.Evaluate(
+            EligibleContext(),
+            EligibleRuntime(),
+            normal,
+            InterstitialAdHistory.Empty);
+
+        Assert.Equal(AdDecisionReason.Eligible, allowed.Reason);
+    }
+
     private static InterstitialAdContext EligibleContext() => new(
         Now: Now,
         SessionStartedAt: Now - TimeSpan.FromMinutes(30),

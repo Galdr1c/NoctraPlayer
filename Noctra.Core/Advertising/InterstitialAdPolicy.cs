@@ -93,20 +93,31 @@ public static class InterstitialAdPolicy
             .OrderByDescending(timestamp => timestamp)
             .ToArray();
 
+        // Caps are fail-closed: 0 (or negative) means "no ads", never
+        // "unlimited". The remote config parser only emits 0..N, but the
+        // policy also defends against a misbehaving caller.
+        if (options.MaxPerHour <= 0)
+        {
+            return AdDecision.Deny(AdDecisionReason.HourlyCap);
+        }
+
+        if (options.MaxPerDay <= 0)
+        {
+            return AdDecision.Deny(AdDecisionReason.DailyCap);
+        }
+
         if (impressions.Length > 0 &&
             context.Now - impressions[0] < options.Cooldown)
         {
             return AdDecision.Deny(AdDecisionReason.Cooldown);
         }
 
-        if (options.MaxPerHour > 0 &&
-            impressions.Count(timestamp => context.Now - timestamp < TimeSpan.FromHours(1)) >= options.MaxPerHour)
+        if (impressions.Count(timestamp => context.Now - timestamp < TimeSpan.FromHours(1)) >= options.MaxPerHour)
         {
             return AdDecision.Deny(AdDecisionReason.HourlyCap);
         }
 
-        if (options.MaxPerDay > 0 &&
-            impressions.Count(timestamp => context.Now - timestamp < TimeSpan.FromHours(24)) >= options.MaxPerDay)
+        if (impressions.Count(timestamp => context.Now - timestamp < TimeSpan.FromHours(24)) >= options.MaxPerDay)
         {
             return AdDecision.Deny(AdDecisionReason.DailyCap);
         }

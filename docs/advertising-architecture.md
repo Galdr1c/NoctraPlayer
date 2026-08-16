@@ -212,8 +212,9 @@ feed, policy, paging or player code added here.
 
 A production Android provider must own:
 
-- UMP/consent flow and `CanRequestAds`,
-- Mobile Ads initialization after entitlement/consent gating,
+- consent flow (UMP) and `CanRequestAds`, both invoked from the `InitializeAsync`
+  startup hook,
+- Mobile Ads SDK initialization after entitlement/consent gating,
 - mediated native preload (max the slots actually needed),
 - ad age/expiry and explicit destroy,
 - no-fill/failure retry with backoff (never UI blocking),
@@ -224,15 +225,48 @@ A production Android provider must own:
 - impression-level revenue analytics,
 - test ad IDs in debug builds and production IDs only in release configuration.
 
-## Remote configuration
+## Startup pipeline (`MobileAdvertisingBootstrapper`)
 
-Ad placement rules are not hard-coded in the APK/AAB. `RemoteAdvertisingConfigService`
-fetches them once at startup from `NOCTRA_ADVERTISING_CONFIG_URL` (Release embeds the
-URL as `Noctra.AdvertisingConfigUrl` AssemblyMetadata via `Noctra.Core.csproj`;
-DEBUG reads the runtime environment variable, e.g. `.env` → Debug APK asset). Any
-fetch/parse failure falls back to `AdvertisingOptions.ConservativeDefault`
-(fail-closed — a config error can never make ads more aggressive). The UI only
-consumes the normalized `AdvertisingOptions` exposed by the provider.
+Ad startup is provider-independent and runs fire-and-forget from
+`MainActivity.OnCreate` (never on the UI thread). The bootstrapper sequences:
+
+1. **Remote config** — `IRemoteAdvertisingConfigService.RefreshAsync()` is invoked
+   unconditionally, so placement rules are already fresh when entitlement later
+   flips to ads (e.g. a subscription expires while the app runs). Parsing is a
+   **field-by-field merge**: every section and every field is optional, and a
+   missing or invalid field keeps the in-app default for that field only. This
+   makes `{ "enabled": false }` for any section a true emergency kill switch —
+   it never needs `spacing`/`max` and never resurrects an otherwise-valid
+   placement. Every numeric field is also bounded by a **safe envelope**
+   (`RemoteAdvertisingLimits`): values outside the range are rejected and the
+   in-app default is kept, so the server can never dictate unbounded values
+   (e.g. `max: 2000000000`) that would cause oversized allocations or integer
+   overflow in `AdPlacementPlanner` — which additionally caps anchor allocation
+   and uses 64-bit arithmetic as defense-in-depth. Interstitial caps are
+   fail-closed in `InterstitialAdPolicy` too: `maxPerHour: 0` / `maxPerDay: 0`
+   means **no interstitials at all**, never "unlimited" (the policy denies
+   anything `<= 0`). Whole-config fetch/parse
+   failures fall back to `AdvertisingOptions.ConservativeDefault` (fail-closed —
+   a config error can never make ads more aggressive). `RemoteAdvertisingConfigService`
+   resolves `NOCTRA_ADVERTISING_CONFIG_URL` from the `Noctra.AdvertisingConfigUrl`
+   AssemblyMetadata in Release (embedded via `Noctra.Core.csproj`) and from the
+   runtime environment variable in DEBUG (e.g. `.env` → Debug APK asset).
+2. **Entitlement** — providers expose `CanServeAds` (premium subscribers never see
+   ads). A provider that cannot serve ads short-circuits the pipeline here; no
+   consent, no SDK initialization.
+3. **Consent + provider initialization** — `IMobileAdvertisingService.InitializeAsync()`
+   is invoked only for entitled users. The production Android provider runs UMP/consent
+   and Mobile Ads SDK initialization here; `NoOpMobileAdvertisingService` and
+   `PreviewMobileAdvertisingService` return immediately.
+
+When a remote config refresh completes, `RemoteAdvertisingConfigService` raises
+`OptionsChanged`; the provider forwards it as `EligibilityChanged`, which feed
+controls subscribe to (full row rebuild with fresh anchors/priming). This closes
+the race where a grid renders with default options while the remote fetch is
+still in flight: when the config lands, the UI re-evaluates immediately instead
+of waiting for the next resize/category/paging rebuild.
+
+The UI only consumes the normalized `AdvertisingOptions` exposed by the provider.
 
 Comprehensive configuration (every section is optional; missing sections keep the
 in-app defaults):

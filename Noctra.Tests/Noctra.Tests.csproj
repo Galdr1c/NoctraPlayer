@@ -43,8 +43,12 @@
          Android visual tree. -->
     <Compile Include="..\Noctra.Mobile\ViewModels\MobileEpgGuidePresentation.cs"
              Link="ViewModels\MobileEpgGuidePresentation.cs" />
-    <Compile Include="..\Noctra.Mobile\Services\MobileInputModeService.cs"
+<Compile Include="..\Noctra.Mobile\Services\MobileInputModeService.cs"
              Link="Services\MobileInputModeService.cs" />
+    <Compile Include="..\Noctra.Mobile\Services\IMobileAdvertisingService.cs"
+             Link="Services\IMobileAdvertisingService.cs" />
+    <Compile Include="..\Noctra.Mobile\Services\MobileAdvertisingBootstrapper.cs"
+             Link="Services\MobileAdvertisingBootstrapper.cs" />
     <Compile Include="..\Noctra.Mobile\Services\MobileAppLifecycle.cs"
              Link="Services\MobileAppLifecycle.cs" />
     <Compile Include="..\Noctra.Mobile\Services\SharedImageLoadCoordinator.cs"

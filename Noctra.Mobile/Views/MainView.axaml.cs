@@ -58,6 +58,7 @@ public partial class MainView : UserControl
     private bool _adPlaybackIsLive;
     private bool _adPlaybackFailed;
     private bool _adPlaybackWasPiP;
+    private int _interstitialPresentationInProgress;
     private bool _isPlayerFullScreen;
     private string _currentDestination = "Home";
     private DateTime _lastBackExitPromptUtc = DateTime.MinValue;
@@ -1886,6 +1887,8 @@ public partial class MainView : UserControl
         _playerViewModel.PiPRequested += PlayerViewModel_PiPRequested;
         _playerViewModel.PropertyChanged -= PlayerViewModel_PropertyChanged;
         _playerViewModel.PropertyChanged += PlayerViewModel_PropertyChanged;
+        _playerViewModel.VideoPlayerService.ErrorOccurred -= PlayerViewModel_VideoPlayerServiceErrorOccurred;
+        _playerViewModel.VideoPlayerService.ErrorOccurred += PlayerViewModel_VideoPlayerServiceErrorOccurred;
 
         var pictureInPictureService = platformResolver?.GetPictureInPictureService();
         if (pictureInPictureService is not null)
@@ -2043,10 +2046,26 @@ public partial class MainView : UserControl
         await PlaySelectedChannelAsync(channel);
     }
 
+    private void PlayerViewModel_VideoPlayerServiceErrorOccurred(object? sender, string errorMessage)
+    {
+        // Runtime playback failure (decoder/network/player fatal error) after
+        // playback established. The ad policy must never serve an interstitial
+        // on exit when the playback itself failed. Startup failures are already
+        // marked in the catch of PlaySelectedChannelAsync; this covers the
+        // "played N minutes, then the player died" path. Stays set until the
+        // next ResetPlaybackAdTracking (a new playback intent).
+        _adPlaybackFailed = true;
+    }
+
     private async void PlayerViewModel_CloseRequested(object? sender, EventArgs e)
     {
         UpdatePlaybackAdClock(isPlaying: false);
         var adContext = CreatePlaybackExitAdContext();
+
+        // Tracking now belongs to the closed playback. Reset it immediately so a
+        // slow interstitial presentation can never wipe the tracking of a new
+        // playback that starts while the ad task is still in flight.
+        ResetPlaybackAdTracking();
 
         var platform = GetPlatformServiceResolver();
         var window = GetPlayerWindowService();
@@ -2071,6 +2090,14 @@ public partial class MainView : UserControl
         RestoreCurrentDestinationAfterCover();
         UpdatePictureInPictureState();
 
+        // One presentation at a time: a double CloseRequested (or a second close
+        // while a full-screen ad is already presenting) must never trigger two
+        // interstitials.
+        if (Interlocked.Exchange(ref _interstitialPresentationInProgress, 1) != 0)
+        {
+            return;
+        }
+
         try
         {
             var ads = MobileAdvertisingServices.TryGet();
@@ -2086,7 +2113,7 @@ public partial class MainView : UserControl
         }
         finally
         {
-            ResetPlaybackAdTracking();
+            Interlocked.Exchange(ref _interstitialPresentationInProgress, 0);
         }
     }
 

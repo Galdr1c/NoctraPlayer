@@ -102,6 +102,11 @@ public class MainActivity : AvaloniaMainActivity
             services = app.Services;
         }
 
+        if (services?.GetService<MobileAdvertisingBootstrapper>() is { } bootstrapper)
+        {
+            _ = RunAdvertisingBootstrapSafelyAsync(bootstrapper);
+        }
+
 #if DEBUG
         if (Intent?.GetBooleanExtra("noctra.performance.bootstrap", false) == true)
         {
@@ -400,6 +405,18 @@ public class MainActivity : AvaloniaMainActivity
         catch (Exception ex)
         {
             Log.Warn("Noctra", $"Update resume check failed: {ex}");
+        }
+    }
+
+    private static async Task RunAdvertisingBootstrapSafelyAsync(MobileAdvertisingBootstrapper bootstrapper)
+    {
+        try
+        {
+            await bootstrapper.StartAsync().ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            Log.Warn("NoctraAds", $"Advertising bootstrap failed: {ex}");
         }
     }
 
