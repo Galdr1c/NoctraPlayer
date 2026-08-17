@@ -341,12 +341,13 @@
                                VerticalAlignment="Center"/>
                     </StackPanel>
 
-                    <!-- Sağ: Kalem (yönet modunu aç/kapa) -->
+                    <!-- Sağ: Kalem (yönet modunu aç/kapa) — hiç kayıtlı profil yoksa gizlenir -->
                     <Button Grid.Column="2"
                             Classes="HeaderIconBtn"
                             Click="ToggleManage_Click"
                             Margin="4,0,0,0"
-                            ToolTip.Tip="{loc:Translate Profiles.ManageMode.Manage}">
+                            ToolTip.Tip="{loc:Translate Profiles.ManageMode.Manage}"
+                            IsVisible="{Binding Profiles.Count, Converter={StaticResource CountToVisibilityConverter}}">
                     </Button>
 
                     <!-- Settings -->

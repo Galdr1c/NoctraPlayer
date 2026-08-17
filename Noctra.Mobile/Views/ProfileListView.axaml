@@ -114,11 +114,13 @@
         </StackPanel>
 
         <!-- Sağ: Kalem (yönet modunu aç/kapa)
-             Handler executes ToggleManageModeCommand through the bound ProfilesViewModel. -->
+             Handler executes ToggleManageModeCommand through the bound ProfilesViewModel.
+             Hiç kayıtlı profil yoksa gizlenir (yönetilecek bir şey yok). -->
         <Button Grid.Column="1"
                 Classes="HeaderIconBtn"
                 Click="ToggleManage_Click"
-                VerticalAlignment="Center">
+                VerticalAlignment="Center"
+                IsVisible="{Binding Profiles.Count, Converter={StaticResource CountToVisibilityConverter}}">
           <icons:MaterialIcon Kind="PencilOutline"
                               Width="22" Height="22"
                               Foreground="{DynamicResource TextPrimaryBrush}" />
