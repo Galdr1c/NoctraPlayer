@@ -596,14 +596,6 @@
                                     <Binding Path="StatusKind" Converter="{StaticResource EnumToStringConverter}" />
                                 </Border.Tag>
                                 <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                                    <!-- Progress spinner -->
-                                    <ProgressBar IsIndeterminate="True"
-                                                 Width="14" Height="14"
-                                                 VerticalAlignment="Center"
-                                                 Foreground="{DynamicResource TextSecondaryBrush}"
-                                                 IsVisible="{Binding StatusKind,
-                                                    Converter={StaticResource EnumEqualConverter},
-                                                    ConverterParameter={x:Static vm:FormStatusKind.Progress}}" />
                                     <!-- Success icon -->
                                     <materialIcons:MaterialIcon Kind="CheckCircle"
                                                                 Width="16" Height="16"

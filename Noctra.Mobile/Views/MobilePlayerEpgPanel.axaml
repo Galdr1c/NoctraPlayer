@@ -145,22 +145,8 @@
               Background="{x:Null}"
               ClipToBounds="True">
         <Border VerticalAlignment="Bottom"
-                Background="{DynamicResource PlayerOverlayShieldBrush}"
                 Padding="14,8">
           <Grid ColumnDefinitions="*,Auto">
-            <StackPanel VerticalAlignment="Center" Spacing="2">
-              <TextBlock Text="{Binding CurrentChannel.Name}"
-                         FontSize="{DynamicResource FBody}"
-                         FontWeight="SemiBold"
-                         Foreground="{DynamicResource PlayerOverlayTextBrush}"
-                         TextTrimming="CharacterEllipsis"
-                         MaxLines="1" />
-              <TextBlock Text="{Binding CurrentProgram.Title}"
-                         FontSize="{DynamicResource FCaption}"
-                         Foreground="{DynamicResource PlayerOverlaySecondaryTextBrush}"
-                         TextTrimming="CharacterEllipsis"
-                         MaxLines="1" />
-            </StackPanel>
             <StackPanel Grid.Column="1"
                         Orientation="Horizontal"
                         Spacing="6"
@@ -573,7 +559,7 @@
 
           <Border Padding="16,10"
                   VerticalAlignment="Top"
-                  Background="{DynamicResource Surface1Brush}"
+                  Background="{DynamicResource OverlayDimBrush}"
                   BorderBrush="{DynamicResource WarningBrush}"
                   BorderThickness="0,0,0,1"
                   IsVisible="{Binding EpgHasNoProgramData}">
