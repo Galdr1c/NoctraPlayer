@@ -1152,6 +1152,7 @@
                      LetterSpacing="1"
                      MaxLength="24"
                      IsEnabled="{Binding !IsApplyingPromoCode}"
+                     TextChanged="PromoCodeTextBox_TextChanged"
                      KeyDown="PromoCodeTextBox_KeyDown"
                      AutomationProperties.Name="{loc:Translate GlobalSettings.Promo.Title}" />
             <Button Classes="SettingsPrimaryActionButton"

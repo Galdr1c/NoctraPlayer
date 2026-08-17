@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
@@ -8,6 +9,7 @@ using Avalonia.Input;
 using Avalonia.Media;
 using Noctra.Mobile.Localization;
 using Noctra.Mobile.Navigation;
+using Noctra.Core.Services;
 using Noctra.ViewModels;
 
 namespace Noctra.Mobile.Views;
@@ -15,6 +17,7 @@ namespace Noctra.Mobile.Views;
 public partial class MobileSettingsView : UserControl, IMobileNavigationStateParticipant
 {
     private SettingsViewModel? _viewModel;
+    private bool _isFormattingPromoCode;
 
     private static readonly (string Value, string Key)[] AppLanguageOptions =
     {
@@ -159,6 +162,45 @@ public partial class MobileSettingsView : UserControl, IMobileNavigationStatePar
 
         _viewModel.ApplyPromoCodeCommand.Execute(null);
         e.Handled = true;
+    }
+
+    /// <summary>
+    /// Promo kodunu yazıldıkça biçimlendirir: büyük harf + her 4 karakterde
+    /// bir '-' (PromoCodeFormatter). Caret konumunu korur; paste edilen düz
+    /// değerler de otomatik biçimlenir.
+    /// </summary>
+    private void PromoCodeTextBox_TextChanged(object? sender, TextChangedEventArgs e)
+    {
+        if (_isFormattingPromoCode || sender is not TextBox textBox)
+        {
+            return;
+        }
+
+        _isFormattingPromoCode = true;
+        try
+        {
+            var caretIndex = textBox.CaretIndex;
+            var raw = textBox.Text ?? string.Empty;
+
+            // Caret öncesindeki alfanümerik karakter sayısını hesapla
+            var rawAlnumBeforeCaret = raw[..Math.Min(caretIndex, raw.Length)]
+                .Count(c => (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9'));
+            var alnumCount = Math.Min(rawAlnumBeforeCaret, PromoCodeFormatter.MaxCharacters);
+
+            // Ortak formatter'ı kullanarak kodu biçimlendir
+            var formatted = PromoCodeFormatter.Normalize(raw);
+            var newCaretIndex = PromoCodeFormatter.CalculateCaretPosition(alnumCount, formatted.Length);
+
+            if (textBox.Text != formatted)
+            {
+                textBox.Text = formatted;
+                textBox.CaretIndex = newCaretIndex;
+            }
+        }
+        finally
+        {
+            _isFormattingPromoCode = false;
+        }
     }
 
     private void DarkTheme_Tapped(object? sender, TappedEventArgs e)

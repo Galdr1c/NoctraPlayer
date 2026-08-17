@@ -6,10 +6,11 @@ namespace Noctra.Tests;
 public class PromoCodeFormatterTests
 {
     [Theory]
+    [InlineData("NOC-G8K2-XW9P-7L4Q", true)]
     [InlineData("PROM-OEXA-MPLE-7D", true)]
+    [InlineData("PROMO-EXAMPLE-7D", true)]
     [InlineData("ABCD", true)]
     [InlineData("ABCD-EFGH", true)]
-    [InlineData("ABCD-EFGH-IJKL-MNOP-QRST", true)]
     [InlineData("A1B2-C3D4", true)]
     public void IsValid_WithValidCode_ReturnsTrue(string code, bool expected)
     {
@@ -25,6 +26,7 @@ public class PromoCodeFormatterTests
     [InlineData("ABCD--EFGH")]
     [InlineData("ABCD-EFGH-IJKL-MNOP-QRST-UVWX")]
     [InlineData("ABCDEFGHIJKLMNOPQRSTUV")]
+    [InlineData("ABCD-EFGH-IJKL-MNOP-QRST")]
     [InlineData("abcd-efgh")]
     [InlineData("ABC D")]
     [InlineData("ABCD_EFGH")]
@@ -43,31 +45,31 @@ public class PromoCodeFormatterTests
     [Fact]
     public void Normalize_RawCodeWithSpacesAndDashes_FormatsCorrectly()
     {
-        Assert.Equal("PROM-OEXA-MPLE-7D", PromoCodeFormatter.Normalize("promo example 7d"));
+        Assert.Equal("PRO-MOEX-AMPL-E7D", PromoCodeFormatter.Normalize("promo example 7d"));
     }
 
     [Fact]
     public void Normalize_AlreadyFormattedCode_ReturnsSameFormat()
     {
-        Assert.Equal("PROM-OEXA-MPLE-7D", PromoCodeFormatter.Normalize("PROMO-EXAMPLE-7D"));
+        Assert.Equal("PRO-MOEX-AMPL-E7D", PromoCodeFormatter.Normalize("PROMO-EXAMPLE-7D"));
     }
 
     [Fact]
     public void Normalize_LowerCaseInput_ConvertsToUpper()
     {
-        Assert.Equal("PROM-OEXA-MPLE-7D", PromoCodeFormatter.Normalize("promo-example-7d"));
+        Assert.Equal("PRO-MOEX-AMPL-E7D", PromoCodeFormatter.Normalize("promo-example-7d"));
     }
 
     [Fact]
     public void Normalize_TurkishCharacters_AreRemoved()
     {
-        Assert.Equal("ZMTE-ST", PromoCodeFormatter.Normalize("çözüm-test"));
+        Assert.Equal("ZMT-EST", PromoCodeFormatter.Normalize("çözüm-test"));
     }
 
     [Fact]
-    public void Normalize_MoreThan20Chars_Truncates()
+    public void Normalize_MoreThan15Chars_Truncates()
     {
-        Assert.Equal("ABCD-EFGH-IJKL-MNOP-QRST", PromoCodeFormatter.Normalize("ABCDEFGHIJKLMNOPQRSTUVWXYZ"));
+        Assert.Equal("ABC-DEFG-HIJK-LMNO", PromoCodeFormatter.Normalize("ABCDEFGHIJKLMNOPQRSTUVWXYZ"));
     }
 
     [Theory]
@@ -82,20 +84,27 @@ public class PromoCodeFormatterTests
     [Fact]
     public void Normalize_SymbolsAndDigits_FormatsCorrectly()
     {
-        Assert.Equal("A1B2-C3D4", PromoCodeFormatter.Normalize("a1-b2 c3 d4"));
+        Assert.Equal("A1B-2C3D-4", PromoCodeFormatter.Normalize("a1-b2 c3 d4"));
     }
 
     [Fact]
-    public void Normalize_MaxCharacters_IsTwenty()
+    public void Normalize_MaxCharacters_IsFifteen()
     {
-        Assert.Equal(20, PromoCodeFormatter.MaxCharacters);
+        Assert.Equal(15, PromoCodeFormatter.MaxCharacters);
+    }
+
+    [Fact]
+    public void Normalize_RealCode_IsPreservedAsIs()
+    {
+        Assert.Equal("NOC-G8K2-XW9P-7L4Q", PromoCodeFormatter.Normalize("NOC-G8K2-XW9P-7L4Q"));
+        Assert.Equal("NOC-G8K2-XW9P-7L4Q", PromoCodeFormatter.Normalize("noc g8k2 xw9p 7l4q"));
     }
 
     [Theory]
-    [InlineData("PROMOEXAMPLE7D", "PROM-OEXA-MPLE-7D")]
-    [InlineData("ABCDEFGHIJKL", "ABCD-EFGH-IJKL")]
+    [InlineData("NOCG8K2XW9P7L4Q", "NOC-G8K2-XW9P-7L4Q")]
+    [InlineData("ABCDEFGHIJKL", "ABC-DEFG-HIJK-L")]
     [InlineData("AB", "AB")]
-    [InlineData("ABCDE", "ABCD-E")]
+    [InlineData("ABCDE", "ABC-DE")]
     public void FormatWithDashes_FormatsCorrectly(string alnum, string expected)
     {
         Assert.Equal(expected, PromoCodeFormatter.FormatWithDashes(alnum));
@@ -112,20 +121,22 @@ public class PromoCodeFormatterTests
     [Fact]
     public void CalculateCaretPosition_ReturnsCorrectPosition()
     {
-        Assert.Equal(0, PromoCodeFormatter.CalculateCaretPosition(0, 24));
-        Assert.Equal(1, PromoCodeFormatter.CalculateCaretPosition(1, 24));
-        Assert.Equal(4, PromoCodeFormatter.CalculateCaretPosition(4, 24));
-        Assert.Equal(5, PromoCodeFormatter.CalculateCaretPosition(5, 24));
-        Assert.Equal(9, PromoCodeFormatter.CalculateCaretPosition(8, 24));
-        Assert.Equal(14, PromoCodeFormatter.CalculateCaretPosition(12, 24));
-        Assert.Equal(19, PromoCodeFormatter.CalculateCaretPosition(16, 24));
-        Assert.Equal(24, PromoCodeFormatter.CalculateCaretPosition(20, 24));
+        Assert.Equal(0, PromoCodeFormatter.CalculateCaretPosition(0, 18));
+        Assert.Equal(1, PromoCodeFormatter.CalculateCaretPosition(1, 18));
+        Assert.Equal(3, PromoCodeFormatter.CalculateCaretPosition(3, 18));
+        Assert.Equal(5, PromoCodeFormatter.CalculateCaretPosition(4, 18));
+        Assert.Equal(6, PromoCodeFormatter.CalculateCaretPosition(5, 18));
+        Assert.Equal(8, PromoCodeFormatter.CalculateCaretPosition(7, 18));
+        Assert.Equal(10, PromoCodeFormatter.CalculateCaretPosition(8, 18));
+        Assert.Equal(13, PromoCodeFormatter.CalculateCaretPosition(11, 18));
+        Assert.Equal(15, PromoCodeFormatter.CalculateCaretPosition(12, 18));
+        Assert.Equal(18, PromoCodeFormatter.CalculateCaretPosition(15, 18));
     }
 
     [Fact]
     public void CalculateCaretPosition_ClampsCountToMaxCharacters()
     {
-        Assert.Equal(24, PromoCodeFormatter.CalculateCaretPosition(25, 24));
+        Assert.Equal(18, PromoCodeFormatter.CalculateCaretPosition(25, 18));
     }
 
     [Fact]

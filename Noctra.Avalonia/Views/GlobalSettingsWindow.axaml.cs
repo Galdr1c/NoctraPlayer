@@ -6,6 +6,7 @@ using Avalonia.Media;
 using Avalonia.Threading;
 using Microsoft.Extensions.DependencyInjection;
 using Noctra.Avalonia.Localization;
+using Noctra.Core.Services;
 using Noctra.ViewModels;
 
 namespace Noctra.Avalonia.Views;
@@ -14,6 +15,7 @@ public partial class GlobalSettingsWindow : Window
 {
     private GlobalSettingsViewModel? _viewModel;
     private GlobalSettings? _subscribedSettings;
+    private bool _isFormattingPromoCode;
 
     public GlobalSettingsWindow()
         : this(((App)Application.Current!).Services.GetRequiredService<GlobalSettingsViewModel>())
@@ -140,6 +142,45 @@ public partial class GlobalSettingsWindow : Window
     private void CloseButton_Click(object? sender, RoutedEventArgs e)
     {
         Close();
+    }
+
+    /// <summary>
+    /// Promo kodunu yazıldıkça biçimlendirir: büyük harf + her 4 karakterde
+    /// bir '-' (PromoCodeFormatter). Caret konumunu korur; paste edilen düz
+    /// değerler de otomatik biçimlenir.
+    /// </summary>
+    private void PromoCodeTextBox_TextChanged(object? sender, TextChangedEventArgs e)
+    {
+        if (_isFormattingPromoCode || sender is not TextBox textBox)
+        {
+            return;
+        }
+
+        _isFormattingPromoCode = true;
+        try
+        {
+            var caretIndex = textBox.CaretIndex;
+            var raw = textBox.Text ?? string.Empty;
+
+            // Caret öncesindeki alfanümerik karakter sayısını hesapla
+            var rawAlnumBeforeCaret = raw[..Math.Min(caretIndex, raw.Length)]
+                .Count(c => (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9'));
+            var alnumCount = Math.Min(rawAlnumBeforeCaret, PromoCodeFormatter.MaxCharacters);
+
+            // Ortak formatter'ı kullanarak kodu biçimlendir
+            var formatted = PromoCodeFormatter.Normalize(raw);
+            var newCaretIndex = PromoCodeFormatter.CalculateCaretPosition(alnumCount, formatted.Length);
+
+            if (textBox.Text != formatted)
+            {
+                textBox.Text = formatted;
+                textBox.CaretIndex = newCaretIndex;
+            }
+        }
+        finally
+        {
+            _isFormattingPromoCode = false;
+        }
     }
 
     private void DarkTheme_PointerPressed(object? sender, PointerPressedEventArgs e)
