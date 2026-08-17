@@ -182,7 +182,7 @@
                   CornerRadius="{DynamicResource RadiusSmall}"
                   Background="{DynamicResource Surface1Brush}"
                   ClipToBounds="True"
-                  VerticalAlignment="Top">
+                  VerticalAlignment="Center">
             <Grid>
               <controls:RemoteImage Url="{Binding Guide.SelectedChannel.LogoUrl, ElementName=EpgPanelRoot}"
                                     Stretch="Uniform" />
@@ -228,7 +228,7 @@
                        Foreground="{DynamicResource TextSecondaryBrush}"
                        TextWrapping="Wrap"
                        TextTrimming="CharacterEllipsis"
-                       MaxLines="2" />
+                       MaxLines="3" />
           </StackPanel>
 
           <Button x:Name="WatchSelectedButton"

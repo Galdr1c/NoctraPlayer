@@ -302,7 +302,15 @@ public partial class MobilePlayerEpgPanel : UserControl
             Grid.SetRow(ProgramDetailPanel, 0);
 
             var minimumHeroHeight = Bounds.Height < 500 ? 136 : 190;
-            var heroHeight = Math.Clamp(Bounds.Height * 0.25, minimumHeroHeight, 300);
+            // Yatay modda video kolonu panel genişliğinin 2/5'i kadardır;
+            // yüksekliği 16:9'a göre hesaplayarak slot'un kısa kalmasını ve
+            // videonun iki yanında pillarbox (siyah bant) oluşmasını engelle.
+            // Üst sınır rehber zaman çizelgesine yer bırakacak şekilde sınırlanır.
+            var videoColumnWidth = Bounds.Width * 2.0 / 5.0;
+            var heroHeight = Math.Clamp(
+                videoColumnWidth * 9.0 / 16.0,
+                minimumHeroHeight,
+                Math.Max(minimumHeroHeight, Bounds.Height * 0.5));
             VideoSlot.Height = heroHeight;
             ProgramDetailPanel.Height = heroHeight;
         }

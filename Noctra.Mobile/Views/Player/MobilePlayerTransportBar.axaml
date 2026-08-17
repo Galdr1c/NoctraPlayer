@@ -145,7 +145,8 @@
                   Orientation="Horizontal"
                   Spacing="6"
                   VerticalAlignment="Center"
-                  Margin="8,0,0,0">
+                  Margin="8,0,0,0"
+                  IsVisible="{Binding !IsLiveContent}">
         <TextBlock Text="{Binding DisplayedPositionText}"
                    FontSize="14"
                    FontWeight="SemiBold"
