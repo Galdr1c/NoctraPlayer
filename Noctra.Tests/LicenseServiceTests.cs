@@ -336,7 +336,7 @@ namespace Noctra.Tests
 
             Assert.True(result.Success);
             Assert.True(service.IsPremium);
-            Assert.Equal("PROMO-EXAMPLE-7D", service.ActivePromoCode);
+            Assert.Equal("PROMOEXAMPLE7D", service.ActivePromoCode);
             Assert.NotNull(service.PromoPremiumExpiresAtUtc);
         }
 
@@ -453,7 +453,7 @@ namespace Noctra.Tests
             var service = CreateLicenseService(settings);
 
             Assert.True(service.IsPremium);
-            Assert.Equal("PROMO-EXAMPLE-7D", service.ActivePromoCode);
+            Assert.Equal("PROMOEXAMPLE7D", service.ActivePromoCode);
             Assert.False(string.IsNullOrWhiteSpace(settings.Settings.PromoGrant));
             Assert.Null(settings.Settings.ActivePromoCode);
             Assert.Null(settings.Settings.PromoPremiumExpiresAtUtc);
@@ -576,7 +576,7 @@ namespace Noctra.Tests
 
             Assert.False(secondResult.Success);
             Assert.Contains("kaydedilemedi", secondResult.Message);
-            Assert.Equal("PROMO-FIRST-7D", service.ActivePromoCode);
+            Assert.Equal("PROMOFIRST7D", service.ActivePromoCode);
             Assert.Equal(previousExpiry, service.PromoPremiumExpiresAtUtc);
             Assert.True(service.IsPremium);
 
@@ -673,7 +673,7 @@ namespace Noctra.Tests
             var third = await service.ApplyPromoCodeAsync("PROMO-ACC-3");
             Assert.False(third.Success);
             Assert.Contains("üst sınırına ulaşıldı", third.Message);
-            Assert.Equal("PROMO-ACC-2", service.ActivePromoCode);
+            Assert.Equal("PROMOACC2", service.ActivePromoCode);
         }
 
         [Fact]

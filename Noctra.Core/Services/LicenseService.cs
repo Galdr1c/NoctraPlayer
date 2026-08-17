@@ -1210,7 +1210,7 @@ public class LicenseService : ObservableObject, ILicenseService, IDisposable
     {
         return string.IsNullOrWhiteSpace(code)
             ? string.Empty
-            : code.Trim().Replace(" ", string.Empty).ToUpperInvariant();
+            : code.Trim().Replace(" ", string.Empty).Replace("-", string.Empty).ToUpperInvariant();
     }
 
     private static string FormatLocalDate(DateTime utcDate)
