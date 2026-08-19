@@ -61,18 +61,19 @@ public interface IMobileAdvertisingService
     Task<bool> ShowPrivacyOptionsAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Runs once at startup after the remote config refresh and only when
-    /// <see cref="IsAdsEligible"/> is true. A production provider runs the
-    /// consent flow (UMP) and Mobile Ads SDK initialization here; no-op
-    /// providers return immediately.
-    /// </summary>
-    /// <summary>
     /// Creates a banner ad and attaches it to the given host control.
     /// Returns a disposable handle that releases the ad when disposed.
     /// Returns null when no banner ad can be served.
     /// </summary>
     IDisposable? CreateBannerAd(Control host);
 
+    /// <summary>
+    /// Runs once at startup. A production provider always refreshes UMP consent
+    /// info (Google requires it on every launch, premium users included) and
+    /// initializes the Mobile Ads SDK only when ads are actually served
+    /// (<see cref="IsAdsEligible"/> + consent granted). No-op providers return
+    /// immediately.
+    /// </summary>
     Task InitializeAsync(CancellationToken cancellationToken = default);
 }
 

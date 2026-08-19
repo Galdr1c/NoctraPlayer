@@ -26,6 +26,10 @@ namespace Noctra.Android.Advertising;
 /// Consent flow (runs once, off the UI thread, gated by <see cref="StartupPrivacyCoordinator"/>):
 /// wait for Noctra's own legal consent → requestConsentInfoUpdate → load/show the
 /// UMP consent form when required → MobileAds.Initialize when CanRequestAds.
+/// The consent/privacy part runs for every user — premium included — because
+/// UMP consent info must be refreshed on every launch (Google requirement) and
+/// the privacy-options entry point applies regardless of entitlement; only the
+/// ad stack (SDK init, banner, interstitial) is gated by free entitlement.
 /// A consent-info-update failure does NOT fail-closed: previously granted consent
 /// still allows requesting ads.
 ///
@@ -105,21 +109,22 @@ public sealed class AdMobMobileAdvertisingService : IMobileAdvertisingService
 
     public async Task InitializeAsync(CancellationToken cancellationToken = default)
     {
-        if (!IsAdsEligible)
-        {
-            return;
-        }
-
         await _initLock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            if (Interlocked.CompareExchange(ref _initializationState, 1, 0) != 0)
+            var firstRun = Interlocked.CompareExchange(ref _initializationState, 1, 0) == 0;
+            if (firstRun)
             {
-                return; // already running or completed
+                await RunConsentAndInitializationAsync(cancellationToken).ConfigureAwait(false);
+                Interlocked.Exchange(ref _initializationState, 2);
             }
-
-            await RunConsentAndInitializationAsync(cancellationToken).ConfigureAwait(false);
-            Interlocked.Exchange(ref _initializationState, 2);
+            else if (!_mobileAdsInitialized)
+            {
+                // Consent was already refreshed on a previous run; the ad stack
+                // may still be missing (e.g. premium at launch, expired
+                // mid-session). Bring ads up without re-running the consent flow.
+                await InitializeAdsIfEligibleAsync(cancellationToken).ConfigureAwait(false);
+            }
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -261,21 +266,41 @@ public sealed class AdMobMobileAdvertisingService : IMobileAdvertisingService
         var activity = _activityProvider.CurrentActivity;
         if (activity is null)
         {
+            global::Android.Util.Log.Warn("NoctraAds", "privacy options skipped: no foreground activity");
             return Task.FromResult(false);
         }
 
+        var consentInformation = UserMessagingPlatform.GetConsentInformation(_context);
         var completion = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         DispatchOnMainThread(() =>
         {
             try
             {
+                global::Android.Util.Log.Info("NoctraAds", "privacy options form requested");
                 UserMessagingPlatform.ShowPrivacyOptionsForm(
                     activity,
-                    new ConsentFormDismissedListener(_ => completion.TrySetResult(true)));
+                    new ConsentFormDismissedListener(error =>
+                    {
+                        // The user may have changed/withdrawn consent in the
+                        // form; refresh cached state so ads and the Settings
+                        // entry point reflect the new choice immediately.
+                        RefreshConsentState(consentInformation);
+
+                        if (error is not null)
+                        {
+                            global::Android.Util.Log.Warn("NoctraAds",
+                                $"privacy options failed: code={error.ErrorCodeData()} msg={error.Message}");
+                            completion.TrySetResult(false);
+                            return;
+                        }
+
+                        global::Android.Util.Log.Info("NoctraAds", "privacy options dismissed");
+                        completion.TrySetResult(true);
+                    }));
             }
             catch (Exception ex)
             {
-                global::Android.Util.Log.Warn("NoctraAds", $"privacy options form failed: {ex.Message}");
+                global::Android.Util.Log.Warn("NoctraAds", $"privacy options form threw: {ex.Message}");
                 completion.TrySetResult(false);
             }
         });
@@ -294,7 +319,7 @@ public sealed class AdMobMobileAdvertisingService : IMobileAdvertisingService
         // 1. Noctra's own legal consent screen first — the two modals must never
         //    stack. The timeout only covers abnormal startup paths.
         await _privacyCoordinator.WaitForLegalConsentAsync(cancellationToken).ConfigureAwait(false);
-        if (!IsAdsEligible || cancellationToken.IsCancellationRequested)
+        if (cancellationToken.IsCancellationRequested)
         {
             return;
         }
@@ -327,12 +352,19 @@ public sealed class AdMobMobileAdvertisingService : IMobileAdvertisingService
             RefreshConsentState(consentInformation);
         }
 
-        if (!IsAdsEligible || !_canRequestAds || cancellationToken.IsCancellationRequested)
+        // 4. Mobile Ads SDK initialization (once per process) — only for
+        //    ad-serving users; the consent/privacy lifecycle above applies to
+        //    everyone (premium included).
+        await InitializeAdsIfEligibleAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task InitializeAdsIfEligibleAsync(CancellationToken cancellationToken)
+    {
+        if (!IsAdsEligible || !_canRequestAds || _mobileAdsInitialized || cancellationToken.IsCancellationRequested)
         {
             return;
         }
 
-        // 4. Mobile Ads SDK initialization (once per process).
         await MobileAdsInitializeAsync(cancellationToken).ConfigureAwait(false);
         _mobileAdsInitialized = true;
         EligibilityChanged?.Invoke(this, EventArgs.Empty);
@@ -449,6 +481,14 @@ public sealed class AdMobMobileAdvertisingService : IMobileAdvertisingService
         var changed = canRequest != _canRequestAds || privacyRequired != _privacyOptionsRequired;
         _canRequestAds = canRequest;
         _privacyOptionsRequired = privacyRequired;
+
+        if (!canRequest)
+        {
+            // Consent withdrawn: never serve an ad that was preloaded under the
+            // previous consent state.
+            _interstitial = null;
+        }
+
         if (changed)
         {
             ConsentStatusChanged?.Invoke(this, EventArgs.Empty);
@@ -462,8 +502,12 @@ public sealed class AdMobMobileAdvertisingService : IMobileAdvertisingService
         {
             DisposeAllAds();
         }
-        else if (Volatile.Read(ref _initializationState) == 0)
+        else if (Volatile.Read(ref _initializationState) != 1)
         {
+            // Either consent never ran (state 0) or it ran while the user was
+            // premium (state 2 without SDK init): bring the ad stack up in
+            // both cases. A flow already in progress (state 1) will complete
+            // on its own and gate ad creation on the now-free entitlement.
             _ = Task.Run(async () =>
             {
                 try

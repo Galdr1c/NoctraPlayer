@@ -6,7 +6,8 @@ namespace Noctra.Mobile.Services;
 
 /// <summary>
 /// Startup pipeline for advertising, independent of any ad provider:
-/// entitlement → consent/provider initialization.
+/// consent/privacy refresh → provider initialization. Ad creation itself is
+/// gated by entitlement inside the provider.
 ///
 /// Runs fire-and-forget from startup (never on the UI thread). Fail-closed:
 /// a missing provider (NoOp) simply exits. Stage failures are caught here so
@@ -25,18 +26,11 @@ public sealed class MobileAdvertisingBootstrapper
     {
         try
         {
-            // Stage 1 — entitlement: premium users never see ads, so skip the rest.
-            // NOTE: gate on IsAdsEligible, NOT CanServeAds. CanServeAds implies UMP
-            // consent + SDK initialization, and UMP's CanRequestAds is false until
-            // requestConsentInfoUpdate() has run — gating initialization on it would
-            // deadlock the consent flow.
-            if (!_advertising.IsAdsEligible)
-            {
-                return;
-            }
-
-            // Stage 2 — consent + provider initialization. The production Android
-            // provider runs UMP/consent and Mobile Ads SDK initialization here.
+            // Consent/privacy lifecycle is independent of ad entitlement: UMP
+            // consent info must be refreshed on every launch (Google
+            // requirement) and privacy-options requirements apply to premium
+            // users too. The provider decides whether ads are actually created
+            // (free entitlement + consent granted).
             await _advertising.InitializeAsync(cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)

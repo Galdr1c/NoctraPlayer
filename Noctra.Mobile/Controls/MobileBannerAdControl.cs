@@ -45,18 +45,22 @@ public sealed class MobileBannerAdControl : ContentControl
 
     /// <summary>
     /// Asks the advertising service to load a banner ad into this host.
+    /// When ads are no longer servable (consent withdrawn, premium, provider
+    /// gone) any existing banner is released so a stale ad never stays on
+    /// screen; a later call reloads when eligibility returns.
     /// </summary>
     public void LoadAd()
     {
-        if (_adisposable is not null)
-        {
-            UpdateVisibility();
-            return;
-        }
-
         var service = MobileAdvertisingServices.TryGet();
         if (service is null || !service.CanServeAds)
         {
+            ClearAd();
+            return;
+        }
+
+        if (_adisposable is not null)
+        {
+            UpdateVisibility();
             return;
         }
 
