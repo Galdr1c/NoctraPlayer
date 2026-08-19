@@ -542,7 +542,7 @@
            navigation rail in landscape, above the bottom nav in portrait) -->
       <controls:MobileBannerAdControl x:Name="BannerAd"
                                        Grid.Row="1"
-                                       MinHeight="0"
+                                       Height="50"
                                        MaxHeight="68"
                                        HorizontalAlignment="Stretch" />
 

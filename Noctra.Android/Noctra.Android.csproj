@@ -24,18 +24,22 @@
       AssemblyMetadata for the Android advertising provider.
 
       NoctraAdMobTestDeviceIds lists the AdMob test-device hashed IDs (from
-      logcat). Test devices receive TEST ads from the real unit IDs so real
-      (non-emulator) serving still pays out and the emulator/dev machine sees
-      working ads in every build configuration. Semicolon-separated.
+      logcat) ONLY when a QA build must force TEST creatives; leave empty so
+      every build (Debug and Release alike) serves REAL ads from the unit IDs.
+      Semicolon-separated.
+
+      The 96EFF064B44BEC9BBFB0A97870B9412E entry below is the Xiaomi
+      (2201117TG, Android 13) test device. Remove it before shipping so real
+      ads serve again.
 
       NoctraAdMobDebugGeography optionally forces UMP's debug geography for the
       listed test devices ONLY (EEA to see the consent form on a non-EEA
       device). Leave empty for production-correct behavior.
     -->
+    <NoctraAdMobTestDeviceIds Condition="'$(NoctraAdMobTestDeviceIds)' == ''">96EFF064B44BEC9BBFB0A97870B9412E</NoctraAdMobTestDeviceIds>
     <NoctraAdMobAppId Condition="'$(NoctraAdMobAppId)' == ''">ca-app-pub-4557682582400970~9852101527</NoctraAdMobAppId>
     <NoctraBannerAdUnitId Condition="'$(NoctraBannerAdUnitId)' == ''">ca-app-pub-4557682582400970/5775345477</NoctraBannerAdUnitId>
     <NoctraInterstitialAdUnitId Condition="'$(NoctraInterstitialAdUnitId)' == ''">ca-app-pub-4557682582400970/6102598203</NoctraInterstitialAdUnitId>
-    <NoctraAdMobTestDeviceIds Condition="'$(NoctraAdMobTestDeviceIds)' == ''">B3EEABB8EE11C2BE770B684D95219ECB</NoctraAdMobTestDeviceIds>
     <NoctraAdMobDebugGeography Condition="'$(NoctraAdMobDebugGeography)' == ''"></NoctraAdMobDebugGeography>
     <AndroidManifestPlaceholders>$(AndroidManifestPlaceholders);noctraAdMobAppId=$(NoctraAdMobAppId)</AndroidManifestPlaceholders>
   </PropertyGroup>

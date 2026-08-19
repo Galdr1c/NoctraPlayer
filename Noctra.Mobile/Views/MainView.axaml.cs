@@ -254,6 +254,16 @@ public partial class MainView : UserControl
             return;
         }
 
+        // Every startup path must complete the legal consent gate first: the
+        // Android ad provider awaits it before running the UMP consent flow,
+        // and returning users with a stored profile would otherwise never open
+        // it (no-consent → no SDK init → no ads).
+        await ShowLegalConsentIfNeededAsync();
+        if (!IsAttachmentCurrent(attachmentGeneration))
+        {
+            return;
+        }
+
         var resolver = GetViewModelResolver();
         var coreVm = resolver?.GetCoreMainViewModel();
         if (coreVm?.CurrentProfile is not null)
@@ -303,12 +313,6 @@ public partial class MainView : UserControl
 
         try
         {
-            await ShowLegalConsentIfNeededAsync();
-            if (!IsAttachmentCurrent(attachmentGeneration))
-            {
-                return;
-            }
-
             await ShowPinSystemResetNoticeIfNeededAsync();
             if (!IsAttachmentCurrent(attachmentGeneration))
             {
@@ -322,6 +326,7 @@ public partial class MainView : UserControl
                 if (IsAttachmentCurrent(attachmentGeneration))
                 {
                     _startupFlowCompleted = true;
+                    LoadBannerAdIfEligible();
                     ShowProfileSelection();
                 }
             });
@@ -333,6 +338,7 @@ public partial class MainView : UserControl
                 if (IsAttachmentCurrent(attachmentGeneration))
                 {
                     _startupFlowCompleted = true;
+                    LoadBannerAdIfEligible();
                     ShowProfileSelection();
                 }
             });
@@ -1088,6 +1094,12 @@ public partial class MainView : UserControl
         // Show core content (home) and hide shell content
         ShellContent.IsVisible = false;
         CoreContentHost.IsVisible = true;
+
+        // Safety net: the SDK may have finished initializing while the profile
+        // picker was open (EligibilityChanged fires from the bootstrap thread and
+        // can be missed pre-startup). Re-attempt the banner now that chrome is
+        // back; LoadAd is a no-op when already loaded.
+        LoadBannerAdIfEligible();
 
         // Navigate to the home screen by selecting the Home destination
         _pageNavigationState.Clear();

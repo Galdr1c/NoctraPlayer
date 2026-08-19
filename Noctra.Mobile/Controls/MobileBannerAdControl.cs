@@ -76,5 +76,15 @@ public sealed class MobileBannerAdControl : ContentControl
     }
 
     private void UpdateVisibility()
-        => IsVisible = _adisposable is not null && !_isSuppressed;
+    {
+        IsVisible = _adisposable is not null && !_isSuppressed;
+        if (IsVisible)
+        {
+            Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+            {
+                Console.WriteLine(
+                    $"NoctraAds: banner control bounds={Bounds.Width}x{Bounds.Height} visible={IsVisible}");
+            });
+        }
+    }
 }

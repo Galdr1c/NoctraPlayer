@@ -47,6 +47,7 @@ public sealed class AdMobMobileAdvertisingService : IMobileAdvertisingService
     private readonly ILicenseService _licenseService;
     private readonly StartupPrivacyCoordinator _privacyCoordinator;
     private readonly SemaphoreSlim _initLock = new(1, 1);
+    private readonly string _bannerUnitId;
     private readonly string _interstitialUnitId;
     private readonly string _adMobAppId;
     private readonly string[] _testDeviceIds;
@@ -71,6 +72,7 @@ public sealed class AdMobMobileAdvertisingService : IMobileAdvertisingService
         _licenseService = licenseService ?? throw new ArgumentNullException(nameof(licenseService));
         _privacyCoordinator = privacyCoordinator ?? throw new ArgumentNullException(nameof(privacyCoordinator));
 
+        _bannerUnitId = ReadMetadata("BannerAdUnitId");
         _interstitialUnitId = ReadMetadata("InterstitialAdUnitId");
         _adMobAppId = ReadMetadata("AppId");
         _testDeviceIds = ReadMetadata("TestDeviceIds")
@@ -83,12 +85,13 @@ public sealed class AdMobMobileAdvertisingService : IMobileAdvertisingService
     public AdvertisingOptions Options => AdvertisingOptions.ConservativeDefault;
 
     /// <summary>
-    /// Free entitlement + interstitial unit id present. Independent of UMP
+    /// Free entitlement + at least one configured ad unit. Independent of UMP
     /// consent so the bootstrap can run the consent flow before the SDK is
     /// initialized.
     /// </summary>
     public bool IsAdsEligible => !_licenseService.IsPremium &&
-        (Options.PlaybackExit.Enabled && !string.IsNullOrWhiteSpace(_interstitialUnitId));
+        (!string.IsNullOrWhiteSpace(_bannerUnitId) ||
+         (Options.PlaybackExit.Enabled && !string.IsNullOrWhiteSpace(_interstitialUnitId)));
 
     public bool CanRequestAds => _canRequestAds && IsAdsEligible;
 
@@ -136,17 +139,17 @@ public sealed class AdMobMobileAdvertisingService : IMobileAdvertisingService
             return null;
         }
 
-        var bannerUnitId = ReadMetadata("BannerAdUnitId");
-        if (string.IsNullOrWhiteSpace(bannerUnitId))
+        if (string.IsNullOrWhiteSpace(_bannerUnitId))
         {
             return null;
         }
 
         var adView = new Google.Android.Gms.Ads.AdView(_context)
         {
-            AdSize = Google.Android.Gms.Ads.AdSize.Fluid,
-            AdUnitId = bannerUnitId
+            AdSize = Google.Android.Gms.Ads.AdSize.Banner,
+            AdUnitId = _bannerUnitId
         };
+        adView.AdListener = new BannerAdListener(adView);
 
         var request = new AdRequest.Builder().Build();
         DispatchOnMainThread(() => adView.LoadAd(request));
@@ -554,6 +557,38 @@ public sealed class AdMobMobileAdvertisingService : IMobileAdvertisingService
 
         public void OnInitializationComplete(IInitializationStatus initializationStatus)
             => _completed();
+    }
+
+    private sealed class BannerAdListener : AdListener
+    {
+        private readonly Google.Android.Gms.Ads.AdView _adView;
+
+        public BannerAdListener(Google.Android.Gms.Ads.AdView adView)
+        {
+            _adView = adView;
+        }
+
+        public override void OnAdLoaded()
+        {
+            global::Android.Util.Log.Info("NoctraAds", "banner loaded");
+            new global::Android.OS.Handler(global::Android.OS.Looper.MainLooper).Post(() =>
+            {
+                var loc = new int[2];
+                _adView.GetLocationOnScreen(loc);
+                global::Android.Util.Log.Info("NoctraAds",
+                    $"banner metrics: w={_adView.Width} h={_adView.Height} x={loc[0]} y={loc[1]} vis={_adView.Visibility} parent={_adView.Parent}");
+            });
+        }
+
+        public override void OnAdFailedToLoad(LoadAdError error)
+            => global::Android.Util.Log.Warn("NoctraAds",
+                $"banner load failed: code={error.Code} domain={error.Domain} msg={error.Message}");
+
+        public override void OnAdImpression()
+            => global::Android.Util.Log.Info("NoctraAds", "banner impression");
+
+        public override void OnAdClicked()
+            => global::Android.Util.Log.Info("NoctraAds", "banner clicked");
     }
 
     private sealed class InterstitialLoadCallbackImpl : InterstitialAdLoadCallback
