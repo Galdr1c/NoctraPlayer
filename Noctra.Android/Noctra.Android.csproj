@@ -15,7 +15,38 @@
     <AndroidStoreUncompressedFileExtensions Condition="'$(Configuration)' == 'Debug'">.so;$(AndroidStoreUncompressedFileExtensions)</AndroidStoreUncompressedFileExtensions>
     <EmbedAssembliesIntoApk Condition="'$(Configuration)' == 'Debug'">true</EmbedAssembliesIntoApk>
     <AndroidEnableProfiledAot>false</AndroidEnableProfiledAot>
+
+    <!--
+      AdMob production identifiers. Defaults are the production values; override
+      any of them per-build with -p:NoctraAdMobAppId=... (or the unit IDs) when
+      building a test/QA flavor. The App ID is injected into AndroidManifest.xml
+      through AndroidManifestPlaceholders and the ad-unit IDs are embedded as
+      AssemblyMetadata for the Android advertising provider.
+
+      NoctraAdMobTestDeviceIds lists the AdMob test-device hashed IDs (from
+      logcat). Test devices receive TEST ads from the real unit IDs so real
+      (non-emulator) serving still pays out and the emulator/dev machine sees
+      working ads in every build configuration. Semicolon-separated.
+
+      NoctraAdMobDebugGeography optionally forces UMP's debug geography for the
+      listed test devices ONLY (EEA to see the consent form on a non-EEA
+      device). Leave empty for production-correct behavior.
+    -->
+    <NoctraAdMobAppId Condition="'$(NoctraAdMobAppId)' == ''">ca-app-pub-4557682582400970~9852101527</NoctraAdMobAppId>
+    <NoctraBannerAdUnitId Condition="'$(NoctraBannerAdUnitId)' == ''">ca-app-pub-4557682582400970/5775345477</NoctraBannerAdUnitId>
+    <NoctraInterstitialAdUnitId Condition="'$(NoctraInterstitialAdUnitId)' == ''">ca-app-pub-4557682582400970/6102598203</NoctraInterstitialAdUnitId>
+    <NoctraAdMobTestDeviceIds Condition="'$(NoctraAdMobTestDeviceIds)' == ''">B3EEABB8EE11C2BE770B684D95219ECB</NoctraAdMobTestDeviceIds>
+    <NoctraAdMobDebugGeography Condition="'$(NoctraAdMobDebugGeography)' == ''"></NoctraAdMobDebugGeography>
+    <AndroidManifestPlaceholders>$(AndroidManifestPlaceholders);noctraAdMobAppId=$(NoctraAdMobAppId)</AndroidManifestPlaceholders>
   </PropertyGroup>
+
+  <ItemGroup>
+    <AssemblyMetadata Include="Noctra.AdMob.AppId" Value="$(NoctraAdMobAppId)" />
+    <AssemblyMetadata Include="Noctra.AdMob.BannerAdUnitId" Value="$(NoctraBannerAdUnitId)" />
+    <AssemblyMetadata Include="Noctra.AdMob.InterstitialAdUnitId" Value="$(NoctraInterstitialAdUnitId)" />
+    <AssemblyMetadata Include="Noctra.AdMob.TestDeviceIds" Value="$(NoctraAdMobTestDeviceIds)" />
+    <AssemblyMetadata Include="Noctra.AdMob.DebugGeography" Value="$(NoctraAdMobDebugGeography)" Condition="'$(NoctraAdMobDebugGeography)' != ''" />
+  </ItemGroup>
 
   <ItemGroup>
     <AndroidResource Remove="Resources\PlayStore_Assets\**\*" />
@@ -67,6 +98,8 @@
     <PackageReference Include="Xamarin.AndroidX.Media3.ExoPlayer.SmoothStreaming" Version="1.4.1.1" />
     <PackageReference Include="Xamarin.AndroidX.Media3.ExoPlayer.Rtsp" Version="1.4.1.1" />
     <PackageReference Include="Xamarin.AndroidX.Media3.Session" Version="1.4.1.1" />
+    <PackageReference Include="Xamarin.GooglePlayServices.Ads" Version="125.4.0.2" />
+    <PackageReference Include="Xamarin.Google.UserMessagingPlatform" Version="4.0.0.3" />
   </ItemGroup>
 
   <ItemGroup>

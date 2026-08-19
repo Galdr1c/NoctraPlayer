@@ -470,6 +470,8 @@
   "Settings.Privacy.Retention.7d": "7 Days",
   "Settings.Privacy.Retention.14d": "14 Days",
   "Settings.Privacy.Retention.30d": "30 Days",
+  "Settings.Privacy.Choices": "Privacy choices",
+  "Settings.Privacy.ChoicesDescription": "Manage how ads are personalized and review your consent choices",
   "Settings.Privacy.DangerZone": "Danger Zone",
   "Settings.Privacy.ClearAllNow": "Clear All Watch History Now",
   "Settings.About.VersionFormat": "Version {0}",

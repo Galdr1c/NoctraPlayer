@@ -1,35 +1,53 @@
 using System;
-using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Layout;
-using Avalonia.Media;
 using Noctra.Core.Advertising;
 using Noctra.Services;
 
 namespace Noctra.Mobile.Services;
 
-public readonly record struct MobileNativeAdSlot(
-    string OwnerKey,
-    AdPlacement Placement,
-    int Ordinal);
-
 /// <summary>
 /// Platform/provider boundary. The feed code never talks directly to AdMob or
 /// any mediation network. A production Android provider owns consent, preloading,
-/// NativeAd lifetime, no-fill handling and full-screen presentation.
+/// banner lifetime, no-fill handling and full-screen presentation.
 /// </summary>
 public interface IMobileAdvertisingService
 {
     AdvertisingOptions Options { get; }
+
+    /// <summary>
+    /// True when this user/device could see ads: free entitlement, advertising
+    /// enabled by remote config and a real provider is available. Deliberately
+    /// independent of UMP consent so bootstrap can run consent before the SDK
+    /// is initialized (CanRequestAds is false until consent is updated).
+    /// </summary>
+    bool IsAdsEligible { get; }
+
+    /// <summary>
+    /// True when UMP consent state permits requesting ads (UMP's CanRequestAds).
+    /// Requires a consent info update.
+    /// </summary>
+    bool CanRequestAds { get; }
+
+    /// <summary>
+    /// True when UMP demands a visible privacy-options entry point
+    /// (PrivacyOptionsRequirementStatus == Required).
+    /// </summary>
+    bool CanShowPrivacyOptions { get; }
+
+    /// <summary>
+    /// Effective gate for the UI: eligible + consent granted + SDK initialized.
+    /// </summary>
     bool CanServeAds { get; }
+
     event EventHandler? EligibilityChanged;
 
-    void PrimeNative(string ownerKey, AdPlacement placement, int slotCount);
-    bool TryCreateNativeAdControl(MobileNativeAdSlot slot, out Control? control);
-    void ReleaseOwner(string ownerKey);
+    /// <summary>
+    /// Raised when UMP consent/privacy-options requirement changes so the
+    /// Settings privacy section can show/hide the "Privacy choices" entry.
+    /// </summary>
+    event EventHandler? ConsentStatusChanged;
 
     void PrimeInterstitial();
     Task<bool> TryShowInterstitialAsync(
@@ -37,11 +55,24 @@ public interface IMobileAdvertisingService
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Opens the UMP privacy-options form (GDPR/US state choices). Returns false
+    /// when no form is available or no activity is present.
+    /// </summary>
+    Task<bool> ShowPrivacyOptionsAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Runs once at startup after the remote config refresh and only when
-    /// <see cref="CanServeAds"/> is true. A production provider runs the
+    /// <see cref="IsAdsEligible"/> is true. A production provider runs the
     /// consent flow (UMP) and Mobile Ads SDK initialization here; no-op
     /// providers return immediately.
     /// </summary>
+    /// <summary>
+    /// Creates a banner ad and attaches it to the given host control.
+    /// Returns a disposable handle that releases the ad when disposed.
+    /// Returns null when no banner ad can be served.
+    /// </summary>
+    IDisposable? CreateBannerAd(Control host);
+
     Task InitializeAsync(CancellationToken cancellationToken = default);
 }
 
@@ -52,6 +83,9 @@ public interface IMobileAdvertisingService
 public sealed class NoOpMobileAdvertisingService : IMobileAdvertisingService
 {
     public AdvertisingOptions Options => AdvertisingOptions.ConservativeDefault;
+    public bool IsAdsEligible => false;
+    public bool CanRequestAds => false;
+    public bool CanShowPrivacyOptions => false;
     public bool CanServeAds => false;
     public event EventHandler? EligibilityChanged
     {
@@ -59,14 +93,12 @@ public sealed class NoOpMobileAdvertisingService : IMobileAdvertisingService
         remove { }
     }
 
-    public void PrimeNative(string ownerKey, AdPlacement placement, int slotCount) { }
-    public bool TryCreateNativeAdControl(MobileNativeAdSlot slot, out Control? control)
+    public event EventHandler? ConsentStatusChanged
     {
-        control = null;
-        return false;
+        add { }
+        remove { }
     }
 
-    public void ReleaseOwner(string ownerKey) { }
     public void PrimeInterstitial() { }
 
     public Task<bool> TryShowInterstitialAsync(
@@ -74,31 +106,27 @@ public sealed class NoOpMobileAdvertisingService : IMobileAdvertisingService
         CancellationToken cancellationToken = default)
         => Task.FromResult(false);
 
+    public Task<bool> ShowPrivacyOptionsAsync(CancellationToken cancellationToken = default)
+        => Task.FromResult(false);
+
+    public IDisposable? CreateBannerAd(Control host) => null;
+
     public Task InitializeAsync(CancellationToken cancellationToken = default)
         => Task.CompletedTask;
 }
 
 /// <summary>
 /// DEBUG-only visual harness. Set NOCTRA_ADS_PREVIEW=1 before launching Android
-/// to exercise row placement/recycling without requesting real ads.
+/// to exercise entitlement gating without requesting real ads.
 /// </summary>
 public sealed class PreviewMobileAdvertisingService : IMobileAdvertisingService
 {
     private readonly ILicenseService _licenseService;
-    private readonly IRemoteAdvertisingConfigService? _remoteConfig;
-    private readonly HashSet<MobileNativeAdSlot> _primedSlots = new();
 
-    public PreviewMobileAdvertisingService(
-        ILicenseService licenseService,
-        IRemoteAdvertisingConfigService? remoteConfig = null)
+    public PreviewMobileAdvertisingService(ILicenseService licenseService)
     {
         _licenseService = licenseService ?? throw new ArgumentNullException(nameof(licenseService));
-        _remoteConfig = remoteConfig;
         _licenseService.SubscriptionChanged += OnSubscriptionChanged;
-        if (_remoteConfig is not null)
-        {
-            _remoteConfig.OptionsChanged += OnRemoteConfigChanged;
-        }
     }
 
     public static bool IsPreviewEnabled =>
@@ -116,96 +144,13 @@ public sealed class PreviewMobileAdvertisingService : IMobileAdvertisingService
 
     public static bool IsEnabled => IsPreviewEnabled || DebugOverrideEnabled;
 
-    public AdvertisingOptions Options =>
-        _remoteConfig?.CurrentOptions ?? AdvertisingOptions.ConservativeDefault;
+    public AdvertisingOptions Options => AdvertisingOptions.ConservativeDefault;
+    public bool IsAdsEligible => IsEnabled && !_licenseService.IsPremium;
+    public bool CanRequestAds => IsEnabled && !_licenseService.IsPremium;
+    public bool CanShowPrivacyOptions => false;
     public bool CanServeAds => IsEnabled && !_licenseService.IsPremium;
     public event EventHandler? EligibilityChanged;
-
-    public void PrimeNative(string ownerKey, AdPlacement placement, int slotCount)
-    {
-        if (!CanServeAds || string.IsNullOrWhiteSpace(ownerKey) || slotCount <= 0)
-            return;
-
-        for (var ordinal = 0; ordinal < slotCount; ordinal++)
-        {
-            _primedSlots.Add(new MobileNativeAdSlot(ownerKey, placement, ordinal));
-        }
-    }
-
-    public bool TryCreateNativeAdControl(MobileNativeAdSlot slot, out Control? control)
-    {
-        if (!CanServeAds || !_primedSlots.Contains(slot))
-        {
-            control = null;
-            return false;
-        }
-
-        var grid = new Grid
-        {
-            ColumnDefinitions = new ColumnDefinitions("Auto,*"),
-            ColumnSpacing = 12
-        };
-
-        grid.Children.Add(new Border
-        {
-            Width = 72,
-            Height = 72,
-            CornerRadius = new CornerRadius(8),
-            Background = Brushes.DimGray,
-            Child = new TextBlock
-            {
-                Text = "AD",
-                FontWeight = FontWeight.Bold,
-                HorizontalAlignment = HorizontalAlignment.Center,
-                VerticalAlignment = VerticalAlignment.Center
-            }
-        });
-
-        var copy = new StackPanel
-        {
-            Spacing = 4,
-            VerticalAlignment = VerticalAlignment.Center
-        };
-        Grid.SetColumn(copy, 1);
-        copy.Children.Add(new TextBlock
-        {
-            Text = "Sponsored • Preview",
-            FontSize = 12,
-            FontWeight = FontWeight.SemiBold
-        });
-        copy.Children.Add(new TextBlock
-        {
-            Text = $"{slot.Placement} / slot {slot.Ordinal + 1}",
-            FontSize = 15,
-            FontWeight = FontWeight.SemiBold
-        });
-        copy.Children.Add(new TextBlock
-        {
-            Text = "Real providers replace this control with a mediated native ad.",
-            FontSize = 12,
-            TextWrapping = TextWrapping.Wrap
-        });
-        grid.Children.Add(copy);
-
-        control = new Border
-        {
-            Padding = new Thickness(12),
-            Margin = new Thickness(0, 8),
-            MinHeight = 112,
-            CornerRadius = new CornerRadius(8),
-            BorderThickness = new Thickness(1),
-            BorderBrush = Brushes.DimGray,
-            Background = Brushes.Transparent,
-            Child = grid
-        };
-        return true;
-    }
-
-    public void ReleaseOwner(string ownerKey)
-    {
-        _primedSlots.RemoveWhere(slot =>
-            string.Equals(slot.OwnerKey, ownerKey, StringComparison.Ordinal));
-    }
+    public event EventHandler? ConsentStatusChanged;
 
     public void PrimeInterstitial() { }
 
@@ -214,12 +159,14 @@ public sealed class PreviewMobileAdvertisingService : IMobileAdvertisingService
         CancellationToken cancellationToken = default)
         => Task.FromResult(false);
 
+    public Task<bool> ShowPrivacyOptionsAsync(CancellationToken cancellationToken = default)
+        => Task.FromResult(false);
+
+    public IDisposable? CreateBannerAd(Control host) => null;
+
     public Task InitializeAsync(CancellationToken cancellationToken = default)
         => Task.CompletedTask;
 
     private void OnSubscriptionChanged()
-        => EligibilityChanged?.Invoke(this, EventArgs.Empty);
-
-    private void OnRemoteConfigChanged(object? sender, EventArgs e)
         => EligibilityChanged?.Invoke(this, EventArgs.Empty);
 }

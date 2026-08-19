@@ -470,6 +470,8 @@
   "Settings.Privacy.Retention.7d": "7 Tage",
   "Settings.Privacy.Retention.14d": "14 Tage",
   "Settings.Privacy.Retention.30d": "30 Tage",
+  "Settings.Privacy.Choices": "Datenschutzoptionen",
+  "Settings.Privacy.ChoicesDescription": "Verwalten Sie die Personalisierung von Anzeigen und prüfen Sie Ihre Einwilligungsoptionen",
   "Settings.Privacy.DangerZone": "Gefahrenzone",
   "Settings.Privacy.ClearAllNow": "Gesamten Wiedergabeverlauf jetzt löschen",
   "Settings.About.VersionFormat": "Version {0}",

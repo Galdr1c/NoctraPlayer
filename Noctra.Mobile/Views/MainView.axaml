@@ -365,7 +365,7 @@
       </StackPanel>
     </Border>
 
-    <Grid Grid.Row="1" Grid.Column="1">
+    <Grid Grid.Row="1" Grid.Column="1" RowDefinitions="*,Auto">
       <ScrollViewer x:Name="ShellContent"
                     IsVisible="False">
         <StackPanel Margin="20,16,20,28"
@@ -538,15 +538,26 @@
         </Border>
       </Border>
 
+      <!-- Banner ad pinned to the bottom of the content column (right of the
+           navigation rail in landscape, above the bottom nav in portrait) -->
+      <controls:MobileBannerAdControl x:Name="BannerAd"
+                                       Grid.Row="1"
+                                       MinHeight="0"
+                                       MaxHeight="68"
+                                       HorizontalAlignment="Stretch" />
+
     </Grid>
 
-    <Border x:Name="BottomNavigation"
+    <DockPanel x:Name="BottomNavigation"
             Grid.Row="2"
             Grid.ColumnSpan="2"
-            BorderBrush="{DynamicResource BorderBrush}"
-            BorderThickness="0,1,0,0"
-            Background="{DynamicResource Bg0Brush}"
+            LastChildFill="True"
             IsVisible="False">
+
+      <Border x:Name="BottomNavContent"
+              BorderBrush="{DynamicResource BorderBrush}"
+              BorderThickness="0,1,0,0"
+              Background="{DynamicResource Bg0Brush}">
 
       <Grid ColumnDefinitions="*,*,*,*,*" Height="{DynamicResource BottomNavHeight}">
 
@@ -611,13 +622,13 @@
         </Button>
 
       </Grid>
-    </Border>
+      </Border>
+    </DockPanel>
 
             <views:MobileCategorySelectionView x:Name="CategorySelectionOverlay"
                                        Grid.RowSpan="3"
                                        Grid.ColumnSpan="2"
                                        ZIndex="{x:Static controls:MobileZIndex.ShellCategorySelection}"
-                                       controls:MobileNativeAdOverlayGuard.IsEnabled="True"
                                        IsVisible="False" />
 
     </Grid>
@@ -626,7 +637,6 @@
                                   Grid.RowSpan="3"
                                   Grid.ColumnSpan="2"
                                   ZIndex="{x:Static controls:MobileZIndex.ShellCardActions}"
-                                  controls:MobileNativeAdOverlayGuard.IsEnabled="True"
                                   IsVisible="False" />
 
     <Border x:Name="PlayerHost"
@@ -672,7 +682,6 @@
                                   Grid.RowSpan="3"
                                   Grid.ColumnSpan="2"
                                   ZIndex="{x:Static controls:MobileZIndex.ShellLegalConsent}"
-                                  controls:MobileNativeAdOverlayGuard.IsEnabled="True"
                                   IsVisible="False" />
 
     <!-- Review Prompt Overlay (Avalonia bottom sheet) -->
@@ -680,7 +689,6 @@
                                   Grid.RowSpan="3"
                                   Grid.ColumnSpan="2"
                                   ZIndex="{x:Static controls:MobileZIndex.ShellReviewPrompt}"
-                                  controls:MobileNativeAdOverlayGuard.IsEnabled="True"
                                   IsVisible="False" />
 
     <!-- Profiles Overlay -->
@@ -717,7 +725,6 @@
             Grid.ColumnSpan="2"
             Background="{DynamicResource Bg0Brush}"
             ZIndex="{x:Static controls:MobileZIndex.ShellProfiles}"
-            controls:MobileNativeAdOverlayGuard.IsEnabled="True"
             IsVisible="False">
       <!--
         ProfileListView kendi başlığını içeriyor:

@@ -1,155 +1,59 @@
 # NoctraPlayer Advertising Architecture
 
-This patch adds the advertising placement/policy foundation without contaminating
-media/domain collections and without making navigation depend on an ad network.
+This document describes the advertising placement/policy foundation: a persistent
+banner above the bottom navigation bar (free users only) and a playback-exit
+interstitial. Feed/domain collections never receive ad objects and navigation
+never depends on an ad network.
 
-## Rollout defaults
+## Placements
 
-| Placement | Enabled | Minimum real content | Maximum native slots |
-|---|---:|---:|---:|
-| Home / Continue Watching | No | 6 | 1 |
-| Movies | Yes | 14 | 2 |
-| Series | Yes | 14 | 2 |
-| Live | Yes | 20 | 1 |
-| Search | Yes | 10 exact results | 1 |
+| Placement | Surface | Audience |
+|---|---|---|
+| Banner | `MainView` — `BottomNavigation`'un hemen üstü, tüm sayfalarda persistent | Free users |
+| Playback exit interstitial | Player kapanışında | Free users, eşikler sağlandığında |
 
-`HomeFeed` exists in policy but is deliberately not wired into `MobileHomeView` in
-the first rollout. If Continue Watching is empty (or the user is new), Home remains
-a clean welcome/empty state and contains no ad.
+### Persistent banner
 
-### Responsive row snapping
+`MobileBannerAdControl` lives in the content column of `MainView.axaml`
+(`Grid.Row="1" Grid.Column="1"`, `RowDefinitions="*,Auto"`), pinned to the bottom
+of that column. Behavior:
 
-`MinContentSpacing` is a minimum number of **real media items**, not a raw list
-index. `AdPlacementPlanner` snaps each anchor to a complete media row so a native
-ad can never split a partially populated poster/channel row.
+- Rendered on every shell page (Home, Live, Movies, Series, Search, Downloads,
+  More) because it lives in the shell, not in a page.
+- In portrait it sits directly above the bottom navigation bar; in landscape/
+  tablet mode (width ≥ 720, navigation rail active) it stays at the bottom of
+  the content area, to the right of the rail.
+- Hidden while the player is open — the player hides `ShellLayer`, which
+  collapses the banner with it.
+- Collapses to zero height (`IsVisible=false`) for premium users, when consent/
+  SDK is not ready, or when the provider returns no ad — it never reserves
+  blank screen space.
+- `MainView.LoadBannerAdIfEligible()` asks `IMobileAdvertisingService.CreateBannerAd(host)`
+  once the startup flow completes; `CanServeAds` gates free entitlement + consent
+  + SDK initialization. `MobileBannerAdControl.IsSuppressed` (driven by
+  `UpdateNavigationMode`/overlay openers) hides a loaded ad while keeping it
+  alive during overlays (profiles, category selection, player).
 
-For Movies/Series with `MinContentSpacing=14`:
-
-| Columns | Slot 1 after | Slot 2 after |
-|---:|---:|---:|
-| 1 | 14 | 28 |
-| 2 | 14 | 28 |
-| 3 | 15 | 30 |
-| 4 | 16 | 32 |
-| 5 | 15 | 30 |
-| 6 | 18 | 36 |
-
-The second slot is another full minimum interval after the first. For example, a
-6-column layout uses 18 + ad + 18 + ad, not 18 + ad + 12 + ad.
-
-## Virtualization and paging
-
-`FilteredChannels`, `SeriesViewItems`, Search collections, favorites, sorting and
-player navigation never receive ad objects.
-
-`MobileVirtualizingCardGrid` projects the real collection through
-`AdAwareIncrementalRowCollection`:
-
-```
-content row
-content row
-...
-native ad row
-content row
-...
-```
-
-The `VirtualizingStackPanel` still virtualizes rows. `ItemCount` remains the real
-domain item count, so paging indexes are not changed by ads.
-
-Contiguous page appends are handled incrementally. A rebuild is required only when
-the real source/index is inconsistent, the responsive column count changes, or the
-ad anchor policy changes.
-
-## Empty/loading/no-fill behavior
-
-- Loading: no ad is requested by the feed until real rows exist.
-- 0 real items: zero ad rows.
-- Below the placement threshold: zero ad rows.
-- Provider unavailable, offline, consent unavailable, no-fill, or ad object not
-  ready: `MobileNativeAdHost` collapses to zero; no spinner, toast, error text or
-  navigation delay.
-- Ads are best effort. A provider must never make the user wait for a request.
-
-A production provider should preload early and must **not** insert a newly loaded
-ad above a scroll position the user has already consumed. If a slot missed its
-deadline, skip that slot and use the next eligible anchor.
-
-## Search
-
-Search uses one `MobileSectionedCardFeed` with six logical sections. The first
-three are exact Live/Series/Movies results; the last three are similar results.
-
-`NativeAdInsertAfterSection="3"` means:
-
-```
-Exact Live
-Exact Series
-Exact Movies
---- native ad (only when exact-result count >= 10) ---
-Similar Live
-Similar Series
-Similar Movies
-```
-
-Similar results do not make a short exact-result set eligible. 0-9 exact results
-therefore have no Search ad.
-
-A production provider should also enforce a Search impression/request cooldown
-(e.g. 120 seconds) so successive user queries do not create ad spam. That cooldown
-belongs in the provider/session budget, not in Search view-model collections.
-
-## Category/sort/paging budgets
-
-Ad owner keys are generated by the feed controls and released only when the
-control leaves the visual tree.
-
-- Sorting does not create a new owner key.
-- Category/filter changes rebuild the presentation but do not create a new
-  screen-level owner key.
-- Paging does not reset the owner key.
-- A production provider should cap impressions per owner key so repeated filters
-  cannot reset the screen budget.
-- A provider/profile change should release old ad leases and obtain new ones.
+The Android provider embeds a Google `AdView` (fluid size) into the Avalonia
+`NativeControlHost` inside the control and returns an `IDisposable` handle that
+destroys the view on release. No-fill is handled by the native SDK (zero-height
+view); the app never blocks on it.
 
 ## Premium
 
-`IMobileAdvertisingService.CanServeAds` must be false for Premium users.
-`PreviewMobileAdvertisingService` demonstrates the entitlement gate and emits an
-eligibility change when `ILicenseService.SubscriptionChanged` fires.
-
-A production provider must additionally:
-
-1. Resolve entitlement before initializing/requesting ads whenever possible.
-2. Destroy/release preloaded native/full-screen objects immediately after Premium
-   activation.
-3. Refuse every future request while Premium.
-4. Never put ads in Premium purchase/upsell UI.
-
-## Native Android view / airspace
-
-A real Google native ad is an Android native view. Avalonia embeds native views
-through a platform-native hosting boundary, which can create z-order/airspace
-problems with Avalonia overlays.
-
-`MobileNativeAdSurfaceCoordinator` and
-`MobileNativeAdOverlayGuard.IsEnabled="True"` suppress native ad hosts while:
-
-- category/sort selection sheets,
-- card-actions sheet,
-- legal consent,
-- review prompt,
-- profiles overlay
-
-are visible. A real Android provider should use the same host surface and must
-not bypass this coordinator.
+`IMobileAdvertisingService.CanServeAds` must be false for Premium users. The
+banner and interstitials are gated through the same `CanServeAds` so a Premium
+user never sees either surface. On Premium activation the Android provider
+destroys preloaded interstitial objects; the banner collapses on the next
+eligibility change.
 
 ## Interstitial playback-exit policy
 
 `MainView` records only meaningful playback time (time while `IsPlaying` is true).
 On player close it passes a deterministic `InterstitialAdContext` to the provider.
 
-Conservative defaults:
+In-app policy (`AdvertisingOptions.ConservativeDefault` — not remotely
+configurable):
 
 - session age >= 5 minutes,
 - meaningful playback >= 10 minutes,
@@ -172,131 +76,43 @@ the user is leaving the player.
 and impression history, evaluates this policy, records a successful impression,
 then preloads the next ad.
 
-## Mediation and bidding
-
-Noctra should not hard-code a client-side order such as "Google, else AppLovin,
-else Meta". Configure Google AdMob/Ad Manager mediation and bidding in the ad
-console. The application decides **whether this UX moment is eligible**; mediation
-decides which demand source wins the impression.
-
-Keep separate ad units/reporting placements for at least:
-
-- movies native feed,
-- series native feed,
-- live native feed,
-- search native feed,
-- playback-exit interstitial.
+Interstitial caps are fail-closed in `InterstitialAdPolicy` too:
+`maxPerHour: 0` / `maxPerDay: 0` means **no interstitials at all**, never
+"unlimited".
 
 ## Provider boundary
 
-`IMobileAdvertisingService` is intentionally the only interface the Mobile UI
-knows. This patch registers:
+`IMobileAdvertisingService` is the only interface the Mobile UI knows:
+
+- `CreateBannerAd(Control host)` — creates the banner, attaches it to the host,
+  returns a disposable handle (null when no banner can be served).
+- `PrimeInterstitial()` / `TryShowInterstitialAsync(InterstitialAdContext, ...)` —
+  playback-exit preload/show.
+- `ShowPrivacyOptionsAsync()` — UMP privacy-options form (GDPR/US state choices).
+- `InitializeAsync()` — consent flow + Mobile Ads SDK initialization, invoked
+  once at startup for entitled users.
+
+Registered providers:
 
 - `NoOpMobileAdvertisingService` by default (store-safe, fail-closed).
-- `PreviewMobileAdvertisingService` in DEBUG when
-  `NOCTRA_ADS_PREVIEW=1`, allowing virtualization/recycling/manual UX tests without
-  generating real impressions.
-
-### Why a live Google SDK implementation is not hard-wired here
-
-As of August 2026, Microsoft publishes current .NET for Android bindings for both
-the legacy Google Mobile Ads artifact and the newer Next-Gen artifact. The legacy
-binding still has a public issue concerning strongly typed callback overrides.
-A production monetization patch should not silently depend on a callback surface
-that cannot be compiled and exercised in the target toolchain.
-
-The safe next step is a separate Android implementation of
-`IMobileAdvertisingService` against the selected binding, with its own Android
-instrumentation/device tests. Swapping providers does not require changing any
-feed, policy, paging or player code added here.
-
-A production Android provider must own:
-
-- consent flow (UMP) and `CanRequestAds`, both invoked from the `InitializeAsync`
-  startup hook,
-- Mobile Ads SDK initialization after entitlement/consent gating,
-- mediated native preload (max the slots actually needed),
-- ad age/expiry and explicit destroy,
-- no-fill/failure retry with backoff (never UI blocking),
-- native Android view construction and asset registration,
-- owner-key budget and late-slot deadline,
-- interstitial preload/readiness/show callbacks,
-- rolling impression history for `InterstitialAdPolicy`,
-- impression-level revenue analytics,
-- test ad IDs in debug builds and production IDs only in release configuration.
+- `PreviewMobileAdvertisingService` in DEBUG when `NOCTRA_ADS_PREVIEW=1` —
+  exercises entitlement gating without requesting real ads (banner/interstitial
+  both return null/no-op).
+- `AdMobMobileAdvertisingService` on Android (production).
 
 ## Startup pipeline (`MobileAdvertisingBootstrapper`)
 
 Ad startup is provider-independent and runs fire-and-forget from
-`MainActivity.OnCreate` (never on the UI thread). The bootstrapper sequences:
+`MainActivity.OnCreate` (never on the UI thread):
 
-1. **Remote config** — `IRemoteAdvertisingConfigService.RefreshAsync()` is invoked
-   unconditionally, so placement rules are already fresh when entitlement later
-   flips to ads (e.g. a subscription expires while the app runs). Parsing is a
-   **field-by-field merge**: every section and every field is optional, and a
-   missing or invalid field keeps the in-app default for that field only. This
-   makes `{ "enabled": false }` for any section a true emergency kill switch —
-   it never needs `spacing`/`max` and never resurrects an otherwise-valid
-   placement. Every numeric field is also bounded by a **safe envelope**
-   (`RemoteAdvertisingLimits`): values outside the range are rejected and the
-   in-app default is kept, so the server can never dictate unbounded values
-   (e.g. `max: 2000000000`) that would cause oversized allocations or integer
-   overflow in `AdPlacementPlanner` — which additionally caps anchor allocation
-   and uses 64-bit arithmetic as defense-in-depth. Interstitial caps are
-   fail-closed in `InterstitialAdPolicy` too: `maxPerHour: 0` / `maxPerDay: 0`
-   means **no interstitials at all**, never "unlimited" (the policy denies
-   anything `<= 0`). Whole-config fetch/parse
-   failures fall back to `AdvertisingOptions.ConservativeDefault` (fail-closed —
-   a config error can never make ads more aggressive). `RemoteAdvertisingConfigService`
-   resolves `NOCTRA_ADVERTISING_CONFIG_URL` from the `Noctra.AdvertisingConfigUrl`
-   AssemblyMetadata in Release (embedded via `Noctra.Core.csproj`) and from the
-   runtime environment variable in DEBUG (e.g. `.env` → Debug APK asset).
-2. **Entitlement** — providers expose `CanServeAds` (premium subscribers never see
-   ads). A provider that cannot serve ads short-circuits the pipeline here; no
-   consent, no SDK initialization.
-3. **Consent + provider initialization** — `IMobileAdvertisingService.InitializeAsync()`
-   is invoked only for entitled users. The production Android provider runs UMP/consent
-   and Mobile Ads SDK initialization here; `NoOpMobileAdvertisingService` and
-   `PreviewMobileAdvertisingService` return immediately.
+1. **Entitlement** — providers expose `IsAdsEligible` (premium subscribers never
+   see ads). A provider that cannot serve ads short-circuits the pipeline here.
+2. **Consent + provider initialization** — `InitializeAsync()` only for entitled
+   users: UMP consent, then Mobile Ads SDK initialization.
 
-When a remote config refresh completes, `RemoteAdvertisingConfigService` raises
-`OptionsChanged`; the provider forwards it as `EligibilityChanged`, which feed
-controls subscribe to (full row rebuild with fresh anchors/priming). This closes
-the race where a grid renders with default options while the remote fetch is
-still in flight: when the config lands, the UI re-evaluates immediately instead
-of waiting for the next resize/category/paging rebuild.
-
-The UI only consumes the normalized `AdvertisingOptions` exposed by the provider.
-
-Comprehensive configuration (every section is optional; missing sections keep the
-in-app defaults):
-
-```json
-{
-  "schemaVersion": 1,
-  "movies":  { "enabled": true,  "spacing": 14, "max": 2 },
-  "series":  { "enabled": true,  "spacing": 14, "max": 2 },
-  "live":    { "enabled": true,  "spacing": 20, "max": 1 },
-  "search":  { "enabled": true,  "spacing": 10, "max": 1 },
-  "home":    { "enabled": false, "spacing": 6,  "max": 1 },
-  "playbackExit": {
-    "enabled": true,
-    "minSessionAgeMinutes": 5,
-    "minPlaybackDurationMinutes": 10,
-    "cooldownMinutes": 18,
-    "maxPerHour": 2,
-    "maxPerDay": 4,
-    "allowLive": false
-  }
-}
-```
-
-Native sections use `spacing` (minimum real content items between ads) and `max`
-(maximum ad slots); anchors snap to complete rows at runtime
-(`AdPlacementPlanner`). The interstitial policy (`InterstitialAdPolicy`) consumes
-the `playbackExit` block — session age, minimum playback duration, cooldown,
-hourly/daily caps and the live-content switch. `schemaVersion` is reserved for
-future migration logic and currently ignored.
+Eligibility changes (subscription expiry, consent state) are pushed through
+`EligibilityChanged`, so the banner/interstitial surfaces re-evaluate
+immediately instead of waiting for the next startup.
 
 ## Manual preview
 
@@ -307,16 +123,11 @@ $env:NOCTRA_ADS_PREVIEW = "1"
 dotnet build .\Noctra.Android\Noctra.Android.csproj -c Debug
 ```
 
-The preview provider renders a clearly marked "Sponsored • Preview" row. It never
-requests a network ad and never shows a real interstitial.
-
 Validate:
 
-1. Movies/Series anchors snap to complete rows and max at two.
-2. Live uses the conservative 20/max-1 default.
-3. Empty states have no ad.
-4. Search 0-9 exact results has no ad; 10+ inserts one ad before Similar Results.
-5. Paging does not duplicate or move existing real content.
-6. Opening any guarded sheet hides the native row; closing restores it.
-7. Premium entitlement removes eligibility.
-8. Player error/PiP/Live/short playback never produces an eligible interstitial.
+1. Free entitlement shows the persistent banner above the bottom nav on every
+   page; Premium hides it.
+2. Opening the player hides the bottom nav and the banner; closing restores.
+3. No banner area is reserved when the provider serves no ad.
+4. Short playback / Live / PiP / playback failure never produces an eligible
+   interstitial.

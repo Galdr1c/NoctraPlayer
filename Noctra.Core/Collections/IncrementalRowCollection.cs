@@ -1,120 +1,131 @@
 namespace Noctra.Core.Collections;
 
 /// <summary>
-/// Groups a sequential source into rows while retaining only the incomplete tail.
-/// Contiguous appends update the tail and add new rows without enumerating the old source.
+/// Incremental virtualized row projection that groups items into fixed-width rows.
 /// </summary>
 public sealed class IncrementalRowCollection<TItem, TRow>
 {
-    private readonly Func<IReadOnlyList<TItem>, TRow> _rowFactory;
-    private IReadOnlyList<TItem> _incompleteTail = Array.Empty<TItem>();
+    private readonly Func<IReadOnlyList<TItem>, TRow> _contentRowFactory;
+    private readonly List<TItem> _incompleteTail = new();
     private int _columns;
 
-    public IncrementalRowCollection(Func<IReadOnlyList<TItem>, TRow> rowFactory)
+    public IncrementalRowCollection(
+        Func<IReadOnlyList<TItem>, TRow> contentRowFactory)
     {
-        _rowFactory = rowFactory ?? throw new ArgumentNullException(nameof(rowFactory));
+        _contentRowFactory = contentRowFactory
+            ?? throw new ArgumentNullException(nameof(contentRowFactory));
     }
 
     public BatchObservableCollection<TRow> Rows { get; } = new();
-
     public int ItemCount { get; private set; }
-
     public int FullRebuildCount { get; private set; }
 
-    public void Rebuild(IEnumerable<TItem> source, int columns)
+    public void Rebuild(
+        IEnumerable<TItem> source,
+        int columns)
     {
         ArgumentNullException.ThrowIfNull(source);
-        ArgumentOutOfRangeException.ThrowIfLessThan(columns, 1);
+        if (columns <= 0)
+            throw new ArgumentOutOfRangeException(nameof(columns));
+
+        _columns = columns;
+        _incompleteTail.Clear();
 
         var rows = new List<TRow>();
-        var rowItems = new List<TItem>(columns);
-        var itemCount = 0;
+        var buffer = new List<TItem>(columns);
+        var contentCount = 0;
 
         foreach (var item in source)
         {
-            rowItems.Add(item);
-            itemCount++;
-            if (rowItems.Count != columns)
-            {
+            buffer.Add(item);
+            contentCount++;
+
+            if (buffer.Count != columns)
                 continue;
-            }
 
-            rows.Add(CreateRow(rowItems));
-            rowItems.Clear();
+            rows.Add(_contentRowFactory(buffer.ToArray()));
+            buffer.Clear();
         }
 
-        if (rowItems.Count > 0)
+        if (buffer.Count > 0)
         {
-            rows.Add(CreateRow(rowItems));
-            _incompleteTail = rowItems.ToArray();
-        }
-        else
-        {
-            _incompleteTail = Array.Empty<TItem>();
+            _incompleteTail.AddRange(buffer);
+            rows.Add(_contentRowFactory(buffer.ToArray()));
         }
 
-        _columns = columns;
-        ItemCount = itemCount;
+        ItemCount = contentCount;
         FullRebuildCount++;
         Rows.ReplaceAll(rows);
     }
 
-    public bool TryAppend(int startingIndex, IEnumerable<TItem> appendedItems, int columns)
+    public bool TryAppend(
+        int startingIndex,
+        IReadOnlyList<TItem> appendedItems,
+        int columns)
     {
         ArgumentNullException.ThrowIfNull(appendedItems);
-        ArgumentOutOfRangeException.ThrowIfLessThan(columns, 1);
 
-        if (columns != _columns || startingIndex != ItemCount)
+        if (appendedItems.Count == 0)
+            return true;
+
+        if (columns <= 0 ||
+            columns != _columns ||
+            startingIndex != ItemCount)
         {
             return false;
         }
 
-        var additions = appendedItems as IReadOnlyList<TItem> ?? appendedItems.ToList();
-        if (additions.Count == 0)
-        {
-            return true;
-        }
+        var offset = 0;
 
-        var additionIndex = 0;
         if (_incompleteTail.Count > 0)
         {
-            var completedTail = new List<TItem>(_incompleteTail);
-            while (completedTail.Count < columns && additionIndex < additions.Count)
-            {
-                completedTail.Add(additions[additionIndex++]);
-            }
-
-            Rows[^1] = CreateRow(completedTail);
-            _incompleteTail = completedTail.Count < columns
-                ? completedTail.ToArray()
-                : Array.Empty<TItem>();
-        }
-
-        var newRows = new List<TRow>();
-        while (additionIndex < additions.Count)
-        {
-            var take = Math.Min(columns, additions.Count - additionIndex);
-            var rowItems = new TItem[take];
+            var needed = columns - _incompleteTail.Count;
+            var take = Math.Min(needed, appendedItems.Count);
             for (var index = 0; index < take; index++)
             {
-                rowItems[index] = additions[additionIndex++];
+                _incompleteTail.Add(appendedItems[index]);
             }
 
-            newRows.Add(_rowFactory(rowItems));
-            _incompleteTail = take < columns
-                ? rowItems
-                : Array.Empty<TItem>();
+            offset += take;
+            ItemCount += take;
+
+            if (_incompleteTail.Count < columns)
+            {
+                Rows[^1] = _contentRowFactory(_incompleteTail.ToArray());
+                return true;
+            }
+
+            Rows[^1] = _contentRowFactory(_incompleteTail.ToArray());
+            _incompleteTail.Clear();
         }
 
-        if (newRows.Count > 0)
+        var pendingRows = new List<TRow>();
+        while (offset + columns <= appendedItems.Count)
         {
-            Rows.AddRange(newRows);
+            var rowItems = new TItem[columns];
+            for (var column = 0; column < columns; column++)
+            {
+                rowItems[column] = appendedItems[offset + column];
+            }
+
+            offset += columns;
+            ItemCount += columns;
+            pendingRows.Add(_contentRowFactory(rowItems));
         }
 
-        ItemCount += additions.Count;
+        if (offset < appendedItems.Count)
+        {
+            _incompleteTail.Clear();
+            for (; offset < appendedItems.Count; offset++)
+            {
+                _incompleteTail.Add(appendedItems[offset]);
+                ItemCount++;
+            }
+
+            pendingRows.Add(_contentRowFactory(_incompleteTail.ToArray()));
+        }
+
+        Rows.AddRange(pendingRows);
         return true;
     }
-
-    private TRow CreateRow(IEnumerable<TItem> items)
-        => _rowFactory(items.ToArray());
 }

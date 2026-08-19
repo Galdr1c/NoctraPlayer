@@ -8,6 +8,17 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 Detailed historical engineering notes are archived in [`docs/history/legacy-changelog.md`](./docs/history/legacy-changelog.md).
 
 ## [Unreleased]
+
+### Added
+
+- **Persistent banner ad at the bottom of the content area**: a new `MobileBannerAdControl` is pinned to the bottom of `MainView`'s content column (`Grid.Row="1" Grid.Column="1"`, `RowDefinitions="*,Auto"`) and is visible on every shell page — Home, Live, Movies, Series, Search, Downloads, More — for free users only. In portrait it sits directly above the bottom navigation bar; in landscape/tablet mode (width ≥ 720, navigation rail active) it stays at the bottom of the content area to the right of the rail. It collapses to zero height when the user is Premium, when consent/SDK is not ready, or when the provider serves no ad; `IsSuppressed` hides a loaded ad (keeping it alive) while the player or an overlay is open. `IMobileAdvertisingService.CreateBannerAd(host)` is the provider boundary; the Android `AdMobMobileAdvertisingService` embeds a fluid Google `AdView` via `NativeControlHost` and returns a disposable handle that destroys the view on release.
+
+### Changed
+
+- **Native feed ads removed**: the in-feed native ad system is gone. Deleted `MobileNativeAdHost`, `MobileNativeAdSurfaceCoordinator`/`MobileNativeAdOverlayGuard`, `AdPlacementPlanner`, `AdAwareIncrementalRowCollection` (renamed to `IncrementalRowCollection`, now a plain row projection), the `AdPlacement` property on the virtualizing grids/feeds, and all `AdPlacement=...`/`NativeAdInsertAfterSection=...`/`MobileNativeAdOverlayGuard.IsEnabled=...` XAML bindings. `IMobileAdvertisingService` no longer exposes `PrimeNative`/`TryCreateNativeAdControl`/`ReleaseOwner`; `AdvertisingOptions` keeps only `PlaybackExit` (interstitial policy). The Android csproj's native ad unit IDs (`NativeLive/Movies/Series/Search`) and their `AssemblyMetadata` entries were removed; banner + interstitial unit IDs remain.
+
+- **Remote ad configuration removed**: `RemoteAdvertisingConfigService`, `IRemoteAdvertisingConfigService`, and `RemoteAdvertisingLimits` are gone. Advertising policy is now entirely in-app (`AdvertisingOptions.ConservativeDefault`); the `NOCTRA_ADVERTISING_CONFIG_URL` build-time metadata, the `LoadAdvertisingConfigFromDotEnv` msbuild target, and the `.env` entry were deleted. `MobileAdvertisingBootstrapper` no longer fetches remote config (entitlement → consent/init only), and `AdMobMobileAdvertisingService`/`PreviewMobileAdvertisingService` no longer subscribe to `OptionsChanged`.
+
 ## [1.2.0] - 2026-08-11
 
 ### Added

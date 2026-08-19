@@ -111,8 +111,6 @@
     <controls:MobileSectionedCardFeed Grid.Row="2"
                                       x:Name="PrimaryScrollContent"
         Margin="20,0,20,0"
-        AdPlacement="SearchFeed"
-        NativeAdInsertAfterSection="3"
         ScrollChanged="SearchScrollViewer_ScrollChanged"
         ItemContainerTheme="{StaticResource TransparentListBoxItemTheme}">
       <controls:MobileSectionedCardFeed.Sections>

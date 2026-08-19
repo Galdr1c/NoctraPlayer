@@ -2,13 +2,16 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
+using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Input;
 using Avalonia.Media;
+using Avalonia.Threading;
 using Noctra.Mobile.Localization;
 using Noctra.Mobile.Navigation;
+using Noctra.Mobile.Services;
 using Noctra.Core.Services;
 using Noctra.ViewModels;
 
@@ -18,6 +21,7 @@ public partial class MobileSettingsView : UserControl, IMobileNavigationStatePar
 {
     private SettingsViewModel? _viewModel;
     private bool _isFormattingPromoCode;
+    private bool _privacyChoicesSubscribed;
 
     private static readonly (string Value, string Key)[] AppLanguageOptions =
     {
@@ -105,6 +109,64 @@ public partial class MobileSettingsView : UserControl, IMobileNavigationStatePar
             _viewModel.PropertyChanged += ViewModel_PropertyChanged;
             UpdateThemeSelection(_viewModel.IsDarkTheme);
             UpdateSelectionLabels();
+            SubscribePrivacyChoices();
+        }
+    }
+
+    private void SubscribePrivacyChoices()
+    {
+        if (_privacyChoicesSubscribed)
+            return;
+
+        var ads = MobileAdvertisingServices.TryGet();
+        if (ads is not null)
+        {
+            ads.ConsentStatusChanged += AdService_ConsentStatusChanged;
+        }
+
+        _privacyChoicesSubscribed = true;
+        UpdatePrivacyChoicesVisibility();
+    }
+
+    private void UnsubscribePrivacyChoices()
+    {
+        if (!_privacyChoicesSubscribed)
+            return;
+
+        var ads = MobileAdvertisingServices.TryGet();
+        if (ads is not null)
+        {
+            ads.ConsentStatusChanged -= AdService_ConsentStatusChanged;
+        }
+
+        _privacyChoicesSubscribed = false;
+    }
+
+    private void AdService_ConsentStatusChanged(object? sender, EventArgs e)
+        => Dispatcher.UIThread.Post(UpdatePrivacyChoicesVisibility);
+
+    private void UpdatePrivacyChoicesVisibility()
+    {
+        var ads = MobileAdvertisingServices.TryGet();
+        PrivacyChoicesButton.IsVisible = ads is { CanShowPrivacyOptions: true };
+    }
+
+    private async void PrivacyChoices_Click(object? sender, RoutedEventArgs e)
+    {
+        var ads = MobileAdvertisingServices.TryGet();
+        if (ads is null)
+        {
+            return;
+        }
+
+        try
+        {
+            // Opens the UMP privacy-options form (GDPR / US-state choices).
+            await ads.ShowPrivacyOptionsAsync();
+        }
+        catch
+        {
+            // Best-effort: a failed UMP form must never break Settings.
         }
     }
 
@@ -123,6 +185,7 @@ public partial class MobileSettingsView : UserControl, IMobileNavigationStatePar
             _viewModel = null;
         }
 
+        UnsubscribePrivacyChoices();
         SelectionSheetHost.TryClose();
 
         base.OnDetachedFromVisualTree(e);

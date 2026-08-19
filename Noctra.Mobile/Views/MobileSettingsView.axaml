@@ -986,6 +986,26 @@
                      TextWrapping="Wrap"
                      IsVisible="{Binding PrivacyStatusMessage, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
 
+          <Button x:Name="PrivacyChoicesButton"
+                  Classes="SettingsSelectionButton"
+                  Click="PrivacyChoices_Click"
+                  IsVisible="False">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+              <StackPanel Orientation="Vertical" Spacing="2">
+                <TextBlock Text="{loc:Translate Settings.Privacy.Choices}"
+                           Foreground="{DynamicResource TextPrimaryBrush}"
+                           TextTrimming="CharacterEllipsis"
+                           VerticalAlignment="Center" />
+                <TextBlock Text="{loc:Translate Settings.Privacy.ChoicesDescription}"
+                           Foreground="{DynamicResource TextMutedBrush}"
+                           FontSize="{DynamicResource FCaption}"
+                           TextWrapping="Wrap" />
+              </StackPanel>
+              <icons:MaterialIcon Grid.Column="1" Kind="ChevronRight" Width="20" Height="20"
+                                  Foreground="{DynamicResource TextMutedBrush}" />
+            </Grid>
+          </Button>
+
           <Grid ColumnDefinitions="*,*" ColumnSpacing="10" Margin="0,4,0,0">
             <Button Classes="SettingsActionButton"
                     Click="PrivacyPolicy_Click">

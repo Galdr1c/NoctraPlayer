@@ -23,7 +23,6 @@
     <AssemblyMetadata Include="Noctra.PromoEndpoint" Value="$(NOCTRA_PROMO_CODES_URL)" Condition="'$(NOCTRA_PROMO_CODES_URL)' != ''" />
     <AssemblyMetadata Include="Noctra.BillingVerifyUrl" Value="$(NOCTRA_BILLING_VERIFY_URL)" Condition="'$(NOCTRA_BILLING_VERIFY_URL)' != ''" />
     <AssemblyMetadata Include="Noctra.BillingApiKey" Value="$(NOCTRA_BILLING_API_KEY)" Condition="'$(NOCTRA_BILLING_API_KEY)' != ''" />
-    <AssemblyMetadata Include="Noctra.AdvertisingConfigUrl" Value="$(NOCTRA_ADVERTISING_CONFIG_URL)" Condition="'$(NOCTRA_ADVERTISING_CONFIG_URL)' != ''" />
   </ItemGroup>
 
   <Target Name="LoadPromoEndpointFromDotEnv" BeforeTargets="GetAssemblyAttributes" Condition="'$(Configuration)' == 'Release' and '$(NOCTRA_PROMO_CODES_URL)' == '' and Exists('$(MSBuildThisFileDirectory)..\.env')">
@@ -53,19 +52,6 @@
                          Condition="$([System.String]::Copy('%(_BillingEnvLine.Identity)').StartsWith('NOCTRA_BILLING_API_KEY='))">
         <_Parameter1>Noctra.BillingApiKey</_Parameter1>
         <_Parameter2>$([System.String]::Copy('%(_BillingEnvLine.Identity)').Remove(0, 23))</_Parameter2>
-      </AssemblyAttribute>
-    </ItemGroup>
-  </Target>
-
-  <Target Name="LoadAdvertisingConfigFromDotEnv" BeforeTargets="GetAssemblyAttributes" Condition="'$(Configuration)' == 'Release' and '$(NOCTRA_ADVERTISING_CONFIG_URL)' == '' and Exists('$(MSBuildThisFileDirectory)..\.env')">
-    <ReadLinesFromFile File="$(MSBuildThisFileDirectory)..\.env">
-      <Output TaskParameter="Lines" ItemName="_AdConfigEnvLine" />
-    </ReadLinesFromFile>
-    <ItemGroup>
-      <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute"
-                         Condition="$([System.String]::Copy('%(_AdConfigEnvLine.Identity)').StartsWith('NOCTRA_ADVERTISING_CONFIG_URL='))">
-        <_Parameter1>Noctra.AdvertisingConfigUrl</_Parameter1>
-        <_Parameter2>$([System.String]::Copy('%(_AdConfigEnvLine.Identity)').Remove(0, 30))</_Parameter2>
       </AssemblyAttribute>
     </ItemGroup>
   </Target>

@@ -9,49 +9,60 @@ namespace Noctra.Tests.Advertising;
 public sealed class MobileAdvertisingBootstrapperTests
 {
     [Fact]
-    public async Task StartAsync_RefreshesConfig_AndInitializesProvider_WhenEntitled()
+    public async Task StartAsync_InitializesProvider_WhenEligible()
     {
-        var remoteConfig = new Mock<IRemoteAdvertisingConfigService>();
         var provider = new Mock<IMobileAdvertisingService>();
-        provider.Setup(p => p.CanServeAds).Returns(true);
+        provider.Setup(p => p.IsAdsEligible).Returns(true);
 
-        var bootstrapper = new MobileAdvertisingBootstrapper(provider.Object, remoteConfig.Object);
+        var bootstrapper = new MobileAdvertisingBootstrapper(provider.Object);
 
         await bootstrapper.StartAsync();
 
-        remoteConfig.Verify(r => r.RefreshAsync(It.IsAny<CancellationToken>()), Times.Once);
         provider.Verify(p => p.InitializeAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
-    public async Task StartAsync_RefreshesConfig_ButSkipsProviderInit_WhenNotEntitled()
+    public async Task StartAsync_InitializesEvenWhenConsentNotYetGranted()
     {
-        var remoteConfig = new Mock<IRemoteAdvertisingConfigService>();
+        // Regression pin for the UMP deadlock: CanServeAds implies UMP consent +
+        // SDK initialization, and CanRequestAds stays false until the consent
+        // flow runs. Gating initialization on CanServeAds would deadlock the
+        // consent flow, so initialization must be gated on IsAdsEligible only.
         var provider = new Mock<IMobileAdvertisingService>();
+        provider.Setup(p => p.IsAdsEligible).Returns(true);
         provider.Setup(p => p.CanServeAds).Returns(false);
 
-        var bootstrapper = new MobileAdvertisingBootstrapper(provider.Object, remoteConfig.Object);
+        var bootstrapper = new MobileAdvertisingBootstrapper(provider.Object);
 
         await bootstrapper.StartAsync();
 
-        remoteConfig.Verify(r => r.RefreshAsync(It.IsAny<CancellationToken>()), Times.Once);
+        provider.Verify(p => p.InitializeAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task StartAsync_SkipsProviderInit_WhenNotEligible()
+    {
+        var provider = new Mock<IMobileAdvertisingService>();
+        provider.Setup(p => p.IsAdsEligible).Returns(false);
+
+        var bootstrapper = new MobileAdvertisingBootstrapper(provider.Object);
+
+        await bootstrapper.StartAsync();
+
         provider.Verify(p => p.InitializeAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
-    public async Task StartAsync_ConfigFailure_DoesNotThrow_AndSkipsProviderInit()
+    public async Task StartAsync_ProviderFailure_DoesNotThrow()
     {
-        var remoteConfig = new Mock<IRemoteAdvertisingConfigService>();
-        remoteConfig.Setup(r => r.RefreshAsync(It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new System.Net.Http.HttpRequestException("unreachable"));
         var provider = new Mock<IMobileAdvertisingService>();
-        provider.Setup(p => p.CanServeAds).Returns(false);
+        provider.Setup(p => p.IsAdsEligible).Returns(true);
+        provider.Setup(p => p.InitializeAsync(It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new System.Net.Http.HttpRequestException("unreachable"));
 
-        var bootstrapper = new MobileAdvertisingBootstrapper(provider.Object, remoteConfig.Object);
+        var bootstrapper = new MobileAdvertisingBootstrapper(provider.Object);
 
         await bootstrapper.StartAsync();
-
-        provider.Verify(p => p.InitializeAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -59,6 +70,7 @@ public sealed class MobileAdvertisingBootstrapperTests
     {
         var provider = new NoOpMobileAdvertisingService();
 
+        Assert.False(provider.IsAdsEligible);
         Assert.False(provider.CanServeAds);
         Assert.Equal(AdvertisingOptions.ConservativeDefault, provider.Options);
         Assert.Equal(Task.CompletedTask, provider.InitializeAsync());

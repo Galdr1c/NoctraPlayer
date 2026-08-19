@@ -470,6 +470,8 @@
   "Settings.Privacy.Retention.7d": "7 Gün",
   "Settings.Privacy.Retention.14d": "14 Gün",
   "Settings.Privacy.Retention.30d": "30 Gün",
+  "Settings.Privacy.Choices": "Gizlilik Seçenekleri",
+  "Settings.Privacy.ChoicesDescription": "Reklam kişiselleştirmeyi yönetin ve onay seçimlerinizi gözden geçirin",
   "Settings.Privacy.DangerZone": "Tehlikeli Bölge",
   "Settings.Privacy.ClearAllNow": "Tüm İzleme Geçmişini Şimdi Sil",
   "Settings.About.VersionFormat": "Sürüm {0}",

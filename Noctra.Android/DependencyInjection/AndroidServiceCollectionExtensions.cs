@@ -4,6 +4,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Android.Content;
 using Microsoft.Extensions.DependencyInjection;
+using Noctra.Android.Advertising;
 using Noctra.Android.Services;
 using Noctra.Core.Advertising;
 using Noctra.Core.DependencyInjection;
@@ -81,7 +82,13 @@ public static class AndroidServiceCollectionExtensions
                 serviceProvider.GetRequiredService<IPlatformActionService>(),
                 serviceProvider.GetRequiredService<IStorePurchaseService>(),
                 serviceProvider.GetRequiredService<IDispatcherService>()));
-        services.AddSingleton<IRemoteAdvertisingConfigService, RemoteAdvertisingConfigService>();
+        services.AddSingleton<StartupPrivacyCoordinator>();
+        services.AddSingleton<AdMobMobileAdvertisingService>(serviceProvider =>
+            new AdMobMobileAdvertisingService(
+                serviceProvider.GetRequiredService<Context>(),
+                serviceProvider.GetRequiredService<AndroidActivityProvider>(),
+                serviceProvider.GetRequiredService<ILicenseService>(),
+                serviceProvider.GetRequiredService<StartupPrivacyCoordinator>()));
         services.AddSingleton<MobileAdvertisingBootstrapper>();
         services.AddSingleton<IMobileAdvertisingService>(serviceProvider =>
         {
@@ -90,12 +97,11 @@ public static class AndroidServiceCollectionExtensions
             {
                 global::Android.Util.Log.Info("NoctraAds", "registered=PreviewMobileAdvertisingService");
                 return new PreviewMobileAdvertisingService(
-                    serviceProvider.GetRequiredService<ILicenseService>(),
-                    serviceProvider.GetRequiredService<IRemoteAdvertisingConfigService>());
+                    serviceProvider.GetRequiredService<ILicenseService>());
             }
 #endif
-            global::Android.Util.Log.Info("NoctraAds", "registered=NoOpMobileAdvertisingService");
-            return new NoOpMobileAdvertisingService();
+            global::Android.Util.Log.Info("NoctraAds", "registered=AdMobMobileAdvertisingService");
+            return serviceProvider.GetRequiredService<AdMobMobileAdvertisingService>();
         });
         services.AddTransient<WatermarkViewModel>();
         services.AddSingleton<CoreMainViewModel>();

@@ -148,7 +148,7 @@ public partial class MainView : UserControl
 
         // Safe-area hesaplaması için temel (tasarım) padding değerlerini sakla.
         _headerBasePadding = HeaderBar.Padding;
-        _bottomNavBasePadding = BottomNavigation.Padding;
+        _bottomNavBasePadding = BottomNavContent.Padding;
 
         _navigationRailController = new MobileCollapsibleNavigationRail(NavigationRail);
         _overscrollController = new MobileStretchOverscrollController(this);
@@ -182,6 +182,15 @@ public partial class MainView : UserControl
         MobileAppLifecycle.Paused += OnAppPaused;
         MobileAppLifecycle.Resumed -= OnAppResumed;
         MobileAppLifecycle.Resumed += OnAppResumed;
+
+        // Ads initialization is async (UMP consent + Mobile Ads SDK). Subscribe
+        // so the banner is (re)attempted once eligibility flips to true.
+        var advertising = MobileAdvertisingServices.TryGet();
+        if (advertising is not null)
+        {
+            advertising.EligibilityChanged -= OnAdvertisingEligibilityChanged;
+            advertising.EligibilityChanged += OnAdvertisingEligibilityChanged;
+        }
 
         // Çentik / sistem çubukları (safe-area) padding'lerini uygula ve değişimleri dinle.
         var topLevel = TopLevel.GetTopLevel(this);
@@ -286,6 +295,7 @@ public partial class MainView : UserControl
                 {
                     _startupFlowCompleted = true;
                     NavigateToDestination(destination);
+                    LoadBannerAdIfEligible();
                 }
             });
             return;
@@ -374,6 +384,14 @@ public partial class MainView : UserControl
     private async Task ShowLegalConsentIfNeededAsync()
     {
         await LegalConsentOverlay.ShowConsentFlowAsync();
+
+        // The Android ad provider waits on this gate before requesting UMP
+        // consent, so Noctra's own consent dialog and the UMP form can never
+        // stack/race at startup.
+        if (Application.Current is App app && app.Services is not null)
+        {
+            app.Services.GetService<StartupPrivacyCoordinator>()?.MarkLegalConsentFlowCompleted();
+        }
     }
 
     /// <summary>
@@ -625,6 +643,12 @@ public partial class MainView : UserControl
         OverlayProfileList.ProfileLoaded -= OverlayProfileList_ProfileLoaded;
         MobileAppLifecycle.Paused -= OnAppPaused;
         MobileAppLifecycle.Resumed -= OnAppResumed;
+        var advertising = MobileAdvertisingServices.TryGet();
+        if (advertising is not null)
+        {
+            advertising.EligibilityChanged -= OnAdvertisingEligibilityChanged;
+        }
+
         _backExitToastTimer.Stop();
         _overscrollController.Hide();
         CardActionsSheet.TryClose();
@@ -670,11 +694,13 @@ public partial class MainView : UserControl
             _headerBasePadding.Right + safe.Right,
             _headerBasePadding.Bottom);
 
-        BottomNavigation.Padding = new Thickness(
+        BottomNavContent.Padding = new Thickness(
             _bottomNavBasePadding.Left + safe.Left,
             _bottomNavBasePadding.Top,
             _bottomNavBasePadding.Right + safe.Right,
             _bottomNavBasePadding.Bottom + safe.Bottom);
+
+        BannerAd.Margin = new Thickness(safe.Left, 0, safe.Right, 0);
 
         LegalConsentOverlay.Padding = new Thickness(safe.Left, safe.Top, safe.Right, safe.Bottom);
         ReviewPromptOverlay.Padding = new Thickness(safe.Left, 0, safe.Right, safe.Bottom);
@@ -852,6 +878,7 @@ public partial class MainView : UserControl
         var canShowNavigation = CanShowNavigationChrome();
         NavigationRail.IsVisible = useNavigationRail && canShowNavigation;
         BottomNavigation.IsVisible = !useNavigationRail && canShowNavigation;
+        BannerAd.IsSuppressed = !canShowNavigation;
 
         if (useNavigationRail)
         {
@@ -1011,6 +1038,7 @@ public partial class MainView : UserControl
         BottomNavigation.IsVisible = false;
         ShellContent.IsVisible = false;
         CoreContentHost.IsVisible = false;
+        BannerAd.IsSuppressed = true;
 
         // Obtain the profiles view model from the service provider.  Unhook any
         // previous subscriptions so multiple invocations do not accumulate
@@ -2249,7 +2277,7 @@ public partial class MainView : UserControl
             IsLiveContent: _adPlaybackIsLive,
             PlaybackFailed: _adPlaybackFailed,
             WasPictureInPicture: _adPlaybackWasPiP,
-            HasBlockingOverlay: MobileNativeAdSurfaceCoordinator.IsSuppressed);
+            HasBlockingOverlay: false);
     }
 
     private void UpdatePictureInPictureState()
@@ -2520,6 +2548,7 @@ public partial class MainView : UserControl
         HeaderBar.IsVisible = false;
         NavigationRail.IsVisible = false;
         BottomNavigation.IsVisible = false;
+        BannerAd.IsSuppressed = true;
         MobileSlideTransitionBehavior.SetTriggerValue(
             CategorySelectionOverlay,
             $"Category:{e.TitleKey}:{DateTime.UtcNow.Ticks}");
@@ -2553,6 +2582,23 @@ public partial class MainView : UserControl
     {
         var value = Interlocked.Increment(ref counter);
         PerformanceTrace.Mark(name, value);
+    }
+
+    private void LoadBannerAdIfEligible()
+    {
+        BannerAd?.LoadAd();
+    }
+
+    private void OnAdvertisingEligibilityChanged(object? sender, EventArgs e)
+    {
+        if (!_startupFlowCompleted)
+        {
+            return;
+        }
+
+        // EligibilityChanged fires from the bootstrap thread; banner creation and
+        // adView.LoadAd() require the UI thread (AdMob #008 otherwise).
+        Dispatcher.UIThread.Post(LoadBannerAdIfEligible);
     }
 
     private sealed record ActiveCorePage(string Destination, Control Page, long Generation);
