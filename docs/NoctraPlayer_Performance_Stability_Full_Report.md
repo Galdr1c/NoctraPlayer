@@ -1229,16 +1229,16 @@ ile refresh.
   version'ını yeniden doğruluyor. Böylece eski playlist/profile sonucu yeni Live surface'e geri
   yazılamıyor.
 - Otomatik doğrulama: P1-20 davranış/contract paketi `7/7`; 10 tekrar `70/70`; EPG enrichment,
-  visible-refresh, database-filter, write-scheduling, accessibility ve Android activity contract
-  odak paketi `25/25`. Tam takım `2171/2176` geçti; kalan `5` hata P1-20/P1-24 dışındaki mevcut mobil seçim,
+  visible-refresh, database-filter, write-scheduling, keyset-pagination, metadata-notification,
+  accessibility ve Android activity contract odak paketi `30/30`. Tam takım `2173/2179` geçti; kalan `6` hata P1-20/P1-29 dışındaki mevcut mobil seçim,
   download görünürlüğü, sezon indirme ve sleep-timer testleridir.
 - Sonraki reklam commitlerinin Android erişilebilirlik regresyonu için eklenen banner peer contract
   testi `1/1` geçti; `NoneAutomationPeer` guard'ı odak pakette korunuyor.
 - Build: Core `0` hata; Mobile `0` hata (yalnız mevcut 2 uyarı); Avalonia `0` hata; Android arm64
-  `0` hata (mevcut AndroidX/Java binding uyarıları). P1-24 sonrası güncel APK `381461764` byte,
-  SHA-256 `33CB5D2E752264B58A7E1179D6E6414BEDEDD693D922C292E16E0980F235FB24`.
+  `0` hata (mevcut AndroidX/Java binding uyarıları). P1-29 sonrası güncel APK `380858660` byte,
+  SHA-256 `74E4B26584D6AD722460884E6CAF839E43DA79EBA159F965AFEB936A2FA3E59B`.
 - APK DBY_W09 cihazına `adb install -r` ile veri silmeden kuruldu; `firstInstallTime`
-  `2026-08-10 17:51:36` korundu (`lastUpdateTime` `2026-08-20 14:09:26`). Önceki kabulde
+  `2026-08-10 17:51:36` korundu (`lastUpdateTime` `2026-08-20 14:46:41`). Önceki kabulde
   `uiautomator dump` sırasında görülen `InteropAutomationPeer.GetOrCreateChildrenCore`
   `NotImplementedException` crash'i `BannerNativeControlHost` için `NoneAutomationPeer` ile
   kapatıldı; güncel APK'da iki accessibility dump PID değişmeden tamamlandı.
@@ -1248,8 +1248,8 @@ ile refresh.
   `LaunchMode.SingleTask`; güncel APK'da gerçek içerikli Live/Movies/Series geçişinde `20`
   navigation, `40` çift yönlü scroll ve ardından `10/10` HOME/launcher turu yapıldı. PID `7431`
   sabit kaldı, görevde tek `MainActivity` kaldı, yeni `SIGABRT`/`NotImplementedException` oluşmadı.
-  P1-24 smoke sonrası canlı bellek örneği PSS `600256 KB`, RSS `734868 KB`, Native Heap
-  `230894 KB`, Graphics `48708 KB`.
+  P1-29 final smoke sonrası bellek örneği PSS `435814 KB`, RSS `512564 KB`, Native Heap
+  `174144 KB`, Graphics `48708 KB`.
 - SQLite PRAGMA uygulama telemetrisi `34` connection-open olayı kaydetti; ham telemetri
   `artifacts/p1-20-live/p1-20-final.jsonl` SHA-256
   `FF0771CF06D892CF05BE6A01CB8CAC640CFA94089C46A72A0A713C9A50DAF95E`.
@@ -1276,7 +1276,7 @@ aynı EPG/lifecycle paketinde kapatıldı; sıradaki bağımsız EPG maddesi **P
 - P1-20 görünür snapshot'ı en fazla `96` Live channel ile sınırlandığı için tek refresh'te
   PropertyChanged üretimi tüm loaded playlist'e değil, görünür karta bağlı kalıyor.
 - Aynı EPG snapshot'ında `0`, değişen başlık+ilerlemede yalnız `2` bildirim beklentisini doğrulayan
-  regresyon testleri eklendi; güncel EPG/lifecycle odak paketi `25/25` geçti.
+  regresyon testleri eklendi; güncel EPG/lifecycle odak paketi `29/29` geçti.
 
 Sonuç: P1-21 kapatıldı. Eşit değerlerde bildirim dalgası yok; değişen değerlerde yalnız gerekli
 alanlar bildiriliyor.
@@ -1337,13 +1337,17 @@ AND Type = Live
 - `EpgService.LoadLiveChannelsForEpgAsync` eski `GetChannelsAsync` + managed-memory filtreleme
   yolundan çıkarıldı ve DB-filtreli yönteme yönlendirildi. VOD/Series kayıtları bu EPG eşleştirme
   çağrısında materialize edilmiyor.
-- Eski geniş çağrının kullanılmadığını ve yeni sözleşmenin SQL filtresini koruduğunu doğrulayan
-  contract testi ile mevcut EPG zaman/loader testleri dahil `24/24` odak doğrulama geçti.
-- Son APK `C15CA485E0C128D76A3D8A6C680C801109CD72CA9608D4C4AFE81865D534B36F` ile veri silmeden
-  kuruldu; accessibility dump, Live açılışı ve `5/5` launcher foreground/background turunda PID
-  `11560` sabit kaldı, yeni native crash oluşmadı.
+- Auto-EPG playlist oluşturma ve public `RefreshEpgAsync` yolları da `GetLiveChannelsAsync` ile
+  DB-filtreli hale getirildi; `Include(p => p.Channels)` kaldırıldı. Böylece tüm EPG girişleri
+  VOD/Series kayıtlarını EPG mapping snapshot'ına taşımıyor.
+- Eski geniş çağrıların kullanılmadığını ve yeni sözleşmenin SQL filtresini koruduğunu doğrulayan
+  contract testi ile mevcut EPG zaman/loader testleri dahil güncel odak doğrulama `30/30` geçti.
+- Son P1-28 APK `19F0071DE9C37DFD2793DD0E9878920E61C782202BEBDFDAA91EBA58C0669B66` ile veri
+  silmeden kuruldu; accessibility dump, Live açılışı ve `5/5` launcher foreground/background
+  turunda PID `17769` sabit kaldı, yeni native crash oluşmadı.
 
-Sonuç: P1-23 kapatıldı. DB/EPG kümesinde sonraki madde **P1-24 — EPG writer batch/write burst**.
+Sonuç: P1-23 kapatıldı. DB/EPG kümesinde sonraki madde **P1-24 — EPG writer batch/write burst**;
+bu madde de aşağıdaki uygulama ile kapatılmıştır.
 
 ---
 
@@ -1370,7 +1374,7 @@ Aynı anda TMDB/download/history write varsa SQLite writer contention.
   SQLite işleri background import’un önüne geçebiliyor.
 - Scheduler callback’ine cancellation token aktarılıyor; kuyrukta bekleyen veya çalışan EPG yazısı
   uygulama kapanışı/timeout sırasında terminal olarak iptal edilebiliyor.
-- Batch boyutu, lane ve DI bağlantısını koruyan contract testi ile EPG/DB odak paketi `25/25`
+- Batch boyutu, lane ve DI bağlantısını koruyan contract testi ile EPG/DB odak paketi `30/30`
   geçti. Android arm64 build `0` hata verdi.
 - Son APK `33CB5D2E752264B58A7E1179D6E6414BEDEDD693D922C292E16E0980F235FB24` ile veri silmeden
   kuruldu; `firstInstallTime` `2026-08-10 17:51:36` korundu. Accessibility dump, Live açılışı
@@ -1465,6 +1469,24 @@ ORDER BY Id DESC
 LIMIT 30
 ```
 
+### Uygulama durumu — 20 Ağustos 2026: UYGULANDI/KAPATILDI
+
+- `ContentPageCursor(LastId)` artık `ContentPageRequest` → `ContentQueryService` →
+  `PlaylistService` zincirinden taşınıyor.
+- `NewestFirst` için `Id < lastId`, `OldestFirst` için `Id > lastId` predicate'i SQL sorgusuna
+  ekleniyor; sıralama adı gibi cursor için doğal olmayan sort'larda mevcut `OFFSET` fallback'i
+  korunuyor.
+- `MainViewModel` son channel ID cursor'ını yalnızca sayfa UI'ya başarıyla commit edildikten sonra
+  ilerletiyor; navigation/filter/profile reset'lerinde cursor temizleniyor. Cancellation veya stale
+  generation durumunda cursor ilerlemiyor.
+- Cursor sınırının strict ilerlediğini, request zincirinden taşındığını ve eski sort fallback'inin
+  korunduğunu doğrulayan keyset + ContentQuery testleriyle güncel odak paketi `30/30` geçti.
+- Android arm64 build `0` hata verdi. Son APK `19F0071DE9C37DFD2793DD0E9878920E61C782202BEBDFDAA91EBA58C0669B66`
+  veri silmeden kuruldu; accessibility dump, Live açılışı ve `5/5` launcher foreground/background
+  turu PID `17769` ile tamamlandı, yeni native crash oluşmadı.
+
+Sonuç: P1-28 kapatıldı. Sıradaki madde **P1-29 — TMDB enrichment çift PropertyChanged**.
+
 ---
 
 ## P1-29 — TMDB sonucu aynı model property'leri için çift `PropertyChanged` üretebiliyor
@@ -1485,6 +1507,23 @@ Tek notification ownership'i:
 
 - generated setter yeterliyse manuel notify kaldır,
 - computed properties için yalnız gerekli dependent property notify et.
+
+### Uygulama durumu — 20 Ağustos 2026: UYGULANDI/KAPATILDI
+
+- `Channel.NotifyMetadataChanged` artık generated setter'ların zaten bildirdiği Plot, Director,
+  Cast, Rating, ContentRating ve BackdropUrl alanlarını tekrar bildirmiyor.
+- TMDB commit aşaması yalnız plain `LogoUrl`, computed `CoverUrl`/`Description` ve değişmişse
+  `TmdbId` için manuel bildirim gönderiyor; değişiklik bayrakları UI commit'inden önce hesaplanıyor.
+- Böylece tek metadata enrichment artık aynı property için iki ayrı `PropertyChanged` dalgası
+  üretmiyor. Notification sahipliğini doğrulayan Channel regresyon testi ve güncel odak paketi
+  `30/30` geçti.
+- Son Android APK `74E4B26584D6AD722460884E6CAF839E43DA79EBA159F965AFEB936A2FA3E59B` ile veri
+  silmeden kuruldu. Önceki smoke koşulunda cihaz SIGSEGV'i görüldü; kontrollü Live açılışı sonrası
+  `10/10` HOME/launcher turu PID `21374` ile temiz geçti. Son APK'da ayrıca accessibility dump ve
+  `3/3` HOME/launcher turu PID `23154` ile temiz geçti. Tekil cihaz olayının logu korunuyor;
+  tekrarlanabilir crash/NotImplementedException oluşmadı.
+
+Sonuç: P1-29 kapatıldı. Sıradaki madde **P1-30 — Background worker'ların UI'ya senkron Invoke yapması**.
 
 ---
 

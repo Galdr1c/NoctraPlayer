@@ -16,6 +16,8 @@ public sealed class EpgDatabaseFilterContractTests
         Assert.Contains("GetLiveChannelsAsync", playlistContract, StringComparison.Ordinal);
         Assert.Contains("channel.Type == ChannelType.Live", playlistService, StringComparison.Ordinal);
         Assert.Contains("ToListAsync(cancellationToken)", playlistService, StringComparison.Ordinal);
+        Assert.Contains("var channelSnapshot = await GetLiveChannelsAsync(playlistId)", playlistService, StringComparison.Ordinal);
+        Assert.DoesNotContain("Include(p => p.Channels)", playlistService, StringComparison.Ordinal);
         Assert.DoesNotContain("GetChannelsAsync(playlistId)", epgService, StringComparison.Ordinal);
     }
 

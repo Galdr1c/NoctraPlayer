@@ -66,7 +66,8 @@ public sealed class ContentQueryServiceTests
                 true,
                 ChannelSortOrder.NameAsc,
                 It.Is<List<string>>(groups => groups.SequenceEqual(new[] { "Hidden live" })),
-                It.IsAny<CancellationToken>()))
+                It.IsAny<CancellationToken>(),
+                It.IsAny<ContentPageCursor?>()))
             .ReturnsAsync([
                 new Channel
                 {

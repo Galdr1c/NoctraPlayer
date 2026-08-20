@@ -100,7 +100,6 @@ public partial class Channel : ObservableObject
     public void NotifyVisualsChanged()
     {
         OnPropertyChanged(nameof(LogoUrl));
-        OnPropertyChanged(nameof(BackdropUrl));
         OnPropertyChanged(nameof(CoverUrl));
     }
 
@@ -108,15 +107,35 @@ public partial class Channel : ObservableObject
     /// Fires PropertyChanged for all metadata fields so the player overlay and detail view
     /// refresh immediately when TMDB data is applied after the initial render.
     /// </summary>
-    public void NotifyMetadataChanged()
+    public void NotifyMetadataChanged(
+        bool logoChanged = true,
+        bool coverChanged = true,
+        bool descriptionChanged = true,
+        bool tmdbIdChanged = false)
     {
-        NotifyVisualsChanged();
-        OnPropertyChanged(nameof(Plot));
-        OnPropertyChanged(nameof(Director));
-        OnPropertyChanged(nameof(Cast));
-        OnPropertyChanged(nameof(Rating));
-        OnPropertyChanged(nameof(ContentRating));
-        OnPropertyChanged(nameof(Description));
+        // ObservableProperty-generated setters already notify the backing
+        // metadata fields. Only the plain/computed properties need a manual
+        // notification here; repeating the generated names doubles binding
+        // invalidation during TMDB enrichment.
+        if (logoChanged)
+        {
+            OnPropertyChanged(nameof(LogoUrl));
+        }
+
+        if (coverChanged)
+        {
+            OnPropertyChanged(nameof(CoverUrl));
+        }
+
+        if (descriptionChanged)
+        {
+            OnPropertyChanged(nameof(Description));
+        }
+
+        if (tmdbIdChanged)
+        {
+            OnPropertyChanged(nameof(TmdbId));
+        }
     }
 }
 

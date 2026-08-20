@@ -2,6 +2,8 @@ using Noctra.Models;
 
 namespace Noctra.Services.Interfaces;
 
+public readonly record struct ContentPageCursor(int LastId);
+
 public sealed record ContentPageRequest(
     int PlaylistId,
     int Skip,
@@ -11,7 +13,8 @@ public sealed record ContentPageRequest(
     ChannelType? Type = null,
     bool OnlyFavorites = false,
     ChannelSortOrder SortOrder = ChannelSortOrder.NewestFirst,
-    bool ApplyHiddenGroups = true);
+    bool ApplyHiddenGroups = true,
+    ContentPageCursor? Cursor = null);
 
 public interface IContentQueryService
 {

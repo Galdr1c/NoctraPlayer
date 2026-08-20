@@ -9,8 +9,32 @@ namespace Noctra.Tests
     /// WatchedPercentage: VodCard, SeriesCard, ContinueWatchingCard'daki progress bar'ı besler.
     /// CoverUrl: Tüm medya kartlarının poster/backdrop seçim mantığını yönetir.
     /// </summary>
-    public class ChannelModelTests
+public class ChannelModelTests
+{
+    [Fact]
+    public void NotifyMetadataChanged_OnlyNotifiesPlainAndComputedProperties()
     {
+        var channel = new Channel();
+        var notifications = new List<string?>();
+        channel.PropertyChanged += (_, args) => notifications.Add(args.PropertyName);
+
+        channel.NotifyMetadataChanged(
+            logoChanged: true,
+            coverChanged: true,
+            descriptionChanged: true,
+            tmdbIdChanged: true);
+
+        Assert.Equal(
+            new[]
+            {
+                nameof(Channel.LogoUrl),
+                nameof(Channel.CoverUrl),
+                nameof(Channel.Description),
+                nameof(Channel.TmdbId)
+            },
+            notifications);
+    }
+
         // ─── WatchedPercentage ───────────────────────────────────────────────────────
 
         [Fact]

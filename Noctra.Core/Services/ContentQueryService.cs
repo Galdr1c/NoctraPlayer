@@ -54,7 +54,8 @@ public sealed class ContentQueryService : IContentQueryService
                 request.OnlyFavorites,
                 request.SortOrder,
                 hiddenGroups,
-                token),
+                token,
+                request.Cursor),
             cancellationToken);
     }
 

@@ -1451,6 +1451,7 @@ public partial class MainViewModel : ObservableObject
 
         // Reset pagination and internal caches
         _currentPage = 0;
+        _lastChannelCursorId = null;
         _hasMoreChannels = false;
         _isLoadingMoreChannels = false;
         _currentSeriesPage = 0;
@@ -1528,6 +1529,7 @@ public partial class MainViewModel : ObservableObject
 
         // Reset pagination and internal caches
         _currentPage = 0;
+        _lastChannelCursorId = null;
         _hasMoreChannels = false;
         _isLoadingMoreChannels = false;
         _currentSeriesPage = 0;
@@ -3208,6 +3210,7 @@ public partial class MainViewModel : ObservableObject
     private string? _lastCompletedFilterSignature;
     private DateTime _lastCompletedFilterUtc;
     private int _currentPage;
+    private int? _lastChannelCursorId;
     private bool _hasMoreChannels;
     private bool _isLoadingMoreChannels;
     private int _currentSeriesPage;
@@ -3395,6 +3398,7 @@ public partial class MainViewModel : ObservableObject
     private void ResetIncrementalState()
     {
         _currentPage = 0;
+        _lastChannelCursorId = null;
         _hasMoreChannels = true;
         _isLoadingMoreChannels = false;
         if (ReferenceEquals(Channels, FilteredChannels))
@@ -3430,6 +3434,9 @@ public partial class MainViewModel : ObservableObject
            ActiveView == view &&
            SelectedChannelType == channelType &&
            SelectedPlaylist?.Id == playlistId;
+
+    private static bool UsesKeysetChannelPagination(ChannelSortOrder sortOrder)
+        => sortOrder is ChannelSortOrder.NewestFirst or ChannelSortOrder.OldestFirst;
 
     private void ResetSeriesIncrementalState()
     {
@@ -3471,6 +3478,7 @@ public partial class MainViewModel : ObservableObject
 
         var requestView = ActiveView;
         var requestChannelType = SelectedChannelType;
+        var requestSortOrder = SelectedSortOrder;
         var requestPlaylist = SelectedPlaylist;
         if (requestPlaylist == null ||
             !_hasMoreChannels ||
@@ -3485,6 +3493,7 @@ public partial class MainViewModel : ObservableObject
         }
 
         var requestedPage = _currentPage;
+        var requestedCursorId = _lastChannelCursorId;
         _isLoadingMoreChannels = true;
 
         try
@@ -3501,7 +3510,11 @@ public partial class MainViewModel : ObservableObject
                 Group: effectiveGroup,
                 Type: effectiveType,
                 OnlyFavorites: ShowOnlyFavorites,
-                SortOrder: SelectedSortOrder), effectiveCancellationToken);
+                SortOrder: requestSortOrder,
+                Cursor: requestedCursorId is > 0 &&
+                        UsesKeysetChannelPagination(requestSortOrder)
+                    ? new ContentPageCursor(requestedCursorId.Value)
+                    : null), effectiveCancellationToken);
 
             // If selected group returns nothing on first page, fallback to "all" to avoid false empty UI.
             if (requestedPage == 0 &&
@@ -3517,7 +3530,7 @@ public partial class MainViewModel : ObservableObject
                     Group: null,
                     Type: effectiveType,
                     OnlyFavorites: ShowOnlyFavorites,
-                    SortOrder: SelectedSortOrder), effectiveCancellationToken);
+                    SortOrder: requestSortOrder), effectiveCancellationToken);
 
                 if (effectiveCancellationToken.IsCancellationRequested ||
                     !IsIncrementalContentRequestCurrent(
@@ -3601,6 +3614,13 @@ public partial class MainViewModel : ObservableObject
 
                 _currentPage = requestedPage + 1;
                 _hasMoreChannels = page.Count == IncrementalPageSize;
+                if (UsesKeysetChannelPagination(requestSortOrder))
+                {
+                    _lastChannelCursorId = page
+                        .Where(channel => channel.Id > 0)
+                        .Select(channel => (int?)channel.Id)
+                        .LastOrDefault();
+                }
                 FilteredChannels.AddRange(page);
                 if (!ReferenceEquals(Channels, FilteredChannels))
                 {
@@ -4009,6 +4029,20 @@ public partial class MainViewModel : ObservableObject
                         return Task.CompletedTask;
                     }
 
+                    var logoChanged = !string.Equals(
+                        channel.LogoUrl,
+                        dbChannel.LogoUrl,
+                        StringComparison.Ordinal);
+                    var backdropChanged = !string.Equals(
+                        channel.BackdropUrl,
+                        dbChannel.BackdropUrl,
+                        StringComparison.Ordinal);
+                    var plotChanged = !string.Equals(
+                        channel.Plot,
+                        dbChannel.Plot,
+                        StringComparison.Ordinal);
+                    var tmdbIdChanged = channel.TmdbId != dbChannel.TmdbId;
+
                     channel.LogoUrl    = dbChannel.LogoUrl;
                     channel.BackdropUrl = dbChannel.BackdropUrl;
                     channel.Plot        = dbChannel.Plot;
@@ -4018,7 +4052,11 @@ public partial class MainViewModel : ObservableObject
                     channel.ContentRating = dbChannel.ContentRating;
                     channel.TmdbId      = dbChannel.TmdbId;
                     channel.LastTmdbSync = dbChannel.LastTmdbSync;
-                    channel.NotifyMetadataChanged();
+                    channel.NotifyMetadataChanged(
+                        logoChanged,
+                        coverChanged: logoChanged || backdropChanged,
+                        descriptionChanged: plotChanged,
+                        tmdbIdChanged);
                     return Task.CompletedTask;
                 });
             }

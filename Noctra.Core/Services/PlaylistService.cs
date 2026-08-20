@@ -237,11 +237,14 @@ public partial class PlaylistService : IPlaylistService
 
             // AUTO EPG in isolated scope to avoid DbContext cross-thread usage.
             var playlistId = playlist.Id;
-            var channelSnapshot = channels.ToList();
             _ = Task.Run(async () =>
             {
                 try
                 {
+                    // Re-read only Live rows after the playlist has been persisted.
+                    // The parsed VOD/Series list must not become an EPG mapping snapshot.
+                    var channelSnapshot = await GetLiveChannelsAsync(playlistId)
+                        .ConfigureAwait(false);
                     var appLanguage = (_settingsService?.Settings?.Language ?? "tr").ToUpperInvariant();
 
                     var epgSources = _epgSourceResolver.ResolveEpgSources(
@@ -1962,7 +1965,7 @@ WHERE PlaylistId = {playlistId}
             .Take(limit)
             .ToListAsync();
     }
-    public async Task<List<Channel>> GetChannelsFilteredPageAsync(int playlistId, int skip, int take, string? searchText = null, string? group = null, ChannelType? type = null, bool onlyFavorites = false, ChannelSortOrder sortOrder = ChannelSortOrder.NewestFirst, List<string>? hiddenGroups = null, CancellationToken cancellationToken = default)
+    public async Task<List<Channel>> GetChannelsFilteredPageAsync(int playlistId, int skip, int take, string? searchText = null, string? group = null, ChannelType? type = null, bool onlyFavorites = false, ChannelSortOrder sortOrder = ChannelSortOrder.NewestFirst, List<string>? hiddenGroups = null, CancellationToken cancellationToken = default, ContentPageCursor? cursor = null)
     {
         await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
         await EnsureLinearStreamChannelTypesRepairedOnceAsync(
@@ -1971,11 +1974,34 @@ WHERE PlaylistId = {playlistId}
             cancellationToken);
         var query = BuildFilteredChannelQuery(context, playlistId, searchText, group, type, onlyFavorites, hiddenGroups);
 
+        if (cursor is { } keysetCursor &&
+            keysetCursor.LastId > 0 &&
+            UsesKeysetPagination(sortOrder))
+        {
+            query = ApplyKeysetCursor(query, sortOrder, keysetCursor);
+            return await ApplySort(query, sortOrder)
+                .Take(Math.Max(1, take))
+                .ToListAsync(cancellationToken);
+        }
+
         return await ApplySort(query, sortOrder)
             .Skip(Math.Max(0, skip))
             .Take(Math.Max(1, take))
             .ToListAsync(cancellationToken);
     }
+
+    internal static bool UsesKeysetPagination(ChannelSortOrder sortOrder)
+        => sortOrder is ChannelSortOrder.NewestFirst or ChannelSortOrder.OldestFirst;
+
+    internal static IQueryable<Channel> ApplyKeysetCursor(
+        IQueryable<Channel> query,
+        ChannelSortOrder sortOrder,
+        ContentPageCursor cursor)
+        => sortOrder switch
+        {
+            ChannelSortOrder.OldestFirst => query.Where(channel => channel.Id > cursor.LastId),
+            _ => query.Where(channel => channel.Id < cursor.LastId)
+        };
 
     public async Task<List<string>> GetGroupsAsync(int playlistId)
     {
@@ -2304,12 +2330,19 @@ WHERE PlaylistId = {playlistId}
     {
         using var context = await _contextFactory.CreateDbContextAsync();
         var playlist = await context.Playlists
-            .Include(p => p.Channels)
             .FirstOrDefaultAsync(p => p.Id == playlistId);
         
         if (playlist == null) return;
 
-        var channels = playlist.Channels.ToList();
+        await EnsureLinearStreamChannelTypesRepairedOnceAsync(context, playlistId);
+        var channels = await context.Channels
+            .AsNoTracking()
+            .Where(channel =>
+                channel.PlaylistId == playlistId &&
+                channel.Type == ChannelType.Live)
+            .OrderBy(channel => channel.GroupTitle)
+            .ThenBy(channel => channel.Name)
+            .ToListAsync();
         
         var channelNames = channels.Select(c => c.Name ?? "").ToList();
         var countryCandidates = new List<string>();
