@@ -1400,6 +1400,15 @@ Response okunuyor ancak `using` / dispose yolu eksik.
 using var response = await ...
 ```
 
+### Uygulama durumu — 20 Ağustos 2026: UYGULANDI/KAPATILDI
+
+- `MetadataService` içindeki üç `GetWithFallbackAsync` tüketicisi yanıt sahipliğini artık
+  `using var response` ile deterministik olarak sonlandırıyor.
+- Proxy yanıtından doğrudan TMDB fallback'ine geçişte eski yanıt kapatılıyor; başarısız doğrudan
+  yanıt ve exception yolları da açık response bırakmıyor.
+- Başarılı response content'inin servis çağrısı bitmeden dispose edildiğini doğrulayan gerçek
+  `HttpMessageHandler` regresyon testi eklendi.
+
 ---
 
 ## P1-26 — Playlist ve metadata aynı 3 dakikalık `HttpClient.Timeout` politikasını paylaşabiliyor
@@ -1425,6 +1434,18 @@ MetadataClient → ~10–20 s
 ImageClient → ayrı policy
 LicenseClient → ayrı policy
 ```
+
+### Uygulama durumu — 20 Ağustos 2026: UYGULANDI/KAPATILDI
+
+- Ortak `HttpClient.Timeout = 3 dakika` playlist/provider indirmeleri için korunuyor; global
+  timeout düşürülmedi.
+- Metadata isteklerinin her proxy ve doğrudan fallback denemesi bağımsız, linked `20 saniye`
+  bütçe kullanıyor. Böylece bir proxy timeout'u doğrudan denemenin süresini tüketmiyor.
+- Kullanıcı/navigation cancellation'ı timeout'tan ayrılıyor ve `OperationCanceledException`
+  olarak yukarı taşınmaya devam ediyor.
+- Metadata lifecycle/cancellation/API-key paketi `19/19`; yeni timeout/dispose testleri `2/2`
+  geçti. P1-30 sonrası tam regresyon sonucu `2183/2189`; kalan `6` hata bu değişikliklerden önce
+  mevcut olan mobil seçim, download ve sleep-timer grubunda.
 
 ---
 
@@ -1554,6 +1575,42 @@ UI yoğun
 - async/coalesced post,
 - generation check,
 - worker thread'i UI bekleyerek bloklama.
+
+### Uygulama durumu — 20 Ağustos 2026: GEREKLİ HOT-PATH KAPSAMI UYGULANDI
+
+- Madde toplu bir `Invoke → Post` dönüşümü olarak uygulanmadı. Audit, gerçek background/hot
+  çağrıları normal UI-thread ve sıralama gerektiren çağrılardan ayırdı.
+- Oynatıcı `PlayingChanged`, `BufferingChanged`, `VolumeChanged` ve kalite callback'leri
+  latest-only sürüm guard'lı `BeginInvoke` kullanıyor; eski kuyruk callback'i yeni state'i ezemiyor.
+- Track retry ve playback health worker'ları UI sonucunu thread bloklamadan `await InvokeAsync`
+  ile alıyor; her committe cancellation/playback request identity tekrar doğrulanıyor. Timer yolu
+  non-blocking post ve yeniden doğrulama kullanıyor.
+- ViewModel health worker'ındaki doğrudan native `Stop/Play` döngüsü kaldırıldı. Reconnect işlevi
+  kaybedilmeden, en fazla dört deneme standart `PlayChannelAsync(existingRequestVersion)`
+  generation pipeline'ına taşındı; exception gözleniyor ve kalan denemeler bounded biçimde sürüyor.
+  Böylece eski recovery yeni medyayı durduramıyor ve native iş UI dispatcher closure'ına taşınmıyor.
+- Yeni playback intent callback kabul kapısını kapatıyor; gerçek yeni `PlayAsync` başlamadan hemen
+  önce açılıyor. Bu nedenle eski native event yeni intent'ten sonra ulaşsa bile Playing/Buffering,
+  Position ve Quality state'ine yazamıyor.
+- Live/Movies/Search sayfa append commit'i ile EPG enrichment commit'i immutable sonuç sonrası
+  `await InvokeAsync` kullanıyor; cancellation/navigation ve commit guard UI üzerinde tekrar
+  kontrol ediliyor.
+- Normal UI akışındaki veya atomik sıralama gerektiren düşük frekanslı senkron çağrılar kanıtsız
+  şekilde değiştirilmedi. Bu karar rapordaki tüm önerilerin zorunlu değil, güncel kodda ölçülebilir
+  risk üretenlerin uygulanması ilkesine uygundur.
+- Oynatıcı odak paketi `180/180`; event-after-intent, latest-only dispatch ve kaynak contract
+  testleri geçti. Tam takım `2183/2189` geçti.
+- Final Android arm64 build `0` hata verdi. `380858660` byte imzalı APK'nın SHA-256 değeri
+  `B1163D3E2A70EB047FB2982C495FF68889D91871A1B2A7F2DA3B63FCED0D11ED`.
+- APK `adb install --user 0 -r -d` ile veri silmeden kuruldu; `firstInstallTime`
+  `2026-08-10 17:51:36` korundu, `lastUpdateTime` `2026-08-20 15:42:41` oldu.
+- Persisted profil seçildi, Live açıldı ve `BEIN BOX OFFICE 1 FHD` player'ı başlatıldı.
+  `MobilePlayerView` içinde `3/3` HOME/launcher turu ve player'dan Live'a geri çıkış PID `2382`
+  değişmeden tamamlandı; logcat'te yeni ANR, `FATAL EXCEPTION` veya native fatal signal yok.
+
+Sonuç: P1-30'un doğrulanan backpressure yolları kapatıldı ve **Aşama 4 — Network ve
+notification tamamlandı**. Sonraki P2/P3 maddeleri otomatik yapılmayacak; her biri önce güncel kod
+ve cihaz bulgularıyla gereklilik audit'inden geçirilecek.
 
 ---
 

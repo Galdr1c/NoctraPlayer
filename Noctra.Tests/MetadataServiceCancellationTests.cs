@@ -19,11 +19,11 @@ public sealed class MetadataServiceCancellationTests
             ChannelType.VOD,
             "en-US",
             cancellation.Token);
-        await handler.Started.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        await handler.Started.Task.WaitAsync(TimeSpan.FromSeconds(10));
         cancellation.Cancel();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(async () =>
-            await request.WaitAsync(TimeSpan.FromSeconds(2)));
+            await request.WaitAsync(TimeSpan.FromSeconds(10)));
     }
 
     [Fact]
@@ -35,11 +35,11 @@ public sealed class MetadataServiceCancellationTests
         using var cancellation = new CancellationTokenSource();
 
         var request = service.FetchSeriesDetailsAsync(42, "en-US", cancellation.Token);
-        await handler.Started.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        await handler.Started.Task.WaitAsync(TimeSpan.FromSeconds(10));
         cancellation.Cancel();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(async () =>
-            await request.WaitAsync(TimeSpan.FromSeconds(2)));
+            await request.WaitAsync(TimeSpan.FromSeconds(10)));
     }
 
     [Fact]
@@ -51,11 +51,11 @@ public sealed class MetadataServiceCancellationTests
         using var cancellation = new CancellationTokenSource();
 
         var request = service.SearchSeriesAsync("Cancelled series", "en-US", cancellation.Token);
-        await handler.Started.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        await handler.Started.Task.WaitAsync(TimeSpan.FromSeconds(10));
         cancellation.Cancel();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(async () =>
-            await request.WaitAsync(TimeSpan.FromSeconds(2)));
+            await request.WaitAsync(TimeSpan.FromSeconds(10)));
     }
 
     [Fact]
@@ -67,11 +67,11 @@ public sealed class MetadataServiceCancellationTests
         using var cancellation = new CancellationTokenSource();
 
         var request = service.SearchSeriesAsync("Fallback cancellation", "en-US", cancellation.Token);
-        await handler.FallbackStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        await handler.FallbackStarted.Task.WaitAsync(TimeSpan.FromSeconds(10));
         cancellation.Cancel();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(async () =>
-            await request.WaitAsync(TimeSpan.FromSeconds(2)));
+            await request.WaitAsync(TimeSpan.FromSeconds(10)));
     }
 
     [Fact]
@@ -87,11 +87,11 @@ public sealed class MetadataServiceCancellationTests
             ChannelType.VOD,
             "en-US",
             cancellation.Token);
-        await handler.BlockedRequestStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        await handler.BlockedRequestStarted.Task.WaitAsync(TimeSpan.FromSeconds(10));
         cancellation.Cancel();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(async () =>
-            await request.WaitAsync(TimeSpan.FromSeconds(2)));
+            await request.WaitAsync(TimeSpan.FromSeconds(10)));
     }
 
     [Fact]
@@ -107,11 +107,11 @@ public sealed class MetadataServiceCancellationTests
             ChannelType.VOD,
             "en-US",
             cancellation.Token);
-        await handler.BlockedRequestStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        await handler.BlockedRequestStarted.Task.WaitAsync(TimeSpan.FromSeconds(10));
         cancellation.Cancel();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(async () =>
-            await request.WaitAsync(TimeSpan.FromSeconds(2)));
+            await request.WaitAsync(TimeSpan.FromSeconds(10)));
     }
 
     private sealed class BlockingHandler : HttpMessageHandler

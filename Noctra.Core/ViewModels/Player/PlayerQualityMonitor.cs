@@ -12,6 +12,7 @@ public class PlayerQualityMonitor
 {
     private readonly PlayerViewModel _vm;
     private CancellationTokenSource? _trackRefreshCts;
+    private int _qualityDispatchVersion;
 
     public PlayerQualityMonitor(PlayerViewModel vm)
     {
@@ -20,8 +21,16 @@ public class PlayerQualityMonitor
 
     public void OnVideoPlayerServiceQualityDetected(object? s, StreamQualityInfo quality)
     {
-        _vm.DispatcherService.Invoke(() =>
+        var dispatchVersion = Interlocked.Increment(ref _qualityDispatchVersion);
+        var requestVersion = Volatile.Read(ref _vm._playRequestVersion);
+        _vm.DispatcherService.BeginInvoke(() =>
         {
+            if (dispatchVersion != Volatile.Read(ref _qualityDispatchVersion) ||
+                !_vm.IsPlayerCallbackCurrent(requestVersion))
+            {
+                return;
+            }
+
             _vm.StreamQuality = quality;
             UpdateStreamInfoFromQuality();
         });
@@ -40,10 +49,7 @@ public class PlayerQualityMonitor
 
     public void OnVideoPlayerServiceErrorOccurred(object? s, string errorMessage)
     {
-        _vm.DispatcherService.Invoke(() =>
-        {
-            _vm.LogDebug($"VM: VideoPlayerService Error: {errorMessage}");
-        });
+        _vm.LogDebug($"VM: VideoPlayerService Error: {errorMessage}");
     }
 
     public async Task RefreshTracksWithRetryAsync()
@@ -63,7 +69,20 @@ public class PlayerQualityMonitor
                     return;
                 }
 
-                _vm.DispatcherService.Invoke(UpdateMediaInfo);
+                var applied = await _vm.DispatcherService.InvokeAsync(() =>
+                {
+                    if (cts.IsCancellationRequested || !_vm.IsPlaying || _vm.CurrentChannel == null)
+                    {
+                        return false;
+                    }
+
+                    UpdateMediaInfo();
+                    return true;
+                });
+                if (!applied)
+                {
+                    return;
+                }
 
                 if (_vm.AudioTracks.Any(t => t.Id >= 0) && (_vm.SubtitleTracks.Any(t => t.Id >= 0) || delay >= 1600))
                 {

@@ -42,6 +42,8 @@ namespace Noctra.Tests
             // Simple dispatcher that executes immediately
             _dispatcherServiceMock.Setup(d => d.Invoke(It.IsAny<Action>()))
                 .Callback<Action>(a => a());
+            _dispatcherServiceMock.Setup(d => d.InvokeAsync(It.IsAny<Func<bool>>()))
+                .Returns((Func<bool> action) => Task.FromResult(action()));
             
             _settingsServiceMock.Setup(s => s.Settings).Returns(new AppSettings());
         }

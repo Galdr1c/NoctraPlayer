@@ -121,6 +121,7 @@ namespace Noctra.Tests
         public void SimulateError(string msg) => ErrorOccurred?.Invoke(this, msg);
         public void SimulatePlaybackEnded() => PlaybackEnded?.Invoke(this, EventArgs.Empty);
         public void SimulateVolumeChanged(int vol) => VolumeChanged?.Invoke(this, vol);
+        public void SimulateQualityDetected(StreamQualityInfo quality) => QualityDetected?.Invoke(this, quality);
     }
 
     internal sealed class FakeEpgService : IEpgService
@@ -1631,6 +1632,122 @@ namespace Noctra.Tests
             ctx.VideoService.SimulatePlayingChanged(false);
 
             Assert.False(ctx.VM.IsPlaying);
+        }
+
+        [Fact]
+        public void PlayingChanged_QueuedCallbacks_ApplyOnlyLatestState()
+        {
+            var dispatcher = new QueuedDispatcher();
+            var ctx = new PlayerTestContext(dispatcher: dispatcher);
+            dispatcher.RunAll();
+
+            ctx.VideoService.SimulatePlayingChanged(true);
+            ctx.VideoService.SimulatePlayingChanged(false);
+
+            Assert.Equal(2, dispatcher.PendingCount);
+            dispatcher.RunAll();
+            Assert.False(ctx.VM.IsPlaying);
+        }
+
+        [Fact]
+        public void PlayingChanged_QueuedOldIntent_CannotReactivateNewPlaybackState()
+        {
+            var dispatcher = new QueuedDispatcher();
+            var ctx = new PlayerTestContext(dispatcher: dispatcher);
+            dispatcher.RunAll();
+
+            ctx.VideoService.SimulatePlayingChanged(true);
+            ctx.VM.BeginPlaybackIntent(stopCurrentPlayback: false);
+
+            dispatcher.RunAll();
+            Assert.False(ctx.VM.IsPlaying);
+        }
+
+        [Fact]
+        public void PlayingChanged_ArrivingAfterNewIntent_IsIgnoredUntilNewPlayStarts()
+        {
+            var dispatcher = new QueuedDispatcher();
+            var ctx = new PlayerTestContext(dispatcher: dispatcher);
+            dispatcher.RunAll();
+
+            ctx.VM.BeginPlaybackIntent(stopCurrentPlayback: false);
+            ctx.VideoService.SimulatePlayingChanged(true);
+
+            dispatcher.RunAll();
+            Assert.False(ctx.VM.IsPlaying);
+        }
+
+        [Fact]
+        public void PositionChanged_QueuedCallbacks_ApplyOnlyLatestSample()
+        {
+            var dispatcher = new QueuedDispatcher();
+            var ctx = new PlayerTestContext(dispatcher: dispatcher);
+            dispatcher.RunAll();
+            ctx.VM.IsLiveContent = false;
+            ctx.VM.Duration = 120;
+
+            ctx.VideoService.SimulatePositionChanged(10);
+            ctx.VideoService.SimulatePositionChanged(20);
+
+            Assert.Equal(2, dispatcher.PendingCount);
+            dispatcher.RunAll();
+            Assert.Equal(20, ctx.VM.Position, precision: 1);
+        }
+
+        [Fact]
+        public void QualityDetected_QueuedOldIntent_CannotOverwriteNewPlaybackState()
+        {
+            var dispatcher = new QueuedDispatcher();
+            var ctx = new PlayerTestContext(dispatcher: dispatcher);
+            dispatcher.RunAll();
+
+            ctx.VideoService.SimulateQualityDetected(new StreamQualityInfo
+            {
+                Width = 1920,
+                Height = 1080,
+                Fps = 60
+            });
+            ctx.VM.BeginPlaybackIntent(stopCurrentPlayback: false);
+
+            dispatcher.RunAll();
+            Assert.Null(ctx.VM.StreamQuality);
+        }
+
+        [Fact]
+        public void QualityDetected_ArrivingAfterNewIntent_IsIgnoredUntilNewPlayStarts()
+        {
+            var dispatcher = new QueuedDispatcher();
+            var ctx = new PlayerTestContext(dispatcher: dispatcher);
+            dispatcher.RunAll();
+
+            ctx.VM.BeginPlaybackIntent(stopCurrentPlayback: false);
+            ctx.VideoService.SimulateQualityDetected(new StreamQualityInfo
+            {
+                Width = 1280,
+                Height = 720,
+                Fps = 30
+            });
+
+            dispatcher.RunAll();
+            Assert.Null(ctx.VM.StreamQuality);
+        }
+
+        [Fact]
+        public void ErrorAndVolume_ArrivingAfterNewIntent_CannotOverwriteNewState()
+        {
+            var dispatcher = new QueuedDispatcher();
+            var ctx = new PlayerTestContext(dispatcher: dispatcher);
+            dispatcher.RunAll();
+            ctx.VM.ConnectionStatus = "new playback";
+            ctx.VM.Volume = 55;
+
+            ctx.VM.BeginPlaybackIntent(stopCurrentPlayback: false);
+            ctx.VideoService.SimulateError("old playback error");
+            ctx.VideoService.SimulateVolumeChanged(5);
+
+            dispatcher.RunAll();
+            Assert.Equal("new playback", ctx.VM.ConnectionStatus);
+            Assert.Equal(55, ctx.VM.Volume);
         }
 
         [Fact]

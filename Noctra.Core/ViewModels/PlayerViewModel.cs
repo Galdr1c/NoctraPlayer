@@ -124,6 +124,10 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
     // ── State Fields ────────────────────────────────────────────────────────
     internal int _playRequestVersion;
+    private int _acceptedPlayerCallbackRequestVersion;
+    private int _playbackEndedDispatchVersion;
+    private int _errorDispatchVersion;
+    private int _cueDispatchVersion;
     internal bool _isPreferenceApplied;
 
     private readonly Dictionary<string, TrackSelectionSnapshot> _trackSelectionsByContent = new(StringComparer.Ordinal);
@@ -1462,6 +1466,7 @@ public bool CanShowDownloadButton => CurrentChannel != null && !IsLiveContent &&
     public int BeginPlaybackIntent(bool stopCurrentPlayback = true)
     {
         var requestVersion = Interlocked.Increment(ref _playRequestVersion);
+        InvalidatePlayerCallbacks();
         LogDebug($"BeginPlaybackIntent: requestVersion={requestVersion}, stopCurrentPlayback={stopCurrentPlayback}");
 
         QueueCurrentPlaybackExitSnapshot();
@@ -1544,6 +1549,21 @@ public bool CanShowDownloadButton => CurrentChannel != null && !IsLiveContent &&
 
     public bool IsPlaybackIntentCurrent(int requestVersion)
         => requestVersion == Volatile.Read(ref _playRequestVersion);
+
+    internal void AcceptPlayerCallbacks(int requestVersion)
+    {
+        if (IsPlaybackIntentCurrent(requestVersion))
+        {
+            Interlocked.Exchange(ref _acceptedPlayerCallbackRequestVersion, requestVersion);
+        }
+    }
+
+    internal void InvalidatePlayerCallbacks()
+        => Interlocked.Exchange(ref _acceptedPlayerCallbackRequestVersion, -1);
+
+    internal bool IsPlayerCallbackCurrent(int requestVersion)
+        => IsPlaybackIntentCurrent(requestVersion) &&
+           requestVersion == Volatile.Read(ref _acceptedPlayerCallbackRequestVersion);
 
     internal bool IsPlaybackIntentCurrent(int requestVersion, Channel? channel)
     {
@@ -2272,6 +2292,7 @@ PiPRequested?.Invoke(this, EventArgs.Empty);
             IsClosingPlayer = true;
 
             Interlocked.Increment(ref _playRequestVersion);
+            InvalidatePlayerCallbacks();
             EpisodeNavigator.ResetForPlaybackExit();
 
             CancelResumeDialog();
@@ -3043,16 +3064,31 @@ PiPRequested?.Invoke(this, EventArgs.Empty);
 
     private void OnVideoPlayerServicePlaybackEnded(object? sender, EventArgs e)
     {
-        _dispatcherService.Invoke(() =>
+        var dispatchVersion = Interlocked.Increment(ref _playbackEndedDispatchVersion);
+        var requestVersion = Volatile.Read(ref _playRequestVersion);
+        _dispatcherService.BeginInvoke(() =>
         {
-            if (IsClosingPlayer || _isContentTransitioning) return;
+            if (dispatchVersion != Volatile.Read(ref _playbackEndedDispatchVersion) ||
+                !IsPlayerCallbackCurrent(requestVersion) ||
+                IsClosingPlayer ||
+                _isContentTransitioning)
+            {
+                return;
+            }
 
             _isPlaybackEnded = true;
 
             if (SleepTimerMode == SleepTimerOption.EndOfEpisode)
             {
                 _ = Task.Delay(1500).ContinueWith(_ =>
-                    _dispatcherService.BeginInvoke(OverlayManager.TriggerSleepShutdown));
+                    _dispatcherService.BeginInvoke(() =>
+                    {
+                        if (dispatchVersion == Volatile.Read(ref _playbackEndedDispatchVersion) &&
+                            IsPlayerCallbackCurrent(requestVersion))
+                        {
+                            OverlayManager.TriggerSleepShutdown();
+                        }
+                    }));
             }
 
             var duration = _videoPlayerService.Duration;
@@ -3100,8 +3136,16 @@ PiPRequested?.Invoke(this, EventArgs.Empty);
 
     private void OnVideoPlayerServiceErrorOccurred(object? s, string errorMessage)
     {
-        _dispatcherService.Invoke(() =>
+        var dispatchVersion = Interlocked.Increment(ref _errorDispatchVersion);
+        var requestVersion = Volatile.Read(ref _playRequestVersion);
+        _dispatcherService.BeginInvoke(() =>
         {
+            if (dispatchVersion != Volatile.Read(ref _errorDispatchVersion) ||
+                !IsPlayerCallbackCurrent(requestVersion))
+            {
+                return;
+            }
+
             PlayerLoadingWarningMessage = string.Empty;
             ConnectionStatus = errorMessage;
             IsBuffering = true;
@@ -3116,7 +3160,21 @@ PiPRequested?.Invoke(this, EventArgs.Empty);
         => PlaybackController.OnVideoPlayerServiceVolumeChanged(s, vol);
 
     private void OnVideoPlayerServiceCuesChanged(object? s, IReadOnlyList<SubtitleCueData> cues)
-        => _dispatcherService.BeginInvoke(() => ActiveSubtitleCues = cues);
+    {
+        var dispatchVersion = Interlocked.Increment(ref _cueDispatchVersion);
+        var requestVersion = Volatile.Read(ref _playRequestVersion);
+        var cueSnapshot = cues.ToArray();
+        _dispatcherService.BeginInvoke(() =>
+        {
+            if (dispatchVersion != Volatile.Read(ref _cueDispatchVersion) ||
+                !IsPlayerCallbackCurrent(requestVersion))
+            {
+                return;
+            }
+
+            ActiveSubtitleCues = cueSnapshot;
+        });
+    }
 
     private void OnNetworkStatusChanged(object? sender, string status)
         => StallDetector.OnNetworkStatusChanged(sender, status);

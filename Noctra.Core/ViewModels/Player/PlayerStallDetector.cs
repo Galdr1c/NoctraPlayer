@@ -8,6 +8,9 @@ namespace Noctra.ViewModels;
 public class PlayerStallDetector
 {
     private readonly PlayerViewModel _vm;
+    private readonly object _startupRecoveryGate = new();
+    private int _startupRecoveryRequestVersion = -1;
+    private int _startupRecoveryAttempts;
 
     public PlayerStallDetector(PlayerViewModel vm)
     {
@@ -35,80 +38,103 @@ public class PlayerStallDetector
     public async Task EnsurePlaybackHealthAsync(Channel channel, int requestVersion)
     {
         const int retryCountdownSeconds = 5;
-        const int maxAttempts = 4;
 
-        for (int attempt = 0; attempt < maxAttempts; attempt++)
+        for (int remaining = retryCountdownSeconds; remaining > 0; remaining--)
         {
-            for (int remaining = retryCountdownSeconds; remaining > 0; remaining--)
-            {
-                await Task.Delay(1000);
-
-                if (IsHealthCheckCancelled(channel, requestVersion))
-                    return;
-
-                if (_vm.IsPlaying)
-                {
-                    _vm.DispatcherService.Invoke(() => _vm.PlayerLoadingWarningMessage = string.Empty);
-                    return;
-                }
-
-                if (_vm._suppressBufferShieldForSeek)
-                {
-                    _vm.DispatcherService.Invoke(() => _vm.PlayerLoadingWarningMessage = string.Empty);
-                    return;
-                }
-
-                var msg = string.Format(_vm.LocalizationService.GetString("Player.Status.RetryInSeconds"), remaining);
-                _vm.DispatcherService.Invoke(() => _vm.PlayerLoadingWarningMessage = msg);
-            }
-
-            if (IsHealthCheckCancelled(channel, requestVersion) || _vm.IsPlaying || _vm._suppressBufferShieldForSeek)
-                return;
-
-            _vm.DispatcherService.Invoke(() =>
-            {
-                _vm.PlayerLoadingWarningMessage = string.Format(_vm.LocalizationService.GetString("Player.Status.ReconnectingFormat"), attempt + 1, maxAttempts);
-                _vm.ConnectionStatus = _vm.LocalizationService.GetString("Player.Status.Reconnecting");
-                _vm.IsBuffering = true;
-                _vm.BufferingProgress = 0;
-            });
-
-            _vm.VideoPlayerService.Stop();
-            await Task.Delay(200);
+            await Task.Delay(1000);
 
             if (IsHealthCheckCancelled(channel, requestVersion))
                 return;
 
-            try
+            if (_vm.IsPlaying)
             {
-                var resolvedUrl = await _vm.ContentDownloadService.ResolvePlayableUrlAsync(channel.StreamUrl);
-                if (IsHealthCheckCancelled(channel, requestVersion))
-                    return;
-
-                await _vm.VideoPlayerService.PlayAsync(resolvedUrl);
-
-                if (IsHealthCheckCancelled(channel, requestVersion))
-                    return;
-
-                _vm.DispatcherService.Invoke(() => _vm.PlayerLoadingWarningMessage = string.Empty);
+                ResetStartupRecovery(requestVersion);
+                await InvokeIfCurrentAsync(
+                    channel,
+                    requestVersion,
+                    () => _vm.PlayerLoadingWarningMessage = string.Empty);
+                return;
             }
-            catch
+
+            if (_vm._suppressBufferShieldForSeek)
             {
-                // Proceed to next attempt
+                await InvokeIfCurrentAsync(
+                    channel,
+                    requestVersion,
+                    () => _vm.PlayerLoadingWarningMessage = string.Empty);
+                return;
+            }
+
+            var msg = string.Format(_vm.LocalizationService.GetString("Player.Status.RetryInSeconds"), remaining);
+            if (!await InvokeIfCurrentAsync(
+                channel,
+                requestVersion,
+                () => _vm.PlayerLoadingWarningMessage = msg,
+                requireNotPlaying: true))
+            {
+                return;
             }
         }
 
         if (IsHealthCheckCancelled(channel, requestVersion) || _vm.IsPlaying)
             return;
 
-        _vm.DispatcherService.Invoke(() =>
-            _vm.PlayerLoadingWarningMessage = _vm.LocalizationService.GetString("Player.Warning.SlowConnection"));
+        if (TryReserveStartupRecovery(requestVersion))
+        {
+            if (!await InvokeIfCurrentAsync(
+                channel,
+                requestVersion,
+                () =>
+                {
+                    _vm.PlayerLoadingWarningMessage = _vm.LocalizationService.GetString("Player.Status.Reconnecting");
+                    _vm.ConnectionStatus = _vm.LocalizationService.GetString("Player.Status.Reconnecting");
+                    _vm.IsBuffering = true;
+                    _vm.BufferingProgress = 0;
+                },
+                requireNotPlaying: true))
+            {
+                return;
+            }
+
+            try
+            {
+                await _vm.PlaybackController.PlayChannelAsync(
+                    channel,
+                    existingRequestVersion: requestVersion);
+            }
+            catch (Exception ex)
+            {
+                _vm.LogDebug($"Startup recovery attempt failed: {ex.Message}");
+                if (!IsHealthCheckCancelled(channel, requestVersion))
+                {
+                    await EnsurePlaybackHealthAsync(channel, requestVersion);
+                }
+            }
+            return;
+        }
+
+        if (!await InvokeIfCurrentAsync(
+            channel,
+            requestVersion,
+            () => _vm.PlayerLoadingWarningMessage = _vm.LocalizationService.GetString("Player.Warning.SlowConnection"),
+            requireNotPlaying: true))
+        {
+            return;
+        }
 
         _vm._unreachableWarningTimer?.Dispose();
         _vm._unreachableWarningTimer = new Timer(_ =>
         {
             if (_vm.IsPlaying || !_vm.IsVisible) return;
-            _vm.DispatcherService.Invoke(() => _vm.PlayerLoadingWarningMessage = _vm.LocalizationService.GetString("Player.Warning.Unreachable"));
+            _vm.DispatcherService.BeginInvoke(() =>
+            {
+                if (IsHealthCheckCancelled(channel, requestVersion) || _vm.IsPlaying || !_vm.IsVisible)
+                {
+                    return;
+                }
+
+                _vm.PlayerLoadingWarningMessage = _vm.LocalizationService.GetString("Player.Warning.Unreachable");
+            });
         }, null, 15000, Timeout.Infinite);
 
         await Task.Delay(7000);
@@ -116,8 +142,59 @@ public class PlayerStallDetector
         if (IsHealthCheckCancelled(channel, requestVersion) || _vm.IsPlaying)
             return;
 
-        _vm.DispatcherService.Invoke(() =>
-            _vm.PlayerLoadingWarningMessage = _vm.LocalizationService.GetString("Player.Warning.Unreachable"));
+        await InvokeIfCurrentAsync(
+            channel,
+            requestVersion,
+            () => _vm.PlayerLoadingWarningMessage = _vm.LocalizationService.GetString("Player.Warning.Unreachable"),
+            requireNotPlaying: true);
+    }
+
+    private Task<bool> InvokeIfCurrentAsync(
+        Channel channel,
+        int requestVersion,
+        Action action,
+        bool requireNotPlaying = false)
+        => _vm.DispatcherService.InvokeAsync(() =>
+        {
+            if (IsHealthCheckCancelled(channel, requestVersion) ||
+                (requireNotPlaying && _vm.IsPlaying))
+            {
+                return false;
+            }
+
+            action();
+            return true;
+        });
+
+    private bool TryReserveStartupRecovery(int requestVersion)
+    {
+        lock (_startupRecoveryGate)
+        {
+            if (_startupRecoveryRequestVersion != requestVersion)
+            {
+                _startupRecoveryRequestVersion = requestVersion;
+                _startupRecoveryAttempts = 0;
+            }
+
+            if (_startupRecoveryAttempts >= 4)
+            {
+                return false;
+            }
+
+            _startupRecoveryAttempts++;
+            return true;
+        }
+    }
+
+    private void ResetStartupRecovery(int requestVersion)
+    {
+        lock (_startupRecoveryGate)
+        {
+            if (_startupRecoveryRequestVersion == requestVersion)
+            {
+                _startupRecoveryAttempts = 0;
+            }
+        }
     }
 
     public bool IsHealthCheckCancelled(Channel channel, int requestVersion)

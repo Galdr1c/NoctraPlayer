@@ -9,6 +9,10 @@ namespace Noctra.ViewModels;
 public class PlayerPlaybackController
 {
     private readonly PlayerViewModel _vm;
+    private int _playingDispatchVersion;
+    private int _bufferingDispatchVersion;
+    private int _positionDispatchVersion;
+    private int _volumeDispatchVersion;
 
     public PlayerPlaybackController(PlayerViewModel vm)
     {
@@ -17,8 +21,16 @@ public class PlayerPlaybackController
 
     public void OnVideoPlayerServicePlayingChanged(object? s, bool playing)
     {
-        _vm.DispatcherService.Invoke(() =>
+        var dispatchVersion = Interlocked.Increment(ref _playingDispatchVersion);
+        var requestVersion = Volatile.Read(ref _vm._playRequestVersion);
+        _vm.DispatcherService.BeginInvoke(() =>
         {
+            if (dispatchVersion != Volatile.Read(ref _playingDispatchVersion) ||
+                !_vm.IsPlayerCallbackCurrent(requestVersion))
+            {
+                return;
+            }
+
             _vm.IsPlaying = playing;
             if (playing) 
             {
@@ -41,8 +53,16 @@ public class PlayerPlaybackController
 
     public void OnVideoPlayerServiceBufferingChanged(object? s, float progress)
     {
-        _vm.DispatcherService.Invoke(() =>
+        var dispatchVersion = Interlocked.Increment(ref _bufferingDispatchVersion);
+        var requestVersion = Volatile.Read(ref _vm._playRequestVersion);
+        _vm.DispatcherService.BeginInvoke(() =>
         {
+            if (dispatchVersion != Volatile.Read(ref _bufferingDispatchVersion) ||
+                !_vm.IsPlayerCallbackCurrent(requestVersion))
+            {
+                return;
+            }
+
             _vm.BufferingProgress = progress;
 
             // Ignore stale buffering callbacks while switching content.
@@ -65,8 +85,16 @@ public class PlayerPlaybackController
 
     public void OnVideoPlayerServicePositionChanged(object? s, double pos)
     {
+        var dispatchVersion = Interlocked.Increment(ref _positionDispatchVersion);
+        var requestVersion = Volatile.Read(ref _vm._playRequestVersion);
         _vm.DispatcherService.BeginInvoke(() =>
         {
+            if (dispatchVersion != Volatile.Read(ref _positionDispatchVersion) ||
+                !_vm.IsPlayerCallbackCurrent(requestVersion))
+            {
+                return;
+            }
+
             if (_vm.IsLiveContent)
             {
                 _vm.BufferedPosition = 0;
@@ -151,8 +179,16 @@ public class PlayerPlaybackController
 
     public void OnVideoPlayerServiceVolumeChanged(object? s, int vol)
     {
-        _vm.DispatcherService.Invoke(() =>
+        var dispatchVersion = Interlocked.Increment(ref _volumeDispatchVersion);
+        var requestVersion = Volatile.Read(ref _vm._playRequestVersion);
+        _vm.DispatcherService.BeginInvoke(() =>
         {
+            if (dispatchVersion != Volatile.Read(ref _volumeDispatchVersion) ||
+                !_vm.IsPlayerCallbackCurrent(requestVersion))
+            {
+                return;
+            }
+
             _vm._isUpdatingFromService = true;
             try
             {
@@ -181,6 +217,7 @@ public class PlayerPlaybackController
         var requestVersion = existingRequestVersion.HasValue && _vm.IsPlaybackIntentCurrent(existingRequestVersion.Value)
             ? existingRequestVersion.Value
             : _vm.BeginPlaybackIntent(stopCurrentPlayback: true);
+        _vm.InvalidatePlayerCallbacks();
 
         // Flush previous content's watch position before switching.
         try
@@ -288,6 +325,8 @@ public class PlayerPlaybackController
                 _vm.LogDebug($"PlayChannelAsync: request {requestVersion} cancelled before VLC PlayAsync.");
                 return;
             }
+
+            _vm.AcceptPlayerCallbacks(requestVersion);
             
             if (startPosition.HasValue && startPosition.Value > 0 && !_vm.IsDownloadedPlayback && resolvedStreamUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
             {
@@ -728,6 +767,7 @@ public class PlayerPlaybackController
         // User-driven close/back must invalidate pending async PlayChannelAsync,
         // ResumePlaybackAsync and health-check retry paths immediately.
         Interlocked.Increment(ref _vm._playRequestVersion);
+        _vm.InvalidatePlayerCallbacks();
         _vm.CancelResumeDialog();
         _vm._isContentTransitioning = false;
         _vm._isPlaybackEnded = false;

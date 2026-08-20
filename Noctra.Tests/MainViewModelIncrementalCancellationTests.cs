@@ -657,6 +657,8 @@ public sealed class MainViewModelIncrementalCancellationTests
             .Callback<Action>(action => action());
         dispatcher.Setup(service => service.InvokeAsync(It.IsAny<Func<Task>>()))
             .Returns((Func<Task> action) => action());
+        dispatcher.Setup(service => service.InvokeAsync(It.IsAny<Func<bool>>()))
+            .Returns((Func<bool> action) => Task.FromResult(action()));
 
         var localization = new Mock<ILocalizationService>();
         localization.Setup(service => service.GetString(It.IsAny<string>())).Returns("Test");

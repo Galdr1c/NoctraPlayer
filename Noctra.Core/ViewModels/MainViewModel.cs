@@ -3599,8 +3599,7 @@ public partial class MainViewModel : ObservableObject
                 }
             }
 
-            var applied = false;
-            _dispatcherService.Invoke(() =>
+            var applied = await _dispatcherService.InvokeAsync(() =>
             {
                 if (effectiveCancellationToken.IsCancellationRequested ||
                     !IsIncrementalContentRequestCurrent(
@@ -3609,7 +3608,7 @@ public partial class MainViewModel : ObservableObject
                         requestChannelType,
                         requestPlaylist.Id))
                 {
-                    return;
+                    return false;
                 }
 
                 _currentPage = requestedPage + 1;
@@ -3635,7 +3634,7 @@ public partial class MainViewModel : ObservableObject
 
                 OnPropertyChanged(nameof(FilteredChannels));
                 NotifyContentStateChanged();
-                applied = true;
+                return true;
             });
 
             if (!applied)
@@ -12027,11 +12026,11 @@ public partial class MainViewModel : ObservableObject
                 return;
             }
             
-            _dispatcherService.Invoke(() =>
+            await _dispatcherService.InvokeAsync(() =>
             {
                 if (commitGuard is not null && !commitGuard())
                 {
-                    return;
+                    return false;
                 }
 
                 foreach (var channel in liveChannels)
@@ -12053,6 +12052,8 @@ public partial class MainViewModel : ObservableObject
                             channel.EpgProgress = 0;
                     }
                 }
+
+                return true;
             });
         }
         catch (Exception ex)
