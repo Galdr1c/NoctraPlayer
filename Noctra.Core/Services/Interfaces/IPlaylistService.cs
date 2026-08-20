@@ -71,6 +71,14 @@ public interface IPlaylistService
     Task<List<Channel>> GetChannelsAsync(int playlistId);
 
     /// <summary>
+    /// Yalnızca Live kanallarını DB seviyesinde filtreleyerek getirir.
+    /// EPG eşleştirmesi için VOD/Series kayıtlarını materialize etmez.
+    /// </summary>
+    Task<List<Channel>> GetLiveChannelsAsync(
+        int playlistId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Filtrelenmiş kanalları getirir (lazy loading için)
     /// </summary>
     Task<List<Channel>> GetChannelsFilteredAsync(int playlistId, string? searchText = null, string? group = null, ChannelType? type = null, bool onlyFavorites = false, int limit = 1000, ChannelSortOrder sortOrder = ChannelSortOrder.NewestFirst, List<string>? hiddenGroups = null);

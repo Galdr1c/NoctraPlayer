@@ -10,6 +10,7 @@ using Avalonia.Controls.Templates;
 using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using Noctra.Core.Collections;
 
 namespace Noctra.Avalonia.Controls;
@@ -76,6 +77,17 @@ public sealed class DesktopVirtualizingCardGrid : ListBox
     }
 
     public event EventHandler<ScrollChangedEventArgs>? ScrollChanged;
+
+    /// <summary>
+    /// Returns source items held by realized rows. VirtualizingStackPanel's
+    /// cache is intentionally included as a small overscan window.
+    /// </summary>
+    public IReadOnlyList<object> GetVisibleSourceItems()
+        => this.GetVisualDescendants()
+            .OfType<RowControl>()
+            .SelectMany(row => (row.DataContext as DesktopCardGridRow)?.Items ?? Array.Empty<object>())
+            .Distinct(ReferenceEqualityComparer.Instance)
+            .ToArray();
 
     public IEnumerable? SourceItems
     {

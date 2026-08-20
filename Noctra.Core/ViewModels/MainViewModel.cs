@@ -112,6 +112,11 @@ public partial class MainViewModel : ObservableObject
     private long _searchRankingSessionsCancelled;
     private long _staleSearchRankingCommits;
     private long _searchRankingCommits;
+    private readonly object _visibleEpgChannelsGate = new();
+    private Channel[] _visibleEpgChannels = Array.Empty<Channel>();
+    private long _visibleEpgChannelsVersion;
+    private long _visibleEpgChannelsInvalidationGeneration;
+    private int _visibleEpgRefreshRunning;
 
     private sealed record NavigationContentResetOwner(long Generation, AppView View, int FilterVersion);
 
@@ -376,6 +381,7 @@ public partial class MainViewModel : ObservableObject
 
     partial void OnActiveViewChanged(AppView value)
     {
+        ClearVisibleEpgChannels();
         ReplaceTmdbVisualEnrichmentScope(value, SelectedPlaylist?.Id, "view");
         InvalidateSearchRankingSession("view");
 
@@ -2405,6 +2411,7 @@ public partial class MainViewModel : ObservableObject
 
     partial void OnSelectedPlaylistChanged(Playlist? value)
     {
+        ClearVisibleEpgChannels();
         ReplaceTmdbVisualEnrichmentScope(ActiveView, value?.Id, "playlist");
         InvalidateSearchRankingSession("playlist");
         _searchDocumentCache.Clear();
@@ -3436,6 +3443,7 @@ public partial class MainViewModel : ObservableObject
 
     partial void OnCurrentProfileChanged(Profile? value)
     {
+        ClearVisibleEpgChannels();
         ReplaceTmdbVisualEnrichmentScope(ActiveView, SelectedPlaylist?.Id, "profile");
         InvalidateSearchRankingSession("profile");
         _searchDocumentCache.Clear();
@@ -4185,6 +4193,7 @@ public partial class MainViewModel : ObservableObject
 
     partial void OnSelectedGroupChanged(string? value)
     {
+        ClearVisibleEpgChannels();
 
         if (_suppressFilterRefresh || _suppressNavigationFilterRefresh)
         {
@@ -4560,6 +4569,7 @@ public partial class MainViewModel : ObservableObject
 
     partial void OnSelectedSortOrderChanged(ChannelSortOrder value)
     {
+        ClearVisibleEpgChannels();
         ScheduleImmediateFilter();
     }
 
@@ -6246,45 +6256,140 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
-    private async Task EnrichVisibleChannelsWithEpgAsync()
+    internal void SetVisibleEpgChannels(IEnumerable<Channel>? channels)
+        => SetVisibleEpgChannelsCore(channels, expectedGeneration: null);
+
+    internal bool TrySetVisibleEpgChannels(
+        IEnumerable<Channel>? channels,
+        long expectedGeneration)
+        => SetVisibleEpgChannelsCore(channels, expectedGeneration);
+
+    private bool SetVisibleEpgChannelsCore(
+        IEnumerable<Channel>? channels,
+        long? expectedGeneration)
     {
-        // Check for EPG expiration (All programs in database have ended)
-        if (_settingsService.Settings.EpgEnabled)
+        var snapshot = channels?
+            .Where(channel => channel is not null && channel.Type == ChannelType.Live && channel.Id > 0)
+            .GroupBy(channel => channel.Id)
+            .Select(group => group.First())
+            .Take(96)
+            .ToArray() ?? Array.Empty<Channel>();
+
+        lock (_visibleEpgChannelsGate)
         {
-            try
+            if (expectedGeneration.HasValue &&
+                expectedGeneration.Value != _visibleEpgChannelsInvalidationGeneration)
             {
-                var maxEndTime = await _epgService.GetMaxProgramEndTimeAsync();
-                if (maxEndTime.HasValue && DateTime.UtcNow > maxEndTime.Value)
-                {
-                    _logger?.LogInformation("EPG data has expired (Latest program ended at {MaxEndTime}). Clearing database.", maxEndTime.Value);
-                    await _epgService.ClearEpgAsync();
-                    
-                    // Clear current program titles from memory to reflect "No Information" immediately
-                    foreach (var channel in Channels)
-                    {
-                        channel.CurrentProgramTitle = null;
-                        channel.EpgProgress = 0;
-                    }
-                }
+                return false;
             }
-            catch (Exception ex)
+
+            _visibleEpgChannels = snapshot;
+            _visibleEpgChannelsVersion++;
+            return true;
+        }
+    }
+
+    internal long VisibleEpgChannelsInvalidationGeneration
+    {
+        get
+        {
+            lock (_visibleEpgChannelsGate)
             {
-                _logger?.LogDebug($"EPG expiration check failed: {ex.Message}");
+                return _visibleEpgChannelsInvalidationGeneration;
             }
         }
+    }
 
-        // Enrich main list
-        if (Channels.Count > 0)
-            await EnrichChannelsWithEpgAsync(Channels);
+    internal void ClearVisibleEpgChannels()
+    {
+        lock (_visibleEpgChannelsGate)
+        {
+            _visibleEpgChannels = Array.Empty<Channel>();
+            _visibleEpgChannelsVersion++;
+            _visibleEpgChannelsInvalidationGeneration++;
+        }
+    }
 
-        // Enrich favorites (only live)
-        var favoriteLive = FavoriteChannels.OfType<Channel>().Where(c => c.Type == ChannelType.Live).ToList();
-        if (favoriteLive.Count > 0)
-            await EnrichChannelsWithEpgAsync(favoriteLive);
+    private (Channel[] Channels, long Version) SnapshotVisibleEpgChannels()
+    {
+        lock (_visibleEpgChannelsGate)
+        {
+            return (_visibleEpgChannels.ToArray(), _visibleEpgChannelsVersion);
+        }
+    }
 
-        // Enrich history (only live)
-        if (HistoryLiveChannels.Count > 0)
-            await EnrichChannelsWithEpgAsync(HistoryLiveChannels);
+    private bool IsVisibleEpgSnapshotCurrent(long version)
+    {
+        lock (_visibleEpgChannelsGate)
+        {
+            return version == _visibleEpgChannelsVersion;
+        }
+    }
+
+    private async Task EnrichVisibleChannelsWithEpgAsync()
+    {
+        if (ActiveView != AppView.Live ||
+            Interlocked.Exchange(ref _visibleEpgRefreshRunning, 1) == 1)
+        {
+            return;
+        }
+
+        var visibleSnapshot = SnapshotVisibleEpgChannels();
+        var visibleChannels = visibleSnapshot.Channels;
+        var visibleSnapshotVersion = visibleSnapshot.Version;
+        if (visibleChannels.Length == 0)
+        {
+            Interlocked.Exchange(ref _visibleEpgRefreshRunning, 0);
+            return;
+        }
+
+        try
+        {
+            // Check for EPG expiration (all programs in the database have ended).
+            if (_settingsService.Settings.EpgEnabled)
+            {
+                try
+                {
+                    var maxEndTime = await _epgService.GetMaxProgramEndTimeAsync();
+                    if (maxEndTime.HasValue &&
+                        DateTime.UtcNow > maxEndTime.Value &&
+                        ActiveView == AppView.Live &&
+                        IsVisibleEpgSnapshotCurrent(visibleSnapshotVersion))
+                    {
+                        _logger?.LogInformation("EPG data has expired (Latest program ended at {MaxEndTime}). Clearing database.", maxEndTime.Value);
+                        await _epgService.ClearEpgAsync();
+
+                        // The database clear may have yielded. Re-check the
+                        // snapshot before mutating any in-memory card state.
+                        if (ActiveView == AppView.Live &&
+                            IsVisibleEpgSnapshotCurrent(visibleSnapshotVersion))
+                        {
+                            foreach (var channel in visibleChannels)
+                            {
+                                channel.CurrentProgramTitle = null;
+                                channel.EpgProgress = 0;
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger?.LogDebug($"EPG expiration check failed: {ex.Message}");
+                }
+            }
+
+            if (ActiveView == AppView.Live)
+            {
+                await EnrichChannelsWithEpgAsyncCore(
+                    visibleChannels,
+                    () => ActiveView == AppView.Live &&
+                          IsVisibleEpgSnapshotCurrent(visibleSnapshotVersion));
+            }
+        }
+        finally
+        {
+            Interlocked.Exchange(ref _visibleEpgRefreshRunning, 0);
+        }
     }
 
     private void EnsureChannelBackgroundRefresh()
@@ -11865,7 +11970,12 @@ public partial class MainViewModel : ObservableObject
         return null;
     }
 
-    private async Task EnrichChannelsWithEpgAsync(IEnumerable<Channel> channels)
+    private Task EnrichChannelsWithEpgAsync(IEnumerable<Channel> channels)
+        => EnrichChannelsWithEpgAsyncCore(channels, commitGuard: null);
+
+    private async Task EnrichChannelsWithEpgAsyncCore(
+        IEnumerable<Channel> channels,
+        Func<bool>? commitGuard)
     {
         try
         {
@@ -11873,9 +11983,19 @@ public partial class MainViewModel : ObservableObject
             if (liveChannels.Count == 0) return;
 
             var epgData = await _epgService.GetCurrentProgramsAsync(liveChannels);
+
+            if (commitGuard is not null && !commitGuard())
+            {
+                return;
+            }
             
             _dispatcherService.Invoke(() =>
             {
+                if (commitGuard is not null && !commitGuard())
+                {
+                    return;
+                }
+
                 foreach (var channel in liveChannels)
                 {
                     if (epgData.TryGetValue(channel.Id, out var program) && program != null)

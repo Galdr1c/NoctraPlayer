@@ -1180,52 +1180,17 @@ Kodda tuning var görünür ancak gerçek paging/TMDB/EPG connection'ları varsa
 - Her yeni connection için gerekli PRAGMA seti.
 - PRAGMA'ları gerçekten aktif connection'da telemetry ile doğrula.
 ---
-diff --git a/D:\IPTVPlayer\docs\NoctraPlayer_Performance_Stability_Full_Report.md b/D:\IPTVPlayer\docs\NoctraPlayer_Performance_Stability_Full_Report.md
-@@ -1182,2 +1182,44 @@
- 
-+### Uygulama durumu — 13 Ağustos 2026: TAMAMLANDI
-+
-+- `SqliteConnectionPragmaInterceptor`, EF Core `AddDbContextFactory<AppDbContext>` yoluna
-+  singleton olarak bağlandı. Senkron ve asenkron her connection-open sonrasında
-+  `foreign_keys=ON`, `synchronous=NORMAL`, `cache_size`, `temp_store=MEMORY` ve `mmap_size`
-+  aynı aktif bağlantıda uygulanıyor.
-+- Masaüstü profili `cache_size=-64000` / `mmap_size=268435456`; Android profili
-+  `cache_size=-32000` / `mmap_size=134217728` olarak DI üzerinden seçiliyor. Core varsayılanı
-+  masaüstü, Android kaydı core servislerinden önce mobil profili yerleştiriyor.
-+- `journal_mode=WAL` dosya/veritabanı kapsamlı olduğu için yalnız idempotent schema-fixup
-+  başlangıç yolunda bırakıldı. Connection-scope PRAGMA tekrarları schema servisinden çıkarıldı;
-+  böylece iki farklı ayar kaynağının zamanla ayrışması engellendi.
-+- PRAGMA apply veya gerçek-değer doğrulaması exception/cancellation ile kesilirse bağlantı
-+  best-effort kapatılıyor ve özgün exception/token korunarak yeniden fırlatılıyor. Böylece kısmi
-+  ayarlı açık connection aynı context'te interceptor atlanarak kullanılamıyor veya pool'a sessizce
-+  dönemiyor.
-+- Telemetri eklendi: her açılış için `sqlite.connection.pragmas.applied.count`; aynı gerçek aktif
-+  bağlantıdan okunan `foreign_keys`, `synchronous`, `cache_size`, `temp_store`, `mmap_size`
-+  değerleri ve `sqlite.connection.pragmas.verified.count`.
-+- Otomatik kanıt: odaklı PRAGMA/DI/schema paketi `19/19`; 10 ardışık tekrarda `190/190`.
-+  DB scheduler/content-query ile genişletilmiş paket `33/33`. Bağımsız son kod incelemesinde
-+  Critical/Important bulgu kalmadı; reviewer'ın paketi `19/19` geçti ve değişiklik merge-ready
-+  bulundu.
-+- Tam regresyon `2123/2130` geçti. Kalan `7` hata P1-19 alanı dışındaki önceden bilinen mobil
-+  seçim stili, download, promo formatter ve tek metadata cancellation testidir; SQLite/PRAGMA
-+  testi başarısız olmadı.
-+- Build: Mobile `0 warning / 0 error`; Android arm64 `0 error`, mevcut `NU1608` ve `XA0141`
-+  uyarılarıyla tamamlandı. İmzalı APK `180624857` byte, SHA-256
-+  `E5F69410022DDDCF8BA8C8F6B9016C55D11CB49E3C0A95E2121B71C2E3B0CB03`.
-+- APK DBY_W09 cihazına veri silmeden `adb install --user 0 -r -d` ile kuruldu;
-+  `firstInstallTime` `2026-08-10 17:51:36` olarak korundu. Gerçek cihaz telemetrisi ilk aktif
-+  bağlantıda `foreign_keys=1`, `synchronous=1`, `cache_size=-32000`, `temp_store=2` ve
-+  `mmap_size=134217728` okudu; test penceresinde `48` ayrı connection-open uygulaması kaydedildi.
-+- Canlı kabulte `20` sayfa geçişi, `40` çift yönlü scroll ve `10/10` launcher
-+  background/foreground turu tamamlandı. PID `18989` sabit; ANR/crash/OOM eşleşmesi `0`.
-+  Son PSS `892714 KB`, RSS `1012956 KB`, Native Heap `274300 KB`, Graphics `158376 KB`.
-+  Ham telemetri: `artifacts/p1-19-live/p1-19-final.jsonl` (SHA-256
-+  `35490E0385914903FDA86B123A3EFEBF947368BEE43CDD13C58E8A4E666F2560`).
-+
-+Sonuç: P1-19 kapatıldı. Sıradaki DB/EPG maddesi **P1-20 — görünür EPG refresh kapsamını
-+gerçek viewport ile sınırlama**.
-+
- ---
+### Uygulama durumu — 13 Ağustos 2026: TAMAMLANDI
+
+- `SqliteConnectionPragmaInterceptor`, EF Core `AddDbContextFactory<AppDbContext>` yoluna singleton olarak bağlandı. Senkron ve asenkron her connection-open sonrasında bağlantı-özel PRAGMA’lar uygulanıyor.
+- Masaüstü ve Android cache/mmap profilleri DI üzerinden seçiliyor; WAL yalnız schema-fixup başlangıç yolunda bırakıldı.
+- Apply/verification exception veya cancellation ile kesilirse bağlantı kapatılıyor ve özgün exception/token korunuyor.
+- Odaklı paket `19/19`, 10 tekrar `190/190`; geniş DB paketi `33/33`. Tam regresyon `2123/2130`; kalan 7 hata P1-19 dışındaki bilinen testlerdir.
+- Android canlı kanıtında 48 connection-open uygulaması, 20 sayfa geçişi, 40 scroll ve 10/10 background/foreground turu tamamlandı; PID sabit ve ANR/crash/OOM `0`.
+
+Sonuç: P1-19 kapatıldı. Sıradaki madde **P1-20 — görünür EPG refresh kapsamını gerçek viewport ile sınırlama**.
+
+---
 
 ## P1-20 — EPG “visible refresh” gerçekte tüm loaded `Channels` koleksiyonunu işliyor
 
@@ -1247,6 +1212,51 @@ küçük overscan
 
 ile refresh.
 
+### Uygulama durumu — 20 Ağustos 2026: UYGULANDI
+
+- `MobileVirtualizingCardGrid` ve `DesktopVirtualizingCardGrid`, `VirtualizingStackPanel` tarafından
+  gerçekleşen satırlardaki kaynak öğeleri döndürüyor. Böylece görünür alan ve virtualization cache
+  overscan'ı ViewModel'e taşınıyor; tüm loaded koleksiyon yeniden taranmıyor.
+- Mobile/desktop Live view attach, scroll, `ActiveView` ve `FilteredChannels.CollectionChanged`
+  anlarında snapshot yayınlıyor; görünüm, playlist, profil, kategori ve sıralama değişimlerinde
+  snapshot temizleniyor. Snapshot live channel ID ile deduplicate edilip `96` öğe ile
+  sınırlandırılıyor.
+- Beş dakikalık UI timer yalnız `ActiveView == Live` ve boş olmayan snapshot varsa çalışıyor. Aynı
+  timer callback'lerinin üst üste binmesini atomic single-flight bayrağı engelliyor. EPG süresi
+  dolduğunda memory temizliği de yalnız snapshot üzerinde yapılıyor.
+- Dispatcher callback'leri ViewModel invalidation generation ve attachment/Live görünüm kontrolüyle
+  korunuyor; EPG expiration sonrası in-memory temizleme de `ClearEpgAsync` dönüşünde aynı snapshot
+  version'ını yeniden doğruluyor. Böylece eski playlist/profile sonucu yeni Live surface'e geri
+  yazılamıyor.
+- Otomatik doğrulama: P1-20 davranış/contract paketi `7/7`; 10 tekrar `70/70`; EPG enrichment,
+  visible-refresh, database-filter, accessibility ve Android activity contract odak paketi `24/24`.
+  Tam takım `2170/2175` geçti; kalan `5` hata P1-20/P1-23 dışındaki mevcut mobil seçim,
+  download görünürlüğü, sezon indirme ve sleep-timer testleridir.
+- Sonraki reklam commitlerinin Android erişilebilirlik regresyonu için eklenen banner peer contract
+  testi `1/1` geçti; `NoneAutomationPeer` guard'ı odak pakette korunuyor.
+- Build: Core `0` hata; Mobile `0` hata (yalnız mevcut 2 uyarı); Avalonia `0` hata; Android arm64
+  `0` hata (mevcut AndroidX/Java binding uyarıları). P1-23 sonrası güncel APK `380825892` byte,
+  SHA-256 `C15CA485E0C128D76A3D8A6C680C801109CD72CA9608D4C4AFE81865D534B36F`.
+- APK DBY_W09 cihazına `adb install -r` ile veri silmeden kuruldu; `firstInstallTime`
+  `2026-08-10 17:51:36` korundu (`lastUpdateTime` `2026-08-20 13:47:58`). Önceki kabulde
+  `uiautomator dump` sırasında görülen `InteropAutomationPeer.GetOrCreateChildrenCore`
+  `NotImplementedException` crash'i `BannerNativeControlHost` için `NoneAutomationPeer` ile
+  kapatıldı; güncel APK'da iki accessibility dump PID değişmeden tamamlandı.
+- İlk arka plan/ön plan guard koşusunda aynı launcher intent'inin yeni `MainActivity` örnekleri
+  ürettiği, aynı süreçte dokuz pencere biriktirdiği ve Mono large-object heap doğrulamasının
+  `SIGABRT` verdiği log/tombstone ile doğrulandı. `MainActivity` artık
+  `LaunchMode.SingleTask`; güncel APK'da gerçek içerikli Live/Movies/Series geçişinde `20`
+  navigation, `40` çift yönlü scroll ve ardından `10/10` HOME/launcher turu yapıldı. PID `7431`
+  sabit kaldı, görevde tek `MainActivity` kaldı, yeni `SIGABRT`/`NotImplementedException` oluşmadı.
+  Son canlı bellek örneği PSS `702076 KB`, RSS `833016 KB`, Native Heap `257809 KB`, Graphics
+  `48708 KB`.
+- SQLite PRAGMA uygulama telemetrisi `34` connection-open olayı kaydetti; ham telemetri
+  `artifacts/p1-20-live/p1-20-final.jsonl` SHA-256
+  `FF0771CF06D892CF05BE6A01CB8CAC640CFA94089C46A72A0A713C9A50DAF95E`.
+
+Sonuç: P1-20 kod, test ve canlı cihaz kabulü kapatıldı. P1-21 ve P1-22 aşağıdaki doğrulamalarla
+aynı EPG/lifecycle paketinde kapatıldı; sıradaki bağımsız EPG maddesi **P1-23**.
+
 ---
 
 ## P1-21 — EPG refresh büyük PropertyChanged dalgası üretebiliyor
@@ -1258,6 +1268,18 @@ ile refresh.
 - EPG state'i atomic/batched uygula.
 - Değer gerçekten değişmediyse setter çağırma.
 - Visible item'lara öncelik ver.
+
+### Uygulama durumu — 20 Ağustos 2026: DOĞRULANDI/KAPATILDI
+
+- EPG sonucu tek dispatcher commit'inde uygulanıyor; setter'lar yalnızca başlık veya ilerleme
+  değeri gerçekten değiştiğinde çağrılıyor.
+- P1-20 görünür snapshot'ı en fazla `96` Live channel ile sınırlandığı için tek refresh'te
+  PropertyChanged üretimi tüm loaded playlist'e değil, görünür karta bağlı kalıyor.
+- Aynı EPG snapshot'ında `0`, değişen başlık+ilerlemede yalnız `2` bildirim beklentisini doğrulayan
+  regresyon testleri eklendi; güncel EPG/lifecycle odak paketi `24/24` geçti.
+
+Sonuç: P1-21 kapatıldı. Eşit değerlerde bildirim dalgası yok; değişen değerlerde yalnız gerekli
+alanlar bildiriliyor.
 
 ---
 
@@ -1275,6 +1297,17 @@ ile refresh.
 if !AppForeground || ActiveView != Live → skip
 if refresh already running → skip
 ```
+
+### Uygulama durumu — 20 Ağustos 2026: P1-20 İLE KAPATILDI
+
+- Timer yalnız `ActiveView == Live` ve boş olmayan görünür snapshot ile çalışıyor.
+- Atomic single-flight bayrağı üst üste timer callback'lerini eliyor; snapshot/version guard'ı
+  eski foreground veya eski Live yüzeyinin commit'ini engelliyor.
+- Android canlı kabulünde 20 navigation, 40 scroll ve 10/10 launcher background/foreground
+  turu tek PID ve tek `MainActivity` ile tamamlandı.
+
+Sonuç: P1-22 kapatıldı. Sıradaki madde **P1-23 — EPG servisinde tüm playlist channel'larını
+materialize etmeden DB seviyesinde Live filtresi**.
 
 ---
 
@@ -1296,6 +1329,21 @@ DB seviyesinde:
 WHERE PlaylistId = ?
 AND Type = Live
 ```
+
+### Uygulama durumu — 20 Ağustos 2026: UYGULANDI/KAPATILDI
+
+- `IPlaylistService.GetLiveChannelsAsync` eklendi; `PlaylistService` artık yalnız
+  `PlaylistId` ve `ChannelType.Live` koşullarını içeren `AsNoTracking` sorguyu çalıştırıyor.
+- `EpgService.LoadLiveChannelsForEpgAsync` eski `GetChannelsAsync` + managed-memory filtreleme
+  yolundan çıkarıldı ve DB-filtreli yönteme yönlendirildi. VOD/Series kayıtları bu EPG eşleştirme
+  çağrısında materialize edilmiyor.
+- Eski geniş çağrının kullanılmadığını ve yeni sözleşmenin SQL filtresini koruduğunu doğrulayan
+  contract testi ile mevcut EPG zaman/loader testleri dahil `24/24` odak doğrulama geçti.
+- Son APK `C15CA485E0C128D76A3D8A6C680C801109CD72CA9608D4C4AFE81865D534B36F` ile veri silmeden
+  kuruldu; accessibility dump, Live açılışı ve `5/5` launcher foreground/background turunda PID
+  `11560` sabit kaldı, yeni native crash oluşmadı.
+
+Sonuç: P1-23 kapatıldı. DB/EPG kümesinde sonraki madde **P1-24 — EPG writer batch/write burst**.
 
 ---
 

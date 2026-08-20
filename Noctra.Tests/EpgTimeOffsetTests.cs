@@ -218,12 +218,10 @@ namespace Noctra.Tests
         {
             var playlistService = new Mock<IPlaylistService>();
             playlistService
-                .Setup(service => service.GetChannelsAsync(42))
+                .Setup(service => service.GetLiveChannelsAsync(42, It.IsAny<System.Threading.CancellationToken>()))
                 .ReturnsAsync(
                 [
                     new Channel { Id = 1, Type = ChannelType.Live },
-                    new Channel { Id = 2, Type = ChannelType.VOD },
-                    new Channel { Id = 3, Type = ChannelType.Series }
                 ]);
 
             var channels = await EpgService.LoadLiveChannelsForEpgAsync(
@@ -233,6 +231,7 @@ namespace Noctra.Tests
             var channel = Assert.Single(channels);
             Assert.Equal(1, channel.Id);
             Assert.Equal(ChannelType.Live, channel.Type);
+            playlistService.Verify(service => service.GetChannelsAsync(42), Times.Never);
         }
 
         private EpgService CreateEpgServiceForLoad(AppSettings settings)

@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Android.App;
 using Android.Content;
 using Avalonia.Android;
+using Avalonia.Automation.Peers;
 using Avalonia.Controls;
 using Avalonia.Platform;
 using Google.Android.Gms.Ads;
@@ -702,6 +703,13 @@ internal sealed class BannerNativeControlHost : NativeControlHost
     {
         _adView = adView;
     }
+
+    // Avalonia Android 12.1's interop peer throws NotImplementedException when
+    // an accessibility service asks a NativeControlHost for child peers. The
+    // embedded AdView owns its native accessibility tree, so expose this host
+    // as a non-interactive leaf and let Android handle the native view itself.
+    protected override AutomationPeer OnCreateAutomationPeer()
+        => new NoneAutomationPeer(this);
 
     protected override IPlatformHandle CreateNativeControlCore(IPlatformHandle parent)
         => new AndroidViewControlHandle(_adView);

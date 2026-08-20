@@ -26,6 +26,9 @@ namespace Noctra.Android;
     Label = "Noctra",
     Theme = "@style/MyTheme.Splash",
     MainLauncher = true,
+    // Repeated launcher taps/resume flows must bring the existing task forward
+    // instead of allocating another Avalonia window and native surface.
+    LaunchMode = LaunchMode.SingleTask,
     SupportsPictureInPicture = true,
     ResizeableActivity = true,
     WindowSoftInputMode = SoftInput.AdjustResize,

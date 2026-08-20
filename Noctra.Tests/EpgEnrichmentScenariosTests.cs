@@ -199,5 +199,74 @@ namespace Noctra.Tests
             Assert.Equal("Show 1", ch1.CurrentProgramTitle);
             Assert.Null(ch2.CurrentProgramTitle);
         }
+
+        [Fact]
+        public async Task EnrichChannelsWithEpgAsync_UnchangedSnapshot_DoesNotRaiseEpgNotifications()
+        {
+            var vm = CreateViewModel();
+            var program = new EpgProgram
+            {
+                Title = "Same programme",
+                StartTime = DateTime.UtcNow.AddHours(-2),
+                EndTime = DateTime.UtcNow.AddHours(-1)
+            };
+            var channel = new Channel
+            {
+                Id = 1,
+                Type = ChannelType.Live,
+                CurrentProgramTitle = program.Title,
+                EpgProgress = program.ProgressPercentage
+            };
+            var notifications = 0;
+            channel.PropertyChanged += (_, args) =>
+            {
+                if (args.PropertyName is nameof(Channel.CurrentProgramTitle) or nameof(Channel.EpgProgress))
+                {
+                    notifications++;
+                }
+            };
+            _epgServiceMock.Setup(s => s.GetCurrentProgramsAsync(It.IsAny<IEnumerable<Channel>>()))
+                .ReturnsAsync(new Dictionary<int, EpgProgram?> { [1] = program });
+
+            await InvokeEnrichChannelsWithEpgAsync(vm, new[] { channel });
+
+            Assert.Equal(0, notifications);
+        }
+
+        [Fact]
+        public async Task EnrichChannelsWithEpgAsync_ChangedSnapshot_RaisesOnlyChangedEpgProperties()
+        {
+            var vm = CreateViewModel();
+            var program = new EpgProgram
+            {
+                Title = "New programme",
+                StartTime = DateTime.UtcNow.AddMinutes(-10),
+                EndTime = DateTime.UtcNow.AddMinutes(10)
+            };
+            var channel = new Channel
+            {
+                Id = 1,
+                Type = ChannelType.Live,
+                CurrentProgramTitle = "Old programme",
+                EpgProgress = 0
+            };
+            var notifications = new List<string?>();
+            channel.PropertyChanged += (_, args) =>
+            {
+                if (args.PropertyName is nameof(Channel.CurrentProgramTitle) or nameof(Channel.EpgProgress))
+                {
+                    notifications.Add(args.PropertyName);
+                }
+            };
+            _epgServiceMock.Setup(s => s.GetCurrentProgramsAsync(It.IsAny<IEnumerable<Channel>>()))
+                .ReturnsAsync(new Dictionary<int, EpgProgram?> { [1] = program });
+
+            await InvokeEnrichChannelsWithEpgAsync(vm, new[] { channel });
+
+            Assert.Equal(2, notifications.Count);
+            Assert.Equal(
+                new[] { nameof(Channel.CurrentProgramTitle), nameof(Channel.EpgProgress) },
+                notifications);
+        }
     }
 }

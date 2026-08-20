@@ -1,8 +1,12 @@
 using System;
 using System.ComponentModel;
+using System.Collections.Specialized;
+using System.Threading;
+using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Avalonia.Threading;
 using Noctra.Mobile.Localization;
 using Noctra.Mobile.Navigation;
 using Noctra.Models;
@@ -13,6 +17,7 @@ namespace Noctra.Mobile.Views;
 public partial class MobileLiveView : UserControl, IMobileNavigationStateParticipant
 {
     private MainViewModel? _sortViewModel;
+    private long _visibleEpgPublishGeneration;
 
     public MobileLiveView()
     {
@@ -34,10 +39,12 @@ public partial class MobileLiveView : UserControl, IMobileNavigationStatePartici
     protected override void OnDataContextChanged(EventArgs e)
     {
         SelectionSheetHost.TryClose();
+        Interlocked.Increment(ref _visibleEpgPublishGeneration);
 
         if (_sortViewModel is not null)
         {
             _sortViewModel.PropertyChanged -= ViewModel_PropertyChanged;
+            _sortViewModel.FilteredChannels.CollectionChanged -= FilteredChannels_CollectionChanged;
         }
 
         base.OnDataContextChanged(e);
@@ -46,6 +53,7 @@ public partial class MobileLiveView : UserControl, IMobileNavigationStatePartici
         if (_sortViewModel is not null)
         {
             _sortViewModel.PropertyChanged += ViewModel_PropertyChanged;
+            _sortViewModel.FilteredChannels.CollectionChanged += FilteredChannels_CollectionChanged;
             UpdateSortSelection();
             UpdateCategorySelection();
         }
@@ -85,6 +93,56 @@ public partial class MobileLiveView : UserControl, IMobileNavigationStatePartici
         {
             UpdateCategorySelection();
         }
+
+        if (e.PropertyName == nameof(MainViewModel.ActiveView) && ViewModel?.ActiveView == AppView.Live)
+        {
+            QueueVisibleEpgSnapshot();
+        }
+    }
+
+    private void FilteredChannels_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+        => QueueVisibleEpgSnapshot();
+
+    private void PublishVisibleEpgSnapshot(
+        MainViewModel? expectedViewModel = null,
+        long? expectedGeneration = null)
+    {
+        var viewModel = ViewModel;
+        if (viewModel is null ||
+            (expectedViewModel is not null && !ReferenceEquals(viewModel, expectedViewModel)) ||
+            VisualRoot is null ||
+            viewModel.ActiveView != AppView.Live)
+        {
+            return;
+        }
+
+        var generation = expectedGeneration ?? viewModel.VisibleEpgChannelsInvalidationGeneration;
+        viewModel.TrySetVisibleEpgChannels(
+            PrimaryScrollContent.GetVisibleSourceItems().OfType<Channel>(),
+            generation);
+    }
+
+    private void QueueVisibleEpgSnapshot()
+    {
+        var viewModel = ViewModel;
+        if (viewModel is null)
+        {
+            return;
+        }
+
+        var expectedGeneration = viewModel.VisibleEpgChannelsInvalidationGeneration;
+        var publishGeneration = Interlocked.Increment(ref _visibleEpgPublishGeneration);
+        Dispatcher.UIThread.Post(
+            () =>
+            {
+                if (publishGeneration != Volatile.Read(ref _visibleEpgPublishGeneration))
+                {
+                    return;
+                }
+
+                PublishVisibleEpgSnapshot(viewModel, expectedGeneration);
+            },
+            DispatcherPriority.Background);
     }
 
     private void UpdateSortSelection()
@@ -117,21 +175,32 @@ public partial class MobileLiveView : UserControl, IMobileNavigationStatePartici
     }
 
     private async void LiveScrollViewer_ScrollChanged(object? sender, ScrollChangedEventArgs e)
-        // MobileScrollPaging calls LoadMoreChannelsIfNeededAsync.
-        => await MobileScrollPaging.LoadMoreIfNearEndAsync(
+    {
+        PublishVisibleEpgSnapshot();
+        await MobileScrollPaging.LoadMoreIfNearEndAsync(
             ViewModel,
             sender,
             MobileScrollPagingTarget.Channels);
+    }
+
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+        QueueVisibleEpgSnapshot();
+    }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
+        Interlocked.Increment(ref _visibleEpgPublishGeneration);
         if (_sortViewModel is not null)
         {
             _sortViewModel.PropertyChanged -= ViewModel_PropertyChanged;
+            _sortViewModel.FilteredChannels.CollectionChanged -= FilteredChannels_CollectionChanged;
             _sortViewModel = null;
         }
 
         SelectionSheetHost.TryClose();
+        ViewModel?.ClearVisibleEpgChannels();
         base.OnDetachedFromVisualTree(e);
     }
 }

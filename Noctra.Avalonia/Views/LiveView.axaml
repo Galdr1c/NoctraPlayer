@@ -29,7 +29,7 @@
         </StackPanel>
       </Grid>
       <Grid Grid.Row="1">
-        <controls:DesktopVirtualizingCardGrid CardKind="Live"
+        <controls:DesktopVirtualizingCardGrid x:Name="PrimaryScrollContent" CardKind="Live"
             SourceItems="{Binding FilteredChannels}" IsVisible="{Binding !IsContentLoading}"
             ScrollChanged="LiveView_ScrollChanged" />
         <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="18"

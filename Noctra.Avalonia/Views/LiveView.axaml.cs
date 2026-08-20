@@ -1,10 +1,13 @@
 using System;
 using System.ComponentModel;
+using System.Collections.Specialized;
+using System.Threading;
 using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Threading;
 using Noctra.Avalonia.Localization;
 using Noctra.Models;
 using Noctra.ViewModels;
@@ -14,6 +17,7 @@ namespace Noctra.Avalonia.Views;
 public partial class LiveView : UserControl
 {
     private MainViewModel? _observedViewModel;
+    private long _visibleEpgPublishGeneration;
 
     public LiveView()
     {
@@ -32,6 +36,7 @@ public partial class LiveView : UserControl
             return;
         _observedViewModel = vm;
         _observedViewModel.PropertyChanged += ViewModel_PropertyChanged;
+        _observedViewModel.FilteredChannels.CollectionChanged += FilteredChannels_CollectionChanged;
         UpdateSortSelection();
         UpdateCategorySelection();
     }
@@ -40,9 +45,11 @@ public partial class LiveView : UserControl
     {
         SelectionSheetHost.TryClose();
         CategorySelectionHost.TryClose();
+        Interlocked.Increment(ref _visibleEpgPublishGeneration);
         if (_observedViewModel is not null)
         {
             _observedViewModel.PropertyChanged -= ViewModel_PropertyChanged;
+            _observedViewModel.FilteredChannels.CollectionChanged -= FilteredChannels_CollectionChanged;
             _observedViewModel = null;
         }
         base.OnDataContextChanged(e);
@@ -85,6 +92,55 @@ public partial class LiveView : UserControl
         {
             UpdateCategorySelection();
         }
+        if (e.PropertyName == nameof(MainViewModel.ActiveView) && ViewModel?.ActiveView == AppView.Live)
+        {
+            QueueVisibleEpgSnapshot();
+        }
+    }
+
+    private void FilteredChannels_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+        => QueueVisibleEpgSnapshot();
+
+    private void PublishVisibleEpgSnapshot(
+        MainViewModel? expectedViewModel = null,
+        long? expectedGeneration = null)
+    {
+        var viewModel = ViewModel;
+        if (viewModel is null ||
+            (expectedViewModel is not null && !ReferenceEquals(viewModel, expectedViewModel)) ||
+            VisualRoot is null ||
+            viewModel.ActiveView != AppView.Live)
+        {
+            return;
+        }
+
+        var generation = expectedGeneration ?? viewModel.VisibleEpgChannelsInvalidationGeneration;
+        viewModel.TrySetVisibleEpgChannels(
+            PrimaryScrollContent.GetVisibleSourceItems().OfType<Channel>(),
+            generation);
+    }
+
+    private void QueueVisibleEpgSnapshot()
+    {
+        var viewModel = ViewModel;
+        if (viewModel is null)
+        {
+            return;
+        }
+
+        var expectedGeneration = viewModel.VisibleEpgChannelsInvalidationGeneration;
+        var publishGeneration = Interlocked.Increment(ref _visibleEpgPublishGeneration);
+        Dispatcher.UIThread.Post(
+            () =>
+            {
+                if (publishGeneration != Volatile.Read(ref _visibleEpgPublishGeneration))
+                {
+                    return;
+                }
+
+                PublishVisibleEpgSnapshot(viewModel, expectedGeneration);
+            },
+            DispatcherPriority.Background);
     }
 
     private void UpdateSortSelection()
@@ -109,6 +165,7 @@ public partial class LiveView : UserControl
 
     private async void LiveView_ScrollChanged(object? sender, ScrollChangedEventArgs e)
     {
+        PublishVisibleEpgSnapshot();
         try
         {
             await ScrollPaging.LoadMoreIfNeededAsync(ViewModel, sender);
@@ -133,17 +190,21 @@ public partial class LiveView : UserControl
     {
         base.OnAttachedToVisualTree(e);
         AttachViewModelObserver();
+        QueueVisibleEpgSnapshot();
     }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
+        Interlocked.Increment(ref _visibleEpgPublishGeneration);
         if (_observedViewModel is not null)
         {
             _observedViewModel.PropertyChanged -= ViewModel_PropertyChanged;
+            _observedViewModel.FilteredChannels.CollectionChanged -= FilteredChannels_CollectionChanged;
             _observedViewModel = null;
         }
         SelectionSheetHost.TryClose();
         CategorySelectionHost.TryClose();
+        ViewModel?.ClearVisibleEpgChannels();
         base.OnDetachedFromVisualTree(e);
     }
 }

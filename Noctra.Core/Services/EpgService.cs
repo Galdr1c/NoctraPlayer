@@ -473,16 +473,11 @@ public class EpgService : IEpgService
         IPlaylistService playlistService,
         int playlistId)
     {
-        return await Task.Run(async () =>
-        {
-            var channels = await playlistService
-                .GetChannelsAsync(playlistId)
-                .ConfigureAwait(false);
-
-            return channels
-                .Where(channel => channel.Type == ChannelType.Live)
-                .ToList();
-        }).ConfigureAwait(false);
+        // The playlist service applies the Live predicate in SQL. Do not load
+        // the complete VOD/Series dataset only to discard it in memory.
+        return await playlistService
+            .GetLiveChannelsAsync(playlistId)
+            .ConfigureAwait(false);
     }
 
     internal static async Task PersistEpgBatchAsync(

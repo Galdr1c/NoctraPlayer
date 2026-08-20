@@ -1926,6 +1926,29 @@ WHERE PlaylistId = {playlistId}
             .ToListAsync();
     }
 
+    public async Task<List<Channel>> GetLiveChannelsAsync(
+        int playlistId,
+        CancellationToken cancellationToken = default)
+    {
+        await using var context = await _contextFactory
+            .CreateDbContextAsync(cancellationToken)
+            .ConfigureAwait(false);
+        await EnsureLinearStreamChannelTypesRepairedOnceAsync(
+            context,
+            playlistId,
+            cancellationToken).ConfigureAwait(false);
+
+        return await context.Channels
+            .AsNoTracking()
+            .Where(channel =>
+                channel.PlaylistId == playlistId &&
+                channel.Type == ChannelType.Live)
+            .OrderBy(channel => channel.GroupTitle)
+            .ThenBy(channel => channel.Name)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
     /// <summary>
     /// Get channels with filtering and pagination for fast loading
     /// </summary>
