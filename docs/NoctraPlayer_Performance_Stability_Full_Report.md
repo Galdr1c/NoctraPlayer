@@ -1611,7 +1611,7 @@ UI yoğun
 Sonuç: P1-30'un doğrulanan backpressure yolları kapatıldı ve **Aşama 4 — Network ve
 notification tamamlandı**. Aşama 5 audit'inde P2-13 (paused position polling) ve P2-04
 (idle card ScrollChanged fan-out) ve P2-16 (resume grid recovery race) gerekli bulunup kapatıldı.
-Diğer P2/P3 maddeleri otomatik
+(P2-17 sectioned feed resume projection) da Search/Favorites/History/MyList için kapatıldı. Diğer P2/P3 maddeleri otomatik
 yapılmayacak; her biri önce güncel kod ve cihaz bulgularıyla gereklilik audit'inden geçirilecek.
 
 ---
@@ -1732,6 +1732,28 @@ ise tesadüfen tam rebuild tetikliyor.
   `lastUpdateTime` `2026-08-20 16:19:51`.
 - Gerçek ekran kapat/aç testinde Live kart metni `34 → 34`, grid satırı `8 → 8` kaldı; içerikler
   sayfa değişimine gerek kalmadan geri geldi. PID `11911` değişmedi, ANR/fatal crash yok.
+
+---
+
+## P2-17 — Sectioned card feed resume sonrasında yeniden projekte edilmeyebiliyor
+
+Search, Favorites, History ve MyList ekranları `MobileSectionedCardFeed` kullanıyor. Bu feed, ortak
+grid gibi lifecycle `Resumed` olayını dinlemediğinde ekran yeniden görünür olsa bile section row'ları
+eski/boş projection ile kalabiliyor.
+
+### Uygulama durumu — 20 Ağustos 2026: UYGULANDI/KAPATILDI
+
+- `MobileSectionedCardFeed` visual tree attach/detach yaşamına bağlandı; pause/resume aboneliği
+  yönetiliyor.
+- Resume sonrasında feed full rebuild istiyor; source section sahipliği korunuyor ve mevcut
+  `DispatcherPriority.Loaded` rebuild yolu kullanılıyor.
+- Contract testi mevcut kodda kırmızı, lifecycle + full rebuild sonrası yeşil oldu. Tam takım
+  `2188/2193`; kalan 5 hata kapsam dışı mevcut mobil seçim/download/sleep-timer grubunda.
+- Search cihaz testinde `Being` sonuç sayısı `4 → 4`, `MobileSectionedCardFeed` sayısı `1` kaldı;
+  ekran kapat/aç sonrasında arama sonuçları kaybolmadı. PID `13729`, ANR/fatal crash yok.
+- Final APK SHA-256 `B9D250366898EF88DCCE674C3E66072B37B4AA1326545B42DF09721B47F2438A`, boyut
+  `380858660` byte; `firstInstallTime` `2026-08-10 17:51:36`, `lastUpdateTime`
+  `2026-08-20 16:28:51`.
 
 ---
 

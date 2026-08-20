@@ -13,6 +13,7 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
 using Noctra.Core.Collections;
+using Noctra.Mobile.Services;
 
 namespace Noctra.Mobile.Controls;
 
@@ -87,6 +88,7 @@ public sealed class MobileSectionedCardFeed : ListBox
     private int _rebuildQueued;
     private int _fullRebuildRequired;
     private double _lastAvailableWidth;
+    private bool _lifecycleSubscribed;
 
     protected override Type StyleKeyOverride => typeof(ListBox);
 
@@ -115,9 +117,60 @@ public sealed class MobileSectionedCardFeed : ListBox
         SelectionChanged += ClearTransientSelection;
         SizeChanged += (_, _) => QueueRebuildIfMetricsChanged();
         AddHandler(ScrollViewer.ScrollChangedEvent, OnInnerScrollChanged);
+        AttachedToVisualTree += OnAttachedToVisualTree;
+        DetachedFromVisualTree += OnDetachedFromVisualTree;
     }
 
     public AvaloniaList<MobileCardSection> Sections { get; } = new();    public event EventHandler<ScrollChangedEventArgs>? ScrollChanged;
+
+    public void RefreshAfterResume()
+    {
+        Interlocked.Exchange(ref _fullRebuildRequired, 1);
+        QueueFullRebuild();
+    }
+
+    private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
+    {
+        SubscribeToLifecycle();
+    }
+
+    private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
+    {
+        UnsubscribeFromLifecycle();
+    }
+
+    private void SubscribeToLifecycle()
+    {
+        if (_lifecycleSubscribed)
+        {
+            return;
+        }
+
+        MobileAppLifecycle.Resumed += OnAppResumed;
+        MobileAppLifecycle.Paused += OnAppPaused;
+        _lifecycleSubscribed = true;
+    }
+
+    private void UnsubscribeFromLifecycle()
+    {
+        if (!_lifecycleSubscribed)
+        {
+            return;
+        }
+
+        MobileAppLifecycle.Resumed -= OnAppResumed;
+        MobileAppLifecycle.Paused -= OnAppPaused;
+        _lifecycleSubscribed = false;
+    }
+
+    private void OnAppResumed(object? sender, EventArgs e)
+        => RefreshAfterResume();
+
+    private static void OnAppPaused(object? sender, EventArgs e)
+    {
+        // The section feed keeps its source ownership while paused. The next
+        // resume requests a full projection rebuild through RefreshAfterResume.
+    }
 
     private void Sections_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {

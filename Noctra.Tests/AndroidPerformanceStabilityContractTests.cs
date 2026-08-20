@@ -131,6 +131,17 @@ public sealed class AndroidPerformanceStabilityContractTests
     }
 
     [Fact]
+    public void MobileSectionedFeed_RequestsFullRebuildOnResume()
+    {
+        var feed = ReadProjectFile("Noctra.Mobile", "Controls", "MobileSectionedCardFeed.cs");
+
+        Assert.Contains("MobileAppLifecycle.Resumed", feed, StringComparison.Ordinal);
+        Assert.Contains("MobileAppLifecycle.Paused", feed, StringComparison.Ordinal);
+        Assert.Contains("RefreshAfterResume", feed, StringComparison.Ordinal);
+        Assert.Contains("QueueFullRebuild", feed, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void MobileGrid_ResumeRecoveryDoesNotInvalidateParentChain()
     {
         var grid = ReadProjectFile("Noctra.Mobile", "Controls", "MobileVirtualizingCardGrid.cs");
