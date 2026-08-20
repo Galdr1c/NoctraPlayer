@@ -58,6 +58,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
     private int _playbackGeneration;
     private readonly AudioBecomingNoisyReceiver _audioBecomingNoisyReceiver;
     private bool _isAudioBecomingNoisyReceiverRegistered;
+    private static readonly Handler MainHandler = new(Looper.MainLooper!);
 
     // Cached values to avoid cross-thread calls when queried outside main thread
     private bool _isPlaying;
@@ -1439,7 +1440,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
         }
         else
         {
-            new Handler(Looper.MainLooper!).Post(action);
+            MainHandler.Post(action);
         }
     }
 

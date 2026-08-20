@@ -1636,9 +1636,10 @@ UI yoğun
   `MobilePlayerView` içinde `3/3` HOME/launcher turu ve player'dan Live'a geri çıkış PID `2382`
   değişmeden tamamlandı; logcat'te yeni ANR, `FATAL EXCEPTION` veya native fatal signal yok.
 
-Güncel P2-09/P2-15 final kabulü için [canlı kabul özeti](../artifacts/p1-20-live/acceptance-summary.md)
-esas alınmalıdır: APK SHA-256 `57C71E0337FD85DB56D93370CEF33F3247739C21F885FC52D86748AEC6E6A943`,
-`380891428` byte, `lastUpdateTime` `2026-08-20 17:14:00`, cold-start PID `23279`.
+Güncel P3-01 kabulü için [canlı kabul özeti](../artifacts/p1-20-live/acceptance-summary.md)
+esas alınmalıdır: APK SHA-256 `74AA3FD3792D9C98DC208A1DA2D8DC84164589831B010EEA363B35083D2946D6`,
+`381486340` byte, APK dosya zamanı `2026-08-20 18:15:53`, cihaz paket `lastUpdateTime`
+`2026-08-20 18:17:21`, cold/live PID `2899`.
 
 Sonuç: P1-30'un doğrulanan backpressure yolları kapatıldı ve **Aşama 4 — Network ve
 notification tamamlandı**. Aşama 5 audit'inde P2-04 (idle card ScrollChanged fan-out), P2-09
@@ -2618,13 +2619,15 @@ tekrarlanabilir cihaz kanıtı gerekir.
 - P2-01/P2-02/P2-03/P2-05/P2-06/P2-07/P2-08/P2-10/P2-11/P2-12 henüz uygulanmadı; etkileri
   ölçülmeden refaktör yapılmayacak.
 - P2-14 audit edildi ve aktif runtime riski doğrulanmadı; kod değişikliği yapılmadı.
-- P3-01/P3-02/P3-03/P3-04’e henüz geçilmedi.
+- P3-01 cached Android main-thread `Handler` ile uygulandı ve cihaz smoke ile kapatıldı.
+- P3-02/P3-03/P3-04 audit edildi; aşağıdaki ölçüm sonuçları nedeniyle production patch
+  uygulanmadı.
 
 ### Sonraki doğru sıra
 
-P3’e geçiş yapılmadı. Önce P1-10/P1-16 ve P1-27 için ölçüm/benchmark ile gerçekten gerekli
-bir risk olup olmadığı belirlenecek; yalnızca kanıtlanan madde uygulanacak. P3 maddeleri ancak
-bu residual P1/P2 triage tamamlandıktan sonra ele alınacak.
+P3 audit tamamlandı. P3-01’in düşük riskli allocation düzeltmesi uygulandı; P3-02/P3-03 için
+gerçek benchmark, P1-10/P1-16/P1-27 için de ölçüm/benchmark oluşursa ayrı, küçük kapsamlı
+düzeltme planlanacak. P3-04 mevcut singleton VM lifetime’ı nedeniyle audit-only olarak kapatıldı.
 
 ### 20 Ağustos 2026 doğrulama eki
 
@@ -2638,8 +2641,28 @@ bu residual P1/P2 triage tamamlandıktan sonra ele alınacak.
 - P1-17: Android `OnTrimMemory` callback'i mobil bitmap cache'inin cache-owned lease'lerini
   bırakıyor; aktif consumer lease'leri korunuyor. `RUNNING_LOW` cihaz tetikleme sonrası PID
   `30871` ayakta kaldı; üç HOME→foreground döngüsünde PID sabit, FATAL/ANR/SIGSEGV/OOM: **0**.
-- Tam test paketi: **2197/2202** geçti; kalan 5 hata bilinen DownloadCenter (2),
-  DownloadSystem (1), MobileRecent selection (1) ve PlayerSleepTimer (1) testleridir.
+- Tam test paketi (P3-01 sonrası): **2197/2203** geçti; kalan 6 hata bilinen DownloadCenter (2),
+  DownloadSystem (1), DownloadContentKey (1), MobileRecent selection (1) ve PlayerSleepTimer (1)
+  testleridir.
+- P3-01: Android video servisinde cached main-thread `Handler` kullanıldı; odak test **1/1**,
+  Android build **0 hata**, güncel cihaz smoke PID `2899` ile 3 foreground/background döngüsü
+  ve FATAL/ANR/SIGSEGV/OOM taraması temiz.
+
+### P3 audit sonucu — 20 Ağustos 2026
+
+- P3-01: `AndroidVideoPlayerService.RunOnMainThread()` off-main çağrıda her seferinde
+  `Handler` oluşturuyordu. Process-owned cached `Handler` uygulandı. Odak contract testi
+  **1/1**, Android build **0 hata**; güncel APK cold PID `2899` ve üç HOME→foreground
+  döngüsünde PID sabit, FATAL/ANR/SIGSEGV/OOM: **0**.
+- P3-02: DI hâlâ `AddDbContextFactory` kullanıyor. Global `DatabaseWorkScheduler` zaten read/write
+  concurrency ve backpressure sağlıyor; pooling kazancını gösterecek benchmark yok. Pooling
+  değişikliği yapılmadı.
+- P3-03: `ResponsiveCardMetricConverter` tek statik son-değer cache’i kullanıyor. UI binding
+  çağrılarında görünür thread-race veya ölçülmüş cache thrash yok; daha büyük cache eklemek
+  kanıtsız memory/invalidasyon maliyeti yaratabilir. Değişiklik yapılmadı.
+- P3-04: `MainViewModel` Desktop ve Android DI’da singleton. Uzun yaşayan event subscription’ları
+  bu lifetime altında duplicate VM leak üretmiyor; gelecekte lifetime değişirse disposable
+  subscription guard yeniden değerlendirilecek.
 
 ---
 
