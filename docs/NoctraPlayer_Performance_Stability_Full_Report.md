@@ -1229,16 +1229,16 @@ ile refresh.
   version'ını yeniden doğruluyor. Böylece eski playlist/profile sonucu yeni Live surface'e geri
   yazılamıyor.
 - Otomatik doğrulama: P1-20 davranış/contract paketi `7/7`; 10 tekrar `70/70`; EPG enrichment,
-  visible-refresh, database-filter, accessibility ve Android activity contract odak paketi `24/24`.
-  Tam takım `2170/2175` geçti; kalan `5` hata P1-20/P1-23 dışındaki mevcut mobil seçim,
+  visible-refresh, database-filter, write-scheduling, accessibility ve Android activity contract
+  odak paketi `25/25`. Tam takım `2171/2176` geçti; kalan `5` hata P1-20/P1-24 dışındaki mevcut mobil seçim,
   download görünürlüğü, sezon indirme ve sleep-timer testleridir.
 - Sonraki reklam commitlerinin Android erişilebilirlik regresyonu için eklenen banner peer contract
   testi `1/1` geçti; `NoneAutomationPeer` guard'ı odak pakette korunuyor.
 - Build: Core `0` hata; Mobile `0` hata (yalnız mevcut 2 uyarı); Avalonia `0` hata; Android arm64
-  `0` hata (mevcut AndroidX/Java binding uyarıları). P1-23 sonrası güncel APK `380825892` byte,
-  SHA-256 `C15CA485E0C128D76A3D8A6C680C801109CD72CA9608D4C4AFE81865D534B36F`.
+  `0` hata (mevcut AndroidX/Java binding uyarıları). P1-24 sonrası güncel APK `381461764` byte,
+  SHA-256 `33CB5D2E752264B58A7E1179D6E6414BEDEDD693D922C292E16E0980F235FB24`.
 - APK DBY_W09 cihazına `adb install -r` ile veri silmeden kuruldu; `firstInstallTime`
-  `2026-08-10 17:51:36` korundu (`lastUpdateTime` `2026-08-20 13:47:58`). Önceki kabulde
+  `2026-08-10 17:51:36` korundu (`lastUpdateTime` `2026-08-20 14:09:26`). Önceki kabulde
   `uiautomator dump` sırasında görülen `InteropAutomationPeer.GetOrCreateChildrenCore`
   `NotImplementedException` crash'i `BannerNativeControlHost` için `NoneAutomationPeer` ile
   kapatıldı; güncel APK'da iki accessibility dump PID değişmeden tamamlandı.
@@ -1248,8 +1248,8 @@ ile refresh.
   `LaunchMode.SingleTask`; güncel APK'da gerçek içerikli Live/Movies/Series geçişinde `20`
   navigation, `40` çift yönlü scroll ve ardından `10/10` HOME/launcher turu yapıldı. PID `7431`
   sabit kaldı, görevde tek `MainActivity` kaldı, yeni `SIGABRT`/`NotImplementedException` oluşmadı.
-  Son canlı bellek örneği PSS `702076 KB`, RSS `833016 KB`, Native Heap `257809 KB`, Graphics
-  `48708 KB`.
+  P1-24 smoke sonrası canlı bellek örneği PSS `600256 KB`, RSS `734868 KB`, Native Heap
+  `230894 KB`, Graphics `48708 KB`.
 - SQLite PRAGMA uygulama telemetrisi `34` connection-open olayı kaydetti; ham telemetri
   `artifacts/p1-20-live/p1-20-final.jsonl` SHA-256
   `FF0771CF06D892CF05BE6A01CB8CAC640CFA94089C46A72A0A713C9A50DAF95E`.
@@ -1276,7 +1276,7 @@ aynı EPG/lifecycle paketinde kapatıldı; sıradaki bağımsız EPG maddesi **P
 - P1-20 görünür snapshot'ı en fazla `96` Live channel ile sınırlandığı için tek refresh'te
   PropertyChanged üretimi tüm loaded playlist'e değil, görünür karta bağlı kalıyor.
 - Aynı EPG snapshot'ında `0`, değişen başlık+ilerlemede yalnız `2` bildirim beklentisini doğrulayan
-  regresyon testleri eklendi; güncel EPG/lifecycle odak paketi `24/24` geçti.
+  regresyon testleri eklendi; güncel EPG/lifecycle odak paketi `25/25` geçti.
 
 Sonuç: P1-21 kapatıldı. Eşit değerlerde bildirim dalgası yok; değişen değerlerde yalnız gerekli
 alanlar bildiriliyor.
@@ -1360,6 +1360,23 @@ Aynı anda TMDB/download/history write varsa SQLite writer contention.
 - Benchmark ile 500–1000 batch değerlendir.
 - Daha önemlisi merkezi DB write lane.
 - Background import düşük priority.
+
+### Uygulama durumu — 20 Ağustos 2026: UYGULANDI/KAPATILDI
+
+- EPG write batch boyutu `2500` yerine `500` olarak sınırlandı; her batch sonrası change tracker
+  temizlenmeye devam ediyor.
+- Üretim DI’sındaki ortak `DatabaseWorkScheduler` kullanılıyor. EPG yazıları
+  `DatabaseWorkLane.Write + DatabaseWorkPriority.Background` ile kuyruğa alınıyor; interaktif
+  SQLite işleri background import’un önüne geçebiliyor.
+- Scheduler callback’ine cancellation token aktarılıyor; kuyrukta bekleyen veya çalışan EPG yazısı
+  uygulama kapanışı/timeout sırasında terminal olarak iptal edilebiliyor.
+- Batch boyutu, lane ve DI bağlantısını koruyan contract testi ile EPG/DB odak paketi `25/25`
+  geçti. Android arm64 build `0` hata verdi.
+- Son APK `33CB5D2E752264B58A7E1179D6E6414BEDEDD693D922C292E16E0980F235FB24` ile veri silmeden
+  kuruldu; `firstInstallTime` `2026-08-10 17:51:36` korundu. Accessibility dump, Live açılışı
+  ve `5/5` launcher foreground/background turu PID `15059` ile tamamlandı; yeni native crash yok.
+
+Sonuç: P1-24 kapatıldı. DB/EPG kümesinde sıradaki madde **P1-28 — OFFSET pagination**.
 
 ---
 

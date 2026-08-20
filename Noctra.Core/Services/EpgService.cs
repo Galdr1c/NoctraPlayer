@@ -15,19 +15,28 @@ namespace Noctra.Services;
 /// </summary>
 public class EpgService : IEpgService
 {
+    private const int EpgWriteBatchSize = 500;
     private readonly IDbContextFactory<AppDbContext> _contextFactory;
     private readonly HttpClient _httpClient;
     private readonly ISettingsService _settingsService;
     private readonly ILocalizationService _localizationService;
     private readonly LanguageDetectionService _languageDetectionService;
     private readonly ILogger<EpgService>? _logger;
+    private readonly IDatabaseWorkScheduler? _databaseWorkScheduler;
     private readonly SemaphoreSlim _loadSemaphore = new(1, 1);
     
     public bool IsLoaded { get; private set; }
     public DateTime? LastUpdated { get; private set; }
     public string? LastError { get; private set; }
 
-    public EpgService(IDbContextFactory<AppDbContext> contextFactory, HttpClient httpClient, ISettingsService settingsService, ILocalizationService localizationService, LanguageDetectionService languageDetectionService, ILogger<EpgService>? logger = null)
+    public EpgService(
+        IDbContextFactory<AppDbContext> contextFactory,
+        HttpClient httpClient,
+        ISettingsService settingsService,
+        ILocalizationService localizationService,
+        LanguageDetectionService languageDetectionService,
+        ILogger<EpgService>? logger = null,
+        IDatabaseWorkScheduler? databaseWorkScheduler = null)
     {
         _contextFactory = contextFactory;
         _httpClient = httpClient;
@@ -35,6 +44,7 @@ public class EpgService : IEpgService
         _localizationService = localizationService;
         _languageDetectionService = languageDetectionService;
         _logger = logger;
+        _databaseWorkScheduler = databaseWorkScheduler;
     }
 
     public void ClearLastError()
@@ -180,7 +190,6 @@ public class EpgService : IEpgService
             }
 
             var programs = new List<EpgProgram>();
-            var batchSize = 2500; // Slightly larger batch for better performance
             var windowStartUtc = DateTime.UtcNow.Date;
             var windowEndUtc = windowStartUtc.AddDays(Math.Max(1, daysAhead) + 1);
 
@@ -355,7 +364,7 @@ public class EpgService : IEpgService
                                 totalLoaded++;
                             }
 
-                            if (programs.Count >= batchSize)
+                            if (programs.Count >= EpgWriteBatchSize)
                             {
                                 progress?.Report(new EpgProgressInfo 
                                 { 
@@ -365,7 +374,10 @@ public class EpgService : IEpgService
                                     LoadedCount = totalLoaded
                                 });
 
-                                await PersistEpgBatchAsync(context, programs).ConfigureAwait(false);
+                                await PersistEpgBatchThroughSchedulerAsync(
+                                    context,
+                                    programs,
+                                    cts.Token).ConfigureAwait(false);
                                 programs.Clear();
                             }
                         }
@@ -374,7 +386,10 @@ public class EpgService : IEpgService
 
                 if (programs.Any())
                 {
-                    await PersistEpgBatchAsync(context, programs).ConfigureAwait(false);
+                    await PersistEpgBatchThroughSchedulerAsync(
+                        context,
+                        programs,
+                        cts.Token).ConfigureAwait(false);
                 }
             }
             finally
@@ -482,10 +497,14 @@ public class EpgService : IEpgService
 
     internal static async Task PersistEpgBatchAsync(
         AppDbContext context,
-        List<EpgProgram> programs)
+        List<EpgProgram> programs,
+        CancellationToken cancellationToken = default)
     {
-        await AddProgramsDeduplicatedAsync(context, programs).ConfigureAwait(false);
-        await context.SaveChangesAsync().ConfigureAwait(false);
+        await AddProgramsDeduplicatedAsync(
+            context,
+            programs,
+            cancellationToken).ConfigureAwait(false);
+        await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         // A refresh can persist hundreds of thousands of rows. Keeping every inserted
         // entity tracked makes each later SaveChanges progressively more expensive and
@@ -493,7 +512,38 @@ public class EpgService : IEpgService
         context.ChangeTracker.Clear();
     }
 
-    private static async Task AddProgramsDeduplicatedAsync(AppDbContext context, List<EpgProgram> programs)
+    private async Task PersistEpgBatchThroughSchedulerAsync(
+        AppDbContext context,
+        List<EpgProgram> programs,
+        CancellationToken cancellationToken)
+    {
+        if (_databaseWorkScheduler is null)
+        {
+            await PersistEpgBatchAsync(
+                context,
+                programs,
+                cancellationToken).ConfigureAwait(false);
+            return;
+        }
+
+        await _databaseWorkScheduler.ScheduleAsync(
+            DatabaseWorkLane.Write,
+            DatabaseWorkPriority.Background,
+            async schedulerToken =>
+            {
+                await PersistEpgBatchAsync(
+                    context,
+                    programs,
+                    schedulerToken).ConfigureAwait(false);
+                return true;
+            },
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    private static async Task AddProgramsDeduplicatedAsync(
+        AppDbContext context,
+        List<EpgProgram> programs,
+        CancellationToken cancellationToken)
     {
         if (programs.Count == 0)
         {
@@ -522,14 +572,16 @@ public class EpgService : IEpgService
                     StartTime = p.StartTime,
                     EndTime = p.EndTime
                 })
-                .ToListAsync()
+                .ToListAsync(cancellationToken)
                 .ConfigureAwait(false);
 
         var accepted = FilterEpgBatch(programs, existingPrograms);
 
         if (accepted.Count > 0)
         {
-            await context.EpgPrograms.AddRangeAsync(accepted).ConfigureAwait(false);
+            await context.EpgPrograms
+                .AddRangeAsync(accepted, cancellationToken)
+                .ConfigureAwait(false);
         }
     }
 

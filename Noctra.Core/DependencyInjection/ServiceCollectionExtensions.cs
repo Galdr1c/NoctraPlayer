@@ -41,7 +41,8 @@ public static class ServiceCollectionExtensions
                 serviceProvider.GetRequiredService<ISettingsService>(),
                 serviceProvider.GetRequiredService<ILocalizationService>(),
                 serviceProvider.GetRequiredService<LanguageDetectionService>(),
-                serviceProvider.GetService<ILogger<EpgService>>()));
+                serviceProvider.GetService<ILogger<EpgService>>(),
+                serviceProvider.GetRequiredService<IDatabaseWorkScheduler>()));
         services.AddTransient<IMetadataService, MetadataService>();
         services.AddSingleton<IXtreamCodesService>(serviceProvider =>
             new XtreamCodesService(
