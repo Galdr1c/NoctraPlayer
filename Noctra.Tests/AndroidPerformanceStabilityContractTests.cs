@@ -221,6 +221,20 @@ public sealed class AndroidPerformanceStabilityContractTests
     }
 
     [Fact]
+    public void AndroidPlayer_StopsPositionPollingWhenLoadedMediaIsPaused()
+    {
+        var player = ReadProjectFile("Noctra.Android", "Services", "AndroidVideoPlayerService.cs");
+        var start = player.IndexOf("private void UpdatePositionPollingForLoadedMedia", StringComparison.Ordinal);
+        var end = player.IndexOf("private void QueuePositionUpdate", start, StringComparison.Ordinal);
+
+        Assert.True(start >= 0 && end > start);
+        var method = player[start..end];
+
+        Assert.Contains("_hasLoadedMedia", method, StringComparison.Ordinal);
+        Assert.Contains("_isPlaying", method, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void MobilePerformanceWork_ExposesRequiredLowAllocationCounters()
     {
         var grid = ReadProjectFile("Noctra.Mobile", "Controls", "MobileVirtualizingCardGrid.cs");

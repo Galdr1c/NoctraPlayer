@@ -976,7 +976,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
 
     private void UpdatePositionPollingForLoadedMedia()
     {
-        if (_hasLoadedMedia && _exoPlayer is not null)
+        if (_hasLoadedMedia && _isPlaying && _exoPlayer is not null)
         {
             StartPositionUpdates();
         }

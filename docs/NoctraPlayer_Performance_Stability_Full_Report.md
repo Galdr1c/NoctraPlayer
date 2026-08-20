@@ -1848,6 +1848,19 @@ Her 500 ms:
 
 Player surface inactive + not playing ise polling'i durdur.
 
+### Uygulama durumu — 20 Ağustos 2026: UYGULANDI/KAPATILDI
+
+- `UpdatePositionPollingForLoadedMedia()` artık yalnızca `_hasLoadedMedia && _isPlaying`
+  durumunda timer'ı çalıştırıyor. Pause, stop, ended ve error yolları 500 ms polling üretmiyor;
+  yeniden playing/ready callback'i timer'ı tekrar açıyor.
+- Android contract testi önce mevcut koddaki eksik koşul nedeniyle kırmızı görüldü, koşul eklendikten
+  sonra yeşile döndü. Android/oynatıcı odak paketi `187/187`; tam takım `2185/2190` geçti.
+- P2-13 final APK SHA-256 `F7836EFD5A11710BE4E8CA7AFEABD105C73E9BF16827DC98083C3C194194EEB`,
+  boyut `381461764` byte. Veri silmeden kuruldu; `firstInstallTime` `2026-08-10 17:51:36`,
+  `lastUpdateTime` `2026-08-20 15:56:50` olarak kaldı.
+- Gerçek Live player açılışı, `3/3` HOME/launcher döngüsü ve player'dan Live'a dönüş PID `6243`
+  değişmeden tamamlandı; yeni ANR, `FATAL EXCEPTION` veya native fatal signal görülmedi.
+
 ---
 
 ## P2-14 — Shared `HttpClient.DefaultRequestHeaders.Authorization` mutation concurrency açısından riskli
