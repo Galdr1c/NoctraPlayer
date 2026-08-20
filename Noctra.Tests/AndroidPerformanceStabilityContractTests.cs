@@ -116,6 +116,21 @@ public sealed class AndroidPerformanceStabilityContractTests
     }
 
     [Fact]
+    public void MobileGrid_DoesNotLoseResumeRecoveryWhenVisibilityIsTemporarilyUnavailable()
+    {
+        var grid = ReadProjectFile("Noctra.Mobile", "Controls", "MobileVirtualizingCardGrid.cs");
+        var refreshStart = grid.IndexOf("public void RefreshAfterResume", StringComparison.Ordinal);
+        var skipStart = grid.IndexOf("if (!IsResumeRecoveryEligibleOnUiThread())", refreshStart, StringComparison.Ordinal);
+        var skipReturn = grid.IndexOf("return;", skipStart, StringComparison.Ordinal);
+        var recoveryStart = grid.IndexOf("RecoverAfterResumeAsync", skipStart, StringComparison.Ordinal);
+
+        Assert.True(refreshStart >= 0 && skipStart > refreshStart && skipReturn > skipStart);
+        Assert.True(
+            recoveryStart >= 0 && recoveryStart < skipReturn,
+            "A temporarily inactive resume must schedule bounded recovery before returning.");
+    }
+
+    [Fact]
     public void MobileGrid_ResumeRecoveryDoesNotInvalidateParentChain()
     {
         var grid = ReadProjectFile("Noctra.Mobile", "Controls", "MobileVirtualizingCardGrid.cs");

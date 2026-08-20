@@ -1610,7 +1610,8 @@ UI yoğun
 
 Sonuç: P1-30'un doğrulanan backpressure yolları kapatıldı ve **Aşama 4 — Network ve
 notification tamamlandı**. Aşama 5 audit'inde P2-13 (paused position polling) ve P2-04
-(idle card ScrollChanged fan-out) gerekli bulunup kapatıldı. Diğer P2/P3 maddeleri otomatik
+(idle card ScrollChanged fan-out) ve P2-16 (resume grid recovery race) gerekli bulunup kapatıldı.
+Diğer P2/P3 maddeleri otomatik
 yapılmayacak; her biri önce güncel kod ve cihaz bulgularıyla gereklilik audit'inden geçirilecek.
 
 ---
@@ -1706,6 +1707,31 @@ Normal scroll sırasında pointer aktif değilken bile event N kart handler'ına
   regresyonu. Tam takım `2185/2191`.
 - Final P2 APK ile Live → player, `2/2` HOME/launcher turu ve player'dan Live'a dönüş PID `7775`
   değişmeden tamamlandı; ANR/fatal crash log'u oluşmadı.
+
+---
+
+## P2-16 — Resume görünürlük yarışında kart grid rebuild'i kaybolabiliyor
+
+Ekran kapalıyken lifecycle işleri durduruluyor. Resume callback'i grid henüz geçici olarak görünür
+değilken çalışırsa `RefreshAfterResume()` erken dönüyor ve daha sonra görünür hale geldiğinde yeni
+rebuild isteği gelmeyebiliyor. Bu durumda header görünür, kart satırları boş kalıyor; sayfa değişimi
+ise tesadüfen tam rebuild tetikliyor.
+
+### Uygulama durumu — 20 Ağustos 2026: UYGULANDI/KAPATILDI
+
+- `MobileVirtualizingCardGrid.RefreshAfterResume()` inactive/VisualRoot hazır değil durumunda
+  recovery isteğini artık kaybetmiyor; full rebuild işaretleyip mevcut bounded recovery döngüsünü
+  başlatıyor.
+- Bu ortak grid yolu Live, Movies ve Series ekranlarını kapsıyor. Search/Favorites/History/MyList
+  tarafındaki `MobileSectionedCardFeed` ayrı bir yüzey olarak izlenmeye devam ediyor.
+- Resume contract testi mevcut kodda kırmızı görüldü, deferred recovery sonrası yeşile döndü.
+  Tam takım `2187/2192`; yeni 5 başarısızlık P2-16 ile ilgisiz mevcut download, mobil seçim ve
+  sleep-timer grubunda.
+- Final APK SHA-256 `3EEEC460C74194F1D0C4C5970C77876387D64570F367460DDC4869A27FA1A67E`, boyut
+  `381461764` byte. Veri korunarak kuruldu; `firstInstallTime` `2026-08-10 17:51:36`,
+  `lastUpdateTime` `2026-08-20 16:19:51`.
+- Gerçek ekran kapat/aç testinde Live kart metni `34 → 34`, grid satırı `8 → 8` kaldı; içerikler
+  sayfa değişimine gerek kalmadan geri geldi. PID `11911` değişmedi, ANR/fatal crash yok.
 
 ---
 

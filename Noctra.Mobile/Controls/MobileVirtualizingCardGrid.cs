@@ -136,6 +136,9 @@ public sealed class MobileVirtualizingCardGrid : ListBox
         if (!IsResumeRecoveryEligibleOnUiThread())
         {
             MarkCounter("GridResumeSkippedInactive", ref _gridResumeSkippedInactive);
+            Interlocked.Exchange(ref _fullRebuildRequired, 1);
+            var deferredVersion = Interlocked.Increment(ref _resumeRecoveryVersion);
+            _ = RecoverAfterResumeAsync(deferredVersion);
             return;
         }
 
