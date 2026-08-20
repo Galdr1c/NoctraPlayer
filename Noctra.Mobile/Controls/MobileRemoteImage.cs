@@ -26,6 +26,7 @@ public class RemoteImage : Image
 {
     private const int DefaultDecodePixelWidth = 384;
     private const int MaxDecodePixelWidth = 2048;
+    private const long MaxImageResponseBytes = 8L * 1024L * 1024L;
     private const int MaxCacheEntries = 128;
     private const long MaxCacheBytes = 64L * 1024L * 1024L;
     private const int MaxDistinctImageLoads = 48;
@@ -89,6 +90,17 @@ public class RemoteImage : Image
                 control.Opacity = isLoaded ? 1.0 : 0.0;
             }
         });
+    }
+
+    /// <summary>
+    /// Releases cached image resources when Android reports memory pressure.
+    /// Active controls retain their consumer leases; clearing the cache only
+    /// drops the cache-owned references, so visible images remain valid.
+    /// </summary>
+    public static void TrimImageCaches()
+    {
+        Cache.Clear();
+        Interlocked.Exchange(ref _failedImageMarksSinceSweep, 0);
     }
 
     public RemoteImage()
@@ -407,11 +419,31 @@ public class RemoteImage : Image
                     continue;
                 }
 
+                if (response.Content.Headers.ContentLength is > MaxImageResponseBytes)
+                {
+                    MarkFailureCooldown(normalizedUrl);
+                    return null;
+                }
+
                 await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
-                using var memory = new MemoryStream();
+                var contentLength = response.Content.Headers.ContentLength;
+                var initialCapacity = contentLength is > 0 and <= int.MaxValue
+                    ? (int)contentLength.Value
+                    : 0;
+                using var memory = initialCapacity > 0
+                    ? new MemoryStream(initialCapacity)
+                    : new MemoryStream();
                 using var bodyCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                 bodyCts.CancelAfter(TimeSpan.FromSeconds(8));
-                await stream.CopyToAsync(memory, bodyCts.Token).ConfigureAwait(false);
+                if (!await BoundedResponseReader.CopyToAsync(
+                        stream,
+                        memory,
+                        MaxImageResponseBytes,
+                        bodyCts.Token).ConfigureAwait(false))
+                {
+                    MarkFailureCooldown(normalizedUrl);
+                    return null;
+                }
 
                 if (memory.Length == 0)
                 {

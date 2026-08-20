@@ -87,6 +87,72 @@ public sealed class MainViewModelTmdbEnrichmentScopeTests
             It.IsAny<CancellationToken>()), Times.Never);
     }
 
+    [Fact]
+    public async Task MovieWithoutPoster_IsNegativeCachedAcrossRepeatedVisibility()
+    {
+        await using var scheduler = CreateScheduler();
+        var calls = 0;
+        var metadata = new Mock<IMetadataService>();
+        metadata
+            .Setup(service => service.FetchMetadataAsync(
+                It.IsAny<string>(),
+                ChannelType.VOD,
+                It.IsAny<string?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() =>
+            {
+                Interlocked.Increment(ref calls);
+                return new ChannelMetadata { TmdbId = 501 };
+            });
+
+        var viewModel = CreateViewModel(metadata.Object, scheduler);
+        viewModel.CurrentProfile = CreateM3uProfile();
+        viewModel.SelectedPlaylist = new Playlist { Id = 7, Name = "Movies" };
+        viewModel.ActiveView = AppView.Movies;
+        var movie = CreateMovie(704, playlistId: 7);
+
+        QueueMovieEnrichment(viewModel, movie);
+        await Task.Delay(150);
+        QueueMovieEnrichment(viewModel, movie);
+        await Task.Delay(150);
+
+        Assert.Equal(1, calls);
+    }
+
+    [Fact]
+    public async Task MovieNetworkFailure_IsRetriedAfterNewEnrichmentScope()
+    {
+        await using var scheduler = CreateScheduler();
+        var calls = 0;
+        var metadata = new Mock<IMetadataService>();
+        metadata
+            .Setup(service => service.FetchMetadataAsync(
+                It.IsAny<string>(),
+                ChannelType.VOD,
+                It.IsAny<string?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() =>
+            {
+                Interlocked.Increment(ref calls);
+                return (ChannelMetadata?)null;
+            });
+
+        var viewModel = CreateViewModel(metadata.Object, scheduler);
+        viewModel.CurrentProfile = CreateM3uProfile();
+        viewModel.SelectedPlaylist = new Playlist { Id = 7, Name = "Movies" };
+        viewModel.ActiveView = AppView.Movies;
+        var movie = CreateMovie(705, playlistId: 7);
+
+        QueueMovieEnrichment(viewModel, movie);
+        await Task.Delay(150);
+        viewModel.ActiveView = AppView.Series;
+        viewModel.ActiveView = AppView.Movies;
+        QueueMovieEnrichment(viewModel, movie);
+        await Task.Delay(150);
+
+        Assert.Equal(2, calls);
+    }
+
     private static TmdbEnrichmentScheduler CreateScheduler()
         => new(new TmdbEnrichmentSchedulerOptions(
             PendingCapacity: 8,

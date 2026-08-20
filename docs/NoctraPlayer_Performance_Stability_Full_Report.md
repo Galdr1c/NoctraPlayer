@@ -783,6 +783,14 @@ NoPoster / MetadataNotFound
 TTL = ör. 6–24 saat
 ```
 
+### Güncel doğrulama — 20 Ağustos 2026
+
+VOD tarafında generation'dan bağımsız `playlistId:channelId` negative cache uygulandı.
+TTL 30 dakika ve üst sınır 4096 kayıttır; profil/refresh resetinde temizlenir. Yalnız
+`metadata != null` ve poster boş sonucu işaretlenir. `metadata == null` geçici kabul edilir
+ve yeni enrichment scope'unda tekrar denenir. `MainViewModelTmdbEnrichmentScopeTests`
+odak paketi **5/5** geçti.
+
 ---
 
 ## P1-07 — Offscreen/cancelled görsel işleri tamamlandığında cache'i kirletebiliyor
@@ -929,6 +937,13 @@ Kötü provider artwork URL'si çok büyük bir JPEG/PNG döndürürse uygulama 
 - Decode dimension guard.
 - Aşırı büyük artwork için fail-fast.
 
+### Güncel doğrulama — 20 Ağustos 2026
+
+Desktop ve Mobile pipeline'larında 8 MiB `Content-Length` ön kontrolü ve `Content-Length`
+olmayan gövdeler için ArrayPool tabanlı bounded copy eklendi. Limit aşımı decode ve retry
+öncesinde terminal olarak reddediliyor. `ImageResponseSizeGuardContractTests` ve
+`BoundedResponseReaderTests` toplam **3/3** geçti.
+
 ---
 
 ## P1-12 — 64 MB image cache gerçek bitmap/native-memory üst sınırı değil
@@ -1049,6 +1064,11 @@ Backlog oluştuğunda onlarca image completion scroll'un en hassas render zaman�
 - gerektiğinde daha düşük priority,
 - frame başına limitli image commit.
 
+### Güncel doğrulama — 20 Ağustos 2026
+
+Desktop `RemoteImage` içindeki iki completion post'u `DispatcherPriority.Loaded` kullanıyor;
+URL/cancellation guard'ları korunuyor. Sözleşme testi **1/1** geçti.
+
 ---
 
 ## P1-16 — Her `RemoteImage` 180 ms opacity transition oluşturuyor
@@ -1089,6 +1109,14 @@ için adaptif trim yapmıyor.
 - UI hidden → daha agresif trim,
 - moderate/critical → cache clear/trim,
 - foreground → normal budget.
+
+### Güncel doğrulama — 20 Ağustos 2026
+
+Android `MainActivity.OnTrimMemory` mobil image cache'inin cache-owned lease'lerini
+temizliyor; görünür consumer lease'leri korunuyor. Failure cooldown dictionary'si trim ile
+silinmiyor; retry storm önleniyor. Android Debug build **0 hata** ile tamamlandı. Gerçek
+cihazda `RUNNING_LOW` tetikleme sonrası PID `30871` kaldı ve üç foreground/background
+cycle'ında FATAL/ANR/SIGSEGV/OOM görülmedi.
 
 ---
 
@@ -1600,7 +1628,7 @@ UI yoğun
   risk üretenlerin uygulanması ilkesine uygundur.
 - Oynatıcı odak paketi `180/180`; event-after-intent, latest-only dispatch ve kaynak contract
   testleri geçti. Tam takım `2183/2189` geçti.
-- Final Android arm64 build `0` hata verdi. `380858660` byte imzalı APK'nın SHA-256 değeri
+- P1-30 ara Android arm64 build `0` hata verdi. `380858660` byte imzalı APK'nın SHA-256 değeri
   `B1163D3E2A70EB047FB2982C495FF68889D91871A1B2A7F2DA3B63FCED0D11ED`.
 - APK `adb install --user 0 -r -d` ile veri silmeden kuruldu; `firstInstallTime`
   `2026-08-10 17:51:36` korundu, `lastUpdateTime` `2026-08-20 15:42:41` oldu.
@@ -1608,10 +1636,15 @@ UI yoğun
   `MobilePlayerView` içinde `3/3` HOME/launcher turu ve player'dan Live'a geri çıkış PID `2382`
   değişmeden tamamlandı; logcat'te yeni ANR, `FATAL EXCEPTION` veya native fatal signal yok.
 
+Güncel P2-09/P2-15 final kabulü için [canlı kabul özeti](../artifacts/p1-20-live/acceptance-summary.md)
+esas alınmalıdır: APK SHA-256 `57C71E0337FD85DB56D93370CEF33F3247739C21F885FC52D86748AEC6E6A943`,
+`380891428` byte, `lastUpdateTime` `2026-08-20 17:14:00`, cold-start PID `23279`.
+
 Sonuç: P1-30'un doğrulanan backpressure yolları kapatıldı ve **Aşama 4 — Network ve
-notification tamamlandı**. Aşama 5 audit'inde P2-13 (paused position polling) ve P2-04
-(idle card ScrollChanged fan-out) ve P2-16 (resume grid recovery race) gerekli bulunup kapatıldı.
-(P2-17 sectioned feed resume projection) da Search/Favorites/History/MyList için kapatıldı. Diğer P2/P3 maddeleri otomatik
+notification tamamlandı**. Aşama 5 audit'inde P2-04 (idle card ScrollChanged fan-out), P2-09
+(bounded failed-image cooldown cache), P2-13 (paused position polling), P2-15 (cold-start
+license/Billing deferral), P2-16 (resume grid recovery race) ve P2-17 (sectioned feed resume
+projection) gerekli bulunup kapatıldı. P2-17 Search/Favorites/History/MyList için kapatıldı. Diğer P2/P3 maddeleri otomatik
 yapılmayacak; her biri önce güncel kod ve cihaz bulgularıyla gereklilik audit'inden geçirilecek.
 
 ---
@@ -2553,6 +2586,60 @@ Bu konu mevcut performans kök neden listesine dahil edilmemelidir.
 | P3-02 | P3 | DbContext pooling yok | EF Core |
 | P3-03 | P3 | Responsive metric cache/thrash riski | UI metrics |
 | P3-04 | P3 | VM subscription lifetime guard zayıf | Lifecycle |
+
+---
+
+## Güncel uygulama durumu — 20 Ağustos 2026
+
+Bu bölüm tarihsel inceleme notlarının üstüne güncel karar özetini verir. Raporun her maddesi
+otomatik olarak uygulanmış sayılmaz; aşağıdaki “audit/ertelendi” maddeleri için yeni ölçüm veya
+tekrarlanabilir cihaz kanıtı gerekir.
+
+### Kapatılan yüksek etkili kümeler
+
+- P0 lifecycle/navigation/image/search/TMDB kümeleri ve bunların P1 sağlamlaştırmaları.
+- P1-01/P1-02/P1-07/P1-08/P1-09/P1-12/P1-13/P1-14.
+- P1-06/P1-11/P1-15/P1-17 (odak testleri ve Android canlı smoke ile).
+- P1-18–P1-26, P1-28/P1-29/P1-30.
+- P2-04/P2-09/P2-13/P2-15/P2-16/P2-17.
+
+### Açık veya ek kanıt bekleyen maddeler
+
+- P1-03, P0 active-surface/lifecycle değişiklikleriyle büyük ölçüde karşılanmış durumda; ayrı
+  kapanış kanıtı rapora henüz yazılmadı.
+- P1-04/P1-05, P0-11/P0-12 ortak TMDB scheduler, generation/cancellation ve global concurrency
+  kapsamıyla karşılandı; ayrıca bağımsız patch uygulanmadı.
+- P1-10 (image `MemoryStream` kopyası) tam stream/decode refaktörü olarak açık; ancak P1-11
+  kapsamında 8 MiB `Content-Length` ve chunked-body sınırı ile worst-case gövde büyümesi
+  sınırlandı.
+- P1-16 (fade transition) için doğrudan cihaz/frame telemetry kanıtı yok; UX değişikliği
+  yaratmamak için ertelendi.
+- P1-27 Search SQL/index maliyeti açık; önce gerçek veri setiyle benchmark gerekiyor.
+- P2-01/P2-02/P2-03/P2-05/P2-06/P2-07/P2-08/P2-10/P2-11/P2-12 henüz uygulanmadı; etkileri
+  ölçülmeden refaktör yapılmayacak.
+- P2-14 audit edildi ve aktif runtime riski doğrulanmadı; kod değişikliği yapılmadı.
+- P3-01/P3-02/P3-03/P3-04’e henüz geçilmedi.
+
+### Sonraki doğru sıra
+
+P3’e geçiş yapılmadı. Önce P1-10/P1-16 ve P1-27 için ölçüm/benchmark ile gerçekten gerekli
+bir risk olup olmadığı belirlenecek; yalnızca kanıtlanan madde uygulanacak. P3 maddeleri ancak
+bu residual P1/P2 triage tamamlandıktan sonra ele alınacak.
+
+### 20 Ağustos 2026 doğrulama eki
+
+- P1-06: VOD `playlistId:channelId` anahtarlı, 30 dakika TTL ve 4096 üst sınırlı negative
+  cache eklendi. Yalnız eşleşip posteri boş TMDB sonucu cache'leniyor; `null`/network sonucu
+  yeni scope'ta tekrar deneniyor. Odak test: **5/5**.
+- P1-11: Desktop ve Mobile `RemoteImage` yanıtlarında 8 MiB `Content-Length` ön kontrolü ve
+  chunked yanıtlar için pooled bounded copy var. Odak sözleşme/helper testleri: **3/3**.
+- P1-15: Desktop image completion post'ları `DispatcherPriority.Render` yerine `Loaded`.
+  Odak sözleşme testi: **1/1**.
+- P1-17: Android `OnTrimMemory` callback'i mobil bitmap cache'inin cache-owned lease'lerini
+  bırakıyor; aktif consumer lease'leri korunuyor. `RUNNING_LOW` cihaz tetikleme sonrası PID
+  `30871` ayakta kaldı; üç HOME→foreground döngüsünde PID sabit, FATAL/ANR/SIGSEGV/OOM: **0**.
+- Tam test paketi: **2197/2202** geçti; kalan 5 hata bilinen DownloadCenter (2),
+  DownloadSystem (1), MobileRecent selection (1) ve PlayerSleepTimer (1) testleridir.
 
 ---
 

@@ -48,11 +48,12 @@ public class LicenseService : ObservableObject, ILicenseService, IDisposable
 
     /// <summary>
     /// Mağazadan (Google Play) doğrulanan Premium hakları. Yalnızca mağaza
-    /// desteği olan platformlarda güncellenir; başlangıçta ve haklar değişince
-    /// servis tarafından itilir (LicenseService kendi başına sorgulamaz).
-    /// Constructor, son doğrulanmış hakkı diskteki önbellekten senkron yükler
-    /// (soğuk başlangıçta Free→Premium sıçraması olmasın); async refresh
-    /// tamamlanınca güncel durumla ezilir.
+    /// desteği olan platformlarda güncellenir; haklar değişince veya platform
+    /// yüzeyi hazır olduktan sonra çağıran tarafından yenilenir. Constructor,
+    /// son doğrulanmış hakkı diskteki önbellekten senkron yükler (soğuk başlangıçta
+    /// Free→Premium sıçraması olmasın); async refresh tamamlanınca güncel durumla
+    /// ezilir. Android cold-start'ta Billing refresh Activity hazır olana kadar
+    /// özellikle ertelenir.
     /// </summary>
     private StoreEntitlement _storeEntitlement = StoreEntitlement.None;
     private bool _manualPremiumOverride;
@@ -76,9 +77,9 @@ public class LicenseService : ObservableObject, ILicenseService, IDisposable
 
     /// <summary>
     /// Mağaza haklarını yeniden doğrulayan akışları serileştirir. Aynı anda
-    /// üç kaynak tetiklenebilir — kuruluşta fire-and-forget, satın alma
-    /// değişince EntitlementChanged ve OnResume/Activated'de
-    /// RefreshSubscriptionStatusAsync. Eşzamanlı GetEntitlementAsync çağrıları
+    /// kaynaklar tetiklenebilir — satın alma değişince EntitlementChanged ve
+    /// OnResume/Activated'de RefreshSubscriptionStatusAsync (Android'de Activity
+    /// yüzeyi hazırlandıktan sonra). Eşzamanlı GetEntitlementAsync çağrıları
     /// hem gereksiz Play/backend yükü hem de önbelleğe yazma yarışı üretir;
     /// bu kilit tek seferde yalnızca bir refresh çalıştırır (sonuncusu bekler).
     /// </summary>

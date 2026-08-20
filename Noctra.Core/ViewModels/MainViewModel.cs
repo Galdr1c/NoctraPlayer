@@ -84,6 +84,10 @@ public partial class MainViewModel : ObservableObject
     private readonly DateTime _downloadCenterSessionStartUtc = DateTime.UtcNow;
     private readonly ConcurrentDictionary<string, byte> _pendingVisualEnrichmentKeys = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, byte> _seriesVisualNoPosterKeys = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, DateTime> _vodVisualNoPosterUntilUtc = new(StringComparer.OrdinalIgnoreCase);
+    private const int MaxVodVisualNoPosterEntries = 4096;
+    private static readonly TimeSpan VodVisualNoPosterCooldown = TimeSpan.FromMinutes(30);
+    private int _vodVisualNoPosterMarksSinceSweep;
     private readonly ConcurrentDictionary<PersonalStateKey, SemaphoreSlim> _personalStateGates = new();
     private long _downloadLandingStoredBytes;
     private CancellationTokenSource? _slowLoadingWarnCts;
@@ -1462,6 +1466,8 @@ public partial class MainViewModel : ObservableObject
         Interlocked.Increment(ref _seriesSearchDatasetVersion);
         _seriesCachePlaylistId = null;
         _seriesVisualNoPosterKeys.Clear();
+        _vodVisualNoPosterUntilUtc.Clear();
+        Interlocked.Exchange(ref _vodVisualNoPosterMarksSinceSweep, 0);
         _allGroupsCache.Clear();
         _liveGroupsCache.Clear();
         _vodGroupsCache.Clear();
@@ -1540,6 +1546,8 @@ public partial class MainViewModel : ObservableObject
         Interlocked.Increment(ref _seriesSearchDatasetVersion);
         _seriesCachePlaylistId = null;
         _seriesVisualNoPosterKeys.Clear();
+        _vodVisualNoPosterUntilUtc.Clear();
+        Interlocked.Exchange(ref _vodVisualNoPosterMarksSinceSweep, 0);
         _allGroupsCache.Clear();
         _liveGroupsCache.Clear();
         _vodGroupsCache.Clear();
@@ -3854,6 +3862,62 @@ public partial class MainViewModel : ObservableObject
     private static string GetSeriesVisualEnrichmentKey(int seriesId)
         => $"series:{seriesId}";
 
+    private static string GetVodVisualEnrichmentKey(Channel channel)
+        => $"{channel.PlaylistId}:{channel.Id}";
+
+    private bool IsVodVisualNoPosterCoolingDown(string key)
+    {
+        if (!_vodVisualNoPosterUntilUtc.TryGetValue(key, out var untilUtc))
+        {
+            return false;
+        }
+
+        if (untilUtc > DateTime.UtcNow)
+        {
+            return true;
+        }
+
+        // Remove only the value we observed so a newer mark cannot be lost.
+        ((ICollection<KeyValuePair<string, DateTime>>)_vodVisualNoPosterUntilUtc)
+            .Remove(new KeyValuePair<string, DateTime>(key, untilUtc));
+        return false;
+    }
+
+    private void MarkVodVisualNoPoster(string key)
+    {
+        _vodVisualNoPosterUntilUtc[key] = DateTime.UtcNow + VodVisualNoPosterCooldown;
+
+        var marks = Interlocked.Increment(ref _vodVisualNoPosterMarksSinceSweep);
+        if (marks % 64 != 0 && _vodVisualNoPosterUntilUtc.Count <= MaxVodVisualNoPosterEntries)
+        {
+            return;
+        }
+
+        var nowUtc = DateTime.UtcNow;
+        foreach (var entry in _vodVisualNoPosterUntilUtc)
+        {
+            if (entry.Value <= nowUtc)
+            {
+                ((ICollection<KeyValuePair<string, DateTime>>)_vodVisualNoPosterUntilUtc)
+                    .Remove(entry);
+            }
+        }
+
+        var overflow = _vodVisualNoPosterUntilUtc.Count - MaxVodVisualNoPosterEntries;
+        if (overflow <= 0)
+        {
+            return;
+        }
+
+        foreach (var entry in _vodVisualNoPosterUntilUtc
+                     .OrderBy(pair => pair.Value)
+                     .Take(overflow))
+        {
+            ((ICollection<KeyValuePair<string, DateTime>>)_vodVisualNoPosterUntilUtc)
+                .Remove(entry);
+        }
+    }
+
     private void QueueVisibleChannelVisualEnrichment(IReadOnlyCollection<Channel> page)
     {
         if (!ShouldUseTmdbVisualEnrichment() ||
@@ -3866,7 +3930,8 @@ public partial class MainViewModel : ObservableObject
         var candidates = page
             .Where(c => c.PlaylistId == scope.PlaylistId &&
                         c.Type == ChannelType.VOD && c.Id > 0 &&
-                        !HasDisplayImage(c))
+                        !HasDisplayImage(c) &&
+                        !IsVodVisualNoPosterCoolingDown(GetVodVisualEnrichmentKey(c)))
             .ToList();
 
         if (candidates.Count == 0)
@@ -3944,10 +4009,14 @@ public partial class MainViewModel : ObservableObject
                 ChannelType.VOD,
                 languageCode,
                 cancellationToken);
-            if (metadata == null ||
-                string.IsNullOrWhiteSpace(metadata.PosterUrl) ||
-                !CanCommitTmdbVisualEnrichment(scope, cancellationToken))
+            if (metadata == null || !CanCommitTmdbVisualEnrichment(scope, cancellationToken))
             {
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(metadata.PosterUrl))
+            {
+                MarkVodVisualNoPoster(GetVodVisualEnrichmentKey(channel));
                 return;
             }
 

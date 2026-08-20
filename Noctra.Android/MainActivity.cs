@@ -7,6 +7,7 @@ using Android.Content.PM;
 using Android.Content.Res;
 using Android.Graphics;
 using Android.OS;
+using Android.Runtime;
 using Android.Util;
 using Android.Views;
 using Avalonia.Android;
@@ -15,6 +16,7 @@ using Noctra.Android.DependencyInjection;
 using Noctra.Android.Services;
 using Noctra.Diagnostics;
 using Noctra.Mobile.Services;
+using Noctra.Mobile.Controls;
 using Noctra.Services;
 using Noctra.Services.Interfaces;
 using Noctra.Models;
@@ -373,6 +375,13 @@ public class MainActivity : AvaloniaMainActivity
     {
         MobileAppLifecycle.NotifyPaused();
         base.OnPause();
+    }
+
+    public override void OnTrimMemory([GeneratedEnum] TrimMemory level)
+    {
+        base.OnTrimMemory(level);
+        RemoteImage.TrimImageCaches();
+        PerformanceTrace.Mark("android.memory.trim", (long)level);
     }
 
     private void QueueVisualTreeRecovery(long resumeGeneration)
