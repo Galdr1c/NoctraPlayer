@@ -24,14 +24,15 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton(SqliteConnectionTuningOptions.Desktop);
         services.AddSingleton<SqliteConnectionPragmaInterceptor>();
 
-        services.AddDbContextFactory<AppDbContext>((serviceProvider, options) =>
+        const int dbContextPoolSize = 32;
+        services.AddPooledDbContextFactory<AppDbContext>((serviceProvider, options) =>
         {
             var appPaths = serviceProvider.GetRequiredService<IAppPathService>();
             appPaths.EnsureUserDataDirectory();
             options.UseSqlite($"Data Source={appPaths.DatabasePath}");
             options.AddInterceptors(
                 serviceProvider.GetRequiredService<SqliteConnectionPragmaInterceptor>());
-        });
+        }, poolSize: dbContextPoolSize);
 
         services.AddTransient<IM3UParser, M3UParser>();
         services.AddSingleton<IEpgService>(serviceProvider =>

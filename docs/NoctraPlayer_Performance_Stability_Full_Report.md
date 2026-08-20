@@ -1636,10 +1636,10 @@ UI yoğun
   `MobilePlayerView` içinde `3/3` HOME/launcher turu ve player'dan Live'a geri çıkış PID `2382`
   değişmeden tamamlandı; logcat'te yeni ANR, `FATAL EXCEPTION` veya native fatal signal yok.
 
-Güncel P3-01 kabulü için [canlı kabul özeti](../artifacts/p1-20-live/acceptance-summary.md)
-esas alınmalıdır: APK SHA-256 `74AA3FD3792D9C98DC208A1DA2D8DC84164589831B010EEA363B35083D2946D6`,
-`381486340` byte, APK dosya zamanı `2026-08-20 18:15:53`, cihaz paket `lastUpdateTime`
-`2026-08-20 18:17:21`, cold/live PID `2899`.
+Güncel P3-02 kabulü için [canlı kabul özeti](../artifacts/p1-20-live/acceptance-summary.md)
+esas alınmalıdır: APK SHA-256 `81678359855734982594C4B3E68C2BD00CD0EA241409CA679C91A15B4A3D1377`,
+`380879140` byte, APK dosya zamanı `2026-08-20 18:33:29`, cihaz paket `lastUpdateTime`
+`2026-08-20 18:34:08`, cold/live PID `6273`.
 
 Sonuç: P1-30'un doğrulanan backpressure yolları kapatıldı ve **Aşama 4 — Network ve
 notification tamamlandı**. Aşama 5 audit'inde P2-04 (idle card ScrollChanged fan-out), P2-09
@@ -2620,14 +2620,16 @@ tekrarlanabilir cihaz kanıtı gerekir.
   ölçülmeden refaktör yapılmayacak.
 - P2-14 audit edildi ve aktif runtime riski doğrulanmadı; kod değişikliği yapılmadı.
 - P3-01 cached Android main-thread `Handler` ile uygulandı ve cihaz smoke ile kapatıldı.
-- P3-02/P3-03/P3-04 audit edildi; aşağıdaki ölçüm sonuçları nedeniyle production patch
-  uygulanmadı.
+- P3-02 bounded DbContext pooling ile uygulandı; benchmark, reuse/transaction ve PRAGMA
+  uyumluluk testleriyle kapatıldı.
+- P3-03/P3-04 audit edildi; aşağıdaki ölçüm sonuçları nedeniyle production patch uygulanmadı.
 
 ### Sonraki doğru sıra
 
-P3 audit tamamlandı. P3-01’in düşük riskli allocation düzeltmesi uygulandı; P3-02/P3-03 için
-gerçek benchmark, P1-10/P1-16/P1-27 için de ölçüm/benchmark oluşursa ayrı, küçük kapsamlı
-düzeltme planlanacak. P3-04 mevcut singleton VM lifetime’ı nedeniyle audit-only olarak kapatıldı.
+P3 audit tamamlandı. P3-01 ve P3-02’nin ölçülebilir, düşük riskli düzeltmeleri uygulandı.
+P3-03 için gerçek converter thrash benchmarkı, P1-10/P1-16/P1-27 için de kendi ölçümleri
+oluşursa ayrı küçük kapsamlı düzeltme planlanacak. P3-04 mevcut singleton VM lifetime’ı
+nedeniyle audit-only olarak kapatıldı.
 
 ### 20 Ağustos 2026 doğrulama eki
 
@@ -2641,9 +2643,8 @@ düzeltme planlanacak. P3-04 mevcut singleton VM lifetime’ı nedeniyle audit-o
 - P1-17: Android `OnTrimMemory` callback'i mobil bitmap cache'inin cache-owned lease'lerini
   bırakıyor; aktif consumer lease'leri korunuyor. `RUNNING_LOW` cihaz tetikleme sonrası PID
   `30871` ayakta kaldı; üç HOME→foreground döngüsünde PID sabit, FATAL/ANR/SIGSEGV/OOM: **0**.
-- Tam test paketi (P3-01 sonrası): **2197/2203** geçti; kalan 6 hata bilinen DownloadCenter (2),
-  DownloadSystem (1), DownloadContentKey (1), MobileRecent selection (1) ve PlayerSleepTimer (1)
-  testleridir.
+- Tam test paketi (P3-02 sonrası): **2200/2205** geçti; kalan 5 hata bilinen DownloadCenter (2),
+  DownloadSystem (1), MobileRecent selection (1) ve PlayerSleepTimer (1) testleridir.
 - P3-01: Android video servisinde cached main-thread `Handler` kullanıldı; odak test **1/1**,
   Android build **0 hata**, güncel cihaz smoke PID `2899` ile 3 foreground/background döngüsü
   ve FATAL/ANR/SIGSEGV/OOM taraması temiz.
@@ -2654,9 +2655,12 @@ düzeltme planlanacak. P3-04 mevcut singleton VM lifetime’ı nedeniyle audit-o
   `Handler` oluşturuyordu. Process-owned cached `Handler` uygulandı. Odak contract testi
   **1/1**, Android build **0 hata**; güncel APK cold PID `2899` ve üç HOME→foreground
   döngüsünde PID sabit, FATAL/ANR/SIGSEGV/OOM: **0**.
-- P3-02: DI hâlâ `AddDbContextFactory` kullanıyor. Global `DatabaseWorkScheduler` zaten read/write
-  concurrency ve backpressure sağlıyor; pooling kazancını gösterecek benchmark yok. Pooling
-  değişikliği yapılmadı.
+- P3-02: `AddPooledDbContextFactory<AppDbContext>` pool size 32’ye alındı. 200 SQLite read
+  döngüsü benchmarkı normal `114 ms / 11.56 MB`, pooled `19 ms / 1.57 MB` verdi. Context
+  reuse sonrası tracker temizliği, transaction rollback ve PRAGMA/interceptor paketi toplam
+  **8/8** geçti; güncel Android APK cold PID `6273`, üç foreground/background döngüsü sabit,
+  FATAL/ANR/SIGSEGV/OOM: **0**. Global `DatabaseWorkScheduler` read/write concurrency ve
+  backpressure sağlamaya devam ediyor; pooling yalnız context create/dispose maliyetini azaltıyor.
 - P3-03: `ResponsiveCardMetricConverter` tek statik son-değer cache’i kullanıyor. UI binding
   çağrılarında görünür thread-race veya ölçülmüş cache thrash yok; daha büyük cache eklemek
   kanıtsız memory/invalidasyon maliyeti yaratabilir. Değişiklik yapılmadı.
