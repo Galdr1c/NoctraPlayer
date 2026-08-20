@@ -16,11 +16,13 @@ namespace Noctra.Services;
 /// </summary>
 public partial class MetadataService : IMetadataService
 {
+    private static readonly TimeSpan DefaultMetadataRequestTimeout = TimeSpan.FromSeconds(20);
     private readonly HttpClient _httpClient;
     private readonly IDbContextFactory<AppDbContext>? _dbContextFactory;
     private readonly ISettingsService? _settingsService;
     private readonly ILocalizationService? _localizationService;
     private readonly ILogger<MetadataService>? _logger;
+    private readonly TimeSpan _requestTimeout;
     
     private const string TMDB_BASE_URL = "https://tmdb-proxy-galdric.vercel.app/api/tmdb";
     private const string DIRECT_TMDB_BASE_URL = "https://api.themoviedb.org/3";
@@ -40,13 +42,21 @@ public partial class MetadataService : IMetadataService
         IDbContextFactory<AppDbContext>? dbContextFactory = null,
         ISettingsService? settingsService = null,
         ILocalizationService? localizationService = null,
-        ILogger<MetadataService>? logger = null)
+        ILogger<MetadataService>? logger = null,
+        TimeSpan? requestTimeout = null)
     {
         _httpClient = httpClient;
         _dbContextFactory = dbContextFactory;
         _settingsService = settingsService;
         _localizationService = localizationService;
         _logger = logger;
+        _requestTimeout = requestTimeout ?? DefaultMetadataRequestTimeout;
+        if (_requestTimeout <= TimeSpan.Zero)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(requestTimeout),
+                "Metadata request timeout must be positive.");
+        }
         
         LoadApiKeyFromEnvironment();
     }
@@ -176,6 +186,7 @@ public partial class MetadataService : IMetadataService
 
         // Attempt 2: Direct API
         response?.Dispose();
+        response = null;
 
         try
         {
@@ -187,6 +198,7 @@ public partial class MetadataService : IMetadataService
             if (!response.IsSuccessStatusCode)
             {
                 _logger?.LogWarning("Direct TMDB API fallback also failed: {StatusCode}", (int)response.StatusCode);
+                response.Dispose();
                 return null;
             }
 
@@ -198,6 +210,7 @@ public partial class MetadataService : IMetadataService
         }
         catch (Exception ex)
         {
+            response?.Dispose();
             _logger?.LogError(ex, "Direct TMDB API fallback failed for: {Url}", TrimForLog(fallbackUrl));
             return null;
         }
@@ -208,7 +221,7 @@ public partial class MetadataService : IMetadataService
     /// </summary>
     private async Task<T?> FetchJsonWithFallbackAsync<T>(string url, CancellationToken cancellationToken) where T : class
     {
-        var response = await GetWithFallbackAsync(url, cancellationToken);
+        using var response = await GetWithFallbackAsync(url, cancellationToken);
         if (response?.IsSuccessStatusCode != true)
             return null;
 
@@ -224,7 +237,13 @@ public partial class MetadataService : IMetadataService
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
         }
 
-        return await _httpClient.SendAsync(request, cancellationToken);
+        using var timeoutCancellation = CancellationTokenSource.CreateLinkedTokenSource(
+            cancellationToken);
+        timeoutCancellation.CancelAfter(_requestTimeout);
+        return await _httpClient.SendAsync(
+            request,
+            HttpCompletionOption.ResponseHeadersRead,
+            timeoutCancellation.Token);
     }
 
     private static bool IsLikelyV3ApiKey(string credential)
@@ -274,7 +293,7 @@ public partial class MetadataService : IMetadataService
                 url = $"{TMDB_BASE_URL}/search/multi?query={Uri.EscapeDataString(queryWithoutYear)}&include_adult=false&language={languageCode}";
             }
             
-            var response = await GetWithFallbackAsync(url, cancellationToken);
+            using var response = await GetWithFallbackAsync(url, cancellationToken);
             
             if (response == null)
             {
@@ -661,7 +680,7 @@ public partial class MetadataService : IMetadataService
             url += $"&first_air_date_year={year.Value}";
         }
 
-        var response = await GetWithFallbackAsync(url, cancellationToken);
+        using var response = await GetWithFallbackAsync(url, cancellationToken);
         if (response == null)
         {
             return null;
