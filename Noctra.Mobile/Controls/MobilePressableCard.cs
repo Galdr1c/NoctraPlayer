@@ -19,6 +19,7 @@ public sealed class MobilePressableCard : Border
 
     private IPointer? _activePointer;
     private ScrollViewer? _ancestorScrollViewer;
+    private bool _ancestorScrollSubscribed;
     private Point _pressOrigin;
     private readonly DispatcherTimer _longPressTimer;
     private bool _suppressNextTap;
@@ -96,6 +97,7 @@ public sealed class MobilePressableCard : Border
         _activePointer = e.Pointer;
         _pressOrigin = point.Position;
         _suppressNextTap = false;
+        AttachToAncestorScrollViewer();
         PseudoClasses.Set(":pressed", true);
         _longPressTimer.Stop();
         _longPressTimer.Start();
@@ -172,12 +174,22 @@ public sealed class MobilePressableCard : Border
         }
 
         _ancestorScrollViewer = scrollViewer;
+    }
+
+    private void AttachToAncestorScrollViewer()
+    {
+        if (_ancestorScrollViewer is null || _ancestorScrollSubscribed)
+        {
+            return;
+        }
+
         _ancestorScrollViewer.ScrollChanged += OnAncestorScrollChanged;
         _ancestorScrollViewer.AddHandler(
             InputElement.ScrollGestureEvent,
             OnScrollGesture,
             RoutingStrategies.Bubble,
             handledEventsToo: true);
+        _ancestorScrollSubscribed = true;
     }
 
     private void DetachFromAncestorScrollViewer()
@@ -187,10 +199,15 @@ public sealed class MobilePressableCard : Border
             return;
         }
 
-        _ancestorScrollViewer.ScrollChanged -= OnAncestorScrollChanged;
-        _ancestorScrollViewer.RemoveHandler(
-            InputElement.ScrollGestureEvent,
-            OnScrollGesture);
+        if (_ancestorScrollSubscribed)
+        {
+            _ancestorScrollViewer.ScrollChanged -= OnAncestorScrollChanged;
+            _ancestorScrollViewer.RemoveHandler(
+                InputElement.ScrollGestureEvent,
+                OnScrollGesture);
+            _ancestorScrollSubscribed = false;
+        }
+
         _ancestorScrollViewer = null;
     }
 
@@ -245,6 +262,7 @@ public sealed class MobilePressableCard : Border
     {
         _longPressTimer.Stop();
         _activePointer = null;
+        DetachFromAncestorScrollViewer();
         PseudoClasses.Set(":pressed", false);
     }
 }

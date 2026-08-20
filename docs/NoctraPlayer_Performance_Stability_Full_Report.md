@@ -1609,8 +1609,9 @@ UI yoğun
   değişmeden tamamlandı; logcat'te yeni ANR, `FATAL EXCEPTION` veya native fatal signal yok.
 
 Sonuç: P1-30'un doğrulanan backpressure yolları kapatıldı ve **Aşama 4 — Network ve
-notification tamamlandı**. Sonraki P2/P3 maddeleri otomatik yapılmayacak; her biri önce güncel kod
-ve cihaz bulgularıyla gereklilik audit'inden geçirilecek.
+notification tamamlandı**. Aşama 5 audit'inde P2-13 (paused position polling) ve P2-04
+(idle card ScrollChanged fan-out) gerekli bulunup kapatıldı. Diğer P2/P3 maddeleri otomatik
+yapılmayacak; her biri önce güncel kod ve cihaz bulgularıyla gereklilik audit'inden geçirilecek.
 
 ---
 
@@ -1693,6 +1694,18 @@ Normal scroll sırasında pointer aktif değilken bile event N kart handler'ına
 
 - Yalnız pointer pressed süresince subscribe,
 - veya tek `ScrollGestureCoordinator`.
+
+### Uygulama durumu — 20 Ağustos 2026: UYGULANDI/KAPATILDI
+
+- Kart visual tree'ye bağlandığında parent `ScrollChanged` aboneliği artık açılmıyor.
+- Abonelik yalnız aktif pointer press sırasında açılıyor; release, scroll-cancel, capture-lost,
+  pointer-exit ve detach yollarında kapatılıyor. Normal scroll'ta idle kartların N-handler fan-out'u
+  kaldırıldı.
+- Yeni kaynak contract testi mevcut davranışta kırmızı görüldü; lazy subscription sonrası yeşile
+  döndü. P2 mobile odak paketi `99/100`; tek başarısız test daha önce bilinen mobile seçim
+  regresyonu. Tam takım `2185/2191`.
+- Final P2 APK ile Live → player, `2/2` HOME/launcher turu ve player'dan Live'a dönüş PID `7775`
+  değişmeden tamamlandı; ANR/fatal crash log'u oluşmadı.
 
 ---
 
