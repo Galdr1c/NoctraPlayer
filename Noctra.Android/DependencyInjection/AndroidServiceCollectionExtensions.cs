@@ -81,7 +81,8 @@ public static class AndroidServiceCollectionExtensions
                 serviceProvider.GetRequiredService<ISecurityService>(),
                 serviceProvider.GetRequiredService<IPlatformActionService>(),
                 serviceProvider.GetRequiredService<IStorePurchaseService>(),
-                serviceProvider.GetRequiredService<IDispatcherService>()));
+                serviceProvider.GetRequiredService<IDispatcherService>(),
+                deferInitialStoreRefresh: true));
         services.AddSingleton<StartupPrivacyCoordinator>();
         services.AddSingleton<AdMobMobileAdvertisingService>(serviceProvider =>
             new AdMobMobileAdvertisingService(

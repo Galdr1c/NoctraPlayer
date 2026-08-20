@@ -15,6 +15,15 @@ public static class MobileAppLifecycle
 
     public static bool IsForeground => Volatile.Read(ref _isForeground) == 1;
 
+    public static bool IsGenerationCurrent(long generation)
+    {
+        lock (Sync)
+        {
+            return generation == _generation &&
+                   Volatile.Read(ref _isForeground) == 1;
+        }
+    }
+
     public static event EventHandler? Resumed;
     public static event EventHandler? Paused;
 

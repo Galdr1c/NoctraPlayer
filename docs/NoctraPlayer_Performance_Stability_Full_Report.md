@@ -1843,6 +1843,16 @@ TTL mevcut olsa da yalnız tekrar erişilen anahtarların temizlenmesi gibi bir 
 - periodic expiration sweep,
 - bounded cache.
 
+### Uygulama durumu — 20 Ağustos 2026: UYGULANDI/KAPATILDI
+
+- Mobile ve Desktop image pipeline'larında `FailedUntilUtc` artık `2048` kayıtla sınırlı.
+- Her `64` yeni failure mark'ında düşük frekanslı sweep çalışıyor; önce TTL'si dolan kayıtlar
+  key+value karşılaştırmalı atomik remove ile temizleniyor, sonra gerekirse overflow eviction
+  uygulanıyor.
+- `IsRecentlyFailed` içindeki expired remove da key+value karşılaştırmalı; eşzamanlı yeni
+  cooldown taze kaydı silemiyor. Bitmap başarı cache'ine dokunulmuyor.
+- P2-09 image/cache odak paketi `50/50` geçti; bağımsız incelemede Critical/Important kalmadı.
+
 ---
 
 ## P2-10 — `_personalStateGates` keyed `SemaphoreSlim` dictionary'si remove edilmiyor
@@ -1936,6 +1946,16 @@ Farklı servislerin paylaştığı singleton client üzerinde auth state yarış
 
 Authorization'ı yalnız request message üzerinde ayarla.
 
+### Audit durumu — 20 Ağustos 2026: KOD DEĞİŞİKLİĞİ GEREKLİ DEĞİL
+
+- `SetApiKey` yalnız `MetadataService` içinde tanımlı; üretim kaynaklarında çağrısı yok.
+- Ortak client'ın `DefaultRequestHeaders.Authorization` değeri yalnız environment credential
+  başlangıç yolunda değişebiliyor; gerçek TMDB request'lerinde authorization request message
+  üzerinde uygulanıyor.
+- `ApiKeyAuthTests`, metadata cancellation ve HTTP lifecycle paketleri birlikte `18/18` geçti.
+- Bu nedenle P2-14 güncel runtime'da aktif concurrency riski olarak doğrulanmadı; proxy/direct
+  endpoint mimarisi değişirse yeniden denetlenecek.
+
 ---
 
 ## P2-15 — Resume sırasında update/license gibi ek işler ana recovery ile aynı anda başlayabiliyor
@@ -1952,6 +1972,23 @@ layout/image/EPG callback'leriyle çakışabilir.
 
 - foreground critical path'i minimal tut,
 - non-urgent işleri düşük priority ile geciktir/coalesce et.
+
+### Uygulama durumu — 20 Ağustos 2026: UYGULANDI/KAPATILDI
+
+- Android DI'da `LicenseService` cold-start store refresh'i ertelendi; constructor Billing JNI
+  çağrısı başlatmıyor. Activity hazır olduğunda `MainActivity` tek bir `PostDelayed(500 ms)`
+  refresh kuyruğa alıyor.
+- Ertelenen callback `MobileAppLifecycle.IsGenerationCurrent` ile pause/yeni resume sonrasında
+  düşürülüyor; mevcut `_storeRefreshLock` serileştirmesi korunuyor. Desktop davranışı için
+  constructor varsayılanı değişmedi.
+- Önceki kabul smoke'unda PID `19081` cold-start sırasında `No Android Activity is available`
+  Billing hatasından hemen sonra native SIGSEGV ile sonlanmıştı. Bu kayıt raporda korunuyor.
+- Guard sonrası gerçek cold-start PID `23279` ile Billing çağrısı yalnız Activity hazır olduktan
+  sonra gerçekleşti; yalnız cihazdaki Play Billing servisinin kapalı olmasından kaynaklanan
+  beklenen `BillingUnavailable` görüldü. Yeni SIGSEGV, ANR veya `APP CRASH(NATIVE)` oluşmadı.
+- Aynı PID ile Profile → Live → MobilePlayerView, `2/2` HOME/launcher döngüsü ve player'dan
+  Live'a dönüş tamamlandı. Başlangıçta `160/42` skipped-frame jank görüldü; bu ANR değildi ve
+  Billing refresh'ten önceki cold-render aşamasına aitti.
 
 ---
 

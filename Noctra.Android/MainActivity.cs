@@ -341,6 +341,7 @@ public class MainActivity : AvaloniaMainActivity
     {
         base.OnResume();
         PerformanceTrace.Mark("android.activity.resume");
+        var resumeGeneration = MobileAppLifecycle.BeginResume();
 
         if (Avalonia.Application.Current is Noctra.Mobile.App app)
         {
@@ -355,7 +356,7 @@ public class MainActivity : AvaloniaMainActivity
             // süre uygulama kapalıyken dolduysa UI burada güncellenir.
             if (app.Services?.GetService<ILicenseService>() is { } licenseService)
             {
-                _ = licenseService.RefreshSubscriptionStatusAsync();
+                QueueLicenseRefresh(licenseService, resumeGeneration);
             }
 
             // Resume sonrasında immersive mode durumunu yeniden uygula.
@@ -365,7 +366,6 @@ public class MainActivity : AvaloniaMainActivity
             }
         }
 
-        var resumeGeneration = MobileAppLifecycle.BeginResume();
         QueueVisualTreeRecovery(resumeGeneration);
     }
 
@@ -409,6 +409,36 @@ public class MainActivity : AvaloniaMainActivity
         {
             Log.Warn("Noctra", $"Update resume check failed: {ex}");
         }
+    }
+
+    private void QueueLicenseRefresh(ILicenseService licenseService, long resumeGeneration)
+    {
+        async void RefreshWhenSurfaceIsReady()
+        {
+            if (!MobileAppLifecycle.IsGenerationCurrent(resumeGeneration))
+            {
+                return;
+            }
+
+            try
+            {
+                await licenseService.RefreshSubscriptionStatusAsync().ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                Log.Warn("Noctra", $"License resume refresh failed: {ex}");
+            }
+        }
+
+        if (Window?.DecorView is { } decorView)
+        {
+            decorView.PostDelayed(RefreshWhenSurfaceIsReady, 500);
+            return;
+        }
+
+        _ = Task.Delay(500).ContinueWith(
+            _ => RefreshWhenSurfaceIsReady(),
+            TaskScheduler.Default);
     }
 
     private static async Task RunAdvertisingBootstrapSafelyAsync(MobileAdvertisingBootstrapper bootstrapper)

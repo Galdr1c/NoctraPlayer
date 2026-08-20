@@ -190,7 +190,8 @@ public class LicenseService : ObservableObject, ILicenseService, IDisposable
         ISecurityService? securityService = null,
         IPlatformActionService? platformActionService = null,
         IStorePurchaseService? storePurchaseService = null,
-        IDispatcherService? dispatcherService = null)
+        IDispatcherService? dispatcherService = null,
+        bool deferInitialStoreRefresh = false)
     {
         _appEditionService = appEditionService;
         _settingsService = settingsService;
@@ -218,7 +219,10 @@ public class LicenseService : ObservableObject, ILicenseService, IDisposable
                 _storeEntitlement = cached;
             }
 
-            _ = RefreshStoreEntitlementAsync();
+            if (!deferInitialStoreRefresh)
+            {
+                _ = RefreshStoreEntitlementAsync();
+            }
         }
 
         _settingsService.SettingsChanged += OnSettingsChanged;

@@ -25,6 +25,7 @@ public class RemoteImage : Image
     private static readonly ConcurrentDictionary<string, Bitmap> Cache = new(StringComparer.OrdinalIgnoreCase);
     private static readonly ConcurrentDictionary<string, Task<Bitmap?>> InFlightLoads = new(StringComparer.OrdinalIgnoreCase);
     private static readonly ConcurrentDictionary<string, DateTime> FailedUntilUtc = new(StringComparer.OrdinalIgnoreCase);
+    private static int _failedImageMarksSinceSweep;
     private static readonly LinkedList<string> CacheLruList = new();
     private static readonly Dictionary<string, LinkedListNode<string>> NodeMap = new(StringComparer.OrdinalIgnoreCase);
     private static readonly SemaphoreSlim DownloadGate = new(6, 6);
@@ -33,6 +34,8 @@ public class RemoteImage : Image
     private const int MaxCacheEntries = 500;
     private const int HttpImageMaxAttempts = 2;
     private const int HttpRetryBaseDelayMs = 250;
+    private const int MaxFailedImageEntries = 2048;
+    private const int FailedImageSweepInterval = 64;
     private static readonly TimeSpan FailureCooldown = TimeSpan.FromMinutes(2);
 
     private CancellationTokenSource? _loadCts;
@@ -547,7 +550,43 @@ public class RemoteImage : Image
 
     private static void MarkFailureCooldown(string url)
     {
-        FailedUntilUtc[url] = DateTime.UtcNow.Add(FailureCooldown);
+        var nowUtc = DateTime.UtcNow;
+        FailedUntilUtc[url] = nowUtc.Add(FailureCooldown);
+
+        var marks = Interlocked.Increment(ref _failedImageMarksSinceSweep);
+        if (FailedUntilUtc.Count > MaxFailedImageEntries || marks >= FailedImageSweepInterval)
+        {
+            Interlocked.Exchange(ref _failedImageMarksSinceSweep, 0);
+            TrimFailedUntilUtc(nowUtc);
+        }
+    }
+
+    private static void TrimFailedUntilUtc(DateTime nowUtc)
+    {
+        foreach (var entry in FailedUntilUtc)
+        {
+            if (entry.Value <= nowUtc)
+            {
+                ((ICollection<KeyValuePair<string, DateTime>>)FailedUntilUtc)
+                    .Remove(new KeyValuePair<string, DateTime>(entry.Key, entry.Value));
+            }
+        }
+
+        var overflow = FailedUntilUtc.Count - MaxFailedImageEntries;
+        if (overflow <= 0)
+        {
+            return;
+        }
+
+        foreach (var entry in FailedUntilUtc)
+        {
+            if (overflow-- <= 0)
+            {
+                break;
+            }
+
+            FailedUntilUtc.TryRemove(entry.Key, out _);
+        }
     }
 
     private static bool IsRecentlyFailed(string url)
@@ -562,7 +601,8 @@ public class RemoteImage : Image
             return true;
         }
 
-        FailedUntilUtc.TryRemove(url, out _);
+        ((ICollection<KeyValuePair<string, DateTime>>)FailedUntilUtc)
+            .Remove(new KeyValuePair<string, DateTime>(url, untilUtc));
         return false;
     }
 
