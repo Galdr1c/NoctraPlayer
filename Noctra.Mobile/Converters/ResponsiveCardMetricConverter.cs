@@ -187,9 +187,11 @@ public sealed class ResponsiveCardMetricConverter : IValueConverter
 
             if (mode.StartsWith("profile", StringComparison.OrdinalIgnoreCase))
             {
-                // Profile cards keep the avatar-heavy shape used in the desktop profile window.
-                // MinWidth 150 ensures the 150x150 avatar Grid never overflows the card.
-                return new CardMetricProfile(150, 200, 170, 1.18, 16, 5);
+                // Profile cards: min 2 per row on5.5" phones (~360px).
+                // Gap 32 accounts for button Margin="8,8" (8px left + 8px right per card = 16px,
+                // plus 8px edge margin on each side = total 32px per card horizontal space).
+                // MinWidth 120 ensures 2 cards fit on 360px screens: (336-32)/2 = 152.
+                return new CardMetricProfile(120, 200, 170, 1.0, 32, 5);
             }
 
             if (mode.StartsWith("moreShortcut", StringComparison.OrdinalIgnoreCase))
