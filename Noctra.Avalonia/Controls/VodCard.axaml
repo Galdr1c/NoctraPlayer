@@ -60,6 +60,13 @@
             BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0">
       <Grid>
         <Border Background="{DynamicResource PlaceHolderBrush}">
+        <Image Grid.ColumnSpan="2"
+                       Source="{Binding ActualThemeVariant, RelativeSource={RelativeSource Self}, Converter={StaticResource LogoThemeConverter}, ConverterParameter=Full}}"
+                       Width="72" Height="72"
+                       Stretch="Uniform"
+                       Opacity="0.12"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center" /> 
           <Border.IsVisible><Binding Path="#PosterImage.IsImageLoaded" Converter="{StaticResource InverseBoolConverter}"/></Border.IsVisible>
         </Border>
         <controls:RemoteImage x:Name="PosterImage" Stretch="UniformToFill" Url="{Binding CoverUrl}" RenderOptions.BitmapInterpolationMode="MediumQuality"/>

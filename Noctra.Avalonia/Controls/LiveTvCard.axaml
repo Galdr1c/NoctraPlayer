@@ -79,6 +79,13 @@
                   Background="{DynamicResource PlaceHolderBrush}">
             <Grid>
               <Border Background="{DynamicResource PlaceHolderBrush}">
+              <Image Grid.ColumnSpan="2"
+                       Source="{Binding ActualThemeVariant, RelativeSource={RelativeSource Self}, Converter={StaticResource LogoThemeConverter}, ConverterParameter=Full}}"
+                       Width="32" Height="32"
+                       Stretch="Uniform"
+                       Opacity="0.12"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center" />  
                 <Border.IsVisible>
                   <Binding Path="#ChannelLogo.IsImageLoaded"
                            Converter="{StaticResource InverseBoolConverter}"/>

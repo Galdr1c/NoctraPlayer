@@ -209,7 +209,7 @@
         -->
         <ItemsControl x:Name="ProfileItemsControl"
                       ItemsSource="{Binding DisplayItems}"
-                      Margin="12,0,12,20">
+                      Margin="60,0,60,20">
           <ItemsControl.ItemsPanel>
             <ItemsPanelTemplate>
               <!--
@@ -347,12 +347,15 @@
                         HorizontalAlignment="Center">
                     <!-- Beyaz daire + artı ikonu (Netflix tarzı) -->
                     <Border CornerRadius="12"
-                            Background="#E5E5E5"
+                            Background="Transparent"
                             HorizontalAlignment="Center"
+                            BorderBrush="{DynamicResource Surface1Brush}"
+                            BorderThickness="2"
+                            Padding="50"
                             VerticalAlignment="Center">
                       <icons:MaterialIcon Kind="Plus"
-                                          Width="42" Height="42"
-                                          Foreground="#1A1A1A"
+                                          Width="32" Height="32"
+                                          Foreground="{DynamicResource GlowBrush}"
                                           HorizontalAlignment="Center"
                                           VerticalAlignment="Center" />
                     </Border>
@@ -392,7 +395,7 @@
                       VerticalAlignment="Center">
                 <icons:MaterialIcon Kind="Plus"
                                     Width="42" Height="42"
-                                    Foreground="{DynamicResource Bg0Brush}"
+                                    Foreground="{DynamicResource Surface0Color}"
                                     HorizontalAlignment="Center"
                                     VerticalAlignment="Center" />
               </Border>

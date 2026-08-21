@@ -170,7 +170,7 @@
                   BringIntoViewOnFocusChange="True"
                   VerticalScrollBarVisibility="Auto"
                   HorizontalScrollBarVisibility="Disabled">
-      <StackPanel Margin="60,48,60,120"
+      <StackPanel Margin="30,20,30,20"
                   Spacing="20">
 
         <!-- ── Avatar bölümü ─────────────────────────────────────
@@ -490,9 +490,8 @@
                           IsVisible="{Binding IsXtream}">
                 <TextBlock Classes="FieldLabel"
                            Text="{loc:Translate Profiles.Account.Password}" />
-                <Grid ColumnDefinitions="*,Auto">
+                <Panel>
                   <TextBox x:Name="PasswordTextBox"
-                           Grid.Column="0"
                            Classes="password"
                            Text="{Binding Password}"
                            Classes.error="{Binding PasswordError, Converter={StaticResource StringNotEmptyToBoolConverter}}"
@@ -500,10 +499,11 @@
                            IsEnabled="{Binding CanEditProviderCredentials}"
                            TextInputOptions.ContentType="Password"
                            TextInputOptions.ReturnKeyType="Done"
+                           Padding="12,0,40,0"
                            PlaceholderText="{loc:Translate Profiles.Account.PasswordPlaceholder}" />
-                  <Button Grid.Column="1"
-                          Theme="{StaticResource RevealBtn}"
+                  <Button Theme="{StaticResource RevealBtn}"
                           Command="{Binding TogglePasswordRevealCommand}"
+                          HorizontalAlignment="Right"
                           VerticalAlignment="Center"
                           ToolTip.Tip="{Binding PasswordToggleA11yName}"
                           AutomationProperties.Name="{Binding PasswordToggleA11yName}">
@@ -512,7 +512,7 @@
                                         Foreground="{DynamicResource TextMutedBrush}"
                                         VerticalAlignment="Center" />
                   </Button>
-                </Grid>
+                </Panel>
                 <TextBlock Text="{Binding PasswordError}"
                            Foreground="{DynamicResource ErrorBrush}"
                            FontSize="{DynamicResource FCaption}"
@@ -554,6 +554,8 @@
                            Foreground="{DynamicResource TextMutedBrush}"
                            Margin="0,0,0,14"
                            HorizontalAlignment="Center"
+                           TextWrapping="Wrap"
+                           MaxLines="2"
                            TextAlignment="Center" />
               </StackPanel>
 
@@ -610,16 +612,6 @@
                                  FontSize="{DynamicResource FBodyL}"
                                  FontWeight="Medium"
                                  Foreground="{DynamicResource TextPrimaryBrush}" />
-                      <!-- Premium rozeti -->
-                      <Border Background="{DynamicResource PremiumBadgeBrush}"
-                              CornerRadius="4"
-                              Padding="6,2"
-                              VerticalAlignment="Center">
-                        <TextBlock Text="PREMIUM"
-                                   FontSize="{DynamicResource FOverline}"
-                                   FontWeight="Bold"
-                                   Foreground="{DynamicResource PremiumBadgeTextBrush}" />
-                      </Border>
                     </StackPanel>
                     <TextBlock Text="{loc:Translate Profiles.Add.PinLockDescription}"
                                FontSize="{DynamicResource FOverline}"

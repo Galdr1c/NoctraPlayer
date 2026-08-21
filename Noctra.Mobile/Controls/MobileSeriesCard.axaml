@@ -37,6 +37,13 @@
     <Border Background="Transparent">
       <Grid>
         <Border Background="{DynamicResource SurfaceLightBrush}">
+        <Image Grid.ColumnSpan="2"
+                       Source="{Binding ActualThemeVariant, RelativeSource={RelativeSource Self}, Converter={StaticResource LogoThemeConverter}, ConverterParameter=Full}}"
+                       Width="72" Height="72"
+                       Stretch="Uniform"
+                       Opacity="0.12"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center" />  
           <Border.IsVisible>
             <Binding Path="#SeriesPoster.IsImageLoaded" Converter="{StaticResource InverseBoolConverter}"/>
           </Border.IsVisible>
