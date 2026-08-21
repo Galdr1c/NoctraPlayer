@@ -110,6 +110,38 @@ public sealed class AdMobMobileAdvertisingService : IMobileAdvertisingService
 
     public event EventHandler? ConsentStatusChanged;
 
+    /// <summary>
+    /// Used by the Android provider factory before resolving the AdMob service.
+    /// Keeping the capability check at the boundary prevents a Huawei-only or
+    /// otherwise unsupported device from touching the Google SDK at runtime.
+    /// </summary>
+    public static bool IsGmsAvailable(Context context)
+    {
+        try
+        {
+            var packageInfo = context.PackageManager?.GetPackageInfo(
+                "com.google.android.gms",
+                global::Android.Content.PM.PackageInfoFlags.MetaData |
+                global::Android.Content.PM.PackageInfoFlags.Signatures);
+            if (packageInfo?.ApplicationInfo?.Enabled != true)
+            {
+                return false;
+            }
+
+            // Huawei tablets can contain a microG/GBox compatibility package
+            // with the same package name. AdMob requires Google-signed Play
+            // Services; the verifier distinguishes that package from genuine
+            // GMS without relying on a version-number heuristic.
+            return global::Android.Gms.Common.GoogleSignatureVerifier
+                .GetInstance(context)
+                .IsGooglePublicSignedPackage(packageInfo);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     public async Task InitializeAsync(CancellationToken cancellationToken = default)
     {
         global::Android.Util.Log.Info("NoctraAds", "consent/init start");

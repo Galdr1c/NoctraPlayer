@@ -90,6 +90,12 @@ public static class AndroidServiceCollectionExtensions
                 serviceProvider.GetRequiredService<AndroidActivityProvider>(),
                 serviceProvider.GetRequiredService<ILicenseService>(),
                 serviceProvider.GetRequiredService<StartupPrivacyCoordinator>()));
+        services.AddSingleton<HuaweiMobileAdvertisingService>(serviceProvider =>
+            new HuaweiMobileAdvertisingService(
+                serviceProvider.GetRequiredService<Context>(),
+                serviceProvider.GetRequiredService<AndroidActivityProvider>(),
+                serviceProvider.GetRequiredService<ILicenseService>(),
+                serviceProvider.GetRequiredService<StartupPrivacyCoordinator>()));
         services.AddSingleton<MobileAdvertisingBootstrapper>();
         services.AddSingleton<IMobileAdvertisingService>(serviceProvider =>
         {
@@ -101,8 +107,28 @@ public static class AndroidServiceCollectionExtensions
                     serviceProvider.GetRequiredService<ILicenseService>());
             }
 #endif
-            global::Android.Util.Log.Info("NoctraAds", "registered=AdMobMobileAdvertisingService");
-            return serviceProvider.GetRequiredService<AdMobMobileAdvertisingService>();
+            var context = serviceProvider.GetRequiredService<Context>();
+#if DEBUG
+            if (HuaweiMobileAdvertisingService.ForceProviderForDebug)
+            {
+                global::Android.Util.Log.Info("NoctraAds", "registered=HuaweiMobileAdvertisingService (debug override)");
+                return serviceProvider.GetRequiredService<HuaweiMobileAdvertisingService>();
+            }
+#endif
+            if (HuaweiMobileAdvertisingService.IsHmsOnlyDevice(context))
+            {
+                global::Android.Util.Log.Info("NoctraAds", "registered=HuaweiMobileAdvertisingService");
+                return serviceProvider.GetRequiredService<HuaweiMobileAdvertisingService>();
+            }
+
+            if (AdMobMobileAdvertisingService.IsGmsAvailable(context))
+            {
+                global::Android.Util.Log.Info("NoctraAds", "registered=AdMobMobileAdvertisingService");
+                return serviceProvider.GetRequiredService<AdMobMobileAdvertisingService>();
+            }
+
+            global::Android.Util.Log.Info("NoctraAds", "registered=NoOpMobileAdvertisingService");
+            return new NoOpMobileAdvertisingService();
         });
         services.AddTransient<WatermarkViewModel>();
         services.AddSingleton<CoreMainViewModel>();

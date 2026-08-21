@@ -1,7 +1,8 @@
 # Android banner host and UMP lifecycle design
 
 **Date:** 2026-08-21  
-**Scope:** Android/Avalonia banner rendering and UMP consent-state boundaries
+**Scope:** Android/Avalonia banner rendering, GMS/HMS provider selection, and
+consent-state boundaries
 
 ## Context and verified root cause
 
@@ -57,6 +58,8 @@ window, so the normal Android `AdView` below it cannot be visible.
 - No redesign of the Settings Privacy Choices UI.
 - No replacement of the existing native video `TextureView` or player activity.
 - No popup/overlay-window implementation for advertising.
+- No server-side mediation migration or change to the existing GMS AdMob
+  account.
 
 ## Design
 
@@ -160,6 +163,35 @@ Choices state, but they never create banner/interstitial ads because
 `CanServeAds` remains false. Consent withdrawal clears any preloaded
 interstitial and emits the existing eligibility/consent notifications.
 
+### Huawei HMS provider parity
+
+The Android DI factory selects exactly one advertising provider per process:
+
+```text
+Google Mobile Services available -> existing AdMob provider
+HMS Core available, GMS unavailable -> Huawei Ads provider
+Neither available -> NoOp provider
+```
+
+The Huawei provider implements the same `IMobileAdvertisingService` contract:
+
+- Calls `HwAds.Init` once and only on an HMS-capable device.
+- Hosts Huawei `BannerView` through the same parent-context `FrameLayout`,
+  loaded/failed state, native-generation, and z-order rules as AdMob.
+- Preloads Huawei `InterstitialAd` and uses the same single-use playback-exit
+  policy and disposal/cancellation guards.
+- Uses Huawei Ads consent APIs on HMS devices; Google UMP is not initialized
+  there. Consent withdrawal disables both Huawei placements.
+- Uses Huawei QA slots `testw6vs28auh3` (banner), `testb4znbuh3n2`
+  (video interstitial), and `teste9ih9j0rc3` (image interstitial). Formal Petal
+  Publisher slot IDs are injected through build metadata for release.
+
+If HMS Core, a slot, or SDK initialization is unavailable, the provider fails
+closed. GMS devices keep the current AdMob IDs and behavior unchanged.
+Debug QA builds may use the official Huawei test slots and a local consent-dialog
+fallback when the lab network cannot reach the Huawei consent endpoint; this
+override is absent from Release metadata.
+
 ### Error and disposal handling
 
 - A missing activity, canceled operation, missing ad unit, UMP error, or ad
@@ -189,6 +221,10 @@ implementation. They cover:
 5. Composition contract: shell mode does not call unconditional
    `SetZOrderOnTop(true)`; player open requests overlay mode before showing the
    player, and every close/failure path restores shell mode.
+6. Provider contract: GMS selects AdMob, HMS-only selects Huawei Ads, and an
+   unsupported device selects NoOp without initializing both SDKs.
+7. HMS placement contract: Huawei banner/interstitial test slots use the same
+   visible/failed/dispose and playback-exit paths as AdMob.
 
 After the red tests, implement the smallest changes needed for green tests,
 then run the focused advertising tests, the full test suite, an Android Debug
@@ -213,5 +249,7 @@ build, and a data-preserving ADB smoke test. The smoke test records:
   loaded/clickable behind Avalonia.
 - Opening the player preserves video plus Avalonia controls; closing it restores
   the banner and does not leave a stale native surface.
+- A Huawei-only device can show the Huawei test banner and playback-exit test
+  interstitial without Google Play Services.
 - Focused and full tests pass; Android build has zero errors; smoke test has no
   new crash/ANR/OOM and no duplicate native-destroy failure.

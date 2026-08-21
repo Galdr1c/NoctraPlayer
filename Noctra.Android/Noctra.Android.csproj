@@ -41,6 +41,15 @@
     <NoctraBannerAdUnitId Condition="'$(NoctraBannerAdUnitId)' == ''">ca-app-pub-4557682582400970/5775345477</NoctraBannerAdUnitId>
     <NoctraInterstitialAdUnitId Condition="'$(NoctraInterstitialAdUnitId)' == ''">ca-app-pub-4557682582400970/6102598203</NoctraInterstitialAdUnitId>
     <NoctraAdMobDebugGeography Condition="'$(NoctraAdMobDebugGeography)' == ''"></NoctraAdMobDebugGeography>
+    <!-- Huawei Petal Ads QA slots. Release builds must pass formal slots from
+         Petal Publisher Service; empty Release values fail closed. -->
+    <NoctraHuaweiBannerAdUnitId Condition="'$(Configuration)' == 'Debug' and '$(NoctraHuaweiBannerAdUnitId)' == ''">testw6vs28auh3</NoctraHuaweiBannerAdUnitId>
+    <NoctraHuaweiInterstitialAdUnitId Condition="'$(Configuration)' == 'Debug' and '$(NoctraHuaweiInterstitialAdUnitId)' == ''">testb4znbuh3n2</NoctraHuaweiInterstitialAdUnitId>
+    <NoctraHuaweiImageInterstitialAdUnitId Condition="'$(Configuration)' == 'Debug' and '$(NoctraHuaweiImageInterstitialAdUnitId)' == ''">teste9ih9j0rc3</NoctraHuaweiImageInterstitialAdUnitId>
+    <NoctraHuaweiForceConsent Condition="'$(Configuration)' == 'Debug' and '$(NoctraHuaweiForceConsent)' == ''">true</NoctraHuaweiForceConsent>
+    <!-- Debug-only provider override for HMS devices that also contain a
+         disabled/compatibility GMS package. Never enabled by Release builds. -->
+    <NoctraHuaweiForceProvider Condition="'$(NoctraHuaweiForceProvider)' == ''">false</NoctraHuaweiForceProvider>
     <AndroidManifestPlaceholders>$(AndroidManifestPlaceholders);noctraAdMobAppId=$(NoctraAdMobAppId)</AndroidManifestPlaceholders>
   </PropertyGroup>
 
@@ -50,6 +59,11 @@
     <AssemblyMetadata Include="Noctra.AdMob.InterstitialAdUnitId" Value="$(NoctraInterstitialAdUnitId)" />
     <AssemblyMetadata Include="Noctra.AdMob.TestDeviceIds" Value="$(NoctraAdMobTestDeviceIds)" />
     <AssemblyMetadata Include="Noctra.AdMob.DebugGeography" Value="$(NoctraAdMobDebugGeography)" Condition="'$(NoctraAdMobDebugGeography)' != ''" />
+    <AssemblyMetadata Include="Noctra.Huawei.BannerAdUnitId" Value="$(NoctraHuaweiBannerAdUnitId)" Condition="'$(NoctraHuaweiBannerAdUnitId)' != ''" />
+    <AssemblyMetadata Include="Noctra.Huawei.InterstitialAdUnitId" Value="$(NoctraHuaweiInterstitialAdUnitId)" Condition="'$(NoctraHuaweiInterstitialAdUnitId)' != ''" />
+    <AssemblyMetadata Include="Noctra.Huawei.ImageInterstitialAdUnitId" Value="$(NoctraHuaweiImageInterstitialAdUnitId)" Condition="'$(NoctraHuaweiImageInterstitialAdUnitId)' != ''" />
+    <AssemblyMetadata Include="Noctra.Huawei.ForceConsent" Value="$(NoctraHuaweiForceConsent)" Condition="'$(NoctraHuaweiForceConsent)' != ''" />
+    <AssemblyMetadata Include="Noctra.Huawei.ForceProvider" Value="$(NoctraHuaweiForceProvider)" Condition="'$(NoctraHuaweiForceProvider)' != ''" />
   </ItemGroup>
 
   <ItemGroup>
@@ -104,6 +118,8 @@
     <PackageReference Include="Xamarin.AndroidX.Media3.Session" Version="1.4.1.1" />
     <PackageReference Include="Xamarin.GooglePlayServices.Ads" Version="125.4.0.2" />
     <PackageReference Include="Xamarin.Google.UserMessagingPlatform" Version="4.0.0.3" />
+    <PackageReference Include="Huawei.Hms.Ads" Version="3.4.67.302" />
+    <PackageReference Include="Huawei.Hms.AdsConsent" Version="3.4.67.302" />
   </ItemGroup>
 
   <ItemGroup>

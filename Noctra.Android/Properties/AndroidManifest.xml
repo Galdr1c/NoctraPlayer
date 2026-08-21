@@ -9,6 +9,11 @@
 	<uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
 	<uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
 	<queries>
+		<!-- Provider capability checks must be visible on Android 11+; without
+		     these package records both GMS and HMS can look absent. -->
+		<package android:name="com.google.android.gms" />
+		<package android:name="com.huawei.hwid" />
+		<package android:name="com.huawei.hms" />
 		<intent>
 			<action android:name="android.intent.action.SENDTO" />
 			<data android:scheme="mailto" />

@@ -194,6 +194,53 @@ public sealed class AdvertisingAccessibilityContractTests
         Assert.Contains("SetPlayerOverlayActive(false)", closeBlock, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void HuaweiProvider_UsesHmsFallbackAndOfficialTestSlots()
+    {
+        var project = File.ReadAllText(ProjectSource(
+            "Noctra.Android", "Noctra.Android.csproj"));
+        var manifest = File.ReadAllText(ProjectSource(
+            "Noctra.Android", "Properties", "AndroidManifest.xml"));
+        var di = File.ReadAllText(ProjectSource(
+            "Noctra.Android", "DependencyInjection", "AndroidServiceCollectionExtensions.cs"));
+        var providerPath = ProjectSource(
+            "Noctra.Android", "Advertising", "HuaweiMobileAdvertisingService.cs");
+
+        Assert.Contains("Huawei.Hms.Ads", project, StringComparison.Ordinal);
+        Assert.Contains("com.huawei.hwid", manifest, StringComparison.Ordinal);
+        Assert.Contains("com.google.android.gms", manifest, StringComparison.Ordinal);
+        Assert.Contains("HuaweiMobileAdvertisingService", di, StringComparison.Ordinal);
+        Assert.True(File.Exists(providerPath));
+
+        var provider = File.ReadAllText(providerPath);
+        Assert.Contains("testw6vs28auh3", provider, StringComparison.Ordinal);
+        Assert.Contains("testb4znbuh3n2", provider, StringComparison.Ordinal);
+        Assert.Contains("teste9ih9j0rc3", provider, StringComparison.Ordinal);
+        Assert.Contains("HwAds.Init", provider, StringComparison.Ordinal);
+        Assert.Contains("ShowPrivacyOptionsAsync", provider, StringComparison.Ordinal);
+        Assert.Contains("Build.Manufacturer", provider, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void AndroidProviderFactory_FailsClosedWhenNeitherPlayServicesIsPresent()
+    {
+        var adMob = File.ReadAllText(ProjectSource(
+            "Noctra.Android", "Advertising", "AdMobMobileAdvertisingService.cs"));
+        var di = File.ReadAllText(ProjectSource(
+            "Noctra.Android", "DependencyInjection", "AndroidServiceCollectionExtensions.cs"));
+
+        Assert.Contains("IsGmsAvailable", adMob, StringComparison.Ordinal);
+        Assert.Contains("HuaweiMobileAdvertisingService.IsHmsOnlyDevice(context)", di, StringComparison.Ordinal);
+        Assert.Contains("AdMobMobileAdvertisingService.IsGmsAvailable(context)", di, StringComparison.Ordinal);
+        Assert.Contains("new NoOpMobileAdvertisingService()", di, StringComparison.Ordinal);
+        Assert.Contains("ForceProviderForDebug", di, StringComparison.Ordinal);
+        Assert.Contains("Noctra.Huawei.ForceProvider", providerSourceForMetadata(), StringComparison.Ordinal);
+        Assert.Contains("GoogleSignatureVerifier", adMob, StringComparison.Ordinal);
+    }
+
+    private static string providerSourceForMetadata()
+        => File.ReadAllText(ProjectSource("Noctra.Android", "Noctra.Android.csproj"));
+
     private static string ProjectSource(params string[] segments)
         => Path.GetFullPath(Path.Combine(
             new[] { AppContext.BaseDirectory, "..", "..", "..", ".." }

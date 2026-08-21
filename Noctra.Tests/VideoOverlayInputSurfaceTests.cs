@@ -106,7 +106,12 @@ public sealed class VideoOverlayInputSurfaceTests
 
         Assert.Contains("ConfigureAvaloniaOverlaySurface();",
             mainActivity, StringComparison.Ordinal);
-        Assert.Contains("surfaceView.SetZOrderOnTop(true);",
+        // Player mode enables the Avalonia surface above native video, while
+        // shell mode leaves it below Android banner content. The activity now
+        // applies the requested composition state instead of forcing one mode.
+        Assert.Contains("surfaceView.SetZOrderOnTop(_playerOverlaySurfaceActive);",
+            mainActivity, StringComparison.Ordinal);
+        Assert.Contains("SetAvaloniaPlayerOverlayActive(bool active)",
             mainActivity, StringComparison.Ordinal);
         Assert.Contains("surfaceView.Holder.SetFormat(Format.Translucent);",
             mainActivity, StringComparison.Ordinal);
@@ -114,7 +119,9 @@ public sealed class VideoOverlayInputSurfaceTests
             "throw new InvalidOperationException(\"Avalonia rendering surface is unavailable.\")",
             mainActivity,
             StringComparison.Ordinal);
-        Assert.Contains("ConfigureAvaloniaOverlaySurface(remainingAttempts - 1)",
+        Assert.Contains("ConfigureAvaloniaOverlaySurface(",
+            mainActivity, StringComparison.Ordinal);
+        Assert.Contains("remainingAttempts - 1",
             mainActivity, StringComparison.Ordinal);
         Assert.Contains(
             "SetAvaloniaSurfaceVisibilityForPictureInPicture(isInPictureInPictureMode);",
