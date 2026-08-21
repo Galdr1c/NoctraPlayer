@@ -78,6 +78,17 @@ public sealed class AndroidPlayerWindowService : IPlayerWindowService
         });
     }
 
+    public void SetPlayerOverlayActive(bool active)
+    {
+        RunOnUi(activity =>
+        {
+            if (activity is global::Noctra.Android.MainActivity mainActivity)
+            {
+                mainActivity.SetAvaloniaPlayerOverlayActive(active);
+            }
+        });
+    }
+
     public void SetBrightness(double brightness)
     {
         // Negatif -> sistem varsayılanı

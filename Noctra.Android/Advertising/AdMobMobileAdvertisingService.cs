@@ -5,6 +5,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Android.App;
 using Android.Content;
+using Android.Views;
+using Android.Widget;
 using Avalonia.Android;
 using Avalonia.Automation.Peers;
 using Avalonia.Controls;
@@ -98,7 +100,7 @@ public sealed class AdMobMobileAdvertisingService : IMobileAdvertisingService
         (!string.IsNullOrWhiteSpace(_bannerUnitId) ||
          (Options.PlaybackExit.Enabled && !string.IsNullOrWhiteSpace(_interstitialUnitId)));
 
-    public bool CanRequestAds => _canRequestAds && IsAdsEligible;
+    public bool CanRequestAds => _canRequestAds;
 
     public bool CanShowPrivacyOptions => _privacyOptionsRequired;
 
@@ -110,6 +112,7 @@ public sealed class AdMobMobileAdvertisingService : IMobileAdvertisingService
 
     public async Task InitializeAsync(CancellationToken cancellationToken = default)
     {
+        global::Android.Util.Log.Info("NoctraAds", "consent/init start");
         await _initLock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
@@ -126,6 +129,11 @@ public sealed class AdMobMobileAdvertisingService : IMobileAdvertisingService
                 // mid-session). Bring ads up without re-running the consent flow.
                 await InitializeAdsIfEligibleAsync(cancellationToken).ConfigureAwait(false);
             }
+
+            global::Android.Util.Log.Info(
+                "NoctraAds",
+                $"consent/init end canRequest={_canRequestAds} privacyRequired={_privacyOptionsRequired} " +
+                $"eligible={IsAdsEligible} sdkInitialized={_mobileAdsInitialized}");
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -138,7 +146,9 @@ public sealed class AdMobMobileAdvertisingService : IMobileAdvertisingService
         }
     }
 
-    public IDisposable? CreateBannerAd(Control host)
+    public IDisposable? CreateBannerAd(
+        Control host,
+        Action<BannerAdLoadState>? stateChanged = null)
     {
         if (!CanServeAds || host is null)
         {
@@ -150,17 +160,7 @@ public sealed class AdMobMobileAdvertisingService : IMobileAdvertisingService
             return null;
         }
 
-        var adView = new Google.Android.Gms.Ads.AdView(_context)
-        {
-            AdSize = Google.Android.Gms.Ads.AdSize.Banner,
-            AdUnitId = _bannerUnitId
-        };
-        adView.AdListener = new BannerAdListener(adView);
-
-        var request = new AdRequest.Builder().Build();
-        DispatchOnMainThread(() => adView.LoadAd(request));
-
-        var nativeHost = new BannerNativeControlHost(adView)
+        var nativeHost = new BannerNativeControlHost(_bannerUnitId, stateChanged)
         {
             HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch,
             VerticalAlignment = Avalonia.Layout.VerticalAlignment.Stretch
@@ -171,7 +171,7 @@ public sealed class AdMobMobileAdvertisingService : IMobileAdvertisingService
             cc.Content = nativeHost;
         }
 
-        return new BannerAdHandle(adView, nativeHost);
+        return new BannerAdHandle(nativeHost);
     }
 
     public void PrimeInterstitial()
@@ -604,20 +604,38 @@ public sealed class AdMobMobileAdvertisingService : IMobileAdvertisingService
             => _completed();
     }
 
-    private sealed class BannerAdListener : AdListener
+    internal sealed class BannerAdListener : AdListener
     {
         private readonly Google.Android.Gms.Ads.AdView _adView;
+        private readonly Action<BannerAdLoadState>? _stateChanged;
+        private readonly Func<bool> _isInvalid;
 
-        public BannerAdListener(Google.Android.Gms.Ads.AdView adView)
+        public BannerAdListener(
+            Google.Android.Gms.Ads.AdView adView,
+            Action<BannerAdLoadState>? stateChanged,
+            Func<bool> isInvalid)
         {
             _adView = adView;
+            _stateChanged = stateChanged;
+            _isInvalid = isInvalid;
         }
 
         public override void OnAdLoaded()
         {
+            if (_isInvalid())
+            {
+                return;
+            }
+
             global::Android.Util.Log.Info("NoctraAds", "banner loaded");
+            _stateChanged?.Invoke(BannerAdLoadState.Loaded);
             new global::Android.OS.Handler(global::Android.OS.Looper.MainLooper).Post(() =>
             {
+                if (_isInvalid())
+                {
+                    return;
+                }
+
                 var loc = new int[2];
                 _adView.GetLocationOnScreen(loc);
                 global::Android.Util.Log.Info("NoctraAds",
@@ -626,8 +644,16 @@ public sealed class AdMobMobileAdvertisingService : IMobileAdvertisingService
         }
 
         public override void OnAdFailedToLoad(LoadAdError error)
-            => global::Android.Util.Log.Warn("NoctraAds",
+        {
+            if (_isInvalid())
+            {
+                return;
+            }
+
+            _stateChanged?.Invoke(BannerAdLoadState.Failed);
+            global::Android.Util.Log.Warn("NoctraAds",
                 $"banner load failed: code={error.Code} domain={error.Domain} msg={error.Message}");
+        }
 
         public override void OnAdImpression()
             => global::Android.Util.Log.Info("NoctraAds", "banner impression");
@@ -696,12 +722,19 @@ public sealed class AdMobMobileAdvertisingService : IMobileAdvertisingService
 /// </summary>
 internal sealed class BannerNativeControlHost : NativeControlHost
 {
-    private readonly Google.Android.Gms.Ads.AdView _adView;
-    private int _destroyed;
+    private readonly string _adUnitId;
+    private readonly Action<BannerAdLoadState>? _stateChanged;
+    private FrameLayout? _container;
+    private Google.Android.Gms.Ads.AdView? _adView;
+    private int _disposed;
+    private int _nativeGeneration;
 
-    public BannerNativeControlHost(Google.Android.Gms.Ads.AdView adView)
+    public BannerNativeControlHost(
+        string adUnitId,
+        Action<BannerAdLoadState>? stateChanged)
     {
-        _adView = adView;
+        _adUnitId = adUnitId;
+        _stateChanged = stateChanged;
     }
 
     // Avalonia Android 12.1's interop peer throws NotImplementedException when
@@ -712,26 +745,81 @@ internal sealed class BannerNativeControlHost : NativeControlHost
         => new NoneAutomationPeer(this);
 
     protected override IPlatformHandle CreateNativeControlCore(IPlatformHandle parent)
-        => new AndroidViewControlHandle(_adView);
+    {
+        var context = (parent as AndroidViewControlHandle)?.View.Context
+            ?? global::Android.App.Application.Context;
+
+        if (Volatile.Read(ref _disposed) != 0)
+        {
+            return new AndroidViewControlHandle(new FrameLayout(context));
+        }
+
+        DestroyCurrentAd();
+        var nativeGeneration = Interlocked.Increment(ref _nativeGeneration);
+        var container = new FrameLayout(context);
+        var adView = new Google.Android.Gms.Ads.AdView(context)
+        {
+            AdSize = Google.Android.Gms.Ads.AdSize.Banner,
+            AdUnitId = _adUnitId
+        };
+        var layoutParams = new FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.WrapContent,
+            ViewGroup.LayoutParams.WrapContent,
+            GravityFlags.Center);
+
+        container.AddView(adView, layoutParams);
+        _container = container;
+        _adView = adView;
+        adView.AdListener = new AdMobMobileAdvertisingService.BannerAdListener(
+            adView,
+            _stateChanged,
+            () => Volatile.Read(ref _disposed) != 0 ||
+                  Volatile.Read(ref _nativeGeneration) != nativeGeneration);
+        _stateChanged?.Invoke(BannerAdLoadState.Loading);
+
+        // The view is now in Avalonia's native hierarchy, so start the request
+        // only after the host/container relationship exists.
+        adView.LoadAd(new AdRequest.Builder().Build());
+        return new AndroidViewControlHandle(container);
+    }
+
+    protected override void DestroyNativeControlCore(IPlatformHandle control)
+    {
+        DestroyCurrentAd();
+        base.DestroyNativeControlCore(control);
+    }
 
     public void DestroyAd()
     {
-        if (Interlocked.Exchange(ref _destroyed, 1) == 0)
+        if (Interlocked.Exchange(ref _disposed, 1) == 0)
         {
-            _adView.Destroy();
+            DestroyCurrentAd();
         }
+    }
+
+    private void DestroyCurrentAd()
+    {
+        Interlocked.Increment(ref _nativeGeneration);
+        var adView = _adView;
+        _adView = null;
+        if (adView is not null)
+        {
+            _container?.RemoveView(adView);
+            adView.Destroy();
+        }
+
+        _container?.RemoveAllViews();
+        _container = null;
     }
 }
 
 internal sealed class BannerAdHandle : IDisposable
 {
-    private readonly Google.Android.Gms.Ads.AdView _adView;
     private readonly BannerNativeControlHost _nativeHost;
     private int _disposed;
 
-    public BannerAdHandle(Google.Android.Gms.Ads.AdView adView, BannerNativeControlHost nativeHost)
+    public BannerAdHandle(BannerNativeControlHost nativeHost)
     {
-        _adView = adView;
         _nativeHost = nativeHost;
     }
 
@@ -741,6 +829,5 @@ internal sealed class BannerAdHandle : IDisposable
             return;
 
         _nativeHost.DestroyAd();
-        _adView.Destroy();
     }
 }

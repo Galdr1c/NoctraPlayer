@@ -65,7 +65,9 @@ public interface IMobileAdvertisingService
     /// Returns a disposable handle that releases the ad when disposed.
     /// Returns null when no banner ad can be served.
     /// </summary>
-    IDisposable? CreateBannerAd(Control host);
+    IDisposable? CreateBannerAd(
+        Control host,
+        Action<BannerAdLoadState>? stateChanged = null);
 
     /// <summary>
     /// Runs once at startup. A production provider always refreshes UMP consent
@@ -110,7 +112,10 @@ public sealed class NoOpMobileAdvertisingService : IMobileAdvertisingService
     public Task<bool> ShowPrivacyOptionsAsync(CancellationToken cancellationToken = default)
         => Task.FromResult(false);
 
-    public IDisposable? CreateBannerAd(Control host) => null;
+    public IDisposable? CreateBannerAd(
+        Control host,
+        Action<BannerAdLoadState>? stateChanged = null)
+        => null;
 
     public Task InitializeAsync(CancellationToken cancellationToken = default)
         => Task.CompletedTask;
@@ -163,7 +168,10 @@ public sealed class PreviewMobileAdvertisingService : IMobileAdvertisingService
     public Task<bool> ShowPrivacyOptionsAsync(CancellationToken cancellationToken = default)
         => Task.FromResult(false);
 
-    public IDisposable? CreateBannerAd(Control host) => null;
+    public IDisposable? CreateBannerAd(
+        Control host,
+        Action<BannerAdLoadState>? stateChanged = null)
+        => null;
 
     public Task InitializeAsync(CancellationToken cancellationToken = default)
         => Task.CompletedTask;

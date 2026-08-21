@@ -44,6 +44,7 @@ public class MainActivity : AvaloniaMainActivity
     // OnStop'ta bizim duraklattığımız oynatmayı OnStart'ta devam ettirmek için işaret.
     // Kullanıcının manuel duraklatmasını geri almamak adına yalnızca bu flag set ise resume edilir.
     private bool _pausedByLifecycle;
+    private bool _playerOverlaySurfaceActive;
 #if DEBUG
     private IDisposable? _performanceProbe;
 #endif
@@ -150,7 +151,9 @@ public class MainActivity : AvaloniaMainActivity
         });
     }
 
-    private void ConfigureAvaloniaOverlaySurface(int remainingAttempts = 2)
+    private void ConfigureAvaloniaOverlaySurface(
+        int remainingAttempts = 2,
+        bool recreateLegacySurface = false)
     {
         var decorView = Window?.DecorView;
         var content = decorView?
@@ -160,18 +163,62 @@ public class MainActivity : AvaloniaMainActivity
         {
             if (remainingAttempts > 0 && decorView is not null)
             {
-                decorView.Post(() => ConfigureAvaloniaOverlaySurface(remainingAttempts - 1));
+                decorView.Post(() => ConfigureAvaloniaOverlaySurface(
+                    remainingAttempts - 1,
+                    recreateLegacySurface));
             }
 
             return;
         }
 
-        // The native video TextureView is drawn into the activity window. Avalonia's
-        // surface needs an alpha channel and must be composed above that window so
-        // decoded video and player controls remain visible together.
-        surfaceView.SetZOrderOnTop(true);
+        // Shell mode keeps Avalonia behind normal Android window content so the
+        // native AdView can be visible. Player mode moves Avalonia above the
+        // native video TextureView so controls remain visible over playback.
+        surfaceView.SetZOrderOnTop(_playerOverlaySurfaceActive);
         surfaceView.Holder.SetFormat(Format.Translucent);
         surfaceView.SetBackgroundColor(Color.Transparent);
+
+        if (recreateLegacySurface && Build.VERSION.SdkInt < BuildVersionCodes.R)
+        {
+            RecreateAvaloniaSurfaceForLegacyZOrder(surfaceView);
+        }
+    }
+
+    internal void SetAvaloniaPlayerOverlayActive(bool active)
+    {
+        var changed = _playerOverlaySurfaceActive != active;
+        _playerOverlaySurfaceActive = active;
+        ConfigureAvaloniaOverlaySurface(
+            remainingAttempts: 2,
+            recreateLegacySurface: changed);
+        Log.Info("NoctraSurface", $"playerOverlayActive={active}");
+    }
+
+    private void RecreateAvaloniaSurfaceForLegacyZOrder(SurfaceView surfaceView)
+    {
+        if (surfaceView.Visibility != ViewStates.Visible)
+        {
+            return;
+        }
+
+        var decorView = Window?.DecorView;
+        if (decorView is null)
+        {
+            return;
+        }
+
+        surfaceView.Visibility = ViewStates.Gone;
+        void RestoreSurface()
+        {
+            surfaceView.Visibility = ViewStates.Visible;
+            surfaceView.RequestLayout();
+            surfaceView.Invalidate();
+        }
+
+        if (!decorView.Post(RestoreSurface))
+        {
+            RestoreSurface();
+        }
     }
 
     private static SurfaceView? FindSurfaceView(View? view)

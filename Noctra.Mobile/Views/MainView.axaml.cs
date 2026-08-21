@@ -192,6 +192,17 @@ public partial class MainView : UserControl
             advertising.EligibilityChanged += OnAdvertisingEligibilityChanged;
         }
 
+        // MainActivity can reach OnCreate before Avalonia has finished
+        // constructing App.Services. Starting the bootstrap here as well makes
+        // the UMP refresh deterministic once the visual tree and services are
+        // ready; the provider's initialization lock makes duplicate starts
+        // harmless when the activity path already succeeded.
+        if (Application.Current is App app &&
+            app.EnsureServices()?.GetService<MobileAdvertisingBootstrapper>() is { } bootstrapper)
+        {
+            _ = StartAdvertisingBootstrapSafelyAsync(bootstrapper);
+        }
+
         // Çentik / sistem çubukları (safe-area) padding'lerini uygula ve değişimleri dinle.
         var topLevel = TopLevel.GetTopLevel(this);
         if (OperatingSystem.IsAndroid() && topLevel is not null)
@@ -397,6 +408,20 @@ public partial class MainView : UserControl
         if (Application.Current is App app && app.Services is not null)
         {
             app.Services.GetService<StartupPrivacyCoordinator>()?.MarkLegalConsentFlowCompleted();
+        }
+    }
+
+    private static async Task StartAdvertisingBootstrapSafelyAsync(
+        MobileAdvertisingBootstrapper bootstrapper)
+    {
+        try
+        {
+            await bootstrapper.StartAsync().ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            System.Diagnostics.Debug.WriteLine(
+                $"[MainView] Advertising bootstrap failed: {ex.Message}");
         }
     }
 
@@ -1965,6 +1990,7 @@ public partial class MainView : UserControl
         InvalidatePageRestore();
         ReleaseSeriesDetailView();
         ReleaseActiveCorePage(captureState: true);
+        GetPlayerWindowService()?.SetPlayerOverlayActive(true);
         PlayerHost.IsVisible = true;
         
         // Mobilde player açıldığında otomatik tam ekran (immersive mode)
@@ -2030,6 +2056,7 @@ public partial class MainView : UserControl
         {
             if (_playerViewModel.IsPlaybackIntentCurrent(playbackIntent))
             {
+                GetPlayerWindowService()?.SetPlayerOverlayActive(false);
                 videoSurfaceService?.Hide();
                 PlayerHost.IsVisible = false;
                 UpdatePlayerChromeState();
@@ -2113,6 +2140,7 @@ public partial class MainView : UserControl
         platform?.GetVideoSurfaceService()?.ResetInteractionTransform();
         platform?.GetVideoSurfaceService()?.Hide();
 
+        window?.SetPlayerOverlayActive(false);
         PlayerHost.IsVisible = false;
 
         if (_playerViewModel is not null)
@@ -2603,7 +2631,7 @@ public partial class MainView : UserControl
 
     private void OnAdvertisingEligibilityChanged(object? sender, EventArgs e)
     {
-        if (!_startupFlowCompleted)
+        if (!_isAttachedToVisualTree)
         {
             return;
         }

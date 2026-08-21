@@ -15,7 +15,7 @@ namespace Noctra.Mobile.Controls;
 public sealed class MobileBannerAdControl : ContentControl
 {
     private IDisposable? _adisposable;
-    private bool _isSuppressed;
+    private readonly BannerAdPresentationState _adState = new();
 
     public MobileBannerAdControl()
     {
@@ -30,15 +30,15 @@ public sealed class MobileBannerAdControl : ContentControl
     /// </summary>
     public bool IsSuppressed
     {
-        get => _isSuppressed;
+        get => _adState.IsSuppressed;
         set
         {
-            if (_isSuppressed == value)
+            if (_adState.IsSuppressed == value)
             {
                 return;
             }
 
-            _isSuppressed = value;
+            _adState.SetSuppressed(value);
             UpdateVisibility();
         }
     }
@@ -64,7 +64,16 @@ public sealed class MobileBannerAdControl : ContentControl
             return;
         }
 
-        _adisposable = service.CreateBannerAd(this);
+        var generation = _adState.BeginLoad();
+        _adisposable = service.CreateBannerAd(
+            this,
+            state => OnAdLoadStateChanged(generation, state));
+
+        if (_adisposable is null)
+        {
+            _adState.Clear();
+        }
+
         UpdateVisibility();
     }
 
@@ -73,15 +82,42 @@ public sealed class MobileBannerAdControl : ContentControl
     /// </summary>
     public void ClearAd()
     {
-        _adisposable?.Dispose();
+        var disposable = _adisposable;
         _adisposable = null;
         Content = null;
+        _adState.Clear();
+        disposable?.Dispose();
         UpdateVisibility();
+    }
+
+    private void OnAdLoadStateChanged(long generation, BannerAdLoadState state)
+    {
+        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        {
+            if (!_adState.ApplyLoadState(generation, state))
+            {
+                return;
+            }
+
+            if (state == BannerAdLoadState.Failed)
+            {
+                ClearAd();
+                return;
+            }
+
+            UpdateVisibility();
+        });
     }
 
     private void UpdateVisibility()
     {
-        IsVisible = _adisposable is not null && !_isSuppressed;
+        // NativeControlHost must remain attached while the request is loading,
+        // otherwise CreateNativeControlCore never runs. Keep that transient
+        // host transparent and non-interactive; only a loaded creative is
+        // visible/clickable, while a failure collapses the row completely.
+        IsVisible = _adState.HasHandle && !_adState.IsSuppressed;
+        IsHitTestVisible = _adState.IsVisible;
+        Opacity = _adState.LoadState == BannerAdLoadState.Loading ? 0 : 1;
         if (IsVisible)
         {
             Avalonia.Threading.Dispatcher.UIThread.Post(() =>

@@ -22,6 +22,14 @@ public interface IPlayerWindowService
     void SetFullScreenMode(bool fullScreen);
 
     /// <summary>
+    /// Controls whether Avalonia's Android SurfaceView must be composed above
+    /// the native video surface. Shell/banner mode uses false so regular
+    /// Android views can remain visible; an active player uses true so
+    /// Avalonia controls stay above the native video TextureView.
+    /// </summary>
+    void SetPlayerOverlayActive(bool active);
+
+    /// <summary>
     /// Ekran parlaklığını ayarlar. 0.0–1.0 arası geçerli değer; negatif değer
     /// (ör. -1) sistem varsayılan parlaklığına döner.
     /// </summary>
