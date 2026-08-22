@@ -799,12 +799,14 @@ public sealed class HuaweiMobileAdvertisingService : IMobileAdvertisingService
 
 internal sealed class HuaweiBannerNativeControlHost : NativeControlHost
 {
+    private const long BannerReloadDelayMs = 1200;
     private readonly string _adUnitId;
     private readonly Action<BannerAdLoadState>? _stateChanged;
     private Huawei.Hms.Ads.Banner.BannerView? _bannerView;
     private FrameLayout? _container;
     private int _disposed;
     private int _nativeGeneration;
+    private int _reloadScheduled;
 
     public HuaweiBannerNativeControlHost(
         string adUnitId,
@@ -829,24 +831,8 @@ internal sealed class HuaweiBannerNativeControlHost : NativeControlHost
         DestroyCurrentBanner();
         var generation = Interlocked.Increment(ref _nativeGeneration);
         var container = new FrameLayout(context);
-            var banner = new Huawei.Hms.Ads.Banner.BannerView(context)
-            {
-                AdId = _adUnitId,
-                BannerAdSize = Huawei.Hms.Ads.BannerAdSize.BannerSizeSmart
-            };
-            container.AddView(banner, new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MatchParent,
-                ViewGroup.LayoutParams.WrapContent,
-                GravityFlags.CenterHorizontal));
         _container = container;
-        _bannerView = banner;
-        banner.AdListener = new HuaweiBannerListener(
-            banner,
-            _stateChanged,
-            () => Volatile.Read(ref _disposed) != 0 ||
-                  Volatile.Read(ref _nativeGeneration) != generation);
-        _stateChanged?.Invoke(BannerAdLoadState.Loading);
-        banner.LoadAd(new AdParam.Builder().Build());
+        CreateAndLoadBanner(context, container, generation);
         return new AndroidViewControlHandle(container);
     }
 
@@ -867,6 +853,102 @@ internal sealed class HuaweiBannerNativeControlHost : NativeControlHost
     private void DestroyCurrentBanner()
     {
         Interlocked.Increment(ref _nativeGeneration);
+        DestroyBannerView();
+
+        _container?.RemoveAllViews();
+        _container = null;
+    }
+
+    private void CreateAndLoadBanner(
+        Context context,
+        FrameLayout container,
+        int generation)
+    {
+        var banner = new Huawei.Hms.Ads.Banner.BannerView(context)
+        {
+            AdId = _adUnitId,
+            BannerAdSize = Huawei.Hms.Ads.BannerAdSize.BannerSizeSmart
+        };
+        container.AddView(banner, new FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MatchParent,
+            ViewGroup.LayoutParams.WrapContent,
+            GravityFlags.CenterHorizontal));
+        _bannerView = banner;
+        banner.AdListener = new HuaweiBannerListener(
+            banner,
+            _stateChanged,
+            () => Volatile.Read(ref _disposed) != 0 ||
+                  Volatile.Read(ref _nativeGeneration) != generation,
+            () => ScheduleBannerReload(generation));
+        _stateChanged?.Invoke(BannerAdLoadState.Loading);
+        banner.LoadAd(new AdParam.Builder().Build());
+        MonitorBannerVisibility(generation);
+    }
+
+    private void MonitorBannerVisibility(int generation)
+    {
+        new Handler(Looper.MainLooper).PostDelayed(() =>
+        {
+            if (Volatile.Read(ref _disposed) != 0 ||
+                Volatile.Read(ref _nativeGeneration) != generation ||
+                _bannerView is not { } banner ||
+                _container is not { } container)
+            {
+                return;
+            }
+
+            var bannerIsAttached = banner.Parent is not null &&
+                banner.Visibility == ViewStates.Visible;
+            var hostIsVisible = container.IsShown &&
+                container.WindowVisibility == ViewStates.Visible;
+            if (hostIsVisible && !bannerIsAttached)
+            {
+                ScheduleBannerReload(generation);
+                return;
+            }
+
+            MonitorBannerVisibility(generation);
+        }, BannerReloadDelayMs);
+    }
+
+    private void ScheduleBannerReload(int generation)
+    {
+        if (Volatile.Read(ref _disposed) != 0 ||
+            Volatile.Read(ref _nativeGeneration) != generation ||
+            Interlocked.Exchange(ref _reloadScheduled, 1) != 0)
+        {
+            return;
+        }
+
+        new Handler(Looper.MainLooper).PostDelayed(() =>
+        {
+            try
+            {
+                if (Volatile.Read(ref _disposed) != 0 ||
+                    Volatile.Read(ref _nativeGeneration) != generation ||
+                    _container is not { } container)
+                {
+                    return;
+                }
+
+                Interlocked.Increment(ref _nativeGeneration);
+                DestroyBannerView();
+                container.RemoveAllViews();
+                var nextGeneration = Volatile.Read(ref _nativeGeneration);
+                CreateAndLoadBanner(
+                    container.Context ?? global::Android.App.Application.Context,
+                    container,
+                    nextGeneration);
+            }
+            finally
+            {
+                Volatile.Write(ref _reloadScheduled, 0);
+            }
+        }, BannerReloadDelayMs);
+    }
+
+    private void DestroyBannerView()
+    {
         var banner = _bannerView;
         _bannerView = null;
         if (banner is not null)
@@ -874,9 +956,6 @@ internal sealed class HuaweiBannerNativeControlHost : NativeControlHost
             _container?.RemoveView(banner);
             banner.Destroy();
         }
-
-        _container?.RemoveAllViews();
-        _container = null;
     }
 }
 
@@ -901,15 +980,18 @@ internal sealed class HuaweiBannerListener : AdListener
     private readonly Huawei.Hms.Ads.Banner.BannerView _banner;
     private readonly Action<BannerAdLoadState>? _stateChanged;
     private readonly Func<bool> _isInvalid;
+    private readonly Action? _reloadRequested;
 
     public HuaweiBannerListener(
         Huawei.Hms.Ads.Banner.BannerView banner,
         Action<BannerAdLoadState>? stateChanged,
-        Func<bool> isInvalid)
+        Func<bool> isInvalid,
+        Action? reloadRequested)
     {
         _banner = banner;
         _stateChanged = stateChanged;
         _isInvalid = isInvalid;
+        _reloadRequested = reloadRequested;
     }
 
     public override void OnAdLoaded()
@@ -931,4 +1013,18 @@ internal sealed class HuaweiBannerListener : AdListener
 
     public override void OnAdClicked()
         => global::Android.Util.Log.Info("NoctraAds", "HMS banner clicked");
+
+    public override void OnAdClosed()
+    {
+        if (_isInvalid()) return;
+        global::Android.Util.Log.Info("NoctraAds", "HMS banner closed; scheduling reload");
+        _reloadRequested?.Invoke();
+    }
+
+    public override void OnAdLeave()
+    {
+        if (_isInvalid()) return;
+        global::Android.Util.Log.Info("NoctraAds", "HMS banner left; scheduling reload");
+        _reloadRequested?.Invoke();
+    }
 }

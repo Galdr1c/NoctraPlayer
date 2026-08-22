@@ -312,6 +312,20 @@ public sealed class AdvertisingAccessibilityContractTests
     }
 
     [Fact]
+    public void HuaweiBanner_RefreshesOnceAfterAdClosed()
+    {
+        var provider = File.ReadAllText(ProjectSource(
+            "Noctra.Android", "Advertising", "HuaweiMobileAdvertisingService.cs"));
+
+        Assert.Contains("OnAdClosed", provider, StringComparison.Ordinal);
+        Assert.Contains("ScheduleBannerReload", provider, StringComparison.Ordinal);
+        Assert.Contains("MonitorBannerVisibility", provider, StringComparison.Ordinal);
+        Assert.Contains("PostDelayed", provider, StringComparison.Ordinal);
+        Assert.Contains("reloadRequested", provider, StringComparison.Ordinal);
+        Assert.Contains("_reloadScheduled", provider, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void AdMobTestDeviceDefault_IsDebugOnly()
     {
         var project = File.ReadAllText(ProjectSource(

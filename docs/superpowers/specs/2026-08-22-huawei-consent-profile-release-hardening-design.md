@@ -25,6 +25,8 @@ currently not restricted to Debug builds.
   `RequestOptions` before requesting banners or interstitials.
 - Keep consent/network failures retryable and allow a non-personalized fallback
   where Huawei permits it.
+- Initialize the Huawei SDK at the Android application boundary and recover a
+  banner after the user closes or hides the current creative.
 - Ensure a consent choice made in Settings initializes Huawei Ads in the same
   process when the SDK was not initialized at startup.
 - Keep AdMob and Huawei test identifiers out of production defaults unless a
@@ -144,6 +146,17 @@ Android package visibility declarations remain present for both GMS and HMS
 package checks. The existing Google signature check remains the primary GMS
 identity check; availability validation is additive and fail-closed.
 
+The Xamarin AdsKit binding omits two small Huawei NetworkCommon helpers that
+the bundled GRS runtime calls (`AssetsUtil.list` and
+`NetworkUtil.isNetworkAvailable`). The Android project includes local Java
+compatibility shims for those exact APIs; they delegate to the platform asset
+and connectivity APIs and do not replace the Huawei ad SDK.
+
+After a banner creative is closed or the user leaves the ad, the native host
+coalesces a single delayed reload. A lightweight visibility check covers the
+SDK's hide-ad path when no callback is emitted. Failed ad requests are not
+automatically retried, so a server-side no-fill cannot create a request loop.
+
 ## Tests and acceptance
 
 Tests are written before each production change and observed failing. The
@@ -154,7 +167,10 @@ focused contract suite must cover:
 3. Unknown + required status opens the provider-aware dialog.
 4. Settings consent choice applies `RequestOptions` and initializes the SDK.
 5. Consent network failure is retryable and uses only non-personalized fallback.
-6. AdMob test-device metadata is Debug-only and Huawei test slots are not
+6. Huawei network compatibility helpers are packaged and the application
+   lifecycle initializes the SDK.
+7. A closed/hidden banner gets one replacement request without a failure loop.
+8. AdMob test-device metadata is Debug-only and Huawei test slots are not
    defaulted in Release.
 
 Verification then consists of:
@@ -164,7 +180,7 @@ Verification then consists of:
 - a zero-error Android Debug arm64 build,
 - a GMS smoke run proving AdMob selection is unchanged,
 - an HMS smoke run proving provider selection, consent choice, request options,
-  banner failure collapse, and process stability.
+  banner load, close/hide replacement, and process stability.
 
 ## Rollout boundary
 
