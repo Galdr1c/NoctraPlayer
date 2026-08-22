@@ -1973,10 +1973,12 @@ WHERE PlaylistId = {playlistId}
             playlistId,
             cancellationToken);
         var query = BuildFilteredChannelQuery(context, playlistId, searchText, group, type, onlyFavorites, hiddenGroups);
+        var prioritizeLiveForSearch = !string.IsNullOrWhiteSpace(searchText) && !type.HasValue;
 
         if (cursor is { } keysetCursor &&
             keysetCursor.LastId > 0 &&
-            UsesKeysetPagination(sortOrder))
+            UsesKeysetPagination(sortOrder) &&
+            !prioritizeLiveForSearch)
         {
             query = ApplyKeysetCursor(query, sortOrder, keysetCursor);
             return await ApplySort(query, sortOrder)
@@ -1984,7 +1986,11 @@ WHERE PlaylistId = {playlistId}
                 .ToListAsync(cancellationToken);
         }
 
-        return await ApplySort(query, sortOrder)
+        var orderedQuery = prioritizeLiveForSearch
+            ? ApplySearchSort(query, sortOrder)
+            : ApplySort(query, sortOrder);
+
+        return await orderedQuery
             .Skip(Math.Max(0, skip))
             .Take(Math.Max(1, take))
             .ToListAsync(cancellationToken);
@@ -2107,6 +2113,24 @@ WHERE PlaylistId = {playlistId}
             ChannelSortOrder.NameAsc => query.OrderBy(c => c.Name).ThenBy(c => c.Id),
             ChannelSortOrder.NameDesc => query.OrderByDescending(c => c.Name).ThenByDescending(c => c.Id),
             _ => query.OrderByDescending(c => c.Id)
+        };
+    }
+
+    private static IOrderedQueryable<Channel> ApplySearchSort(
+        IQueryable<Channel> query,
+        ChannelSortOrder sortOrder)
+    {
+        var liveFirst = query.OrderByDescending(channel => channel.Type == ChannelType.Live);
+        return sortOrder switch
+        {
+            ChannelSortOrder.OldestFirst => liveFirst.ThenBy(channel => channel.Id),
+            ChannelSortOrder.NameAsc => liveFirst
+                .ThenBy(channel => channel.Name)
+                .ThenBy(channel => channel.Id),
+            ChannelSortOrder.NameDesc => liveFirst
+                .ThenByDescending(channel => channel.Name)
+                .ThenByDescending(channel => channel.Id),
+            _ => liveFirst.ThenByDescending(channel => channel.Id)
         };
     }
 

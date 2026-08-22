@@ -118,6 +118,56 @@ namespace Noctra.Tests
             Assert.Equal(2, dbPlaylist.ChannelCount);
         }
 
+        [Theory]
+        [InlineData(ChannelSortOrder.NewestFirst)]
+        [InlineData(ChannelSortOrder.OldestFirst)]
+        [InlineData(ChannelSortOrder.NameAsc)]
+        [InlineData(ChannelSortOrder.NameDesc)]
+        public async Task GetChannelsFilteredPageAsync_SearchPrioritizesLiveBeforeVod(
+            ChannelSortOrder sortOrder)
+        {
+            var service = CreateService();
+            var playlist = await service.AddFromChannelsAsync(
+                "Search priority",
+                "https://provider.test/search-priority",
+                new[]
+                {
+                    new Channel
+                    {
+                        Name = "Sports News Live",
+                        StreamUrl = "https://provider.test/live",
+                        Type = ChannelType.Live
+                    },
+                    new Channel
+                    {
+                        Name = "Sports News Movie",
+                        StreamUrl = "https://provider.test/movie",
+                        Type = ChannelType.VOD
+                    }
+                });
+
+            var page = await service.GetChannelsFilteredPageAsync(
+                playlist.Id,
+                skip: 0,
+                take: 1,
+                searchText: "Sports News",
+                sortOrder: sortOrder);
+
+            Assert.Single(page);
+            Assert.Equal(ChannelType.Live, page[0].Type);
+
+            var nextPage = await service.GetChannelsFilteredPageAsync(
+                playlist.Id,
+                skip: 1,
+                take: 1,
+                searchText: "Sports News",
+                sortOrder: sortOrder,
+                cursor: new ContentPageCursor(page[0].Id));
+
+            Assert.Single(nextPage);
+            Assert.Equal(ChannelType.VOD, nextPage[0].Type);
+        }
+
         [Fact]
         public async Task GetChannelGroupMetadataAsync_WhenCancelled_StopsAtSqliteBoundary()
         {
