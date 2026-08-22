@@ -1045,13 +1045,21 @@ public partial class MainWindow : Window
 
         if (e.ClickCount >= 2)
         {
-            _playerViewModel.ToggleFullScreenCommand?.Execute(null);
+            var playerViewModel = _playerViewModel;
+            if (playerViewModel is not null)
+            {
+                playerViewModel.ToggleFullScreenCommand?.Execute(null);
+            }
             e.Handled = true;
             return;
         }
 
-        _playerViewModel.PlayPauseCommand?.Execute(null);
-        _playerViewModel.UserInteractionCommand?.Execute(null);
+        var currentPlayerViewModel = _playerViewModel;
+        if (currentPlayerViewModel is not null)
+        {
+            currentPlayerViewModel.PlayPauseCommand?.Execute(null);
+            currentPlayerViewModel.UserInteractionCommand?.Execute(null);
+        }
         e.Handled = true;
     }
 

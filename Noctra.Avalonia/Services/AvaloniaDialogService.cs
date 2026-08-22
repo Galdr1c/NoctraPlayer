@@ -145,7 +145,7 @@ public sealed class AvaloniaDialogService : IDialogService
                 builder.Show();
                 return;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
             }
         }
