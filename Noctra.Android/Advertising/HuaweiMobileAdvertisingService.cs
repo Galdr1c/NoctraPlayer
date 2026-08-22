@@ -201,16 +201,13 @@ public sealed class HuaweiMobileAdvertisingService : IMobileAdvertisingService
                 if (_forceConsent)
                 {
                     // Debug QA must still be able to exercise the Huawei
-                    // privacy dialog when the lab device is offline. This
-                    // branch is never enabled by Release metadata; production
-                    // remains fail-closed on a consent-service outage.
-                    Log.Warn("HMS consent debug fallback: showing local choice dialog");
-                    _privacyOptionsRequired = true;
-                    var choseConsent = await ShowConsentDialogAsync(
-                        _consent,
-                        _adProviders,
-                        cancellationToken).ConfigureAwait(false);
-                    Volatile.Write(ref _consentRetryPending, choseConsent ? 0 : 1);
+                    // NPA fallback when the lab device is offline, but an
+                    // unverified provider list must never enable personalized
+                    // ads. Production follows the same NPA-only request mode
+                    // and keeps the consent refresh retryable.
+                    Log.Warn("HMS consent debug fallback: showing NPA-only notice");
+                    await ShowNpaOnlyPrivacyDialogAsync(cancellationToken)
+                        .ConfigureAwait(false);
                 }
             }
             else if (consentResult.NeedConsent &&
@@ -390,14 +387,85 @@ public sealed class HuaweiMobileAdvertisingService : IMobileAdvertisingService
         }
     }
 
-    public Task<bool> ShowPrivacyOptionsAsync(CancellationToken cancellationToken = default)
+    public async Task<bool> ShowPrivacyOptionsAsync(CancellationToken cancellationToken = default)
     {
         if (!_privacyOptionsRequired || cancellationToken.IsCancellationRequested || _consent is null)
         {
-            return Task.FromResult(false);
+            return false;
         }
 
-        return ShowConsentDialogAsync(_consent, _adProviders, cancellationToken);
+        if (Volatile.Read(ref _consentRetryPending) != 0 || _adProviders.Count == 0)
+        {
+            var refreshed = await RefreshConsentForPrivacyOptionsAsync(cancellationToken)
+                .ConfigureAwait(false);
+            if (!refreshed)
+            {
+                return await ShowNpaOnlyPrivacyDialogAsync(cancellationToken)
+                    .ConfigureAwait(false);
+            }
+
+            if (!_privacyOptionsRequired)
+            {
+                return true;
+            }
+        }
+
+        if (_adProviders.Count == 0)
+        {
+            return await ShowNpaOnlyPrivacyDialogAsync(cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        return await ShowConsentDialogAsync(_consent, _adProviders, cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    private async Task<bool> RefreshConsentForPrivacyOptionsAsync(
+        CancellationToken cancellationToken)
+    {
+        await _initLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            if (_consent is null)
+            {
+                return false;
+            }
+
+            await _privacyCoordinator.WaitForLegalConsentAsync(cancellationToken)
+                .ConfigureAwait(false);
+            var result = await RequestConsentUpdateAsync(_consent, cancellationToken)
+                .ConfigureAwait(false);
+            if (!result.Succeeded)
+            {
+                Log.Warn("HMS privacy-options consent refresh failed: " + result.ErrorMessage);
+                _consentStatus = ConsentStatus.NonPersonalized;
+                _adProviders = Array.Empty<AdProvider>();
+                Volatile.Write(ref _consentRetryPending, 1);
+                _privacyOptionsRequired = true;
+                _canRequestAds = true;
+                if (_sdkInitialized)
+                {
+                    ApplyHuaweiRequestOptions();
+                }
+
+                ConsentStatusChanged?.Invoke(this, EventArgs.Empty);
+                EligibilityChanged?.Invoke(this, EventArgs.Empty);
+                return false;
+            }
+
+            _privacyOptionsRequired = result.NeedConsent;
+            _canRequestAds = true;
+            Volatile.Write(ref _consentRetryPending, 0);
+            await EnsureHuaweiAdsInitializedCoreAsync(cancellationToken)
+                .ConfigureAwait(false);
+            ConsentStatusChanged?.Invoke(this, EventArgs.Empty);
+            EligibilityChanged?.Invoke(this, EventArgs.Empty);
+            return true;
+        }
+        finally
+        {
+            _initLock.Release();
+        }
     }
 
     private async Task InitializeHuaweiAdsAsync(CancellationToken cancellationToken)
@@ -550,6 +618,11 @@ public sealed class HuaweiMobileAdvertisingService : IMobileAdvertisingService
         IReadOnlyList<AdProvider> providers,
         CancellationToken cancellationToken)
     {
+        if (providers.Count == 0)
+        {
+            return ShowNpaOnlyPrivacyDialogAsync(cancellationToken);
+        }
+
         var activity = _activityProvider.CurrentActivity;
         if (activity is null || cancellationToken.IsCancellationRequested)
         {
@@ -613,6 +686,43 @@ public sealed class HuaweiMobileAdvertisingService : IMobileAdvertisingService
             catch (Exception ex)
             {
                 Log.Warn("HMS consent dialog failed: " + ex.Message);
+                completion.TrySetResult(false);
+            }
+        });
+        return completion.Task;
+    }
+
+    private Task<bool> ShowNpaOnlyPrivacyDialogAsync(
+        CancellationToken cancellationToken)
+    {
+        var activity = _activityProvider.CurrentActivity;
+        if (activity is null || cancellationToken.IsCancellationRequested)
+        {
+            return Task.FromResult(false);
+        }
+
+        var completion = new TaskCompletionSource<bool>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        DispatchOnMainThread(() =>
+        {
+            try
+            {
+                using var builder = new AlertDialog.Builder(activity);
+                builder.SetTitle("Advertising privacy choices");
+                builder.SetMessage(
+                    "Ad provider information is temporarily unavailable. " +
+                    "Noctra will continue using non-personalized ads. " +
+                    "Please try Privacy Choices again later.");
+                builder.SetPositiveButton(
+                    "OK",
+                    (_, _) => completion.TrySetResult(true));
+                builder.SetOnCancelListener(new HuaweiDialogCancelListener(
+                    () => completion.TrySetResult(false)));
+                builder.Create()?.Show();
+            }
+            catch (Exception ex)
+            {
+                Log.Warn("HMS NPA-only privacy dialog failed: " + ex.Message);
                 completion.TrySetResult(false);
             }
         });
@@ -800,6 +910,7 @@ public sealed class HuaweiMobileAdvertisingService : IMobileAdvertisingService
 internal sealed class HuaweiBannerNativeControlHost : NativeControlHost
 {
     private const long BannerReloadDelayMs = 1200;
+    private static readonly Handler MainHandler = new(Looper.MainLooper!);
     private readonly string _adUnitId;
     private readonly Action<BannerAdLoadState>? _stateChanged;
     private Huawei.Hms.Ads.Banner.BannerView? _bannerView;
@@ -807,6 +918,8 @@ internal sealed class HuaweiBannerNativeControlHost : NativeControlHost
     private int _disposed;
     private int _nativeGeneration;
     private int _reloadScheduled;
+    private int _reloadOnResume;
+    private int _lifecycleSubscribed;
 
     public HuaweiBannerNativeControlHost(
         string adUnitId,
@@ -832,6 +945,7 @@ internal sealed class HuaweiBannerNativeControlHost : NativeControlHost
         var generation = Interlocked.Increment(ref _nativeGeneration);
         var container = new FrameLayout(context);
         _container = container;
+        SubscribeToLifecycle();
         CreateAndLoadBanner(context, container, generation);
         return new AndroidViewControlHandle(container);
     }
@@ -852,7 +966,9 @@ internal sealed class HuaweiBannerNativeControlHost : NativeControlHost
 
     private void DestroyCurrentBanner()
     {
+        UnsubscribeFromLifecycle();
         Interlocked.Increment(ref _nativeGeneration);
+        Volatile.Write(ref _reloadOnResume, 0);
         DestroyBannerView();
 
         _container?.RemoveAllViews();
@@ -867,7 +983,7 @@ internal sealed class HuaweiBannerNativeControlHost : NativeControlHost
         var banner = new Huawei.Hms.Ads.Banner.BannerView(context)
         {
             AdId = _adUnitId,
-            BannerAdSize = Huawei.Hms.Ads.BannerAdSize.BannerSizeSmart
+            BannerAdSize = Huawei.Hms.Ads.BannerAdSize.BannerSize32050
         };
         container.AddView(banner, new FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MatchParent,
@@ -879,36 +995,39 @@ internal sealed class HuaweiBannerNativeControlHost : NativeControlHost
             _stateChanged,
             () => Volatile.Read(ref _disposed) != 0 ||
                   Volatile.Read(ref _nativeGeneration) != generation,
-            () => ScheduleBannerReload(generation));
+            () => OnBannerClosed(generation),
+            () => OnBannerLeft(generation));
         _stateChanged?.Invoke(BannerAdLoadState.Loading);
         banner.LoadAd(new AdParam.Builder().Build());
-        MonitorBannerVisibility(generation);
     }
 
-    private void MonitorBannerVisibility(int generation)
+    private void OnBannerClosed(int generation)
     {
-        new Handler(Looper.MainLooper).PostDelayed(() =>
+        if (Volatile.Read(ref _disposed) != 0 ||
+            Volatile.Read(ref _nativeGeneration) != generation)
         {
-            if (Volatile.Read(ref _disposed) != 0 ||
-                Volatile.Read(ref _nativeGeneration) != generation ||
-                _bannerView is not { } banner ||
-                _container is not { } container)
-            {
-                return;
-            }
+            return;
+        }
 
-            var bannerIsAttached = banner.Parent is not null &&
-                banner.Visibility == ViewStates.Visible;
-            var hostIsVisible = container.IsShown &&
-                container.WindowVisibility == ViewStates.Visible;
-            if (hostIsVisible && !bannerIsAttached)
-            {
-                ScheduleBannerReload(generation);
-                return;
-            }
+        if (MobileAppLifecycle.IsForeground && IsHostVisible())
+        {
+            ScheduleBannerReload(generation);
+            return;
+        }
 
-            MonitorBannerVisibility(generation);
-        }, BannerReloadDelayMs);
+        MarkBannerReloadPending(generation);
+    }
+
+    private void OnBannerLeft(int generation)
+        => MarkBannerReloadPending(generation);
+
+    private void MarkBannerReloadPending(int generation)
+    {
+        if (Volatile.Read(ref _disposed) == 0 &&
+            Volatile.Read(ref _nativeGeneration) == generation)
+        {
+            Volatile.Write(ref _reloadOnResume, 1);
+        }
     }
 
     private void ScheduleBannerReload(int generation)
@@ -920,7 +1039,7 @@ internal sealed class HuaweiBannerNativeControlHost : NativeControlHost
             return;
         }
 
-        new Handler(Looper.MainLooper).PostDelayed(() =>
+        MainHandler.PostDelayed(() =>
         {
             try
             {
@@ -931,7 +1050,14 @@ internal sealed class HuaweiBannerNativeControlHost : NativeControlHost
                     return;
                 }
 
+                if (!MobileAppLifecycle.IsForeground || !IsHostVisible())
+                {
+                    MarkBannerReloadPending(generation);
+                    return;
+                }
+
                 Interlocked.Increment(ref _nativeGeneration);
+                Volatile.Write(ref _reloadOnResume, 0);
                 DestroyBannerView();
                 container.RemoveAllViews();
                 var nextGeneration = Volatile.Read(ref _nativeGeneration);
@@ -945,6 +1071,88 @@ internal sealed class HuaweiBannerNativeControlHost : NativeControlHost
                 Volatile.Write(ref _reloadScheduled, 0);
             }
         }, BannerReloadDelayMs);
+    }
+
+    private bool IsHostVisible()
+        => _container is { IsShown: true } container &&
+           container.WindowVisibility == ViewStates.Visible;
+
+    private void SubscribeToLifecycle()
+    {
+        if (Interlocked.Exchange(ref _lifecycleSubscribed, 1) != 0)
+        {
+            return;
+        }
+
+        MobileAppLifecycle.Paused += OnAppPaused;
+        MobileAppLifecycle.Resumed += OnAppResumed;
+    }
+
+    private void UnsubscribeFromLifecycle()
+    {
+        if (Interlocked.Exchange(ref _lifecycleSubscribed, 0) == 0)
+        {
+            return;
+        }
+
+        MobileAppLifecycle.Paused -= OnAppPaused;
+        MobileAppLifecycle.Resumed -= OnAppResumed;
+    }
+
+    private void OnAppPaused(object? sender, EventArgs e)
+    {
+        MainHandler.Post(() =>
+        {
+            if (Volatile.Read(ref _disposed) != 0)
+            {
+                return;
+            }
+
+            try
+            {
+                if (_bannerView is { } banner)
+                {
+                    banner.Pause();
+                }
+            }
+            catch (Exception ex)
+            {
+                global::Android.Util.Log.Warn("NoctraAds", "HMS banner pause failed: " + ex.Message);
+            }
+        });
+    }
+
+    private void OnAppResumed(object? sender, EventArgs e)
+    {
+        MainHandler.Post(() =>
+        {
+            if (Volatile.Read(ref _disposed) != 0)
+            {
+                return;
+            }
+
+            var banner = _bannerView;
+            try
+            {
+                if (banner is not null)
+                {
+                    banner.Resume();
+                }
+            }
+            catch (Exception ex)
+            {
+                global::Android.Util.Log.Warn("NoctraAds", "HMS banner resume failed: " + ex.Message);
+            }
+
+            var bannerIsAttached = banner?.Parent is not null &&
+                banner.Visibility == ViewStates.Visible;
+            if (Volatile.Read(ref _reloadOnResume) != 0 || !bannerIsAttached)
+            {
+                var generation = Volatile.Read(ref _nativeGeneration);
+                Volatile.Write(ref _reloadOnResume, 0);
+                ScheduleBannerReload(generation);
+            }
+        });
     }
 
     private void DestroyBannerView()
@@ -980,18 +1188,21 @@ internal sealed class HuaweiBannerListener : AdListener
     private readonly Huawei.Hms.Ads.Banner.BannerView _banner;
     private readonly Action<BannerAdLoadState>? _stateChanged;
     private readonly Func<bool> _isInvalid;
-    private readonly Action? _reloadRequested;
+    private readonly Action? _closed;
+    private readonly Action? _left;
 
     public HuaweiBannerListener(
         Huawei.Hms.Ads.Banner.BannerView banner,
         Action<BannerAdLoadState>? stateChanged,
         Func<bool> isInvalid,
-        Action? reloadRequested)
+        Action? closed,
+        Action? left)
     {
         _banner = banner;
         _stateChanged = stateChanged;
         _isInvalid = isInvalid;
-        _reloadRequested = reloadRequested;
+        _closed = closed;
+        _left = left;
     }
 
     public override void OnAdLoaded()
@@ -1018,13 +1229,13 @@ internal sealed class HuaweiBannerListener : AdListener
     {
         if (_isInvalid()) return;
         global::Android.Util.Log.Info("NoctraAds", "HMS banner closed; scheduling reload");
-        _reloadRequested?.Invoke();
+        _closed?.Invoke();
     }
 
     public override void OnAdLeave()
     {
         if (_isInvalid()) return;
-        global::Android.Util.Log.Info("NoctraAds", "HMS banner left; scheduling reload");
-        _reloadRequested?.Invoke();
+        global::Android.Util.Log.Info("NoctraAds", "HMS banner left; deferring reload until resume");
+        _left?.Invoke();
     }
 }

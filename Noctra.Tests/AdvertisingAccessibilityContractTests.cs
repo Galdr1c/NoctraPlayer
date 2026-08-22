@@ -283,7 +283,7 @@ public sealed class AdvertisingAccessibilityContractTests
     }
 
     [Fact]
-    public void HuaweiAds_InitializesFromApplicationLifecycleAndUsesSmartBanner()
+    public void HuaweiAds_InitializesFromApplicationLifecycleAndUsesFixedBanner()
     {
         var application = File.ReadAllText(ProjectSource(
             "Noctra.Android", "Application.cs"));
@@ -292,7 +292,7 @@ public sealed class AdvertisingAccessibilityContractTests
 
         Assert.Contains("InitializeSdkIfSupported", application, StringComparison.Ordinal);
         Assert.Contains("HwAds.Init", provider, StringComparison.Ordinal);
-        Assert.Contains("BannerSizeSmart", provider, StringComparison.Ordinal);
+        Assert.Contains("BannerSize32050", provider, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -319,10 +319,49 @@ public sealed class AdvertisingAccessibilityContractTests
 
         Assert.Contains("OnAdClosed", provider, StringComparison.Ordinal);
         Assert.Contains("ScheduleBannerReload", provider, StringComparison.Ordinal);
-        Assert.Contains("MonitorBannerVisibility", provider, StringComparison.Ordinal);
         Assert.Contains("PostDelayed", provider, StringComparison.Ordinal);
-        Assert.Contains("reloadRequested", provider, StringComparison.Ordinal);
+        Assert.Contains("OnBannerClosed", provider, StringComparison.Ordinal);
         Assert.Contains("_reloadScheduled", provider, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void HuaweiBanner_UsesLifecycleInsteadOfRecursivePolling()
+    {
+        var provider = File.ReadAllText(ProjectSource(
+            "Noctra.Android", "Advertising", "HuaweiMobileAdvertisingService.cs"));
+
+        Assert.Contains("BannerSize32050", provider, StringComparison.Ordinal);
+        Assert.Contains("MobileAppLifecycle.Paused", provider, StringComparison.Ordinal);
+        Assert.Contains("MobileAppLifecycle.Resumed", provider, StringComparison.Ordinal);
+        Assert.Contains("banner.Pause()", provider, StringComparison.Ordinal);
+        Assert.Contains("banner.Resume()", provider, StringComparison.Ordinal);
+        Assert.Contains("MainHandler", provider, StringComparison.Ordinal);
+        Assert.DoesNotContain("MonitorBannerVisibility(", provider, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void HuaweiBanner_LeaveDefersReplacementUntilForegroundResume()
+    {
+        var provider = File.ReadAllText(ProjectSource(
+            "Noctra.Android", "Advertising", "HuaweiMobileAdvertisingService.cs"));
+
+        Assert.Contains("_reloadOnResume", provider, StringComparison.Ordinal);
+        Assert.Contains("MarkBannerReloadPending", provider, StringComparison.Ordinal);
+        Assert.Contains("OnBannerClosed", provider, StringComparison.Ordinal);
+        Assert.Contains("OnBannerLeft", provider, StringComparison.Ordinal);
+        Assert.Contains("MobileAppLifecycle.IsForeground", provider, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void HuaweiConsent_PrivacyChoicesRequireVerifiedProviderMetadata()
+    {
+        var provider = File.ReadAllText(ProjectSource(
+            "Noctra.Android", "Advertising", "HuaweiMobileAdvertisingService.cs"));
+
+        Assert.Contains("RefreshConsentForPrivacyOptionsAsync", provider, StringComparison.Ordinal);
+        Assert.Contains("ShowNpaOnlyPrivacyDialogAsync", provider, StringComparison.Ordinal);
+        Assert.Contains("_adProviders.Count == 0", provider, StringComparison.Ordinal);
+        Assert.DoesNotContain("production remains fail-closed", provider, StringComparison.Ordinal);
     }
 
     [Fact]
