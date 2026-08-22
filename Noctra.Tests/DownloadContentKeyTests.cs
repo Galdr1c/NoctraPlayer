@@ -385,6 +385,10 @@ public sealed class DownloadContentKeyTests : IDisposable
     private ContentDownloadService CreateService()
     {
         var settings = new FakeSettingsService();
+        // Queue-deduplication tests intentionally leave the worker request
+        // pending. Disable the Wi-Fi-only gate so timing cannot turn the first
+        // row into Failed before the second queue call checks its content key.
+        settings.Settings.DownloadWifiOnly = false;
         var tempRoot = Path.Combine(Path.GetTempPath(), $"Noctra-DownloadKeyDownloads-{Guid.NewGuid():N}");
         var paths = new DesktopAppPathService(tempRoot, Path.GetTempPath());
 

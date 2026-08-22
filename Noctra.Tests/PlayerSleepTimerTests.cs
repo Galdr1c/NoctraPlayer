@@ -58,6 +58,7 @@ namespace Noctra.Tests
             ctx.VM.SetSleepTimerCommand.Execute(PlayerViewModel.SleepTimerOption.Minutes15);
 
             Assert.Equal(PlayerViewModel.SleepTimerOption.Off, ctx.VM.SleepTimerMode);
+            Assert.True(ctx.VM.IsOverlayMessageVisible);
         }
 
         [Fact]

@@ -186,6 +186,19 @@ namespace Noctra.Tests
 
     public class DownloadSystemComprehensiveTests
     {
+        private static async Task WaitUntilAsync(
+            Func<bool> condition,
+            int timeoutMilliseconds = 3000)
+        {
+            var deadline = DateTime.UtcNow.AddMilliseconds(timeoutMilliseconds);
+            while (!condition() && DateTime.UtcNow < deadline)
+            {
+                await Task.Delay(25);
+            }
+
+            Assert.True(condition(), "Timed out waiting for the background season download operation.");
+        }
+
         [Fact]
         public async Task QueueDownload_AddsItemToService()
         {
@@ -317,6 +330,13 @@ namespace Noctra.Tests
             });
 
             await viewModel.DownloadSelectedSeasonCommand.ExecuteAsync(null);
+
+            // Season queueing intentionally runs off the UI thread. Wait for
+            // the published result before asserting the aggregate status.
+            await WaitUntilAsync(
+                () => downloadService.Requests.Count == 2 &&
+                      viewModel.StatusMessage.Contains("eklendi", StringComparison.Ordinal) &&
+                      viewModel.StatusMessage.Contains("atlandı", StringComparison.Ordinal));
 
             Assert.Contains("1 eklendi", viewModel.StatusMessage);
             Assert.Contains("1 atlandı", viewModel.StatusMessage);

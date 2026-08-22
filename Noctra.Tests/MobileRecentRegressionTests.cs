@@ -346,10 +346,15 @@ public sealed class MobileRecentRegressionTests
 
         Assert.Contains("x:Name=\"SeasonListBox\"", seriesDetail, StringComparison.Ordinal);
         Assert.Equal(
-            2,
+            1,
             seriesDetail.Split(
                 "ItemContainerTheme=\"{StaticResource TransparentListBoxItemTheme}\"",
                 StringSplitOptions.None).Length - 1);
+        // The season tabs intentionally use a custom container theme for the
+        // active underline; only the episode list should use the transparent
+        // selection theme counted above.
+        Assert.Contains("ListBox.ItemContainerTheme", seriesDetail, StringComparison.Ordinal);
+        Assert.Contains("SeasonUnderline", seriesDetail, StringComparison.Ordinal);
         Assert.Contains("SelectionChanged=\"ClearTransientSelection\"", seriesDetail, StringComparison.Ordinal);
         Assert.Contains("SelectedIndex = -1", seriesDetailCode, StringComparison.Ordinal);
     }

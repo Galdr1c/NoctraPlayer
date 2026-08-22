@@ -573,6 +573,7 @@
   "Player.Sleep.EndOfMovie": "Fin du film",
   "Player.Sleep.EndContent.Episode": "À la fin de cet épisode",
   "Player.Sleep.EndContent.Movie": "À la fin de ce film",
+  "Player.Sleep.LiveUnavailable": "Le minuteur de veille n'est pas disponible pour le contenu en direct.",
   "Player.Sleep.EndDescription.Episode": "La lecture s'arrête quand l'épisode est fini",
   "Player.Sleep.EndDescription.Movie": "La lecture s'arrête quand le film est fini",
   "Player.Status.Connecting": "Connexion...",

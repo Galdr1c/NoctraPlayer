@@ -573,6 +573,7 @@
   "Player.Sleep.EndOfMovie": "End of Movie",
   "Player.Sleep.EndContent.Episode": "At the end of this episode",
   "Player.Sleep.EndContent.Movie": "At the end of this movie",
+  "Player.Sleep.LiveUnavailable": "Sleep timer is not available for live content.",
   "Player.Sleep.EndDescription.Episode": "Playback stops when the episode is finished",
   "Player.Sleep.EndDescription.Movie": "Playback stops when the movie is finished",
   "Player.Status.Connecting": "Connecting...",

@@ -162,6 +162,17 @@ public class PlayerOverlayManager
             return;
         }
 
+        // A live stream has no deterministic end point for a player sleep
+        // timer. Keep the timer off and explain the limitation instead of
+        // starting a countdown that cannot represent the current content.
+        if (mode != PlayerViewModel.SleepTimerOption.Off && _vm.IsLiveContent)
+        {
+            CancelSleepTimer();
+            _ = ShowOverlayMessageAsync(
+                _vm.LocalizationService.GetString("Player.Sleep.LiveUnavailable"));
+            return;
+        }
+
         CancelSleepTimer();
 
         _vm.SleepTimerMode = mode;

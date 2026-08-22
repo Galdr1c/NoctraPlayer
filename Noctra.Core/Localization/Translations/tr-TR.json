@@ -573,6 +573,7 @@
   "Player.Sleep.EndOfMovie": "Film bitince kapanır",
   "Player.Sleep.EndContent.Episode": "Bölüm bitince",
   "Player.Sleep.EndContent.Movie": "Film bitince",
+  "Player.Sleep.LiveUnavailable": "Canlı içeriklerde uyku zamanlayıcısı kullanılamaz.",
   "Player.Sleep.EndDescription.Episode": "Bölüm tamamlanınca oynatma durur",
   "Player.Sleep.EndDescription.Movie": "Film tamamlanınca oynatma durur",
   "Player.Status.Connecting": "Bağlanıyor...",

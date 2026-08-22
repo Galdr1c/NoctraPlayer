@@ -21,6 +21,19 @@ namespace Noctra.Tests
     /// </summary>
     public class DownloadCenterVisibilityTests
     {
+        private static async Task WaitUntilAsync(
+            Func<bool> condition,
+            int timeoutMilliseconds = 3000)
+        {
+            var deadline = DateTime.UtcNow.AddMilliseconds(timeoutMilliseconds);
+            while (!condition() && DateTime.UtcNow < deadline)
+            {
+                await Task.Delay(25);
+            }
+
+            Assert.True(condition(), "Timed out waiting for the asynchronous download state transition.");
+        }
+
         private static async Task RefreshFromServiceAsync(MainViewModel vm, int profileId)
         {
             var method = typeof(MainViewModel).GetMethod(
@@ -224,15 +237,22 @@ namespace Noctra.Tests
         {
             var ctx = new DownloadTestContext();
             ctx.MainVM.CurrentProfileId = 1;
+            // Download state refreshes are scoped to the visible Download
+            // Center. Navigate first so this test exercises the service event
+            // path instead of relying on an implicit/manual refresh.
+            ctx.MainVM.NavigateCommand.Execute(AppView.Downloads);
+            ctx.MainVM.IsDownloadCenterVisible = true;
 
             var req = new DownloadContentRequest(1, DownloadItemType.Vod, "Movie", "http://media/a.mp4");
             await ctx.DownloadService.QueueDownloadAsync(req);
 
+            await WaitUntilAsync(() => ctx.MainVM.HasAnyDownloadState);
             Assert.True(ctx.MainVM.HasAnyDownloadState);
             Assert.False(ctx.MainVM.ShowDownloadsEmptyState);
 
             await ctx.DownloadService.CancelDownloadAsync(1);
 
+            await WaitUntilAsync(() => !ctx.MainVM.HasAnyDownloadState);
             Assert.False(ctx.MainVM.HasAnyDownloadState);
             Assert.True(ctx.MainVM.ShowDownloadsEmptyState);
         }
@@ -585,6 +605,7 @@ namespace Noctra.Tests
             ctx.DownloadService.MockItems.First().Status = DownloadStatus.Failed;
             await RefreshFromServiceAsync(ctx.MainVM, 1);
             ctx.MainVM.CancelDownloadCommand.Execute(ctx.MainVM.FailedDownloadItems.First());
+            await WaitUntilAsync(() => ctx.DownloadService.MockItems.All(i => i.Id != 1));
             await RefreshFromServiceAsync(ctx.MainVM, 1);
 
             Assert.Empty(ctx.MainVM.FailedDownloadItems);

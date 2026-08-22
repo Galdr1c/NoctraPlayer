@@ -573,6 +573,7 @@
   "Player.Sleep.EndOfMovie": "Fin de la Película",
   "Player.Sleep.EndContent.Episode": "Al final de este episodio",
   "Player.Sleep.EndContent.Movie": "Al final de esta película",
+  "Player.Sleep.LiveUnavailable": "El temporizador de apagado no está disponible para contenido en directo.",
   "Player.Sleep.EndDescription.Episode": "La reproducción se detiene al terminar el episodio",
   "Player.Sleep.EndDescription.Movie": "La reproducción se detiene al terminar la película",
   "Player.Status.Connecting": "Conectando...",
