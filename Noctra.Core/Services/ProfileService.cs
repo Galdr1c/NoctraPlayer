@@ -1,5 +1,7 @@
 using System.Collections.Concurrent;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Noctra.Core.Services;
 using Noctra.Data;
 using Noctra.Models;
 using Noctra.Services.Interfaces;
@@ -14,7 +16,10 @@ public class ProfileService : IProfileService
     private readonly ISettingsService? _settingsService;
     private readonly IProfileAccessService _profileAccessService;
     private readonly IProfilePinService _pinService;
+    private readonly IAppPathService? _appPathService;
+    private readonly ILogger<ProfileService>? _logger;
     private const string ProfilesLimitKey = "profiles";
+    private static readonly SemaphoreSlim ImportedPlaylistLifecycleGate = new(1, 1);
 
     public const int MaxPinAttempts = 5;
     public const int PinLockoutDurationSeconds = 30;
@@ -33,7 +38,9 @@ public class ProfileService : IProfileService
         ILicenseService licenseService,
         ISettingsService? settingsService = null,
         IProfileAccessService? profileAccessService = null,
-        IProfilePinService? pinService = null)
+        IProfilePinService? pinService = null,
+        IAppPathService? appPathService = null,
+        ILogger<ProfileService>? logger = null)
     {
         _contextFactory = contextFactory;
         _contentDownloadService = contentDownloadService;
@@ -41,6 +48,8 @@ public class ProfileService : IProfileService
         _settingsService = settingsService;
         _profileAccessService = profileAccessService ?? new ProfileAccessService();
         _pinService = pinService ?? new ProfilePinService();
+        _appPathService = appPathService;
+        _logger = logger;
     }
 
     private SemaphoreSlim GetProfilePinSemaphore(int profileId) =>
@@ -48,11 +57,35 @@ public class ProfileService : IProfileService
 
     public async Task<Profile?> SaveProfileAsync(ProfileSaveRequest request)
     {
+        if (_appPathService is null)
+        {
+            return await SaveProfileCoreAsync(request);
+        }
+
+        await ImportedPlaylistLifecycleGate.WaitAsync();
+        try
+        {
+            if (request.ExistingIds is null || request.CredentialsChanged)
+            {
+                ValidateManagedImportSourceExists(request);
+            }
+
+            return await SaveProfileCoreAsync(request);
+        }
+        finally
+        {
+            ImportedPlaylistLifecycleGate.Release();
+        }
+    }
+
+    private async Task<Profile?> SaveProfileCoreAsync(ProfileSaveRequest request)
+    {
         await using var db = await _contextFactory.CreateDbContextAsync();
         await using var transaction = await db.Database.BeginTransactionAsync();
 
         ProviderAccount account;
         bool credentialsChanged = false;
+        var importedPlaylistCandidates = new List<string>();
 
         if (request.ExistingIds != null)
         {
@@ -69,6 +102,10 @@ public class ProfileService : IProfileService
             if (request.CredentialsChanged)
             {
                 credentialsChanged = true;
+                importedPlaylistCandidates.AddRange(
+                    await CollectProfileImportedPlaylistCandidatesAsync(
+                        db,
+                        [request.ExistingIds.ProfileId]));
             }
 
             existingAccount.Url = request.Url;
@@ -169,6 +206,7 @@ public class ProfileService : IProfileService
                 "Hesap bilgileri degistirildi. Indirmeyi yeni bilgilerle bastan baslatmaniz gerekiyor.");
         }
         await transaction.CommitAsync();
+        await DeleteUnreferencedImportedPlaylistCopiesAsync(importedPlaylistCandidates);
         return profile;
     }
 
@@ -221,9 +259,34 @@ public class ProfileService : IProfileService
 
     public async Task DeleteProfileAsync(int profileId, int providerAccountId, ProfileAccessGrant grant)
     {
+        if (_appPathService is null)
+        {
+            await DeleteProfileCoreAsync(profileId, providerAccountId, grant);
+            return;
+        }
+
+        await ImportedPlaylistLifecycleGate.WaitAsync();
+        try
+        {
+            await DeleteProfileCoreAsync(profileId, providerAccountId, grant);
+        }
+        finally
+        {
+            ImportedPlaylistLifecycleGate.Release();
+        }
+    }
+
+    private async Task DeleteProfileCoreAsync(
+        int profileId,
+        int providerAccountId,
+        ProfileAccessGrant grant)
+    {
         _profileAccessService.ValidateOrThrow(grant, profileId, ProfileAccessPurpose.Delete);
 
         await using var db = await _contextFactory.CreateDbContextAsync();
+        var importedPlaylistCandidates = await CollectProfileImportedPlaylistCandidatesAsync(
+            db,
+            [profileId]);
 
         var hasOtherProfiles = await db.Profiles
             .AnyAsync(p => p.ProviderAccountId == providerAccountId && p.Id != profileId);
@@ -262,6 +325,7 @@ public class ProfileService : IProfileService
 
         await transaction.CommitAsync();
 
+        await DeleteUnreferencedImportedPlaylistCopiesAsync(importedPlaylistCandidates);
         await CleanDeletedProfileSettingsAsync();
     }
 
@@ -312,6 +376,25 @@ public class ProfileService : IProfileService
 
     public async Task PurgeExpiredProfilesAsync()
     {
+        if (_appPathService is null)
+        {
+            await PurgeExpiredProfilesCoreAsync();
+            return;
+        }
+
+        await ImportedPlaylistLifecycleGate.WaitAsync();
+        try
+        {
+            await PurgeExpiredProfilesCoreAsync();
+        }
+        finally
+        {
+            ImportedPlaylistLifecycleGate.Release();
+        }
+    }
+
+    private async Task PurgeExpiredProfilesCoreAsync()
+    {
         await using var db = await _contextFactory.CreateDbContextAsync();
         var cutoff = DateTime.UtcNow.AddDays(-3);
 
@@ -324,6 +407,11 @@ public class ProfileService : IProfileService
         {
             return;
         }
+
+        var expiredIds = expired.Select(p => p.Id).ToArray();
+        var importedPlaylistCandidates = await CollectProfileImportedPlaylistCandidatesAsync(
+            db,
+            expiredIds);
 
         // İndirme dosyaları + indirme DB kayıtları ayrı servis/context üzerinden
         // temizlenir — dosya sistemi DB transaction'ına alınamaz (üstelik açık bir
@@ -342,7 +430,6 @@ public class ProfileService : IProfileService
         // satırları görür. Böylece aynı hesabı paylaşan iki süresi dolmuş profil
         // de birlikte silinirken hesap yetim kalmaz (silinen kümenin dışındaki
         // bir profil tarafından kullanılıyorsa korunur).
-        var expiredIds = expired.Select(p => p.Id).ToArray();
         var remainingAccountIds = await db.Profiles
             .Where(p => !expiredIds.Contains(p.Id))
             .Select(p => p.ProviderAccountId)
@@ -384,6 +471,7 @@ public class ProfileService : IProfileService
             throw;
         }
 
+        await DeleteUnreferencedImportedPlaylistCopiesAsync(importedPlaylistCandidates);
         await CleanDeletedProfileSettingsAsync();
     }
 
@@ -407,6 +495,25 @@ public class ProfileService : IProfileService
 
     public async Task<int> DeleteChildProfilesAsync(CancellationToken cancellationToken = default)
     {
+        if (_appPathService is null)
+        {
+            return await DeleteChildProfilesCoreAsync(cancellationToken);
+        }
+
+        await ImportedPlaylistLifecycleGate.WaitAsync(cancellationToken);
+        try
+        {
+            return await DeleteChildProfilesCoreAsync(cancellationToken);
+        }
+        finally
+        {
+            ImportedPlaylistLifecycleGate.Release();
+        }
+    }
+
+    private async Task<int> DeleteChildProfilesCoreAsync(
+        CancellationToken cancellationToken)
+    {
         await using var db = await _contextFactory.CreateDbContextAsync(cancellationToken);
 
         var childProfiles = await db.Profiles
@@ -418,6 +525,11 @@ public class ProfileService : IProfileService
         {
             return 0;
         }
+
+        var importedPlaylistCandidates = await CollectProfileImportedPlaylistCandidatesAsync(
+            db,
+            childProfiles.Select(profile => profile.Id).ToArray(),
+            cancellationToken);
 
         // 0) İndirme dosyaları + indirme DB kayıtları ayrı servis/context
         //    üzerinden temizlenir. Dosya sistemi DB transaction'ına alınamaz
@@ -489,6 +601,8 @@ public class ProfileService : IProfileService
             throw;
         }
 
+        await DeleteUnreferencedImportedPlaylistCopiesAsync(importedPlaylistCandidates);
+
         // 2) Bildirim kalıcılığı — profil silme DB'ye commit edilir edilmez bayrak
         //    KAYDEDİLİR (best-effort). Kullanıcıya söz verilen bir defalık bilgi,
         //    sonraki cleanup adımlarının hatalarına rağmen kaybolmaz; buradaki bir
@@ -522,6 +636,198 @@ public class ProfileService : IProfileService
         }
 
         return childProfiles.Count;
+    }
+
+    private static async Task<List<string>> CollectProfileImportedPlaylistCandidatesAsync(
+        AppDbContext db,
+        IReadOnlyCollection<int> profileIds,
+        CancellationToken cancellationToken = default)
+    {
+        if (profileIds.Count == 0)
+        {
+            return [];
+        }
+
+        var ids = profileIds.ToArray();
+        var playlistPaths = await db.Playlists
+            .Where(playlist =>
+                playlist.ProfileId.HasValue
+                && ids.Contains(playlist.ProfileId.Value)
+                && playlist.FilePath != null)
+            .OrderBy(playlist => playlist.Id)
+            .Select(playlist => playlist.FilePath!)
+            .ToListAsync(cancellationToken);
+
+        var accountUrls = await db.Profiles
+            .Where(profile => ids.Contains(profile.Id) && profile.ProviderAccount != null)
+            .Select(profile => profile.ProviderAccount!.Url)
+            .ToListAsync(cancellationToken);
+
+        playlistPaths.AddRange(accountUrls);
+        return playlistPaths;
+    }
+
+    private async Task DeleteUnreferencedImportedPlaylistCopiesAsync(
+        IEnumerable<string?> candidates)
+    {
+        if (_appPathService is null)
+        {
+            return;
+        }
+
+        try
+        {
+            var importsDirectory = Path.GetFullPath(
+                Path.Combine(_appPathService.UserDataDirectory, "Imports"));
+            var pathComparer = OperatingSystem.IsWindows()
+                ? StringComparer.OrdinalIgnoreCase
+                : StringComparer.Ordinal;
+            var seenCandidates = new HashSet<string>(pathComparer);
+            var normalizedCandidates = new List<string>();
+
+            foreach (var candidate in candidates)
+            {
+                if (TryNormalizeManagedImportPath(candidate, importsDirectory, out var normalized)
+                    && seenCandidates.Add(normalized))
+                {
+                    normalizedCandidates.Add(normalized);
+                }
+            }
+
+            if (normalizedCandidates.Count == 0)
+            {
+                return;
+            }
+
+            await using var db = await _contextFactory.CreateDbContextAsync();
+            var remainingPlaylistPaths = await db.Playlists
+                .Where(playlist => playlist.FilePath != null)
+                .Select(playlist => playlist.FilePath!)
+                .ToListAsync();
+            var remainingAccountUrls = await db.ProviderAccounts
+                .Select(account => account.Url)
+                .ToListAsync();
+
+            var remainingReferences = new HashSet<string>(pathComparer);
+            foreach (var reference in remainingPlaylistPaths.Concat(remainingAccountUrls))
+            {
+                if (TryNormalizeManagedImportPath(reference, importsDirectory, out var normalized))
+                {
+                    remainingReferences.Add(normalized);
+                }
+            }
+
+            foreach (var candidate in normalizedCandidates)
+            {
+                if (remainingReferences.Contains(candidate))
+                {
+                    continue;
+                }
+
+                try
+                {
+                    File.Delete(candidate);
+                }
+                catch (Exception ex)
+                {
+                    _logger?.LogWarning(
+                        ex,
+                        "Failed to delete unreferenced imported playlist copy {Path}.",
+                        candidate);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(ex, "Failed to clean imported playlist copies.");
+            System.Diagnostics.Debug.WriteLine(
+                $"[ProfileService] Failed to clean imported playlist copies: {ex.Message}");
+        }
+    }
+
+    private void ValidateManagedImportSourceExists(ProfileSaveRequest request)
+    {
+        if (_appPathService is null || request.AccountType != ProfileType.M3U)
+        {
+            return;
+        }
+
+        try
+        {
+            var importsDirectory = Path.GetFullPath(
+                Path.Combine(_appPathService.UserDataDirectory, "Imports"));
+            if (TryNormalizeManagedImportPath(request.Url, importsDirectory, out var managedPath)
+                && !File.Exists(managedPath))
+            {
+                throw new FileNotFoundException(
+                    "The selected imported playlist copy no longer exists.",
+                    managedPath);
+            }
+        }
+        catch (FileNotFoundException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(ex, "Failed to validate the imported playlist source path.");
+        }
+    }
+
+    private static bool TryNormalizeManagedImportPath(
+        string? value,
+        string importsDirectory,
+        out string normalizedPath)
+    {
+        normalizedPath = string.Empty;
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        try
+        {
+            var candidate = value.Trim().Trim('"');
+            if (candidate.StartsWith("file:", StringComparison.OrdinalIgnoreCase))
+            {
+                if (!Uri.TryCreate(candidate, UriKind.Absolute, out var fileUri) || !fileUri.IsFile)
+                {
+                    return false;
+                }
+
+                candidate = fileUri.LocalPath;
+            }
+
+            if (!Path.IsPathRooted(candidate))
+            {
+                return false;
+            }
+
+            var fullPath = Path.GetFullPath(candidate);
+            var parentDirectory = Path.GetDirectoryName(fullPath);
+            if (parentDirectory is null)
+            {
+                return false;
+            }
+
+            var comparison = OperatingSystem.IsWindows()
+                ? StringComparison.OrdinalIgnoreCase
+                : StringComparison.Ordinal;
+            if (!string.Equals(
+                    Path.TrimEndingDirectorySeparator(parentDirectory),
+                    Path.TrimEndingDirectorySeparator(importsDirectory),
+                    comparison))
+            {
+                return false;
+            }
+
+            normalizedPath = fullPath;
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     /// <summary>

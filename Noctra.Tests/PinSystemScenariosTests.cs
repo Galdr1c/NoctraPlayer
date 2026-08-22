@@ -328,7 +328,8 @@ namespace Noctra.Tests
         [Fact]
         public void ChildProfileDeletion_DbOperationsRunInsideExplicitTransaction()
         {
-            // Review guard: DeleteChildProfilesAsync içindeki ExecuteDeleteAsync
+            // Review guard: yaşam döngüsü kilidi sarmalayıcısının çağırdığı
+            // DeleteChildProfilesCoreAsync içindeki ExecuteDeleteAsync
             // çağrılarının her biri ayrı autocommit işlemi çalıştırırdı — ortadaki
             // bir adım başarısız olursa "EPG/series/import-job silinmiş ama profil
             // duruyor" gibi yarım durum oluşabilirdi. Tüm DB işlemleri tek
@@ -336,7 +337,9 @@ namespace Noctra.Tests
             // indirme (dosya sistemi) temizliği transaction DIŞINDA önce tamamlanmalı.
             var source = LoadProfileServiceSource();
 
-            var childDelete = ExtractMethodBody(source, "public async Task<int> DeleteChildProfilesAsync");
+            var childDelete = ExtractMethodBody(
+                source,
+                "private async Task<int> DeleteChildProfilesCoreAsync");
             Assert.Contains("BeginTransactionAsync", childDelete, StringComparison.Ordinal);
             Assert.Contains("CommitAsync", childDelete, StringComparison.Ordinal);
             Assert.Contains("RollbackAsync", childDelete, StringComparison.Ordinal);
@@ -355,7 +358,9 @@ namespace Noctra.Tests
             Assert.True(commitIndex < rollbackIndex,
                 "RollbackAsync must exist after CommitAsync (catch branch).");
 
-            var purge = ExtractMethodBody(source, "public async Task PurgeExpiredProfilesAsync");
+            var purge = ExtractMethodBody(
+                source,
+                "private async Task PurgeExpiredProfilesCoreAsync");
             Assert.Contains("BeginTransactionAsync", purge, StringComparison.Ordinal);
             Assert.Contains("CommitAsync", purge, StringComparison.Ordinal);
             Assert.Contains("RollbackAsync", purge, StringComparison.Ordinal);
