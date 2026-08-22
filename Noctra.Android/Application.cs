@@ -62,7 +62,13 @@ public class Application : AvaloniaAndroidApplication<App>
     {
         try
         {
-            using var stream = Assets.Open("env/noctra-dev.env");
+            var assets = Assets;
+            if (assets is null)
+            {
+                return;
+            }
+
+            using var stream = assets.Open("env/noctra-dev.env");
             using var reader = new StreamReader(stream);
             string? line;
             while ((line = reader.ReadLine()) is not null)

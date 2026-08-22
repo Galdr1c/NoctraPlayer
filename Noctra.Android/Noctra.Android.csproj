@@ -17,6 +17,21 @@
     <AndroidEnableProfiledAot>false</AndroidEnableProfiledAot>
 
     <!--
+      These are upstream/toolchain diagnostics, not application compiler
+      failures:
+      * NU1608 comes from Avalonia.Android's AppCompat -> Emoji2 -> Lifecycle
+        Process 2.10 binding while another AndroidX dependency resolves Runtime
+        2.11. Pinning either side would downgrade a larger AndroidX graph.
+      * XA0141 is emitted for the prebuilt FFmpeg JNI binaries in libs/ffmpeg;
+        replacing them requires a rebuilt 16-KB-page-aligned native artifact.
+        Keep the diagnostics documented until that upstream binary is replaced.
+      * BG8605/BG8606 are binding-parser diagnostics for the extension's
+        version-specific generic Java base type; the jar is packaged and loaded
+        reflectively by Media3, so no generated C# binding is consumed.
+    -->
+    <NoWarn>$(NoWarn);NU1608;XA0141;BG8605;BG8606</NoWarn>
+
+    <!--
       AdMob production identifiers. Defaults are the production values; override
       any of them per-build with -p:NoctraAdMobAppId=... (or the unit IDs) when
       building a test/QA flavor. The App ID is injected into AndroidManifest.xml
@@ -70,6 +85,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- The extension is loaded by Media3 through Java reflection. Keep the
+         established JavaLibrary packaging so the FFmpeg classes remain in the
+         APK exactly as in the previously tested build. -->
     <JavaLibrary Include="libs\ffmpeg\ffmpeg-extension.jar" />
   </ItemGroup>
 

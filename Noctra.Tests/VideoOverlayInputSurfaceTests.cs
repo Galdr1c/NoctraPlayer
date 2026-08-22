@@ -113,7 +113,9 @@ public sealed class VideoOverlayInputSurfaceTests
             mainActivity, StringComparison.Ordinal);
         Assert.Contains("SetAvaloniaPlayerOverlayActive(bool active)",
             mainActivity, StringComparison.Ordinal);
-        Assert.Contains("surfaceView.Holder.SetFormat(Format.Translucent);",
+        Assert.Contains("var surfaceHolder = surfaceView.Holder;",
+            mainActivity, StringComparison.Ordinal);
+        Assert.Contains("surfaceHolder.SetFormat(Format.Translucent);",
             mainActivity, StringComparison.Ordinal);
         Assert.DoesNotContain(
             "throw new InvalidOperationException(\"Avalonia rendering surface is unavailable.\")",

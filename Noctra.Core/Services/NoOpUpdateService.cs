@@ -9,7 +9,13 @@ namespace Noctra.Services;
 /// </summary>
 public sealed class NoOpUpdateService : IAppUpdateService
 {
-    public event EventHandler<UpdateStateChangedEventArgs>? UpdateStateChanged;
+    // This implementation intentionally never raises update notifications:
+    // unsupported builds only expose the synchronous "unsupported" result.
+    public event EventHandler<UpdateStateChangedEventArgs>? UpdateStateChanged
+    {
+        add { }
+        remove { }
+    }
 
     public Task<UpdateCheckResult> CheckAsync(CancellationToken cancellationToken = default)
     {

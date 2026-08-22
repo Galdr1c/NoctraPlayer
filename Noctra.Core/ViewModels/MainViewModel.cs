@@ -7151,7 +7151,7 @@ public partial class MainViewModel : ObservableObject
                              && e.Season != null
                              && e.Season.Series != null
                              && e.Season.Series.PlaylistId == playlistId)
-                    .GroupBy(e => e.Season.SeriesId)
+                    .GroupBy(e => e.Season!.SeriesId)
                     .Select(g => new { SeriesId = g.Key, LastWatched = g.Max(e => e.LastWatched) })
                     .OrderByDescending(x => x.LastWatched)
                     .ToListAsync();
@@ -7556,7 +7556,7 @@ public partial class MainViewModel : ObservableObject
         {
             EpisodeNumber = episodeNumber,
             Name = episodeTitle,
-            StreamUrl = item.LocalFilePath,
+            StreamUrl = item.LocalFilePath ?? string.Empty,
             CoverUrl = item.PosterUrl
         });
     }

@@ -113,7 +113,9 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     private readonly IMediaService _mediaService;
     private readonly IContentDownloadService _contentDownloadService;
     private readonly INetworkService _networkService;
-    private readonly ISettingsService _settingsService;
+    // Constructor injection assigns this before any instance method runs; the
+    // initializer keeps nullable analysis sound across generated partial code.
+    private readonly ISettingsService _settingsService = null!;
     private readonly ILicenseService _licenseService;
     private readonly ILocalizationService _localizationService;
     private readonly MainViewModel _mainViewModel;
@@ -843,7 +845,9 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
     partial void OnSubtitlePositionChanged(SubtitleVerticalPosition value)
     {
-        OnPropertyChanged(nameof(SubtitleMargin));
+        // Keep the legacy binding notification without referencing the
+        // obsolete compatibility property in compiled code.
+        OnPropertyChanged("SubtitleMargin");
         QueueSubtitleSettingsSave();
     }
 
@@ -1286,6 +1290,11 @@ public bool CanShowDownloadButton => CurrentChannel != null && !IsLiveContent &&
         _contentDownloadService = contentDownloadService;
         _networkService = networkService;
         _dispatcherService = dispatcherService;
+        if (settingsService is null)
+        {
+            throw new ArgumentNullException(nameof(settingsService));
+        }
+
         _settingsService = settingsService;
         _licenseService = licenseService;
         _localizationService = localizationService;
@@ -1322,7 +1331,11 @@ public bool CanShowDownloadButton => CurrentChannel != null && !IsLiveContent &&
             _volumeBeforeMute = Volume > 0 ? Volume : 100;
         }
 
-        _settingsService.SettingsChanged += OnSettingsChanged;
+        var assignedSettingsService = _settingsService;
+        if (assignedSettingsService is not null)
+        {
+            assignedSettingsService.SettingsChanged += OnSettingsChanged;
+        }
 
         _autoHideTimer = new System.Threading.Timer(_ =>
             _dispatcherService.BeginInvoke(() =>

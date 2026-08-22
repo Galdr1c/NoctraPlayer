@@ -59,6 +59,11 @@ public sealed class AndroidDiagnosticReportService : IDiagnosticReportService
             mailIntent.PutExtra(Intent.ExtraText, body);
 
             var chooser = Intent.CreateChooser(mailIntent, "Send Noctra report");
+            if (chooser is null)
+            {
+                return;
+            }
+
             if (activity is null)
             {
                 chooser.AddFlags(ActivityFlags.NewTask);
@@ -77,6 +82,11 @@ public sealed class AndroidDiagnosticReportService : IDiagnosticReportService
                 shareIntent.PutExtra(Intent.ExtraText, body);
 
                 var chooser = Intent.CreateChooser(shareIntent, "Share Noctra report");
+                if (chooser is null)
+                {
+                    return;
+                }
+
                 if (activity is null)
                 {
                     chooser.AddFlags(ActivityFlags.NewTask);

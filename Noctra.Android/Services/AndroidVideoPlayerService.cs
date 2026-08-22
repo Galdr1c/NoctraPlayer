@@ -122,7 +122,13 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
     public event EventHandler<bool>? PlayingChanged;
     public event EventHandler<double>? PositionChanged;
     public event EventHandler? PlayerReady;
-    public event EventHandler? MediaPlayerReleasing;
+    // Android's ExoPlayer is released internally; no external release hook
+    // is emitted by this implementation.
+    public event EventHandler? MediaPlayerReleasing
+    {
+        add { }
+        remove { }
+    }
     public event EventHandler? PlaybackEnded;
     public event EventHandler<float>? BufferingChanged;
     public event EventHandler<string>? ErrorOccurred;
@@ -191,26 +197,45 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
         // so audio codecs without a platform MediaCodec decoder (such as MP2
         // on some devices) can still be decoded in software. Extension renderers
         // are only instantiated when a platform decoder cannot handle the format.
-        var renderersFactory = new DefaultRenderersFactory(_applicationContext)
-            .SetExtensionRendererMode(DefaultRenderersFactory.ExtensionRendererModeOn);
+        var renderersFactoryBuilder = new DefaultRenderersFactory(_applicationContext);
+        var renderersFactory = renderersFactoryBuilder
+            .SetExtensionRendererMode(DefaultRenderersFactory.ExtensionRendererModeOn)
+            ?? throw new InvalidOperationException("ExoPlayer renderer factory could not be configured.");
 
-        var builder = new ExoPlayerBuilder(_applicationContext, renderersFactory)
-            .SetLoadControl(CreateLoadControl(_lastVideoBufferSize));
+        var playerBuilder = new ExoPlayerBuilder(_applicationContext, renderersFactory);
+        var builder = playerBuilder
+            .SetLoadControl(CreateLoadControl(_lastVideoBufferSize))
+            ?? throw new InvalidOperationException("ExoPlayer builder could not be configured.");
         
         // Configure AudioAttributes for automatic audio focus handling
-        var audioAttributes = new AndroidX.Media3.Common.AudioAttributes.Builder()
-            .SetUsage(C.UsageMedia)
+        var audioAttributesBuilder = new AndroidX.Media3.Common.AudioAttributes.Builder();
+        var audioUsageBuilder = audioAttributesBuilder.SetUsage(C.UsageMedia);
+        if (audioUsageBuilder is null)
+        {
+            throw new InvalidOperationException("Audio usage could not be configured.");
+        }
+
+        var audioContentBuilder = audioUsageBuilder
+#pragma warning disable CS0618 // Media3 1.4 binding exposes movie content type under this legacy name.
             .SetContentType(C.ContentTypeMovie)
-            .Build();
+#pragma warning restore CS0618
+            ?? throw new InvalidOperationException("Audio content type could not be configured.");
+        var audioAttributes = audioContentBuilder.Build()
+            ?? throw new InvalidOperationException("Audio attributes could not be built.");
         
-        builder.SetAudioAttributes(audioAttributes, true);
+        var configuredPlayerBuilder = builder.SetAudioAttributes(audioAttributes, true);
+        if (configuredPlayerBuilder is null)
+        {
+            throw new InvalidOperationException("Audio attributes could not be applied to ExoPlayer.");
+        }
         
-        _exoPlayer = builder.Build();
+        _exoPlayer = configuredPlayerBuilder.Build();
+        var player = _exoPlayer ?? throw new InvalidOperationException("ExoPlayer could not be built.");
         _fpsListener = new FrameFpsListener(this);
-        _exoPlayer.SetVideoFrameMetadataListener(_fpsListener);
+        player.SetVideoFrameMetadataListener(_fpsListener);
         _playerListener = new PlayerListener(this);
-        _exoPlayer.AddListener(_playerListener);
-        PlayerChanged?.Invoke(_exoPlayer);
+        player.AddListener(_playerListener);
+        PlayerChanged?.Invoke(player);
 
         ApplyVolume();
         ApplyPlaybackRate();
@@ -343,7 +368,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
                     httpDataSourceFactory.SetDefaultRequestProperties(playbackSource.Headers);
                 }
 
-                global::Android.Net.Uri uri;
+                global::Android.Net.Uri? uri;
                 if (playbackSource.IsNetworkStream)
                 {
                     uri = global::Android.Net.Uri.Parse(playbackSource.Url);
@@ -353,27 +378,47 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
                     uri = global::Android.Net.Uri.FromFile(new Java.IO.File(playbackSource.Url));
                 }
 
-                var metadataBuilder = new MediaMetadata.Builder()
-                    .SetTitle(_mediaMetadata.Title);
-
-                if (!string.IsNullOrWhiteSpace(_mediaMetadata.Subtitle))
+                if (uri is null)
                 {
-                    metadataBuilder.SetArtist(_mediaMetadata.Subtitle);
+                    throw new InvalidOperationException("Playback URL could not be converted to an Android URI.");
                 }
 
-                if (!string.IsNullOrWhiteSpace(_mediaMetadata.ArtworkUrl))
+                var metadataBuilder = new MediaMetadata.Builder();
+                if (metadataBuilder is null)
                 {
-                    var artworkUri = global::Android.Net.Uri.Parse(_mediaMetadata.ArtworkUrl);
+                    throw new InvalidOperationException("Media metadata builder could not be created.");
+                }
+
+                metadataBuilder.SetTitle(_mediaMetadata.Title);
+
+                var subtitle = _mediaMetadata.Subtitle;
+                if (!string.IsNullOrWhiteSpace(subtitle))
+                {
+                    metadataBuilder.SetArtist(subtitle);
+                }
+
+                var artworkUrl = _mediaMetadata.ArtworkUrl;
+                if (!string.IsNullOrWhiteSpace(artworkUrl))
+                {
+                    var artworkUri = global::Android.Net.Uri.Parse(artworkUrl);
                     if (artworkUri is not null)
                     {
                         metadataBuilder.SetArtworkUri(artworkUri);
                     }
                 }
 
-                var mediaItem = new MediaItem.Builder()
-                    .SetUri(uri)
-                    .SetMediaMetadata(metadataBuilder.Build())
-                    .Build();
+                var mediaItemBuilder = new MediaItem.Builder();
+                if (mediaItemBuilder is null)
+                {
+                    throw new InvalidOperationException("Media item builder could not be created.");
+                }
+
+                mediaItemBuilder.SetUri(uri);
+                var metadata = metadataBuilder.Build()
+                    ?? throw new InvalidOperationException("Media metadata could not be built.");
+                mediaItemBuilder.SetMediaMetadata(metadata);
+                var mediaItem = mediaItemBuilder.Build()
+                    ?? throw new InvalidOperationException("Media item could not be built.");
 
                 // Create the appropriate MediaSource using DefaultMediaSourceFactory.
                 // Media3 optional modules (DASH/SmoothStreaming/HLS/RTSP) live in separate
@@ -660,7 +705,17 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
             int groupIndex = trackId / 1000;
             int trackIndex = trackId % 1000;
 
-            var currentTracks = _exoPlayer.CurrentTracks;
+            var player = _exoPlayer;
+            if (player is null)
+            {
+                return;
+            }
+
+            var currentTracks = player.CurrentTracks;
+            if (currentTracks is null)
+            {
+                return;
+            }
             var groups = GetTrackGroups(currentTracks);
             if (groupIndex >= groups.Length)
             {
@@ -673,10 +728,22 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
 
             var newOverride = new TrackSelectionOverride(mediaTrackGroup, trackIndex);
 
-            _exoPlayer.TrackSelectionParameters = _exoPlayer.TrackSelectionParameters.BuildUpon()
-                .ClearOverridesOfType(C.TrackTypeAudio)
-                .AddOverride(newOverride)
-                .Build();
+            var trackSelectionParameters = player.TrackSelectionParameters;
+            if (trackSelectionParameters is null)
+            {
+                return;
+            }
+
+            var audioSelectionBuilder = trackSelectionParameters.BuildUpon();
+            if (audioSelectionBuilder is null)
+            {
+                return;
+            }
+
+            audioSelectionBuilder.ClearOverridesOfType(C.TrackTypeAudio);
+            audioSelectionBuilder.AddOverride(newOverride);
+            player.TrackSelectionParameters = audioSelectionBuilder.Build()
+                ?? throw new InvalidOperationException("Audio track selection parameters could not be built.");
 
             _selectedAudioTrack = trackId;
             System.Diagnostics.Debug.WriteLine($"[AndroidVideoPlayerService] SetAudioTrack({trackId}): took {sw.ElapsedMilliseconds}ms");
@@ -696,9 +763,21 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
 
             if (trackId < 0)
             {
-                _exoPlayer.TrackSelectionParameters = _exoPlayer.TrackSelectionParameters.BuildUpon()
-                    .SetTrackTypeDisabled(C.TrackTypeText, true)
-                    .Build();
+                var disableTrackSelectionParameters = _exoPlayer.TrackSelectionParameters;
+                if (disableTrackSelectionParameters is null)
+                {
+                    return;
+                }
+
+                var disableSelectionBuilder = disableTrackSelectionParameters.BuildUpon();
+                if (disableSelectionBuilder is null)
+                {
+                    return;
+                }
+
+                disableSelectionBuilder.SetTrackTypeDisabled(C.TrackTypeText, true);
+                _exoPlayer.TrackSelectionParameters = disableSelectionBuilder.Build()
+                    ?? throw new InvalidOperationException("Subtitle track selection parameters could not be built.");
                 _selectedSubtitleTrack = -1;
                 ClearCues();
                 System.Diagnostics.Debug.WriteLine($"[AndroidVideoPlayerService] SetSubtitleTrack({trackId}): took {sw.ElapsedMilliseconds}ms (disabled)");
@@ -708,7 +787,17 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
             int groupIndex = trackId / 1000;
             int trackIndex = trackId % 1000;
 
-            var currentTracks = _exoPlayer.CurrentTracks;
+            var player = _exoPlayer;
+            if (player is null)
+            {
+                return;
+            }
+
+            var currentTracks = player.CurrentTracks;
+            if (currentTracks is null)
+            {
+                return;
+            }
             var groups = GetTrackGroups(currentTracks);
             if (groupIndex >= groups.Length)
             {
@@ -721,11 +810,23 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
 
             var newOverride = new TrackSelectionOverride(mediaTrackGroup, trackIndex);
 
-            _exoPlayer.TrackSelectionParameters = _exoPlayer.TrackSelectionParameters.BuildUpon()
-                .SetTrackTypeDisabled(C.TrackTypeText, false)
-                .ClearOverridesOfType(C.TrackTypeText)
-                .AddOverride(newOverride)
-                .Build();
+            var trackSelectionParameters = player.TrackSelectionParameters;
+            if (trackSelectionParameters is null)
+            {
+                return;
+            }
+
+            var subtitleSelectionBuilder = trackSelectionParameters.BuildUpon();
+            if (subtitleSelectionBuilder is null)
+            {
+                return;
+            }
+
+            subtitleSelectionBuilder.SetTrackTypeDisabled(C.TrackTypeText, false);
+            subtitleSelectionBuilder.ClearOverridesOfType(C.TrackTypeText);
+            subtitleSelectionBuilder.AddOverride(newOverride);
+            player.TrackSelectionParameters = subtitleSelectionBuilder.Build()
+                ?? throw new InvalidOperationException("Subtitle track selection parameters could not be built.");
 
             _selectedSubtitleTrack = trackId;
             System.Diagnostics.Debug.WriteLine($"[AndroidVideoPlayerService] SetSubtitleTrack({trackId}): took {sw.ElapsedMilliseconds}ms");
@@ -1045,10 +1146,20 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
             _ => (15_000, 90_000, 1_000, 2_500)
         };
 
-        return new DefaultLoadControl.Builder()
-            .SetBufferDurationsMs(minBufferMs, maxBufferMs, playbackMs, rebufferMs)
-            .SetPrioritizeTimeOverSizeThresholds(true)
-            .Build();
+        var builder = new DefaultLoadControl.Builder();
+        var configuredBuilder = builder.SetBufferDurationsMs(
+            minBufferMs,
+            maxBufferMs,
+            playbackMs,
+            rebufferMs);
+        if (configuredBuilder is null)
+        {
+            throw new InvalidOperationException("ExoPlayer buffer durations could not be configured.");
+        }
+
+        configuredBuilder.SetPrioritizeTimeOverSizeThresholds(true);
+        return configuredBuilder.Build()
+            ?? throw new InvalidOperationException("ExoPlayer load control could not be built.");
     }
 
     private void ApplyDataUsageConstraints()
@@ -1064,11 +1175,29 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
 
             try
             {
-                _exoPlayer.TrackSelectionParameters = _exoPlayer.TrackSelectionParameters.BuildUpon()
-                    .SetMaxVideoSize(maxWidth, maxHeight)
-                    .SetMaxVideoBitrate(maxBitrate)
-                    .SetForceLowestBitrate(forceLowestBitrate)
-                    .Build();
+                var player = _exoPlayer;
+                if (player is null)
+                {
+                    return;
+                }
+
+                var trackSelectionParameters = player.TrackSelectionParameters;
+                if (trackSelectionParameters is null)
+                {
+                    return;
+                }
+
+                var selectionBuilder = trackSelectionParameters.BuildUpon();
+                if (selectionBuilder is null)
+                {
+                    return;
+                }
+
+                selectionBuilder.SetMaxVideoSize(maxWidth, maxHeight);
+                selectionBuilder.SetMaxVideoBitrate(maxBitrate);
+                selectionBuilder.SetForceLowestBitrate(forceLowestBitrate);
+                player.TrackSelectionParameters = selectionBuilder.Build()
+                    ?? throw new InvalidOperationException("Data usage track selection parameters could not be built.");
             }
             catch (Exception ex)
             {
@@ -1344,7 +1473,9 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
         {
             quality.Width = videoFormat.Width;
             quality.Height = videoFormat.Height;
-            quality.VideoCodec = videoFormat.SampleMimeType is { } mime ? MimeToCodecName(mime) : null;
+            quality.VideoCodec = videoFormat.SampleMimeType is { } mime
+                ? MimeToCodecName(mime)
+                : string.Empty;
             if (videoFormat.Bitrate > 0)
             {
                 quality.VideoBitrate = videoFormat.Bitrate / 1000;
@@ -1361,7 +1492,9 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
 
         if (audioFormat is not null)
         {
-            quality.AudioCodec = audioFormat.SampleMimeType is { } mime ? MimeToCodecName(mime) : null;
+            quality.AudioCodec = audioFormat.SampleMimeType is { } mime
+                ? MimeToCodecName(mime)
+                : string.Empty;
             if (audioFormat.Bitrate > 0)
             {
                 quality.AudioBitrate = audioFormat.Bitrate / 1000;
@@ -1688,19 +1821,25 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
             _service.PlayingChanged?.Invoke(_service, isPlaying);
         }
 
-        public void OnPlayerError(PlaybackException error)
+        public void OnPlayerError(PlaybackException? error)
         {
             _service.StopPositionUpdates();
             _service._state = PlaybackState.Error;
             _service._isPlaying = false;
             _service.PlayingChanged?.Invoke(_service, false);
-            AndroidVideoPlayerService.LogDebug($"ExoPlayer playback error: {error.Message}");
+            AndroidVideoPlayerService.LogDebug($"ExoPlayer playback error: {error?.Message}");
             _service.ErrorOccurred?.Invoke(_service, _service._localizationService.GetString("VideoPlayer.Error.PlaybackGeneric"));
             _service.ClearCues();
         }
 
-        public void OnCues(CueGroup cueGroup)
+        public void OnCues(CueGroup? cueGroup)
         {
+            if (cueGroup is null)
+            {
+                _service.ClearCues();
+                return;
+            }
+
             var cues = AndroidVideoPlayerService.GetCues(cueGroup);
             if (cues.Length == 0)
             {
@@ -1728,8 +1867,13 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
                 list.Count == 0 ? SubtitleCueData.Empty : list.ToArray());
         }
 
-        public void OnTracksChanged(Tracks tracks)
+        public void OnTracksChanged(Tracks? tracks)
         {
+            if (tracks is null)
+            {
+                return;
+            }
+
             var sw = System.Diagnostics.Stopwatch.StartNew();
             var audio = new List<(int Id, string? Name)>();
             var subtitles = new List<(int Id, string? Name)>();
@@ -1745,6 +1889,10 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
                 for (int j = 0; j < group.Length; j++)
                 {
                     var format = group.GetTrackFormat(j);
+                    if (format is null)
+                    {
+                        continue;
+                    }
                     var lang = string.IsNullOrWhiteSpace(format.Language) || format.Language == "und"
                         ? ""
                         : $" ({format.Language})";
@@ -1776,9 +1924,9 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
             System.Diagnostics.Debug.WriteLine($"[AndroidVideoPlayerService] OnTracksChanged: took {sw.ElapsedMilliseconds}ms (audio={audio.Count}, subtitles={subtitles.Count})");
         }
 
-        public void OnVideoSizeChanged(AndroidX.Media3.Common.VideoSize videoSize)
+        public void OnVideoSizeChanged(AndroidX.Media3.Common.VideoSize? videoSize)
         {
-            if (videoSize.Width > 0 && videoSize.Height > 0)
+            if (videoSize is not null && videoSize.Width > 0 && videoSize.Height > 0)
             {
                 // Anamorphic içerikte piksel oranı 1'den farklıdır; display aspect
                 // ratio = (width × ratio) / height olarak hesaplanır.

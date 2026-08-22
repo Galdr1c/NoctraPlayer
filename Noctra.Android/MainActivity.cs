@@ -175,7 +175,13 @@ public class MainActivity : AvaloniaMainActivity
         // native AdView can be visible. Player mode moves Avalonia above the
         // native video TextureView so controls remain visible over playback.
         surfaceView.SetZOrderOnTop(_playerOverlaySurfaceActive);
-        surfaceView.Holder.SetFormat(Format.Translucent);
+        var surfaceHolder = surfaceView.Holder;
+        if (surfaceHolder is null)
+        {
+            return;
+        }
+
+        surfaceHolder.SetFormat(Format.Translucent);
         surfaceView.SetBackgroundColor(Color.Transparent);
 
         if (recreateLegacySurface && Build.VERSION.SdkInt < BuildVersionCodes.R)
@@ -368,7 +374,9 @@ public class MainActivity : AvaloniaMainActivity
             return;
         }
 
+#pragma warning disable CA1422 // Required fallback for Android API < 33.
         base.OnBackPressed();
+#pragma warning restore CA1422
     }
 
     public override void OnWindowFocusChanged(bool hasFocus)
@@ -522,7 +530,8 @@ public class MainActivity : AvaloniaMainActivity
             if (settings is not { AllowBackgroundPlayback: true })
             {
                 _pausedByLifecycle = true;
-                app.Services.GetService<IVideoPlayerService>()?.Pause();
+                var videoService = app.Services?.GetService<IVideoPlayerService>();
+                videoService?.Pause();
             }
         }
 

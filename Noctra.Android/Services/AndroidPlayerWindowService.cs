@@ -67,7 +67,7 @@ public sealed class AndroidPlayerWindowService : IPlayerWindowService
                 return;
             }
 
-            if (Build.VERSION.SdkInt >= BuildVersionCodes.R)
+            if (OperatingSystem.IsAndroidVersionAtLeast(30))
             {
                 ApplyImmersiveModern(window, fullScreen);
             }
@@ -127,7 +127,7 @@ public sealed class AndroidPlayerWindowService : IPlayerWindowService
                 return;
             }
 
-            if (Build.VERSION.SdkInt >= BuildVersionCodes.R)
+            if (OperatingSystem.IsAndroidVersionAtLeast(30))
             {
                 ApplyImmersiveModern(window, fullScreen: true);
             }
@@ -160,9 +160,15 @@ public sealed class AndroidPlayerWindowService : IPlayerWindowService
         });
     }
 
+    [System.Runtime.Versioning.SupportedOSPlatform("android30.0")]
     private static void ApplyImmersiveModern(Window window, bool fullScreen)
     {
-        window.SetDecorFitsSystemWindows(!fullScreen);
+        // Android 15 (API 35) enforces edge-to-edge and deprecates this setter;
+        // on older API 30-34 devices it is still required for immersive mode.
+        if (!OperatingSystem.IsAndroidVersionAtLeast(35))
+        {
+            window.SetDecorFitsSystemWindows(!fullScreen);
+        }
         var controller = window.InsetsController;
         if (controller is null)
         {

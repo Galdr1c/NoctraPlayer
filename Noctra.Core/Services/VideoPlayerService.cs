@@ -62,7 +62,13 @@ public class VideoPlayerService : IVideoPlayerService
     public event EventHandler<StreamQualityInfo>? QualityDetected;
     public event EventHandler<int>? VolumeChanged;
     // Desktop LibVLC renders subtitles natively; this event is mainly used by mobile where subtitles are drawn in Avalonia overlay.
-    public event EventHandler<IReadOnlyList<SubtitleCueData>>? SubtitleCuesChanged;
+    // Desktop LibVLC renders subtitle cues natively; this event is kept as a
+    // no-op interface member for parity with the mobile player.
+    public event EventHandler<IReadOnlyList<SubtitleCueData>>? SubtitleCuesChanged
+    {
+        add { }
+        remove { }
+    }
 
     public string? CurrentUrl { get; private set; }
     public StreamQualityInfo? StreamQuality { get; private set; }
@@ -101,9 +107,11 @@ public class VideoPlayerService : IVideoPlayerService
         _currentVolume = _settingsService.Settings.DefaultVolume;
         _isMuted = _settingsService.Settings.IsMuted;
         _lastUserAgent = _settingsService.Settings.UserAgent;
-        _lastSubtitleFontSize = _settingsService.Settings.SubtitleFontSize;
+        _lastSubtitleFontSize = SubtitleAppearanceDefaults.ResolveDesktopFontSize(
+            _settingsService.Settings.SubtitleTextSize);
         _lastSubtitleBackgroundOpacity = _settingsService.Settings.SubtitleBackgroundOpacity;
-        _lastSubtitleMargin = _settingsService.Settings.SubtitleMargin;
+        _lastSubtitleMargin = SubtitleAppearanceDefaults.ToLegacyMargin(
+            _settingsService.Settings.SubtitlePosition);
         _lastHardwareAcceleration = _settingsService.Settings.HardwareAcceleration;
         _lastVideoBufferSize = _settingsService.Settings.VideoBufferSize;
 
@@ -130,9 +138,10 @@ public class VideoPlayerService : IVideoPlayerService
             shouldReinit = true;
         }
 
-        if (_lastSubtitleFontSize != settings.SubtitleFontSize)
+        var subtitleFontSize = SubtitleAppearanceDefaults.ResolveDesktopFontSize(settings.SubtitleTextSize);
+        if (_lastSubtitleFontSize != subtitleFontSize)
         {
-            _lastSubtitleFontSize = settings.SubtitleFontSize;
+            _lastSubtitleFontSize = subtitleFontSize;
             shouldReinit = true;
         }
 
@@ -142,9 +151,10 @@ public class VideoPlayerService : IVideoPlayerService
             shouldReinit = true;
         }
 
-        if (_lastSubtitleMargin != settings.SubtitleMargin)
+        var subtitleMargin = SubtitleAppearanceDefaults.ToLegacyMargin(settings.SubtitlePosition);
+        if (_lastSubtitleMargin != subtitleMargin)
         {
-            _lastSubtitleMargin = settings.SubtitleMargin;
+            _lastSubtitleMargin = subtitleMargin;
             shouldReinit = true;
         }
         

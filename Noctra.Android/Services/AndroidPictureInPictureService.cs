@@ -143,16 +143,25 @@ public sealed class AndroidPictureInPictureService : IPictureInPictureService
             return null;
         }
 
-        var builder = new PictureInPictureParams.Builder()
-            .SetAspectRatio(new Rational(16, 9));
+        var builder = new PictureInPictureParams.Builder();
+        if (builder is null)
+        {
+            return null;
+        }
 
-        if (Build.VERSION.SdkInt >= BuildVersionCodes.S)
+        builder = builder.SetAspectRatio(new Rational(16, 9));
+        if (builder is null)
+        {
+            return null;
+        }
+
+        if (OperatingSystem.IsAndroidVersionAtLeast(31))
         {
             builder.SetAutoEnterEnabled(autoEnterEnabled);
             builder.SetSeamlessResizeEnabled(true);
         }
 
-        if (Build.VERSION.SdkInt >= BuildVersionCodes.Tiramisu)
+        if (OperatingSystem.IsAndroidVersionAtLeast(33))
         {
             if (!string.IsNullOrWhiteSpace(_state.Title))
             {
@@ -242,6 +251,11 @@ public sealed class AndroidPictureInPictureService : IPictureInPictureService
             requestCode,
             intent,
             PendingIntentFlags.UpdateCurrent | PendingIntentFlags.Immutable);
+
+        if (pendingIntent is null)
+        {
+            throw new InvalidOperationException("PiP action PendingIntent could not be created.");
+        }
 
         return new RemoteAction(
             Icon.CreateWithResource(context, drawableResource),

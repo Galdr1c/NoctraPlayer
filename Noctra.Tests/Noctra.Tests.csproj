@@ -7,6 +7,16 @@
 
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
+
+    <!-- HotAvalonia's Debug-only dependency graph brings both the .NET 8 and
+         .NET 9 System.Reflection.Metadata reference assemblies into this test
+         host. The test binary uses the primary .NET 8 reference; MSBuild's
+         duplicate-reference diagnostic is an upstream tooling conflict. -->
+    <!-- Test doubles deliberately pass nulls, expose legacy compatibility
+         properties, and declare interface-only events; these are exercised
+         fixture shapes rather than production diagnostics. xUnit analyzer
+         rules also flag intentional synchronous command probes. -->
+    <NoWarn>$(NoWarn);MSB3277;CS0067;CS0168;CS0618;CS8601;CS8602;CS8604;CS8625;Xunit1031;Xunit1026</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

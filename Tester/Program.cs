@@ -921,9 +921,9 @@ partial class NoctraProviderTester
         {
             var ch = new Channel
             {
-                Name = item.TryGetProperty("name", out var n) ? n.GetString() : "",
-                GroupTitle = item.TryGetProperty("category_name", out var g) ? g.GetString() : "",
-                LogoUrl = item.TryGetProperty("stream_icon", out var l) ? l.GetString() : "",
+                Name = item.TryGetProperty("name", out var n) ? n.GetString() ?? string.Empty : string.Empty,
+                GroupTitle = item.TryGetProperty("category_name", out var g) ? g.GetString() ?? string.Empty : string.Empty,
+                LogoUrl = item.TryGetProperty("stream_icon", out var l) ? l.GetString() ?? string.Empty : string.Empty,
                 Type = type
             };
             var streamId = item.TryGetProperty("stream_id", out var sid) ? sid.GetInt32().ToString() : "0";
@@ -944,9 +944,9 @@ partial class NoctraProviderTester
         {
             channels.Add(new Channel
             {
-                Name = item.TryGetProperty("name", out var n) ? n.GetString() : "",
-                GroupTitle = item.TryGetProperty("category_name", out var g) ? g.GetString() : "",
-                LogoUrl = item.TryGetProperty("cover", out var c) ? c.GetString() : "",
+                Name = item.TryGetProperty("name", out var n) ? n.GetString() ?? string.Empty : string.Empty,
+                GroupTitle = item.TryGetProperty("category_name", out var g) ? g.GetString() ?? string.Empty : string.Empty,
+                LogoUrl = item.TryGetProperty("cover", out var c) ? c.GetString() ?? string.Empty : string.Empty,
                 Type = ChannelType.Series,
                 StreamUrl = item.TryGetProperty("series_id", out var sid) ? $"series://{sid}" : ""
             });

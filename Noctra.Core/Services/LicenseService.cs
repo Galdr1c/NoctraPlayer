@@ -268,7 +268,13 @@ public class LicenseService : ObservableObject, ILicenseService, IDisposable
     {
         try
         {
-            var entitlement = await _storePurchaseService.GetEntitlementAsync(cancellationToken);
+            var storePurchaseService = _storePurchaseService;
+            if (storePurchaseService is null)
+            {
+                return;
+            }
+
+            var entitlement = await storePurchaseService.GetEntitlementAsync(cancellationToken);
             if (entitlement.IsVerified)
             {
                 // Backend doğrulaması geçti: hem kullan hem önbelleğe yaz.

@@ -48,7 +48,9 @@ public class TmdbSyncService : ITmdbSyncService
         using var db = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
         var m3uPlaylistIds = await db.Playlists
             .Include(p => p.Profile)
-            .Where(p => p.Profile != null && p.Profile.ProviderAccount.Type == ProfileType.M3U)
+            .Where(p => p.Profile != null &&
+                        p.Profile.ProviderAccount != null &&
+                        p.Profile.ProviderAccount.Type == ProfileType.M3U)
             .Select(p => p.Id)
             .ToListAsync(cancellationToken);
 

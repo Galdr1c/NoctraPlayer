@@ -579,6 +579,7 @@ public sealed class AdMobMobileAdvertisingService : IMobileAdvertisingService
 
     private static int ParseDebugGeography(string value)
     {
+#pragma warning disable CS0618 // UMP binding exposes NOT_EEA only through this legacy enum member.
         return value.Trim().ToUpperInvariant() switch
         {
             "EEA" or "EU" => ConsentDebugSettings.DebugGeography.DebugGeographyEea,
@@ -587,6 +588,7 @@ public sealed class AdMobMobileAdvertisingService : IMobileAdvertisingService
             "OTHER" => ConsentDebugSettings.DebugGeography.DebugGeographyOther,
             _ => ConsentDebugSettings.DebugGeography.DebugGeographyDisabled
         };
+#pragma warning restore CS0618
     }
 
     private void DispatchOnMainThread(Action action)
@@ -595,7 +597,11 @@ public sealed class AdMobMobileAdvertisingService : IMobileAdvertisingService
         // that can be collected or destroyed mid-consent, and Mobile Ads SDK calls
         // (Initialize/AdView/Interstitial) require the main thread. Posting to the
         // main looper is safe from any thread and needs no activity.
-        new global::Android.OS.Handler(global::Android.OS.Looper.MainLooper).Post(action);
+        var mainLooper = global::Android.OS.Looper.MainLooper;
+        if (mainLooper is not null)
+        {
+            new global::Android.OS.Handler(mainLooper).Post(action);
+        }
     }
 
     // --- Java callback adapters -------------------------------------------------
@@ -669,7 +675,13 @@ public sealed class AdMobMobileAdvertisingService : IMobileAdvertisingService
 
             global::Android.Util.Log.Info("NoctraAds", "banner loaded");
             _stateChanged?.Invoke(BannerAdLoadState.Loaded);
-            new global::Android.OS.Handler(global::Android.OS.Looper.MainLooper).Post(() =>
+            var mainLooper = global::Android.OS.Looper.MainLooper;
+            if (mainLooper is null)
+            {
+                return;
+            }
+
+            new global::Android.OS.Handler(mainLooper).Post(() =>
             {
                 if (_isInvalid())
                 {

@@ -561,10 +561,14 @@ public sealed class HuaweiMobileAdvertisingService : IMobileAdvertisingService
                 ? NonPersonalizedAd.AllowAll
                 : NonPersonalizedAd.AllowNonPersonalized;
 
+        // Huawei's binding still exposes Integer for this SDK setter; the
+        // Android 33 deprecation does not have a typed replacement in 3.4.x.
+#pragma warning disable CA1422
         HwAds.RequestOptions = requestOptions
             .ToBuilder()
             .SetNonPersonalizedAd(new global::Java.Lang.Integer(nonPersonalizedMode))
             .Build();
+#pragma warning restore CA1422
     }
 
     private Task<ConsentUpdateResult> RequestConsentUpdateAsync(
@@ -811,7 +815,13 @@ public sealed class HuaweiMobileAdvertisingService : IMobileAdvertisingService
     }
 
     private void DispatchOnMainThread(Action action)
-        => new Handler(Looper.MainLooper).Post(action);
+    {
+        var mainLooper = Looper.MainLooper;
+        if (mainLooper is not null)
+        {
+            new Handler(mainLooper).Post(action);
+        }
+    }
 
     private static bool HasPackage(Context context, string packageName)
     {

@@ -156,7 +156,11 @@ public sealed class PreviewMobileAdvertisingService : IMobileAdvertisingService
     public bool CanShowPrivacyOptions => false;
     public bool CanServeAds => IsEnabled && !_licenseService.IsPremium;
     public event EventHandler? EligibilityChanged;
-    public event EventHandler? ConsentStatusChanged;
+    public event EventHandler? ConsentStatusChanged
+    {
+        add { }
+        remove { }
+    }
 
     public void PrimeInterstitial() { }
 

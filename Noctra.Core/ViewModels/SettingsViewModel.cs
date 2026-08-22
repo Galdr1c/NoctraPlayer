@@ -34,7 +34,7 @@ public partial class SettingsViewModel : ObservableObject, IAsyncDisposable
     private readonly ISecurityService _securityService;
     private readonly IAppPathService _appPaths;
     private readonly ICacheService _cacheService;
-    private readonly IProfileService _profileService;
+    private readonly IProfileService? _profileService;
     private readonly IAppUpdateService _appUpdateService;
     private readonly IDispatcherService? _dispatcherService;
     private readonly SettingsAutoSaveCoordinator _autoSaveCoordinator;
@@ -1408,7 +1408,7 @@ public partial class SettingsViewModel : ObservableObject, IAsyncDisposable
         SelectedDataUsage = (int)s.DataUsage;
         SubtitleEnabled = s.SubtitleEnabled;
         SubtitleLanguage = string.IsNullOrWhiteSpace(s.SubtitleLanguage) ? "en" : s.SubtitleLanguage;
-        SubtitleFontSize = s.SubtitleFontSize;
+        SubtitleFontSize = SubtitleAppearanceDefaults.ResolveDesktopFontSize(s.SubtitleTextSize);
         PreferredAudioLanguage = string.IsNullOrWhiteSpace(s.PreferredAudioLanguage) ? "en" : s.PreferredAudioLanguage;
         
         // Downloads
@@ -1624,7 +1624,7 @@ public partial class SettingsViewModel : ObservableObject, IAsyncDisposable
             settings.DataUsage = DataUsage;
             settings.SubtitleEnabled = SubtitleEnabled;
             settings.SubtitleLanguage = SubtitleLanguage;
-            settings.SubtitleFontSize = SubtitleFontSize;
+            settings.SubtitleTextSize = SubtitleAppearanceDefaults.ResolveTextSize(SubtitleFontSize);
             settings.PreferredAudioLanguage = PreferredAudioLanguage;
             settings.DownloadQuality = DownloadQuality;
             settings.DownloadWifiOnly = DownloadWifiOnly;

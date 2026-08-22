@@ -297,7 +297,7 @@ public partial class MetadataService : IMetadataService
             
             if (response == null)
             {
-                _logger?.LogWarning("TMDB API request failed (proxy + fallback)", null);
+                _logger?.LogWarning("TMDB API request failed (proxy + fallback)");
                 return null;
             }
             

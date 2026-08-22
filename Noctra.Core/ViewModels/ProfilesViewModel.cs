@@ -97,7 +97,7 @@ public partial class ProfilesViewModel : ObservableObject
             UpdateShowAddButton();
             UpdateDisplayItems();
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             
             Profiles = new ObservableCollection<Profile>();

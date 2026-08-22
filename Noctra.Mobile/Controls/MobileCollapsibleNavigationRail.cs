@@ -218,9 +218,12 @@ internal sealed class MobileCollapsibleNavigationRail
             ? MaterialIconKind.Menu
             : MaterialIconKind.MenuOpen;
 
-        ToolTip.SetTip(
-            _toggleButton,
-            IsExpanded ? null : "Menu");
+        if (_toggleButton is not null)
+        {
+            ToolTip.SetTip(
+                _toggleButton,
+                IsExpanded ? null : "Menu");
+        }
     }
 
     private sealed class NavigationItemVisualState
