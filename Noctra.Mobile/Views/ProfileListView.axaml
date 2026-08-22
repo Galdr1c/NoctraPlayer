@@ -348,11 +348,10 @@
                     <!-- Beyaz daire + artı ikonu (Netflix tarzı) -->
                     <Border CornerRadius="12"
                             Background="Transparent"
-                            HorizontalAlignment="Center"
+                            HorizontalAlignment="Stretch"
                             BorderBrush="{DynamicResource Surface1Brush}"
                             BorderThickness="2"
-                            Padding="50"
-                            VerticalAlignment="Center">
+                            VerticalAlignment="Stretch">
                       <icons:MaterialIcon Kind="Plus"
                                           Width="32" Height="32"
                                           Foreground="{DynamicResource GlowBrush}"

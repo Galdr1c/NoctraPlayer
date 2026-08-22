@@ -142,7 +142,7 @@
         </Style>
 
         <!-- ══════════════════════════════════════════════════════════════
-             PROFİL EKLE BUTONU — Noktalı kenar + artı simgesi
+             PROFİL EKLE BUTONU — Mobildeki kare alan + artı görünümü
              ══════════════════════════════════════════════════════════════ -->
         <Style Selector="Button.AddProfileButtonStyle">
             <Setter Property="Background" Value="Transparent"/>
@@ -159,24 +159,26 @@
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
 
-                        <!-- Artı kutusu: noktalı kenarlıklı -->
+                        <!-- Profil kartıyla aynı kare alan -->
                         <Grid Width="{StaticResource RatioSquareSize}" Height="{StaticResource RatioSquareSize}"
-                              Grid.Row="0" Margin="0,0,0,18">
-                            <Rectangle x:Name="AddBorder"
-                                       RadiusX="12" RadiusY="12"
-                                       Stroke="{DynamicResource BorderBrush}"
-                                       StrokeThickness="2"
-                                       StrokeDashArray="4,2"
-                                       Fill="Transparent"/>
-                            <materialIcons:MaterialIcon x:Name="PlusIcon" Kind="Plus" Width="42" Height="42"
-                                                        Foreground="{DynamicResource TextMutedBrush}"
+                              Grid.Row="0" Margin="0,0,0,12">
+                            <Border x:Name="AddBorder"
+                                    CornerRadius="12"
+                                    Background="Transparent"
+                                    BorderBrush="{DynamicResource Surface1Brush}"
+                                    BorderThickness="2"
+                                    HorizontalAlignment="Stretch"
+                                    VerticalAlignment="Stretch">
+                              <materialIcons:MaterialIcon x:Name="PlusIcon" Kind="Plus" Width="32" Height="32"
+                                                        Foreground="{DynamicResource GlowBrush}"
                                                         HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
                         </Grid>
 
                         <!-- "Profil Ekle" etiketi -->
                         <TextBlock x:Name="AddLabel" Grid.Row="1" Text="{loc:Translate Profiles.AddProfile}"
                                    Foreground="{DynamicResource TextMutedBrush}"
-                                   FontSize="{DynamicResource FBody}"
+                                   FontSize="{DynamicResource FBodyL}"
                                    FontWeight="Medium"
                                    MaxWidth="150"
                                    HorizontalAlignment="Center"/>
@@ -194,11 +196,11 @@
             <Setter Property="RenderTransform" Value="scale(1.04)"/>
             <Setter Property="Opacity" Value="0.75" />
         </Style>
-        <Style Selector="Button.AddProfileButtonStyle:pointerover /template/ Rectangle#AddBorder">
-            <Setter Property="Stroke" Value="{DynamicResource TextMutedBrush}"/>
+        <Style Selector="Button.AddProfileButtonStyle:pointerover /template/ Border#AddBorder">
+            <Setter Property="BorderBrush" Value="{DynamicResource TextMutedBrush}"/>
         </Style>
         <Style Selector="Button.AddProfileButtonStyle:pointerover /template/ materialIcons|MaterialIcon#PlusIcon">
-            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
         </Style>
         <Style Selector="Button.AddProfileButtonStyle:pointerover /template/ TextBlock#AddLabel">
             <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
@@ -326,23 +328,24 @@
                  Normal  : [Logo + NOCTRA]            [✏] [⚙] [✕]
                  Yönet   : [←]  Profilleri Yönet  [Bitti] [⚙] [✕]
                  ════════════════════════════════════════════════════════ -->
-            <Grid Grid.Row="0" Margin="24,16" ColumnDefinitions="*,Auto">
+            <Grid Grid.Row="0" Margin="24,8" ColumnDefinitions="*,Auto">
 
                 <!-- ── NORMAL MOD başlığı ── -->
-                <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto"
+                <Grid ColumnDefinitions="*,Auto,Auto,Auto"
                       IsVisible="{Binding !IsManageMode}"
                       VerticalAlignment="Center">
 
-                    <!-- Sol: Uygulama logosu + adı -->
-                    <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center" Margin="8,0">
-                        <Image Source="{Binding ActualThemeVariant, RelativeSource={RelativeSource Self}, Converter={StaticResource LogoThemeConverter}}"
-                               Height="48"
-                               Stretch="Uniform"
-                               VerticalAlignment="Center"/>
-                    </StackPanel>
+                    <!-- Ortada: uygulama logosu (mobildeki görsel hiyerarşi) -->
+                    <Image Grid.Column="0"
+                           Grid.ColumnSpan="4"
+                           Source="{Binding ActualThemeVariant, RelativeSource={RelativeSource Self}, Converter={StaticResource LogoThemeConverter}}"
+                           Width="48" Height="48"
+                           Stretch="Uniform"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"/>
 
-                    <!-- Sağ: Kalem (yönet modunu aç/kapa) — hiç kayıtlı profil yoksa gizlenir -->
-                    <Button Grid.Column="2"
+                    <!-- Sağ: Kalem (yönet modunu aç/kapa) -->
+                    <Button Grid.Column="1"
                             Classes="HeaderIconBtn"
                             Click="ToggleManage_Click"
                             Margin="4,0,0,0"
@@ -351,14 +354,14 @@
                     </Button>
 
                     <!-- Settings -->
-                    <Button Grid.Column="3"
+                    <Button Grid.Column="2"
                             Classes="SettingsButtonStyle"
                             Click="SettingsButton_Click"
                             Margin="4,0,0,0"
                             ToolTip.Tip="{loc:Translate Profiles.Settings.Tooltip}"/>
 
                     <!-- Close -->
-                    <Button Grid.Column="4"
+                    <Button Grid.Column="3"
                             Classes="CloseButtonStyle"
                             Click="Close_Click"
                             Margin="4,0,0,0"
@@ -366,9 +369,8 @@
                 </Grid>
 
                 <!-- ── YÖNET MOD başlığı ── -->
-                <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto"
+                <Grid ColumnDefinitions="*,Auto,*,Auto,Auto"
                       IsVisible="{Binding IsManageMode}"
-                      Margin="0,0,0,100"
                       VerticalAlignment="Center">
 
                     <!-- Sol: Geri ok butonu -->
@@ -436,7 +438,7 @@
                                TextAlignment="Center"
                                TextWrapping="Wrap"
                                MaxLines="2"
-                               Margin="16,24,16,4"
+                               Margin="16,60,16,8"
                                IsVisible="{Binding !IsManageMode}"/>
 
                     <TextBlock Text="{loc:Translate Profiles.SelectProfile}"
@@ -444,7 +446,7 @@
                                Foreground="{DynamicResource TextMutedBrush}"
                                HorizontalAlignment="Center"
                                TextAlignment="Center"
-                               Margin="24,0,24,36"
+                               Margin="24,0,24,32"
                                IsVisible="{Binding !IsManageMode}"/>
 
                     <!-- Yönet modu üst boşluk -->
@@ -455,7 +457,7 @@
                                   ItemsSource="{Binding DisplayItems}"
                                   MaxWidth="1050"
                                   HorizontalAlignment="Center"
-                                  Margin="12,0,12,24">
+                                  Margin="60,0,60,20">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
                                 <WrapPanel HorizontalAlignment="Center">
@@ -475,14 +477,14 @@
                             <DataTemplate DataType="models:Profile">
                                 <Button Classes="ProfileCardStyle"
                                         Click="SelectProfile_Click"
-                                        Margin="10,0"/>
+                                        Margin="8,8"/>
                             </DataTemplate>
 
                             <!-- 2. "Profil Ekle" kartı (sadece normal modda) -->
                             <DataTemplate DataType="vm:AddProfilePlaceholder">
                                 <Button Classes="AddProfileButtonStyle"
                                         Click="AddProfile_Click"
-                                        Margin="10,0"
+                                        Margin="8,8"
                                         IsVisible="{Binding !#ProfilesWindowRoot.DataContext.IsManageMode}"/>
                             </DataTemplate>
 
@@ -494,7 +496,7 @@
                             Classes="AddProfileButtonStyle"
                             Click="AddProfile_Click"
                             HorizontalAlignment="Center"
-                            Margin="10,0"
+                            Margin="8,8"
                             IsVisible="{Binding DisplayItems.Count, Converter={StaticResource CountToVisibilityConverter}, ConverterParameter=invert}">
                     </Button>
 
