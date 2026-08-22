@@ -538,6 +538,14 @@
         </Border>
       </Border>
 
+      <!-- Shell-owned card actions share the same content/banner grid as
+           page-local sheets. Row 0 ends exactly at the native banner's top
+           edge, so Android NativeControlHost composition cannot overlap it. -->
+      <views:MobileCardActionsSheet x:Name="CardActionsSheet"
+                                    Grid.Row="0"
+                                    ZIndex="{x:Static controls:MobileZIndex.ShellCardActions}"
+                                    IsVisible="False" />
+
       <!-- Banner ad pinned to the bottom of the content column (right of the
            navigation rail in landscape, above the bottom nav in portrait) -->
       <controls:MobileBannerAdControl x:Name="BannerAd"
@@ -632,12 +640,6 @@
                                        IsVisible="False" />
 
     </Grid>
-
-    <views:MobileCardActionsSheet x:Name="CardActionsSheet"
-                                  Grid.RowSpan="3"
-                                  Grid.ColumnSpan="2"
-                                  ZIndex="{x:Static controls:MobileZIndex.ShellCardActions}"
-                                  IsVisible="False" />
 
     <Border x:Name="PlayerHost"
             Grid.RowSpan="3"
