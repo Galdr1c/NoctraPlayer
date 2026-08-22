@@ -199,31 +199,38 @@ public class PlayerEpisodeNavigator
             return false;
         }
 
-        var hasDuration = _vm.Duration > 0;
-        var fallbackThreeMinuteTrigger = hasDuration
-            ? Math.Max(0, _vm.Duration - TimeSpan.FromMinutes(3).TotalSeconds)
-            : double.MaxValue;
-
-        if (_vm.CurrentEpisode.CreditsStartSec is double creditsStartSec && creditsStartSec > 0)
-        {
-            triggerAt = hasDuration
-                ? Math.Min(creditsStartSec, fallbackThreeMinuteTrigger)
-                : creditsStartSec;
-            return true;
-        }
-
-        if (!hasDuration)
+        var duration = _vm.Duration;
+        if (!double.IsFinite(duration) || duration <= 0)
         {
             return false;
         }
 
         var tailThreshold = Math.Clamp(
-            _vm.Duration * 0.06, // NextEpisodePromptTailRatio = 0.06
+            duration * 0.06, // NextEpisodePromptTailRatio = 0.06
             25, // NextEpisodePromptMinTailSeconds = 25
             180); // NextEpisodePromptMaxTailSeconds = 180
-        triggerAt = Math.Min(
-            Math.Max(0, _vm.Duration - tailThreshold),
-            fallbackThreeMinuteTrigger);
+        var safeTailTrigger = Math.Max(0, duration - tailThreshold);
+
+        if (_vm.CurrentEpisode.CreditsStartSec is double creditsStartSec &&
+            double.IsFinite(creditsStartSec) &&
+            creditsStartSec > 0 &&
+            creditsStartSec <= duration)
+        {
+            // Metadata may be stale or malformed. It can move the prompt later,
+            // but never earlier than the duration-derived tail window.
+            triggerAt = Math.Max(safeTailTrigger, creditsStartSec);
+        }
+        else
+        {
+            triggerAt = safeTailTrigger;
+        }
+
+        if (!double.IsFinite(triggerAt) || triggerAt <= 0)
+        {
+            triggerAt = 0;
+            return false;
+        }
+
         return true;
     }
 

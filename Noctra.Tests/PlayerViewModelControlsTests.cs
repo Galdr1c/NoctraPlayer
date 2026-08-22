@@ -1794,6 +1794,76 @@ namespace Noctra.Tests
         }
 
         [Fact]
+        public void NextEpisodeThreshold_OneHundredTwentySecondEpisodeUsesTailWindow()
+        {
+            var ctx = new PlayerTestContext();
+            ConfigureEpisodeForThreshold(ctx, 120);
+
+            Assert.True(ctx.VM.EpisodeNavigator.TryGetCreditsTriggerThreshold(out var trigger));
+            Assert.Equal(95, trigger, precision: 6);
+
+            ctx.VM.SeekCommand.Execute(0.0);
+            Assert.False(ctx.VM.IsNextEpisodePromptVisible);
+            ctx.VM.SeekCommand.Execute(trigger);
+            Assert.True(ctx.VM.IsNextEpisodePromptVisible);
+            ctx.VM.Dispose();
+        }
+
+        [Fact]
+        public void NextEpisodeThreshold_ThreeMinuteEpisodeUsesTailWindow()
+        {
+            var ctx = new PlayerTestContext();
+            ConfigureEpisodeForThreshold(ctx, 180);
+
+            Assert.True(ctx.VM.EpisodeNavigator.TryGetCreditsTriggerThreshold(out var trigger));
+            Assert.Equal(155, trigger, precision: 6);
+            ctx.VM.SeekCommand.Execute(0.0);
+            Assert.False(ctx.VM.IsNextEpisodePromptVisible);
+            ctx.VM.SeekCommand.Execute(trigger);
+            Assert.True(ctx.VM.IsNextEpisodePromptVisible);
+            ctx.VM.Dispose();
+        }
+
+        [Fact]
+        public void NextEpisodeThreshold_LongEpisodeUsesBoundedTailWindow()
+        {
+            var ctx = new PlayerTestContext();
+            ConfigureEpisodeForThreshold(ctx, 600);
+
+            Assert.True(ctx.VM.EpisodeNavigator.TryGetCreditsTriggerThreshold(out var trigger));
+            Assert.Equal(564, trigger, precision: 6);
+            ctx.VM.Dispose();
+        }
+
+        [Fact]
+        public void NextEpisodeThreshold_EarlyCreditsMetadataCannotMovePromptIntoOpening()
+        {
+            var ctx = new PlayerTestContext();
+            ConfigureEpisodeForThreshold(ctx, 120, creditsStartSec: 10);
+
+            Assert.True(ctx.VM.EpisodeNavigator.TryGetCreditsTriggerThreshold(out var trigger));
+            Assert.Equal(95, trigger, precision: 6);
+            ctx.VM.SeekCommand.Execute(10.0);
+            Assert.False(ctx.VM.IsNextEpisodePromptVisible);
+            ctx.VM.Dispose();
+        }
+
+        [Fact]
+        public void NextEpisodeThreshold_UnknownDurationDoesNotUseMetadataAlone()
+        {
+            var ctx = new PlayerTestContext();
+            ConfigureEpisodeForThreshold(ctx, 0, creditsStartSec: 10);
+            ctx.VM.CurrentEpisode!.Duration = TimeSpan.FromSeconds(120);
+            ctx.VM.Duration = 0;
+            ctx.VideoService.Duration = 0;
+
+            Assert.False(ctx.VM.EpisodeNavigator.TryGetCreditsTriggerThreshold(out _));
+            ctx.VM.SeekCommand.Execute(10.0);
+            Assert.False(ctx.VM.IsNextEpisodePromptVisible);
+            ctx.VM.Dispose();
+        }
+
+        [Fact]
         public void NextEpisodePrompt_VisibilityBehavior_OnSeeking()
         {
             var ctx = new PlayerTestContext();
@@ -2102,6 +2172,8 @@ namespace Noctra.Tests
 
             ctx.VM.Position = 0;
             ctx.VM._lastKnownValidPosition = 0;
+            ctx.VM.Duration = 3600;
+            ctx.VideoService.Duration = 3600;
             ctx.VM.SeekCommand.Execute(3550.0);
 
             Assert.True(ctx.VM.IsNextEpisodePromptVisible);
@@ -2211,6 +2283,40 @@ namespace Noctra.Tests
             };
             ctx.VM.SetCurrentEpisode(currentEpisode, nextEpisode);
             return nextEpisode;
+        }
+
+        private static void ConfigureEpisodeForThreshold(
+            PlayerTestContext ctx,
+            double duration,
+            double? creditsStartSec = null)
+        {
+            ctx.Settings.Settings.AutoPlayNext = false;
+            ctx.VM.CurrentChannel = new Channel
+            {
+                Id = 11,
+                Name = "Test Series",
+                StreamUrl = "http://test/episode-1.mp4",
+                Type = ChannelType.Series
+            };
+            ctx.VM.IsLiveContent = false;
+            ctx.VM.Duration = duration;
+            ctx.VM.Position = 0;
+            ctx.VideoService.Duration = duration;
+
+            ctx.VM.SetCurrentEpisode(
+                new Episode
+                {
+                    Id = 101,
+                    Name = "Short Episode",
+                    StreamUrl = "http://test/episode-1.mp4",
+                    CreditsStartSec = creditsStartSec
+                },
+                new Episode
+                {
+                    Id = 102,
+                    Name = "Next Episode",
+                    StreamUrl = "http://test/episode-2.mp4"
+                });
         }
     }
 }
