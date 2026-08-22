@@ -219,6 +219,8 @@ public sealed class AdvertisingAccessibilityContractTests
         Assert.Contains("HwAds.Init", provider, StringComparison.Ordinal);
         Assert.Contains("ShowPrivacyOptionsAsync", provider, StringComparison.Ordinal);
         Assert.Contains("Build.Manufacturer", provider, StringComparison.Ordinal);
+        Assert.Contains("SetView", provider, StringComparison.Ordinal);
+        Assert.Contains("LinkMovementMethod", provider, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -236,6 +238,92 @@ public sealed class AdvertisingAccessibilityContractTests
         Assert.Contains("ForceProviderForDebug", di, StringComparison.Ordinal);
         Assert.Contains("Noctra.Huawei.ForceProvider", providerSourceForMetadata(), StringComparison.Ordinal);
         Assert.Contains("GoogleSignatureVerifier", adMob, StringComparison.Ordinal);
+        Assert.Contains("GoogleApiAvailabilityLight", adMob, StringComparison.Ordinal);
+        Assert.Contains("IsGooglePlayServicesAvailable", adMob, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void HuaweiConsent_PreservesStatusProvidersAndUnknownStateRule()
+    {
+        var provider = File.ReadAllText(ProjectSource(
+            "Noctra.Android", "Advertising", "HuaweiMobileAdvertisingService.cs"));
+
+        Assert.Contains("ConsentStatus Status", provider, StringComparison.Ordinal);
+        Assert.Contains("IReadOnlyList<AdProvider> Providers", provider, StringComparison.Ordinal);
+        Assert.Contains("Status == ConsentStatus.Unknown", provider, StringComparison.Ordinal);
+        Assert.Contains("providers", provider, StringComparison.Ordinal);
+        Assert.Contains("Status == ConsentStatus.Unknown", provider, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void HuaweiConsent_AppliesExplicitRequestOptionsAndCanInitializeAfterSettingsChoice()
+    {
+        var provider = File.ReadAllText(ProjectSource(
+            "Noctra.Android", "Advertising", "HuaweiMobileAdvertisingService.cs"));
+
+        Assert.Contains("HwAds.RequestOptions", provider, StringComparison.Ordinal);
+        Assert.Contains("SetNonPersonalizedAd", provider, StringComparison.Ordinal);
+        Assert.Contains("NonPersonalizedAd.AllowNonPersonalized", provider, StringComparison.Ordinal);
+        Assert.Contains("EnsureHuaweiAdsInitializedIfEligibleAsync", provider, StringComparison.Ordinal);
+        Assert.Contains("ShowPrivacyOptionsAsync", provider, StringComparison.Ordinal);
+        Assert.Contains("RequestConsentUpdateAsync", provider, StringComparison.Ordinal);
+        Assert.Contains("OnSubscriptionChanged", provider, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void HuaweiConsent_NetworkFailureRemainsRetryableAndUsesFallbackMode()
+    {
+        var provider = File.ReadAllText(ProjectSource(
+            "Noctra.Android", "Advertising", "HuaweiMobileAdvertisingService.cs"));
+
+        Assert.Contains("AllowNonPersonalized", provider, StringComparison.Ordinal);
+        Assert.Contains("retry", provider, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("_initializationState, 0", provider, StringComparison.Ordinal);
+        Assert.Contains("EnsureHuaweiAdsInitializedIfEligibleAsync", provider, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void HuaweiAds_InitializesFromApplicationLifecycleAndUsesSmartBanner()
+    {
+        var application = File.ReadAllText(ProjectSource(
+            "Noctra.Android", "Application.cs"));
+        var provider = File.ReadAllText(ProjectSource(
+            "Noctra.Android", "Advertising", "HuaweiMobileAdvertisingService.cs"));
+
+        Assert.Contains("InitializeSdkIfSupported", application, StringComparison.Ordinal);
+        Assert.Contains("HwAds.Init", provider, StringComparison.Ordinal);
+        Assert.Contains("BannerSizeSmart", provider, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void HuaweiAds_IncludesNetworkCompatibilityShims()
+    {
+        var project = File.ReadAllText(ProjectSource(
+            "Noctra.Android", "Noctra.Android.csproj"));
+        var assetsUtil = File.ReadAllText(ProjectSource(
+            "Noctra.Android", "HuaweiCompat", "AssetsUtil.java"));
+        var networkUtil = File.ReadAllText(ProjectSource(
+            "Noctra.Android", "HuaweiCompat", "NetworkUtil.java"));
+
+        Assert.Contains("AndroidJavaSource", project, StringComparison.Ordinal);
+        Assert.Contains("AssetsUtil.java", project, StringComparison.Ordinal);
+        Assert.Contains("static String[] list", assetsUtil, StringComparison.Ordinal);
+        Assert.Contains("isNetworkAvailable", networkUtil, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void AdMobTestDeviceDefault_IsDebugOnly()
+    {
+        var project = File.ReadAllText(ProjectSource(
+            "Noctra.Android", "Noctra.Android.csproj"));
+        var marker = "<NoctraAdMobTestDeviceIds";
+        var markerStart = project.IndexOf(marker, StringComparison.Ordinal);
+        Assert.True(markerStart >= 0);
+        var markerEnd = project.IndexOf("</NoctraAdMobTestDeviceIds>", markerStart, StringComparison.Ordinal);
+        Assert.True(markerEnd > markerStart);
+
+        var declaration = project[markerStart..(markerEnd + "</NoctraAdMobTestDeviceIds>".Length)];
+        Assert.Contains("'$(Configuration)' == 'Debug'", declaration, StringComparison.Ordinal);
     }
 
     private static string providerSourceForMetadata()

@@ -4,6 +4,7 @@ using Android.App;
 using Android.Runtime;
 using Avalonia;
 using Avalonia.Android;
+using Noctra.Android.Advertising;
 using Noctra.Android.DependencyInjection;
 using Noctra.Mobile;
 
@@ -46,6 +47,7 @@ public class Application : AvaloniaAndroidApplication<App>
 #endif
         App.ServiceProviderFactory ??= () => Services;
         base.OnCreate();
+        HuaweiMobileAdvertisingService.InitializeSdkIfSupported(this);
     }
 
 #if DEBUG

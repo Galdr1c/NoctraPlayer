@@ -8,6 +8,8 @@ using Android.App;
 using Android.Content;
 using Android.Content.PM;
 using Android.OS;
+using Android.Text.Method;
+using Android.Text.Util;
 using Android.Views;
 using Android.Widget;
 using Avalonia.Android;
@@ -42,6 +44,9 @@ public sealed class HuaweiMobileAdvertisingService : IMobileAdvertisingService
     private const string HuaweiTestVideoInterstitialAdUnitId = "testb4znbuh3n2";
     private const string HuaweiTestImageInterstitialAdUnitId = "teste9ih9j0rc3";
 
+    private static readonly object SdkInitializationGate = new();
+    private static bool _sdkInitializedForProcess;
+
     private readonly Context _context;
     private readonly AndroidActivityProvider _activityProvider;
     private readonly ILicenseService _licenseService;
@@ -56,7 +61,10 @@ public sealed class HuaweiMobileAdvertisingService : IMobileAdvertisingService
     private volatile bool _sdkInitialized;
     private volatile bool _canRequestAds;
     private volatile bool _privacyOptionsRequired;
+    private int _consentRetryPending;
     private Huawei.Hms.Ads.Consent.Inter.Consent? _consent;
+    private ConsentStatus _consentStatus = ConsentStatus.Unknown;
+    private IReadOnlyList<AdProvider> _adProviders = Array.Empty<AdProvider>();
     private Huawei.Hms.Ads.InterstitialAd? _interstitial;
     private bool _interstitialLoading;
 
@@ -113,6 +121,23 @@ public sealed class HuaweiMobileAdvertisingService : IMobileAdvertisingService
     }
 
     /// <summary>
+    /// Initializes Petal Ads at the Android application boundary, matching
+    /// Huawei's integration guidance. The provider-specific consent pipeline
+    /// still controls when requests are allowed; this only makes the SDK
+    /// runtime ready early enough for HMS Core's network/GRS context.
+    /// </summary>
+    public static void InitializeSdkIfSupported(Context context)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        if (!IsHmsOnlyDevice(context) && !ForceProviderForDebug)
+        {
+            return;
+        }
+
+        TryInitializeSdk(context);
+    }
+
+    /// <summary>
     /// Debug-only switch used to exercise the HMS path on a lab device that
     /// ships a compatibility GMS package. Release binaries always return false.
     /// </summary>
@@ -141,9 +166,16 @@ public sealed class HuaweiMobileAdvertisingService : IMobileAdvertisingService
         try
         {
             var firstRun = Interlocked.CompareExchange(ref _initializationState, 1, 0) == 0;
+            if (!firstRun && Volatile.Read(ref _consentRetryPending) == 0)
+            {
+                await EnsureHuaweiAdsInitializedCoreAsync(cancellationToken)
+                    .ConfigureAwait(false);
+                return;
+            }
+
             if (!firstRun)
             {
-                return;
+                Interlocked.Exchange(ref _initializationState, 1);
             }
 
             await _privacyCoordinator.WaitForLegalConsentAsync(cancellationToken)
@@ -161,6 +193,11 @@ public sealed class HuaweiMobileAdvertisingService : IMobileAdvertisingService
             if (!consentResult.Succeeded)
             {
                 Log.Warn("HMS consent update failed: " + consentResult.ErrorMessage);
+                _consentStatus = ConsentStatus.NonPersonalized;
+                _adProviders = consentResult.Providers;
+                Volatile.Write(ref _consentRetryPending, 1);
+                _privacyOptionsRequired = true;
+                _canRequestAds = true;
                 if (_forceConsent)
                 {
                     // Debug QA must still be able to exercise the Huawei
@@ -169,33 +206,37 @@ public sealed class HuaweiMobileAdvertisingService : IMobileAdvertisingService
                     // remains fail-closed on a consent-service outage.
                     Log.Warn("HMS consent debug fallback: showing local choice dialog");
                     _privacyOptionsRequired = true;
-                    _canRequestAds = await ShowConsentDialogAsync(
+                    var choseConsent = await ShowConsentDialogAsync(
                         _consent,
+                        _adProviders,
                         cancellationToken).ConfigureAwait(false);
-                }
-                else
-                {
-                    _canRequestAds = false;
-                    _privacyOptionsRequired = false;
+                    Volatile.Write(ref _consentRetryPending, choseConsent ? 0 : 1);
                 }
             }
-            else if (consentResult.NeedConsent)
+            else if (consentResult.NeedConsent &&
+                (consentResult.Status == ConsentStatus.Unknown ||
+                 consentResult.Status.Value == ConsentStatus.Unknown.Value))
             {
                 _privacyOptionsRequired = true;
-                _canRequestAds = await ShowConsentDialogAsync(
+                Volatile.Write(ref _consentRetryPending, 1);
+                var choseConsent = await ShowConsentDialogAsync(
                     _consent,
+                    consentResult.Providers,
                     cancellationToken).ConfigureAwait(false);
+                // Huawei permits only non-personalized requests when the user
+                // skips the choice, so keep the provider usable in that mode.
+                _canRequestAds = true;
+                Volatile.Write(ref _consentRetryPending, choseConsent ? 0 : 1);
             }
             else
             {
-                _privacyOptionsRequired = false;
+                _privacyOptionsRequired = consentResult.NeedConsent;
                 _canRequestAds = true;
+                Volatile.Write(ref _consentRetryPending, 0);
             }
 
-            if (_canRequestAds && IsAdsEligible)
-            {
-                await InitializeHuaweiAdsAsync(cancellationToken).ConfigureAwait(false);
-            }
+            await EnsureHuaweiAdsInitializedCoreAsync(cancellationToken)
+                .ConfigureAwait(false);
 
             Interlocked.Exchange(ref _initializationState, 2);
             ConsentStatusChanged?.Invoke(this, EventArgs.Empty);
@@ -204,7 +245,12 @@ public sealed class HuaweiMobileAdvertisingService : IMobileAdvertisingService
                      $"privacyRequired={_privacyOptionsRequired} eligible={IsAdsEligible} " +
                      $"sdkInitialized={_sdkInitialized}");
         }
-        catch (Exception ex) when (ex is not System.OperationCanceledException)
+        catch (System.OperationCanceledException)
+        {
+            Interlocked.Exchange(ref _initializationState, 0);
+            throw;
+        }
+        catch (Exception ex)
         {
             Interlocked.Exchange(ref _initializationState, 0);
             Log.Warn("HMS consent/init failed: " + ex.Message);
@@ -351,7 +397,7 @@ public sealed class HuaweiMobileAdvertisingService : IMobileAdvertisingService
             return Task.FromResult(false);
         }
 
-        return ShowConsentDialogAsync(_consent, cancellationToken);
+        return ShowConsentDialogAsync(_consent, _adProviders, cancellationToken);
     }
 
     private async Task InitializeHuaweiAdsAsync(CancellationToken cancellationToken)
@@ -362,7 +408,11 @@ public sealed class HuaweiMobileAdvertisingService : IMobileAdvertisingService
         {
             try
             {
-                HwAds.Init(_context);
+                if (!TryInitializeSdk(_context))
+                {
+                    throw new InvalidOperationException("HMS Ads SDK initialization failed.");
+                }
+
                 completion.TrySetResult(true);
             }
             catch (Exception ex)
@@ -374,6 +424,81 @@ public sealed class HuaweiMobileAdvertisingService : IMobileAdvertisingService
         _sdkInitialized = true;
     }
 
+    private static bool TryInitializeSdk(Context context)
+    {
+        var applicationContext = context.ApplicationContext ?? context;
+        lock (SdkInitializationGate)
+        {
+            if (_sdkInitializedForProcess)
+            {
+                return true;
+            }
+
+            try
+            {
+                HwAds.Init(applicationContext);
+                _sdkInitializedForProcess = true;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Log.Warn("HMS SDK initialization failed: " + ex.Message);
+                return false;
+            }
+        }
+    }
+
+    private async Task EnsureHuaweiAdsInitializedIfEligibleAsync(
+        CancellationToken cancellationToken = default)
+    {
+        await _initLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await EnsureHuaweiAdsInitializedCoreAsync(cancellationToken)
+                .ConfigureAwait(false);
+        }
+        finally
+        {
+            _initLock.Release();
+        }
+    }
+
+    private async Task EnsureHuaweiAdsInitializedCoreAsync(
+        CancellationToken cancellationToken)
+    {
+        if (!CanRequestAds || !IsAdsEligible)
+        {
+            return;
+        }
+
+        var wasInitialized = _sdkInitialized;
+        if (!wasInitialized)
+        {
+            await InitializeHuaweiAdsAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        ApplyHuaweiRequestOptions();
+        if (!wasInitialized && _sdkInitialized)
+        {
+            EligibilityChanged?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    private void ApplyHuaweiRequestOptions()
+    {
+        var requestOptions = HwAds.RequestOptions ?? new RequestOptions();
+        var nonPersonalizedMode =
+            _consentStatus == ConsentStatus.Personalized ||
+            _consentStatus.Value == ConsentStatus.Personalized.Value
+                ? NonPersonalizedAd.AllowAll
+                : NonPersonalizedAd.AllowNonPersonalized;
+
+        HwAds.RequestOptions = requestOptions
+            .ToBuilder()
+            .SetNonPersonalizedAd(new global::Java.Lang.Integer(nonPersonalizedMode))
+            .Build();
+    }
+
     private Task<ConsentUpdateResult> RequestConsentUpdateAsync(
         Huawei.Hms.Ads.Consent.Inter.Consent consent,
         CancellationToken cancellationToken)
@@ -382,10 +507,24 @@ public sealed class HuaweiMobileAdvertisingService : IMobileAdvertisingService
             TaskCreationOptions.RunContinuationsAsynchronously);
         cancellationToken.Register(() => completion.TrySetCanceled(cancellationToken));
         var listener = new HuaweiConsentUpdateListener(
-            success: (status, needConsent) =>
-                completion.TrySetResult(new ConsentUpdateResult(true, needConsent, null)),
+            success: (status, needConsent, providers) =>
+            {
+                _consentStatus = status;
+                _adProviders = providers;
+                completion.TrySetResult(new ConsentUpdateResult(
+                    true,
+                    status,
+                    needConsent,
+                    providers,
+                    null));
+            },
             failed: error =>
-                completion.TrySetResult(new ConsentUpdateResult(false, false, error)));
+                completion.TrySetResult(new ConsentUpdateResult(
+                    false,
+                    ConsentStatus.Unknown,
+                    false,
+                    Array.Empty<AdProvider>(),
+                    error)));
 
         DispatchOnMainThread(() =>
         {
@@ -395,7 +534,12 @@ public sealed class HuaweiMobileAdvertisingService : IMobileAdvertisingService
             }
             catch (Exception ex)
             {
-                completion.TrySetResult(new ConsentUpdateResult(false, false, ex.Message));
+                completion.TrySetResult(new ConsentUpdateResult(
+                    false,
+                    ConsentStatus.Unknown,
+                    false,
+                    Array.Empty<AdProvider>(),
+                    ex.Message));
             }
         });
         return completion.Task;
@@ -403,6 +547,7 @@ public sealed class HuaweiMobileAdvertisingService : IMobileAdvertisingService
 
     private Task<bool> ShowConsentDialogAsync(
         Huawei.Hms.Ads.Consent.Inter.Consent consent,
+        IReadOnlyList<AdProvider> providers,
         CancellationToken cancellationToken)
     {
         var activity = _activityProvider.CurrentActivity;
@@ -419,34 +564,51 @@ public sealed class HuaweiMobileAdvertisingService : IMobileAdvertisingService
             {
                 using var builder = new AlertDialog.Builder(activity);
                 builder.SetTitle("Advertising privacy choices");
-                builder.SetMessage(
+                var messageView = new TextView(activity)
+                {
+                    Text =
                     "Allow Huawei Ads to use data for personalized advertising? " +
-                    "You can change this choice later in Settings.");
+                    "You can change this choice later in Settings.\n\n" +
+                    BuildProviderSummary(providers)
+                };
+                messageView.SetTextIsSelectable(true);
+                messageView.MovementMethod = LinkMovementMethod.Instance;
+                Linkify.AddLinks(messageView, MatchOptions.WebUrls);
+                builder.SetView(messageView);
                 builder.SetPositiveButton(
                     "Allow personalized ads",
                     (_, _) =>
                     {
                         consent.SetConsentStatus(ConsentStatus.Personalized);
+                        _consentStatus = ConsentStatus.Personalized;
+                        _adProviders = providers;
+                        Volatile.Write(ref _consentRetryPending, 0);
                         _canRequestAds = true;
                         _privacyOptionsRequired = true;
                         completion.TrySetResult(true);
                         ConsentStatusChanged?.Invoke(this, EventArgs.Empty);
                         EligibilityChanged?.Invoke(this, EventArgs.Empty);
+                        _ = EnsureAfterConsentChoiceAsync();
                     });
                 builder.SetNegativeButton(
                     "Use non-personalized ads",
                     (_, _) =>
                     {
                         consent.SetConsentStatus(ConsentStatus.NonPersonalized);
+                        _consentStatus = ConsentStatus.NonPersonalized;
+                        _adProviders = providers;
+                        Volatile.Write(ref _consentRetryPending, 0);
                         _canRequestAds = true;
                         _privacyOptionsRequired = true;
                         completion.TrySetResult(true);
                         ConsentStatusChanged?.Invoke(this, EventArgs.Empty);
                         EligibilityChanged?.Invoke(this, EventArgs.Empty);
+                        _ = EnsureAfterConsentChoiceAsync();
                     });
                 builder.SetOnCancelListener(new HuaweiDialogCancelListener(
                     () => completion.TrySetResult(false)));
-                builder.Create()?.Show();
+                var dialog = builder.Create();
+                dialog?.Show();
             }
             catch (Exception ex)
             {
@@ -457,13 +619,46 @@ public sealed class HuaweiMobileAdvertisingService : IMobileAdvertisingService
         return completion.Task;
     }
 
+    private async Task EnsureAfterConsentChoiceAsync()
+    {
+        try
+        {
+            await EnsureHuaweiAdsInitializedIfEligibleAsync().ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is not System.OperationCanceledException)
+        {
+            Log.Warn("HMS post-consent initialization failed: " + ex.Message);
+        }
+    }
+
     private void OnSubscriptionChanged()
     {
         if (_licenseService.IsPremium)
         {
             DisposeAllAds();
         }
+        else if (Volatile.Read(ref _consentRetryPending) != 0)
+        {
+            _ = RetryConsentAndInitializationAsync();
+        }
+        else if (_consent is not null && _canRequestAds)
+        {
+            _ = EnsureAfterConsentChoiceAsync();
+        }
+
         EligibilityChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    private async Task RetryConsentAndInitializationAsync()
+    {
+        try
+        {
+            await InitializeAsync().ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is not System.OperationCanceledException)
+        {
+            Log.Warn("HMS consent retry failed: " + ex.Message);
+        }
     }
 
     private void DisposeAllAds()
@@ -480,6 +675,30 @@ public sealed class HuaweiMobileAdvertisingService : IMobileAdvertisingService
                 MetadataPrefix + suffix,
                 StringComparison.Ordinal))
             ?.Value ?? string.Empty;
+
+    private static string BuildProviderSummary(IReadOnlyList<AdProvider> providers)
+    {
+        if (providers.Count == 0)
+        {
+            return "Ad technology providers: Huawei Ads";
+        }
+
+        var lines = providers.Select(provider =>
+        {
+            var name = string.IsNullOrWhiteSpace(provider.Name)
+                ? provider.Id
+                : provider.Name;
+            var area = string.IsNullOrWhiteSpace(provider.ServiceArea)
+                ? string.Empty
+                : $" ({provider.ServiceArea})";
+            var privacy = string.IsNullOrWhiteSpace(provider.PrivacyPolicyUrl)
+                ? string.Empty
+                : $"\nPrivacy policy: {provider.PrivacyPolicyUrl}";
+            return $"• {name}{area}{privacy}";
+        });
+
+        return "Ad technology providers:\n" + string.Join("\n", lines);
+    }
 
     private void DispatchOnMainThread(Action action)
         => new Handler(Looper.MainLooper).Post(action);
@@ -513,16 +732,18 @@ public sealed class HuaweiMobileAdvertisingService : IMobileAdvertisingService
 
     private readonly record struct ConsentUpdateResult(
         bool Succeeded,
+        ConsentStatus Status,
         bool NeedConsent,
+        IReadOnlyList<AdProvider> Providers,
         string? ErrorMessage);
 
     private sealed class HuaweiConsentUpdateListener : Java.Lang.Object, IConsentUpdateListener
     {
-        private readonly Action<ConsentStatus, bool> _success;
+        private readonly Action<ConsentStatus, bool, IReadOnlyList<AdProvider>> _success;
         private readonly Action<string> _failed;
 
         public HuaweiConsentUpdateListener(
-            Action<ConsentStatus, bool> success,
+            Action<ConsentStatus, bool, IReadOnlyList<AdProvider>> success,
             Action<string> failed)
         {
             _success = success;
@@ -532,7 +753,10 @@ public sealed class HuaweiMobileAdvertisingService : IMobileAdvertisingService
         public void OnFail(string error) => _failed(error);
 
         public void OnSuccess(ConsentStatus status, bool needConsent, IList<AdProvider> providers)
-            => _success(status, needConsent);
+            => _success(
+                status,
+                needConsent,
+                providers?.ToArray() ?? Array.Empty<AdProvider>());
     }
 
     private sealed class HuaweiDialogCancelListener : Java.Lang.Object, IDialogInterfaceOnCancelListener
@@ -605,15 +829,15 @@ internal sealed class HuaweiBannerNativeControlHost : NativeControlHost
         DestroyCurrentBanner();
         var generation = Interlocked.Increment(ref _nativeGeneration);
         var container = new FrameLayout(context);
-        var banner = new Huawei.Hms.Ads.Banner.BannerView(context)
-        {
-            AdId = _adUnitId,
-            BannerAdSize = Huawei.Hms.Ads.BannerAdSize.BannerSize32050
-        };
-        container.AddView(banner, new FrameLayout.LayoutParams(
-            ViewGroup.LayoutParams.WrapContent,
-            ViewGroup.LayoutParams.WrapContent,
-            GravityFlags.Center));
+            var banner = new Huawei.Hms.Ads.Banner.BannerView(context)
+            {
+                AdId = _adUnitId,
+                BannerAdSize = Huawei.Hms.Ads.BannerAdSize.BannerSizeSmart
+            };
+            container.AddView(banner, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MatchParent,
+                ViewGroup.LayoutParams.WrapContent,
+                GravityFlags.CenterHorizontal));
         _container = container;
         _bannerView = banner;
         banner.AdListener = new HuaweiBannerListener(

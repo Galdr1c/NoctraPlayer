@@ -24,19 +24,18 @@
       AssemblyMetadata for the Android advertising provider.
 
       NoctraAdMobTestDeviceIds lists the AdMob test-device hashed IDs (from
-      logcat) ONLY when a QA build must force TEST creatives; leave empty so
-      every build (Debug and Release alike) serves REAL ads from the unit IDs.
-      Semicolon-separated.
+      logcat) for Debug QA builds that must force TEST creatives. Release
+      defaults to empty so production serves REAL ads from the unit IDs.
+      Semicolon-separated; a release build can still override it explicitly.
 
       The 96EFF064B44BEC9BBFB0A97870B9412E entry below is the Xiaomi
-      (2201117TG, Android 13) test device. Remove it before shipping so real
-      ads serve again.
+      (2201117TG, Android 13) Debug test device.
 
       NoctraAdMobDebugGeography optionally forces UMP's debug geography for the
       listed test devices ONLY (EEA to see the consent form on a non-EEA
       device). Leave empty for production-correct behavior.
     -->
-    <NoctraAdMobTestDeviceIds Condition="'$(NoctraAdMobTestDeviceIds)' == ''">96EFF064B44BEC9BBFB0A97870B9412E</NoctraAdMobTestDeviceIds>
+    <NoctraAdMobTestDeviceIds Condition="'$(Configuration)' == 'Debug' and '$(NoctraAdMobTestDeviceIds)' == ''">96EFF064B44BEC9BBFB0A97870B9412E</NoctraAdMobTestDeviceIds>
     <NoctraAdMobAppId Condition="'$(NoctraAdMobAppId)' == ''">ca-app-pub-4557682582400970~9852101527</NoctraAdMobAppId>
     <NoctraBannerAdUnitId Condition="'$(NoctraBannerAdUnitId)' == ''">ca-app-pub-4557682582400970/5775345477</NoctraBannerAdUnitId>
     <NoctraInterstitialAdUnitId Condition="'$(NoctraInterstitialAdUnitId)' == ''">ca-app-pub-4557682582400970/6102598203</NoctraInterstitialAdUnitId>
@@ -120,6 +119,13 @@
     <PackageReference Include="Xamarin.Google.UserMessagingPlatform" Version="4.0.0.3" />
     <PackageReference Include="Huawei.Hms.Ads" Version="3.4.67.302" />
     <PackageReference Include="Huawei.Hms.AdsConsent" Version="3.4.67.302" />
+  </ItemGroup>
+
+  <!-- The 6.0.4 GRS binding shipped by AdsKit references AssetsUtil.list,
+       while the Xamarin binding omits that package-private helper. Keep this
+       tiny compatibility shim in the APK so GRS can load its local config. -->
+  <ItemGroup>
+    <AndroidJavaSource Include="HuaweiCompat\AssetsUtil.java" />
   </ItemGroup>
 
   <ItemGroup>

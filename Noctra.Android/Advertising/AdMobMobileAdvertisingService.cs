@@ -128,6 +128,14 @@ public sealed class AdMobMobileAdvertisingService : IMobileAdvertisingService
                 return false;
             }
 
+            var availability = global::Android.Gms.Common.GoogleApiAvailabilityLight
+                .Instance
+                .IsGooglePlayServicesAvailable(context);
+            if (availability != global::Android.Gms.Common.ConnectionResult.Success)
+            {
+                return false;
+            }
+
             // Huawei tablets can contain a microG/GBox compatibility package
             // with the same package name. AdMob requires Google-signed Play
             // Services; the verifier distinguishes that package from genuine
