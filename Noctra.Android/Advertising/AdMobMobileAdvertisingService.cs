@@ -53,6 +53,7 @@ public sealed class AdMobMobileAdvertisingService : IMobileAdvertisingService
     private readonly AndroidActivityProvider _activityProvider;
     private readonly ILicenseService _licenseService;
     private readonly StartupPrivacyCoordinator _privacyCoordinator;
+    private readonly InterstitialAdPolicyCoordinator _interstitialPolicy;
     private readonly SemaphoreSlim _initLock = new(1, 1);
     private readonly string _bannerUnitId;
     private readonly string _interstitialUnitId;
@@ -72,12 +73,14 @@ public sealed class AdMobMobileAdvertisingService : IMobileAdvertisingService
         Context context,
         AndroidActivityProvider activityProvider,
         ILicenseService licenseService,
-        StartupPrivacyCoordinator privacyCoordinator)
+        StartupPrivacyCoordinator privacyCoordinator,
+        InterstitialAdPolicyCoordinator interstitialPolicy)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
         _activityProvider = activityProvider ?? throw new ArgumentNullException(nameof(activityProvider));
         _licenseService = licenseService ?? throw new ArgumentNullException(nameof(licenseService));
         _privacyCoordinator = privacyCoordinator ?? throw new ArgumentNullException(nameof(privacyCoordinator));
+        _interstitialPolicy = interstitialPolicy ?? throw new ArgumentNullException(nameof(interstitialPolicy));
 
         _bannerUnitId = ReadMetadata("BannerAdUnitId");
         _interstitialUnitId = ReadMetadata("InterstitialAdUnitId");
@@ -259,6 +262,7 @@ public sealed class AdMobMobileAdvertisingService : IMobileAdvertisingService
         InterstitialAdContext context,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(context);
         var ad = _interstitial;
         if (!CanServeAds || ad is null || cancellationToken.IsCancellationRequested)
         {
@@ -271,12 +275,27 @@ public sealed class AdMobMobileAdvertisingService : IMobileAdvertisingService
             return Task.FromResult(false);
         }
 
+        var decision = _interstitialPolicy.Evaluate(
+            context,
+            new AdRuntimeEligibility(
+                IsPremium: _licenseService.IsPremium,
+                CanRequestAds: _canRequestAds,
+                AdReady: true),
+            Options.PlaybackExit);
+        if (!decision.ShouldShow)
+        {
+            global::Android.Util.Log.Info(
+                "NoctraAds",
+                $"interstitial denied: {decision.Reason}");
+            return Task.FromResult(false);
+        }
+
         _interstitial = null; // single-use: never present the same ad twice
         var completion = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         var callback = new InterstitialFullScreenCallback(
-            () => completion.TrySetResult(true),       // shown
-            () => completion.TrySetResult(true),       // dismissed
-            () => completion.TrySetResult(false));     // failed to show
+            shown: () => _interstitialPolicy.RecordImpression(DateTimeOffset.UtcNow),
+            dismissed: () => completion.TrySetResult(true),
+            failedToShow: () => completion.TrySetResult(false));
 
         ad.FullScreenContentCallback = callback;
         DispatchOnMainThread(() =>
@@ -737,6 +756,7 @@ public sealed class AdMobMobileAdvertisingService : IMobileAdvertisingService
         private readonly Action _shown;
         private readonly Action _dismissed;
         private readonly Action _failedToShow;
+        private int _shownInvoked;
         private int _completed;
 
         public InterstitialFullScreenCallback(Action shown, Action dismissed, Action failedToShow)
@@ -747,7 +767,12 @@ public sealed class AdMobMobileAdvertisingService : IMobileAdvertisingService
         }
 
         public override void OnAdShowedFullScreenContent()
-            => Complete(_shown);
+        {
+            if (Interlocked.Exchange(ref _shownInvoked, 1) == 0)
+            {
+                _shown();
+            }
+        }
 
         public override void OnAdDismissedFullScreenContent()
             => Complete(_dismissed);

@@ -61,6 +61,7 @@ configurable):
 - max 2 impressions / rolling hour,
 - max 4 impressions / rolling 24 hours,
 - no Live content,
+- no downloaded/local content,
 - no playback failure,
 - no PiP session,
 - no blocking overlay,
@@ -72,9 +73,16 @@ The UI is hidden before the provider is called. A production provider must retur
 immediately when no preloaded ad is ready; it must never load synchronously while
 the user is leaving the player.
 
-`InterstitialAdPolicy` is pure and unit-tested. The provider owns consent/readiness
-and impression history, evaluates this policy, records a successful impression,
-then preloads the next ad.
+`InterstitialAdPolicy` is pure and unit-tested. Both Android providers use the
+same `InterstitialAdPolicyCoordinator`, which owns a SharedPreferences-backed
+rolling impression history. A provider evaluates this coordinator before show,
+records an impression only after the SDK confirms that the ad opened, and
+completes the UI task only after dismissal/failure.
+
+After a dismissed interstitial, `MainView` explicitly repairs descendant
+`MobileVirtualizingCardGrid` row projections from their existing source
+collections. This complements normal Android resume recovery and prevents a
+provider activity transition from leaving Live/content cards visually empty.
 
 Interstitial caps are fail-closed in `InterstitialAdPolicy` too:
 `maxPerHour: 0` / `maxPerDay: 0` means **no interstitials at all**, never
@@ -99,6 +107,8 @@ Registered providers:
   exercises entitlement gating without requesting real ads (banner/interstitial
   both return null/no-op).
 - `AdMobMobileAdvertisingService` on Android (production).
+- `HuaweiMobileAdvertisingService` on HMS-only Android devices (Petal Ads;
+  Debug uses Huawei's official test slots, Release requires formal slots).
 
 ## Startup pipeline (`MobileAdvertisingBootstrapper`)
 

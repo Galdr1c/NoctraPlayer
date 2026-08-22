@@ -110,6 +110,24 @@ public sealed class InterstitialAdPolicyTests
     }
 
     [Fact]
+    public void DownloadedPlaybackIsRejected()
+    {
+        var context = EligibleContext() with
+        {
+            IsDownloadedContent = true
+        };
+
+        var decision = InterstitialAdPolicy.Evaluate(
+            context,
+            EligibleRuntime(),
+            AdvertisingOptions.ConservativeDefault.PlaybackExit,
+            InterstitialAdHistory.Empty);
+
+        Assert.False(decision.ShouldShow);
+        Assert.Equal(AdDecisionReason.DownloadedContent, decision.Reason);
+    }
+
+    [Fact]
     public void CooldownIsRolling()
     {
         var history = new InterstitialAdHistory(
@@ -249,6 +267,7 @@ public sealed class InterstitialAdPolicyTests
         PlaybackDuration: TimeSpan.FromMinutes(12),
         PlaybackEstablished: true,
         IsLiveContent: false,
+        IsDownloadedContent: false,
         PlaybackFailed: false,
         WasPictureInPicture: false,
         HasBlockingOverlay: false);

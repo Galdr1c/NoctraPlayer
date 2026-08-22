@@ -51,6 +51,7 @@ public sealed class HuaweiMobileAdvertisingService : IMobileAdvertisingService
     private readonly AndroidActivityProvider _activityProvider;
     private readonly ILicenseService _licenseService;
     private readonly StartupPrivacyCoordinator _privacyCoordinator;
+    private readonly InterstitialAdPolicyCoordinator _interstitialPolicy;
     private readonly SemaphoreSlim _initLock = new(1, 1);
     private readonly string _bannerUnitId;
     private readonly string _interstitialUnitId;
@@ -72,12 +73,14 @@ public sealed class HuaweiMobileAdvertisingService : IMobileAdvertisingService
         Context context,
         AndroidActivityProvider activityProvider,
         ILicenseService licenseService,
-        StartupPrivacyCoordinator privacyCoordinator)
+        StartupPrivacyCoordinator privacyCoordinator,
+        InterstitialAdPolicyCoordinator interstitialPolicy)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
         _activityProvider = activityProvider ?? throw new ArgumentNullException(nameof(activityProvider));
         _licenseService = licenseService ?? throw new ArgumentNullException(nameof(licenseService));
         _privacyCoordinator = privacyCoordinator ?? throw new ArgumentNullException(nameof(privacyCoordinator));
+        _interstitialPolicy = interstitialPolicy ?? throw new ArgumentNullException(nameof(interstitialPolicy));
 
         _bannerUnitId = ReadMetadata("BannerAdUnitId");
         _interstitialUnitId = ReadMetadata("InterstitialAdUnitId");
@@ -299,6 +302,7 @@ public sealed class HuaweiMobileAdvertisingService : IMobileAdvertisingService
         InterstitialAdContext context,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(context);
         var ad = _interstitial;
         var activity = _activityProvider.CurrentActivity;
         if (!CanServeAds || ad is null || activity is null || cancellationToken.IsCancellationRequested)
@@ -306,11 +310,31 @@ public sealed class HuaweiMobileAdvertisingService : IMobileAdvertisingService
             return Task.FromResult(false);
         }
 
+        var decision = _interstitialPolicy.Evaluate(
+            context,
+            new AdRuntimeEligibility(
+                IsPremium: _licenseService.IsPremium,
+                CanRequestAds: _canRequestAds,
+                AdReady: true),
+            Options.PlaybackExit);
+        if (!decision.ShouldShow)
+        {
+            Log.Info("HMS interstitial denied: " + decision.Reason);
+            return Task.FromResult(false);
+        }
+
         _interstitial = null;
         var completion = new TaskCompletionSource<bool>(
             TaskCreationOptions.RunContinuationsAsynchronously);
+        var impressionRecorded = 0;
         var callback = new HuaweiInterstitialListener(
-            opened: () => completion.TrySetResult(true),
+            opened: () =>
+            {
+                if (Interlocked.Exchange(ref impressionRecorded, 1) == 0)
+                {
+                    _interstitialPolicy.RecordImpression(DateTimeOffset.UtcNow);
+                }
+            },
             failed: _ => completion.TrySetResult(false),
             closed: () => completion.TrySetResult(true));
         ad.AdListener = callback;

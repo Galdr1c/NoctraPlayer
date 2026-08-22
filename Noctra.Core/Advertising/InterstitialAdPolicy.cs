@@ -12,11 +12,13 @@ public enum AdDecisionReason
     PictureInPicture,
     BlockingOverlay,
     LiveContent,
+    DownloadedContent,
     SessionTooYoung,
     PlaybackTooShort,
     Cooldown,
     HourlyCap,
-    DailyCap
+    DailyCap,
+    HistoryUnavailable
 }
 
 public readonly record struct AdDecision(
@@ -33,6 +35,7 @@ public sealed record InterstitialAdContext(
     TimeSpan PlaybackDuration,
     bool PlaybackEstablished,
     bool IsLiveContent,
+    bool IsDownloadedContent,
     bool PlaybackFailed,
     bool WasPictureInPicture,
     bool HasBlockingOverlay);
@@ -83,6 +86,8 @@ public static class InterstitialAdPolicy
             return AdDecision.Deny(AdDecisionReason.BlockingOverlay);
         if (context.IsLiveContent && !options.AllowLiveContent)
             return AdDecision.Deny(AdDecisionReason.LiveContent);
+        if (context.IsDownloadedContent)
+            return AdDecision.Deny(AdDecisionReason.DownloadedContent);
         if (context.Now - context.SessionStartedAt < options.MinSessionAge)
             return AdDecision.Deny(AdDecisionReason.SessionTooYoung);
         if (context.PlaybackDuration < options.MinPlaybackDuration)

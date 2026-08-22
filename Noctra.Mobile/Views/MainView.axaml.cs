@@ -56,9 +56,11 @@ public partial class MainView : UserControl
     private DateTimeOffset? _adPlaybackPlayingSince;
     private bool _adPlaybackEstablished;
     private bool _adPlaybackIsLive;
+    private bool _adPlaybackWasDownloaded;
     private bool _adPlaybackFailed;
     private bool _adPlaybackWasPiP;
     private int _interstitialPresentationInProgress;
+    private int _interstitialRecoveryPending;
     private bool _isPlayerFullScreen;
     private string _currentDestination = "Home";
     private DateTime _lastBackExitPromptUtc = DateTime.MinValue;
@@ -182,6 +184,7 @@ public partial class MainView : UserControl
         MobileAppLifecycle.Paused += OnAppPaused;
         MobileAppLifecycle.Resumed -= OnAppResumed;
         MobileAppLifecycle.Resumed += OnAppResumed;
+        WirePlayerViewModelEvents();
 
         // Ads initialization is async (UMP consent + Mobile Ads SDK). Subscribe
         // so the banner is (re)attempted once eligibility flips to true.
@@ -674,6 +677,8 @@ public partial class MainView : UserControl
         OverlayProfileList.ProfileLoaded -= OverlayProfileList_ProfileLoaded;
         MobileAppLifecycle.Paused -= OnAppPaused;
         MobileAppLifecycle.Resumed -= OnAppResumed;
+        UnwirePlayerViewModelEvents();
+        Interlocked.Exchange(ref _interstitialRecoveryPending, 0);
         var advertising = MobileAdvertisingServices.TryGet();
         if (advertising is not null)
         {
@@ -967,7 +972,10 @@ public partial class MainView : UserControl
                     return;
                 }
 
-                RestartActivePageRestore();
+                if (!TryRecoverActivePageAfterInterstitial())
+                {
+                    RestartActivePageRestore();
+                }
                 SetSeriesDetailImageLoadsActive(true);
             },
             DispatcherPriority.Background);
@@ -1938,29 +1946,7 @@ public partial class MainView : UserControl
                 return;
             }
 
-        _playerViewModel.CloseRequested -= PlayerViewModel_CloseRequested;
-        _playerViewModel.CloseRequested += PlayerViewModel_CloseRequested;
-        _playerViewModel.NextLiveChannelRequested -= PlayerViewModel_NextLiveChannelRequested;
-        _playerViewModel.NextLiveChannelRequested += PlayerViewModel_NextLiveChannelRequested;
-        _playerViewModel.PreviousLiveChannelRequested -= PlayerViewModel_PreviousLiveChannelRequested;
-        _playerViewModel.PreviousLiveChannelRequested += PlayerViewModel_PreviousLiveChannelRequested;
-        _playerViewModel.NextEpisodeRequested -= PlayerViewModel_NextEpisodeRequested;
-        _playerViewModel.NextEpisodeRequested += PlayerViewModel_NextEpisodeRequested;
-        _playerViewModel.EpisodeRequested -= PlayerViewModel_EpisodeRequested;
-        _playerViewModel.EpisodeRequested += PlayerViewModel_EpisodeRequested;
-        _playerViewModel.PiPRequested -= PlayerViewModel_PiPRequested;
-        _playerViewModel.PiPRequested += PlayerViewModel_PiPRequested;
-        _playerViewModel.PropertyChanged -= PlayerViewModel_PropertyChanged;
-        _playerViewModel.PropertyChanged += PlayerViewModel_PropertyChanged;
-        _playerViewModel.VideoPlayerService.ErrorOccurred -= PlayerViewModel_VideoPlayerServiceErrorOccurred;
-        _playerViewModel.VideoPlayerService.ErrorOccurred += PlayerViewModel_VideoPlayerServiceErrorOccurred;
-
-        var pictureInPictureService = platformResolver?.GetPictureInPictureService();
-        if (pictureInPictureService is not null)
-        {
-            pictureInPictureService.PictureInPictureModeChanged -= PictureInPictureService_ModeChanged;
-            pictureInPictureService.PictureInPictureModeChanged += PictureInPictureService_ModeChanged;
-        }
+        WirePlayerViewModelEvents(platformResolver);
 
         var coreViewModel = _coreMainViewModel ??= resolver.GetCoreMainViewModel();
         _playerViewModel.CurrentProfileId = coreViewModel?.CurrentProfileId;
@@ -2048,8 +2034,12 @@ public partial class MainView : UserControl
 
             _adPlaybackEstablished = true;
             _adPlaybackIsLive = _playerViewModel.IsLiveContent;
+            _adPlaybackWasDownloaded = _playerViewModel.IsDownloadedPlayback;
             UpdatePlaybackAdClock(_playerViewModel.IsPlaying);
-            MobileAdvertisingServices.TryGet()?.PrimeInterstitial();
+            if (!_adPlaybackIsLive && !_adPlaybackWasDownloaded)
+            {
+                MobileAdvertisingServices.TryGet()?.PrimeInterstitial();
+            }
             UpdatePictureInPictureState();
         }
         catch (OperationCanceledException)
@@ -2124,8 +2114,71 @@ public partial class MainView : UserControl
         _adPlaybackFailed = true;
     }
 
+    private void WirePlayerViewModelEvents(
+        MobilePlatformServiceResolver? platformResolver = null)
+    {
+        var player = _playerViewModel;
+        if (player is null)
+        {
+            return;
+        }
+
+        player.CloseRequested -= PlayerViewModel_CloseRequested;
+        player.CloseRequested += PlayerViewModel_CloseRequested;
+        player.NextLiveChannelRequested -= PlayerViewModel_NextLiveChannelRequested;
+        player.NextLiveChannelRequested += PlayerViewModel_NextLiveChannelRequested;
+        player.PreviousLiveChannelRequested -= PlayerViewModel_PreviousLiveChannelRequested;
+        player.PreviousLiveChannelRequested += PlayerViewModel_PreviousLiveChannelRequested;
+        player.NextEpisodeRequested -= PlayerViewModel_NextEpisodeRequested;
+        player.NextEpisodeRequested += PlayerViewModel_NextEpisodeRequested;
+        player.EpisodeRequested -= PlayerViewModel_EpisodeRequested;
+        player.EpisodeRequested += PlayerViewModel_EpisodeRequested;
+        player.PiPRequested -= PlayerViewModel_PiPRequested;
+        player.PiPRequested += PlayerViewModel_PiPRequested;
+        player.PropertyChanged -= PlayerViewModel_PropertyChanged;
+        player.PropertyChanged += PlayerViewModel_PropertyChanged;
+        player.VideoPlayerService.ErrorOccurred -= PlayerViewModel_VideoPlayerServiceErrorOccurred;
+        player.VideoPlayerService.ErrorOccurred += PlayerViewModel_VideoPlayerServiceErrorOccurred;
+
+        var pictureInPictureService =
+            (platformResolver ?? GetPlatformServiceResolver())?.GetPictureInPictureService();
+        if (pictureInPictureService is not null)
+        {
+            pictureInPictureService.PictureInPictureModeChanged -= PictureInPictureService_ModeChanged;
+            pictureInPictureService.PictureInPictureModeChanged += PictureInPictureService_ModeChanged;
+        }
+    }
+
+    private void UnwirePlayerViewModelEvents()
+    {
+        var player = _playerViewModel;
+        if (player is not null)
+        {
+            player.CloseRequested -= PlayerViewModel_CloseRequested;
+            player.NextLiveChannelRequested -= PlayerViewModel_NextLiveChannelRequested;
+            player.PreviousLiveChannelRequested -= PlayerViewModel_PreviousLiveChannelRequested;
+            player.NextEpisodeRequested -= PlayerViewModel_NextEpisodeRequested;
+            player.EpisodeRequested -= PlayerViewModel_EpisodeRequested;
+            player.PiPRequested -= PlayerViewModel_PiPRequested;
+            player.PropertyChanged -= PlayerViewModel_PropertyChanged;
+            player.VideoPlayerService.ErrorOccurred -= PlayerViewModel_VideoPlayerServiceErrorOccurred;
+        }
+
+        var pictureInPictureService =
+            GetPlatformServiceResolver()?.GetPictureInPictureService();
+        if (pictureInPictureService is not null)
+        {
+            pictureInPictureService.PictureInPictureModeChanged -= PictureInPictureService_ModeChanged;
+        }
+    }
+
     private async void PlayerViewModel_CloseRequested(object? sender, EventArgs e)
     {
+        if (!_isAttachedToVisualTree)
+        {
+            return;
+        }
+
         UpdatePlaybackAdClock(isPlaying: false);
         var adContext = CreatePlaybackExitAdContext();
 
@@ -2171,7 +2224,11 @@ public partial class MainView : UserControl
             var ads = MobileAdvertisingServices.TryGet();
             if (ads is not null)
             {
-                await ads.TryShowInterstitialAsync(adContext);
+                var shown = await ads.TryShowInterstitialAsync(adContext);
+                if (shown)
+                {
+                    RecoverActivePageAfterInterstitial();
+                }
             }
         }
         catch
@@ -2183,6 +2240,45 @@ public partial class MainView : UserControl
         {
             Interlocked.Exchange(ref _interstitialPresentationInProgress, 0);
         }
+    }
+
+    private void RecoverActivePageAfterInterstitial()
+    {
+        Interlocked.Exchange(ref _interstitialRecoveryPending, 1);
+        Dispatcher.UIThread.Post(
+            () => TryRecoverActivePageAfterInterstitial(),
+            DispatcherPriority.Loaded);
+    }
+
+    private bool TryRecoverActivePageAfterInterstitial()
+    {
+        if (Volatile.Read(ref _interstitialRecoveryPending) == 0 ||
+            !_isAttachedToVisualTree ||
+            !MobileAppLifecycle.IsForeground ||
+            _activeCorePage is not { } active ||
+            PlayerHost.IsVisible ||
+            ProfilesOverlay.IsVisible ||
+            !CoreContentHost.IsEffectivelyVisible)
+        {
+            return false;
+        }
+
+        if (Interlocked.Exchange(ref _interstitialRecoveryPending, 0) == 0)
+        {
+            return false;
+        }
+
+        // The source collection survives the SDK activity transition, but
+        // Avalonia's virtualized row projection can return empty. Rebuild only
+        // that projection; do not re-query or clear data.
+        foreach (var grid in active.Page.GetVisualDescendants().OfType<MobileVirtualizingCardGrid>())
+        {
+            grid.RefreshAfterResume();
+        }
+
+        RestartActivePageRestore();
+        SetActivePageImageLoadsActive(true);
+        return true;
     }
 
     private void PlayerViewModel_NextLiveChannelRequested(object? sender, EventArgs e)
@@ -2251,6 +2347,16 @@ public partial class MainView : UserControl
             }
             UpdatePlayerWatermarkInsets();
         }
+        else if (e.PropertyName == nameof(PlayerViewModel.IsDownloadedPlayback))
+        {
+            // The player clears CurrentChannel before CloseRequested. Latch the
+            // downloaded state for this playback so that reset cannot make the
+            // exit context look like streamed content.
+            if (_playerViewModel?.IsDownloadedPlayback == true)
+            {
+                _adPlaybackWasDownloaded = true;
+            }
+        }
         else if (e.PropertyName == nameof(PlayerViewModel.IsVisible) ||
                  e.PropertyName == nameof(PlayerViewModel.IsMobileDetailPanelOpen) ||
                  e.PropertyName == nameof(PlayerViewModel.IsActionsPanelOpen))
@@ -2281,6 +2387,7 @@ public partial class MainView : UserControl
         _adPlaybackPlayingSince = null;
         _adPlaybackEstablished = false;
         _adPlaybackIsLive = false;
+        _adPlaybackWasDownloaded = false;
         _adPlaybackFailed = false;
         _adPlaybackWasPiP = false;
     }
@@ -2315,6 +2422,7 @@ public partial class MainView : UserControl
             PlaybackDuration: duration,
             PlaybackEstablished: _adPlaybackEstablished,
             IsLiveContent: _adPlaybackIsLive,
+            IsDownloadedContent: _adPlaybackWasDownloaded,
             PlaybackFailed: _adPlaybackFailed,
             WasPictureInPicture: _adPlaybackWasPiP,
             HasBlockingOverlay: false);

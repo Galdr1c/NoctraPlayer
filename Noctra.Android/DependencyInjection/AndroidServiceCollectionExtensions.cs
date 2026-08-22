@@ -84,18 +84,24 @@ public static class AndroidServiceCollectionExtensions
                 serviceProvider.GetRequiredService<IDispatcherService>(),
                 deferInitialStoreRefresh: true));
         services.AddSingleton<StartupPrivacyCoordinator>();
+        services.AddSingleton<IInterstitialAdHistoryStore>(serviceProvider =>
+            new AndroidInterstitialAdHistoryStore(
+                serviceProvider.GetRequiredService<Context>()));
+        services.AddSingleton<InterstitialAdPolicyCoordinator>();
         services.AddSingleton<AdMobMobileAdvertisingService>(serviceProvider =>
             new AdMobMobileAdvertisingService(
                 serviceProvider.GetRequiredService<Context>(),
                 serviceProvider.GetRequiredService<AndroidActivityProvider>(),
                 serviceProvider.GetRequiredService<ILicenseService>(),
-                serviceProvider.GetRequiredService<StartupPrivacyCoordinator>()));
+                serviceProvider.GetRequiredService<StartupPrivacyCoordinator>(),
+                serviceProvider.GetRequiredService<InterstitialAdPolicyCoordinator>()));
         services.AddSingleton<HuaweiMobileAdvertisingService>(serviceProvider =>
             new HuaweiMobileAdvertisingService(
                 serviceProvider.GetRequiredService<Context>(),
                 serviceProvider.GetRequiredService<AndroidActivityProvider>(),
                 serviceProvider.GetRequiredService<ILicenseService>(),
-                serviceProvider.GetRequiredService<StartupPrivacyCoordinator>()));
+                serviceProvider.GetRequiredService<StartupPrivacyCoordinator>(),
+                serviceProvider.GetRequiredService<InterstitialAdPolicyCoordinator>()));
         services.AddSingleton<MobileAdvertisingBootstrapper>();
         services.AddSingleton<IMobileAdvertisingService>(serviceProvider =>
         {

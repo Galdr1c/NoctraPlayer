@@ -224,6 +224,93 @@ public sealed class AdvertisingAccessibilityContractTests
     }
 
     [Fact]
+    public void PlaybackExitProviders_UseSharedPolicyAndCompleteOnlyAfterDismissal()
+    {
+        var adMob = File.ReadAllText(ProjectSource(
+            "Noctra.Android", "Advertising", "AdMobMobileAdvertisingService.cs"));
+        var huawei = File.ReadAllText(ProjectSource(
+            "Noctra.Android", "Advertising", "HuaweiMobileAdvertisingService.cs"));
+
+        foreach (var provider in new[] { adMob, huawei })
+        {
+            Assert.Contains("InterstitialAdPolicyCoordinator", provider, StringComparison.Ordinal);
+            Assert.Contains("_interstitialPolicy.Evaluate(", provider, StringComparison.Ordinal);
+            Assert.Contains(
+                "_interstitialPolicy.RecordImpression(DateTimeOffset.UtcNow)",
+                provider,
+                StringComparison.Ordinal);
+            Assert.DoesNotContain(
+                "_interstitialPolicy.RecordImpression(context.Now)",
+                provider,
+                StringComparison.Ordinal);
+        }
+
+        Assert.Contains(
+            "dismissed: () => completion.TrySetResult(true)",
+            adMob,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "closed: () => completion.TrySetResult(true)",
+            huawei,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            "shown: () => completion.TrySetResult(true)",
+            adMob,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            "opened: () => completion.TrySetResult(true)",
+            huawei,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void MainView_TracksDownloadedPlaybackAndRepairsGridAfterInterstitialDismissal()
+    {
+        var source = File.ReadAllText(ProjectSource(
+            "Noctra.Mobile", "Views", "MainView.axaml.cs"));
+
+        Assert.Contains("_adPlaybackWasDownloaded", source, StringComparison.Ordinal);
+        Assert.Contains("IsDownloadedContent: _adPlaybackWasDownloaded", source, StringComparison.Ordinal);
+        Assert.Contains("if (!_adPlaybackIsLive && !_adPlaybackWasDownloaded)", source, StringComparison.Ordinal);
+        Assert.Contains("var shown = await ads.TryShowInterstitialAsync(adContext);", source, StringComparison.Ordinal);
+        Assert.Contains("RecoverActivePageAfterInterstitial", source, StringComparison.Ordinal);
+        Assert.Contains("_interstitialRecoveryPending", source, StringComparison.Ordinal);
+        Assert.Contains(
+            "Interlocked.Exchange(ref _interstitialRecoveryPending, 1)",
+            source,
+            StringComparison.Ordinal);
+        Assert.Contains("TryRecoverActivePageAfterInterstitial", source, StringComparison.Ordinal);
+        Assert.Contains(
+            "GetVisualDescendants().OfType<MobileVirtualizingCardGrid>()",
+            source,
+            StringComparison.Ordinal);
+        Assert.Contains("grid.RefreshAfterResume();", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void InterstitialHistoryStore_UsesDurableCommitAndMainViewDetachesPlayerHandlers()
+    {
+        var store = File.ReadAllText(ProjectSource(
+            "Noctra.Android", "Advertising", "AndroidInterstitialAdHistoryStore.cs"));
+        Assert.Contains(".Commit()", store, StringComparison.Ordinal);
+        Assert.DoesNotContain("editor.Apply();", store, StringComparison.Ordinal);
+        Assert.Contains("history could not be committed", store, StringComparison.OrdinalIgnoreCase);
+
+        var mainView = File.ReadAllText(ProjectSource(
+            "Noctra.Mobile", "Views", "MainView.axaml.cs"));
+        var detachStart = mainView.IndexOf(
+            "protected override void OnDetachedFromVisualTree", StringComparison.Ordinal);
+        var detachEnd = mainView.IndexOf(
+            "private void RegisterBackHandler", detachStart, StringComparison.Ordinal);
+        Assert.True(detachStart >= 0 && detachEnd > detachStart);
+        var detach = mainView[detachStart..detachEnd];
+
+        Assert.Contains("UnwirePlayerViewModelEvents();", detach, StringComparison.Ordinal);
+        Assert.Contains("_interstitialRecoveryPending", detach, StringComparison.Ordinal);
+        Assert.Contains("if (!_isAttachedToVisualTree)", mainView, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void AndroidProviderFactory_FailsClosedWhenNeitherPlayServicesIsPresent()
     {
         var adMob = File.ReadAllText(ProjectSource(
