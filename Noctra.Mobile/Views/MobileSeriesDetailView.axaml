@@ -192,12 +192,18 @@
                 ColumnSpacing="14"
                 Margin="0,24,0,0"
                 IsVisible="{Binding !IsDownloadedSeriesDetailMode}">
-            <Border CornerRadius="8"
-                    ClipToBounds="True"
-                    Background="{DynamicResource Surface0Brush}">
-              <controls:RemoteImage Url="{Binding SelectedSeriesPosterUrl}"
-                                    Stretch="UniformToFill" />
-            </Border>
+             <Border CornerRadius="8"
+                     ClipToBounds="True"
+                     Background="{DynamicResource Surface0Brush}">
+               <Grid>
+                 <Image Source="{Binding ActualThemeVariant, RelativeSource={RelativeSource Self}, Converter={StaticResource LogoThemeConverter}, ConverterParameter=Full}"
+                        Width="132" Height="132" Stretch="Uniform" Opacity="0.12"
+                        HorizontalAlignment="Center" VerticalAlignment="Center"
+                        IsHitTestVisible="False" />
+                 <controls:RemoteImage Url="{Binding SelectedSeriesPosterUrl}"
+                                       Stretch="UniformToFill" />
+               </Grid>
+             </Border>
 
             <StackPanel Grid.Column="1"
                         Spacing="8"
@@ -490,13 +496,17 @@
                                 ColumnSpacing="14">
 
                             <!-- Thumbnail with Episode Number Overlay -->
-                            <Border Height="80"
-                                    CornerRadius="4"
-                                    ClipToBounds="True"
-                                    Background="{DynamicResource PlaceHolderBrush}">
-                              <Grid>
-                                <controls:RemoteImage Url="{Binding CoverUrl}"
-                                                      Stretch="UniformToFill" />
+                             <Border Height="80"
+                                     CornerRadius="4"
+                                     ClipToBounds="True"
+                                     Background="{DynamicResource PlaceHolderBrush}">
+                               <Grid>
+                                 <Image Source="{Binding ActualThemeVariant, RelativeSource={RelativeSource Self}, Converter={StaticResource LogoThemeConverter}, ConverterParameter=Full}"
+                                        Width="66" Height="66" Stretch="Uniform" Opacity="0.12"
+                                        HorizontalAlignment="Center" VerticalAlignment="Center"
+                                        IsHitTestVisible="False" />
+                                 <controls:RemoteImage Url="{Binding CoverUrl}"
+                                                       Stretch="UniformToFill" />
 
                                 <!-- Episode Number Badge (bottom-left) -->
                                 <Border VerticalAlignment="Bottom"

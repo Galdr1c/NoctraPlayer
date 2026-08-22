@@ -209,6 +209,10 @@
                                       ClipToBounds="True"
                                       Background="{DynamicResource Surface1Brush}">
                                 <Grid>
+                                  <Image Source="{Binding ActualThemeVariant, RelativeSource={RelativeSource Self}, Converter={StaticResource LogoThemeConverter}, ConverterParameter=Full}"
+                                         Width="32" Height="32" Stretch="Uniform" Opacity="0.12"
+                                         HorizontalAlignment="Center" VerticalAlignment="Center"
+                                         IsHitTestVisible="False" />
                                   <controls:RemoteImage Url="{Binding CoverUrl}"
                                                         Stretch="UniformToFill"
                                                         RenderOptions.BitmapInterpolationMode="MediumQuality" />
@@ -292,6 +296,10 @@
                                       ClipToBounds="True"
                                       Background="{DynamicResource Surface1Brush}">
                                 <Grid>
+                                  <Image Source="{Binding ActualThemeVariant, RelativeSource={RelativeSource Self}, Converter={StaticResource LogoThemeConverter}, ConverterParameter=Full}"
+                                         Width="32" Height="32" Stretch="Uniform" Opacity="0.12"
+                                         HorizontalAlignment="Center" VerticalAlignment="Center"
+                                         IsHitTestVisible="False" />
                                   <controls:RemoteImage Url="{Binding CoverUrl}"
                                                         Stretch="UniformToFill"
                                                         RenderOptions.BitmapInterpolationMode="MediumQuality" />
