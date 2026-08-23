@@ -29,6 +29,37 @@ public sealed class AndroidPerformanceStabilityContractTests
     }
 
     [Fact]
+    public void MobileLifecycle_IsolatesThrowingHandlersSoLaterSubscribersStillRun()
+    {
+        var firstCalled = false;
+        var secondCalled = false;
+
+        EventHandler first = (_, _) => firstCalled = true;
+        EventHandler throwing = (_, _) => throw new InvalidOperationException("boom");
+        EventHandler second = (_, _) => secondCalled = true;
+
+        MobileAppLifecycle.Paused += first;
+        MobileAppLifecycle.Paused += throwing;
+        MobileAppLifecycle.Paused += second;
+        try
+        {
+            MobileAppLifecycle.NotifyPaused();
+        }
+        finally
+        {
+            MobileAppLifecycle.Paused -= first;
+            MobileAppLifecycle.Paused -= throwing;
+            MobileAppLifecycle.Paused -= second;
+        }
+
+        // Grids, the banner control, and the native ad hosts all listen on the
+        // same event: one throwing handler must not silence the others.
+        Assert.True(firstCalled);
+        Assert.True(secondCalled);
+        Assert.False(MobileAppLifecycle.IsForeground);
+    }
+
+    [Fact]
     public void MobileLifecycle_NotifiesPausedSubscribers()
     {
         var lifecycleType = typeof(MobileAppLifecycle);
@@ -117,6 +148,22 @@ public sealed class AndroidPerformanceStabilityContractTests
         Assert.Contains("ResumeRecoveryDeadline = TimeSpan.FromSeconds(2)", grid, StringComparison.Ordinal);
         Assert.Contains("ArmLayoutUpdatedRetry", grid, StringComparison.Ordinal);
         Assert.Contains("DisarmLayoutUpdatedRetry", grid, StringComparison.Ordinal);
+        // Arming mutates a control event: it must happen on the UI thread, not
+        // on the ConfigureAwait(false) continuation.
+        var timeoutIndex = grid.IndexOf(
+            "arming a final layout-driven attempt", StringComparison.Ordinal);
+        var postIndex = grid.IndexOf(
+            "Dispatcher.UIThread.Post", timeoutIndex, StringComparison.Ordinal);
+        var armCallIndex = grid.IndexOf(
+            "ArmLayoutUpdatedRetry(version);", postIndex, StringComparison.Ordinal);
+        Assert.True(timeoutIndex >= 0 && postIndex > timeoutIndex && armCallIndex > postIndex);
+        var armMethodIndex = grid.IndexOf(
+            "private void ArmLayoutUpdatedRetry", StringComparison.Ordinal);
+        var uiThreadAssertIndex = grid.IndexOf(
+            "Debug.Assert(Dispatcher.UIThread.CheckAccess());",
+            armMethodIndex,
+            StringComparison.Ordinal);
+        Assert.True(armMethodIndex >= 0 && uiThreadAssertIndex > armMethodIndex);
         Assert.DoesNotContain("DispatcherPriority.Render", grid, StringComparison.Ordinal);
         Assert.Contains("DispatcherPriority.Loaded", grid, StringComparison.Ordinal);
     }

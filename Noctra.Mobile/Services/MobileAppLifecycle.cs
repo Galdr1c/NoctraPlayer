@@ -49,7 +49,7 @@ public static class MobileAppLifecycle
             handlers = Resumed;
         }
 
-        handlers?.Invoke(null, EventArgs.Empty);
+        InvokeIsolated(handlers);
         return true;
     }
 
@@ -63,6 +63,37 @@ public static class MobileAppLifecycle
             handlers = Paused;
         }
 
-        handlers?.Invoke(null, EventArgs.Empty);
+        InvokeIsolated(handlers);
+    }
+
+    /// <summary>
+    /// Raises each subscriber separately: grids, the banner control, and the
+    /// native ad hosts all listen here, so one throwing handler must never
+    /// leave the remaining subscribers without their resume/pause signal
+    /// (that surfaced as "app came back but parts never recovered").
+    /// </summary>
+    private static void InvokeIsolated(EventHandler? handlers)
+    {
+        if (handlers is null)
+        {
+            return;
+        }
+
+        foreach (var candidate in handlers.GetInvocationList())
+        {
+            if (candidate is not EventHandler handler)
+            {
+                continue;
+            }
+
+            try
+            {
+                handler(null, EventArgs.Empty);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Noctra] Lifecycle handler failed: {ex}");
+            }
+        }
     }
 }

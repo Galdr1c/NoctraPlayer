@@ -32,6 +32,22 @@ public sealed class AndroidActivityLifecycleContractTests
         Assert.Contains("if (!deferInitialStoreRefresh)", license, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void OnStop_PausesOpeningAndBufferingPlaybackOutsidePip()
+    {
+        var source = File.ReadAllText(ProjectSource(
+            "Noctra.Android", "MainActivity.cs"));
+
+        // Zero tolerance outside PiP: a stream still opening/buffering when the
+        // app leaves the foreground must not start playing in the background.
+        Assert.Contains("player.State == PlaybackState.Opening", source, StringComparison.Ordinal);
+        Assert.Contains("player.State == PlaybackState.Buffering", source, StringComparison.Ordinal);
+
+        // Only a player that was actually playing may auto-resume on return; a
+        // paused-seek buffering window must not earn a resume.
+        Assert.Contains("_pausedByLifecycle = player.IsPlaying;", source, StringComparison.Ordinal);
+    }
+
     private static string ProjectSource(params string[] segments)
         => Path.GetFullPath(Path.Combine(
             new[] { AppContext.BaseDirectory, "..", "..", "..", ".." }

@@ -521,13 +521,20 @@ public class MainActivity : AvaloniaMainActivity
     {
         // PiP gerçek background playback yoludur; PiP modunda oynatma
         // Android tarafından yönetilir, burada dokunmuyoruz.
-        // PiP dışında oynatma arka plana taşınmaz.
+        // PiP dışında oynatma arka plana taşınmaz — sıfır tolerans:
+        // Opening/Buffering de duraklatılır, yoksa arka planda buffer
+        // dolunca oynatma kendiliğinden başlayabilir.
         if (!IsInPictureInPictureMode &&
             Avalonia.Application.Current is Noctra.Mobile.App app &&
-            app.Services?.GetService<IVideoPlayerService>()
-                is { IsPlaying: true } player)
+            app.Services?.GetService<IVideoPlayerService>() is { } player &&
+            (player.IsPlaying ||
+             player.State == PlaybackState.Opening ||
+             player.State == PlaybackState.Buffering))
         {
-            _pausedByLifecycle = true;
+            // Yalnızca gerçekten oynayan player geri dönüşte otomatik resume
+            // edilir; paused-seek anındaki kısa Buffering penceresi resume
+            // hakkı kazanmaz (kullanıcının manuel pause'u korunur).
+            _pausedByLifecycle = player.IsPlaying;
             player.Pause();
         }
 

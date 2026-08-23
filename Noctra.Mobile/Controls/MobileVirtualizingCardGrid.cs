@@ -262,7 +262,20 @@ public sealed class MobileVirtualizingCardGrid : ListBox
             Console.WriteLine(
                 $"[Noctra] Grid resume recovery timed out after {ResumeRecoveryDeadline.TotalSeconds:F0}s " +
                 $"(kind={CardKind}); arming a final layout-driven attempt.");
-            ArmLayoutUpdatedRetry(version);
+
+            // This continuation runs on the thread pool (ConfigureAwait(false));
+            // subscribing to LayoutUpdated is UI-thread-only work.
+            Dispatcher.UIThread.Post(
+                () =>
+                {
+                    if (!IsResumeRecoveryEligibleOnUiThread(version))
+                    {
+                        return;
+                    }
+
+                    ArmLayoutUpdatedRetry(version);
+                },
+                DispatcherPriority.Loaded);
         }
         catch (Exception ex)
         {
@@ -272,6 +285,8 @@ public sealed class MobileVirtualizingCardGrid : ListBox
 
     private void ArmLayoutUpdatedRetry(int version)
     {
+        Debug.Assert(Dispatcher.UIThread.CheckAccess());
+
         if (Interlocked.Exchange(ref _layoutRetryArmed, 1) != 0)
         {
             return;
