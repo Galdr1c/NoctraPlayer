@@ -41,6 +41,7 @@ public partial class MainView : UserControl
     private const int MaxProfileSelectionRetries = 20;
     private const int PageRestoreAttempts = 3;
     private const int PageRestoreDelayMilliseconds = 50;
+    private static readonly TimeSpan LateImageActivationDelay = TimeSpan.FromSeconds(2);
     private CoreMainViewModel? _coreMainViewModel;
     private PlayerViewModel? _playerViewModel;
     private MobileViewModelResolver? _viewModelResolver;
@@ -977,8 +978,51 @@ public partial class MainView : UserControl
                     RestartActivePageRestore();
                 }
                 SetSeriesDetailImageLoadsActive(true);
+                ScheduleLateImageLoadActivation();
             },
             DispatcherPriority.Background);
+    }
+
+    /// <summary>
+    /// Pausing clears every RemoteImage source on the active page, and the
+    /// resume-time re-activation only retries for a short window. After a long
+    /// background stay the content host can still be invisible when that window
+    /// ends, leaving the page flag false so no image (including rows realized
+    /// later) ever loads until the user navigates. One delayed check heals that
+    /// case; when activation already succeeded the flag read makes it a no-op.
+    /// </summary>
+    private void ScheduleLateImageLoadActivation()
+    {
+        _ = Task.Delay(LateImageActivationDelay).ContinueWith(
+            _ => Dispatcher.UIThread.Post(
+                VerifyActivePageImageLoadsActive,
+                DispatcherPriority.Background),
+            TaskScheduler.Default);
+    }
+
+    private void VerifyActivePageImageLoadsActive()
+    {
+        if (!MobileAppLifecycle.IsForeground ||
+            !CoreContentHost.IsEffectivelyVisible ||
+            PlayerHost.IsVisible ||
+            ProfilesOverlay.IsVisible)
+        {
+            return;
+        }
+
+        var page = _activeCorePage?.Page;
+        if (page is null ||
+            page.GetValue(RemoteImage.SurfaceLoadsActiveProperty))
+        {
+            return;
+        }
+
+        // Reached only when the resume-time activation missed: log it so a
+        // real-device occurrence identifies this path in adb logcat.
+        Console.WriteLine(
+            $"[Noctra] Late image activation healing page after resume " +
+            $"(destination={_currentDestination}).");
+        SetActivePageImageLoadsActive(true);
     }
 
     private void RestartActivePageRestore()

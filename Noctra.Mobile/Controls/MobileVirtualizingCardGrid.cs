@@ -42,6 +42,15 @@ public sealed class MobileVirtualizingCardGrid : ListBox
     private const int ResumeRecoveryAttempts = 3;
     private const int ResumeRecoveryDelayMilliseconds = 50;
 
+    /// <summary>
+    /// Total patience for resume layout recovery. After a long Android
+    /// background stay (or screen-off) the render surface can take far longer
+    /// than a few frames to come back, especially on low/medium-tier devices;
+    /// the original 3 x 50 ms window gave up before layout was ready and left
+    /// blank card grids until the user navigated away and back.
+    /// </summary>
+    private static readonly TimeSpan ResumeRecoveryDeadline = TimeSpan.FromSeconds(2);
+
     public static readonly StyledProperty<IEnumerable?> SourceItemsProperty =
         AvaloniaProperty.Register<MobileVirtualizingCardGrid, IEnumerable?>(nameof(SourceItems));
 
@@ -65,6 +74,8 @@ public sealed class MobileVirtualizingCardGrid : ListBox
     private double _cardWidth;
     private double _lastStableWidth = FallbackAvailableWidth;
     private bool _lifecycleSubscribed;
+    private int _layoutRetryArmed;
+    private EventHandler? _layoutRetryHandler;
     protected override Type StyleKeyOverride => typeof(ListBox);
 
     static MobileVirtualizingCardGrid()
@@ -128,7 +139,8 @@ public sealed class MobileVirtualizingCardGrid : ListBox
 
     /// <summary>
     /// Revalidates layout after Android recreates or reconnects the render surface.
-    /// Transient resume widths are ignored and retried for a bounded number of frames.
+    /// Transient resume widths are ignored and retried with a bounded deadline;
+    /// a final layout-driven attempt heals grids whose surface came back late.
     /// </summary>
     public void RefreshAfterResume()
     {
@@ -143,8 +155,8 @@ public sealed class MobileVirtualizingCardGrid : ListBox
         }
 
         // Force a full rebuild even if the width later returns to the same value.
-        // Without this, a timeout (350 ms) followed by the same width would skip
-        // rebuild and leave a corrupted or blank visual tree.
+        // Without this, a timeout followed by the same width would skip rebuild
+        // and leave a corrupted or blank visual tree.
         Interlocked.Exchange(ref _fullRebuildRequired, 1);
 
         var version = Interlocked.Increment(ref _resumeRecoveryVersion);
@@ -174,6 +186,7 @@ public sealed class MobileVirtualizingCardGrid : ListBox
         MobileAppLifecycle.Resumed -= OnAppResumed;
         MobileAppLifecycle.Paused -= OnAppPaused;
         _lifecycleSubscribed = false;
+        DisarmLayoutUpdatedRetry();
         Interlocked.Increment(ref _resumeRecoveryVersion);
         MarkCounter("GridResumeGenerationCancelled", ref _gridResumeGenerationCancelled);
     }
@@ -205,7 +218,16 @@ public sealed class MobileVirtualizingCardGrid : ListBox
     {
         try
         {
-            for (var attempt = 0; attempt < ResumeRecoveryAttempts; attempt++)
+            // The original three fast attempts always run; after them the loop
+            // keeps polling until the deadline so a slowly re-attaching render
+            // surface still converges without user interaction.
+            var deadlineTicks =
+                Environment.TickCount64 + (long)ResumeRecoveryDeadline.TotalMilliseconds;
+
+            for (var attempt = 0;
+                 attempt < ResumeRecoveryAttempts ||
+                 Environment.TickCount64 < deadlineTicks;
+                 attempt++)
             {
                 if (!IsResumeRecoveryGenerationCurrent(
                         version,
@@ -217,13 +239,13 @@ public sealed class MobileVirtualizingCardGrid : ListBox
                 if (attempt > 0)
                 {
                     await Task.Delay(ResumeRecoveryDelayMilliseconds).ConfigureAwait(false);
-                }
 
-                if (!IsResumeRecoveryGenerationCurrent(
-                        version,
-                        Volatile.Read(ref _resumeRecoveryVersion)))
-                {
-                    return;
+                    if (!IsResumeRecoveryGenerationCurrent(
+                            version,
+                            Volatile.Read(ref _resumeRecoveryVersion)))
+                    {
+                        return;
+                    }
                 }
 
                 if (await TryRepairAfterResumeAsync(version).ConfigureAwait(false))
@@ -232,11 +254,61 @@ public sealed class MobileVirtualizingCardGrid : ListBox
                 }
             }
 
-            Debug.WriteLine("[Noctra] Resume layout recovery timed out before a stable width was observed.");
+            // The deadline passed without a stable layout. Arm one
+            // event-driven final attempt so the next real layout pass heals
+            // the grid instead of waiting for a navigation or size change.
+            // Console (not Debug) so the evidence reaches adb logcat on a
+            // device without a debugger attached.
+            Console.WriteLine(
+                $"[Noctra] Grid resume recovery timed out after {ResumeRecoveryDeadline.TotalSeconds:F0}s " +
+                $"(kind={CardKind}); arming a final layout-driven attempt.");
+            ArmLayoutUpdatedRetry(version);
         }
         catch (Exception ex)
         {
             Debug.WriteLine($"[Noctra] Resume layout recovery failed: {ex}");
+        }
+    }
+
+    private void ArmLayoutUpdatedRetry(int version)
+    {
+        if (Interlocked.Exchange(ref _layoutRetryArmed, 1) != 0)
+        {
+            return;
+        }
+
+        void OnLayoutRetry(object? sender, object e)
+        {
+            LayoutUpdated -= OnLayoutRetry;
+            Interlocked.Exchange(ref _layoutRetryArmed, 0);
+
+            if (!IsResumeRecoveryGenerationCurrent(
+                    version,
+                    Volatile.Read(ref _resumeRecoveryVersion)))
+            {
+                return;
+            }
+
+            Console.WriteLine(
+                $"[Noctra] Grid resume final layout attempt running (kind={CardKind}).");
+            _ = TryRepairAfterResumeAsync(version);
+        }
+
+        _layoutRetryHandler = OnLayoutRetry;
+        LayoutUpdated += OnLayoutRetry;
+    }
+
+    private void DisarmLayoutUpdatedRetry()
+    {
+        if (Interlocked.Exchange(ref _layoutRetryArmed, 0) == 0)
+        {
+            return;
+        }
+
+        if (_layoutRetryHandler is { } handler)
+        {
+            _layoutRetryHandler = null;
+            LayoutUpdated -= handler;
         }
     }
 

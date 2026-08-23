@@ -170,6 +170,23 @@ public sealed class MobileLazyPageHostContractTests
     }
 
     [Fact]
+    public void Resume_HealsMissedImageActivationAfterLongBackground()
+    {
+        var code = ReadProjectFile("Noctra.Mobile", "Views", "MainView.axaml.cs");
+
+        var resume = ExtractMethod(code, "OnAppResumed");
+        Assert.Contains("ScheduleLateImageLoadActivation", resume, StringComparison.Ordinal);
+
+        // The delayed heal must be eligibility-gated and must no-op when the
+        // resume-time activation already flipped the page flag (the flag read
+        // prevents restarting every image load on every resume).
+        var verify = ExtractMethod(code, "VerifyActivePageImageLoadsActive");
+        Assert.Contains("MobileAppLifecycle.IsForeground", verify, StringComparison.Ordinal);
+        Assert.Contains("SurfaceLoadsActiveProperty", verify, StringComparison.Ordinal);
+        Assert.Contains("SetActivePageImageLoadsActive(true)", verify, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void DetachReattach_UsesAnAttachmentGenerationAndCanRestartTheHost()
     {
         var code = ReadProjectFile("Noctra.Mobile", "Views", "MainView.axaml.cs");

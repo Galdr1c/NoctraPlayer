@@ -111,6 +111,12 @@ public sealed class AndroidPerformanceStabilityContractTests
         var grid = ReadProjectFile("Noctra.Mobile", "Controls", "MobileVirtualizingCardGrid.cs");
 
         Assert.Contains("ResumeRecoveryAttempts = 3", grid, StringComparison.Ordinal);
+        // A long background stay can leave the render surface detached for far
+        // longer than the original 3 x 50 ms window; recovery must stay patient
+        // (deadline-bounded) and heal on the next real layout pass.
+        Assert.Contains("ResumeRecoveryDeadline = TimeSpan.FromSeconds(2)", grid, StringComparison.Ordinal);
+        Assert.Contains("ArmLayoutUpdatedRetry", grid, StringComparison.Ordinal);
+        Assert.Contains("DisarmLayoutUpdatedRetry", grid, StringComparison.Ordinal);
         Assert.DoesNotContain("DispatcherPriority.Render", grid, StringComparison.Ordinal);
         Assert.Contains("DispatcherPriority.Loaded", grid, StringComparison.Ordinal);
     }
