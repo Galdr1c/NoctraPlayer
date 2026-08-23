@@ -29,6 +29,8 @@ internal enum DownloadContentKind
 
 public class ContentDownloadService : IContentDownloadService
 {
+    internal const string CredentialChangeFailureMessage =
+        "Hesap bilgileri degistirildi. Indirmeyi yeni bilgilerle bastan baslatmaniz gerekiyor.";
     private const int ProgressPersistIntervalMs = 1800;
     private const long ProgressPersistMinDeltaBytes = 1024 * 1024; // 1 MB
     private const int MaxAutoResumeAttempts = 3;
@@ -43,11 +45,13 @@ public class ContentDownloadService : IContentDownloadService
     private readonly IAppPathService _appPaths;
     private readonly INetworkService? _networkService;
     private readonly SemaphoreSlim _queueSignal = new(0);
+    private readonly SemaphoreSlim _downloadStateGate = new(1, 1);
     private readonly ConcurrentQueue<int> _pendingIds = new();
     private readonly ConcurrentDictionary<int, byte> _queuedIds = new();
     private readonly ConcurrentDictionary<int, CancellationTokenSource> _activeDownloadCts = new();
     private readonly ConcurrentDictionary<int, Task> _activeDownloadTasks = new();
     private readonly ConcurrentDictionary<int, string> _activeTempFiles = new();
+    private readonly ConcurrentDictionary<int, byte> _credentialFailureRequestedIds = new();
     private readonly ConcurrentDictionary<int, byte> _pauseRequestedIds = new();
     private readonly ConcurrentDictionary<int, byte> _cancelRequestedIds = new();
     private readonly ConcurrentDictionary<int, int> _autoResumeAttempts = new();
@@ -386,36 +390,155 @@ public class ContentDownloadService : IContentDownloadService
         CancellationToken cancellationToken = default)
     {
         using var db = await _contextFactory.CreateDbContextAsync(cancellationToken);
-        
-        var activeItems = await db.DownloadItems
-            .Where(d => d.ProfileId == profileId && 
-                        (d.Status == DownloadStatus.Queued || 
-                         d.Status == DownloadStatus.Downloading || 
-                         d.Status == DownloadStatus.Paused))
-            .ToListAsync(cancellationToken);
+        var activeIds = Array.Empty<int>();
+        var ctsToCancel = new List<CancellationTokenSource>();
 
-        if (activeItems.Count == 0) return;
-
-        foreach (var item in activeItems)
+        // Serialize the claim/marker transition with the worker's initial
+        // status claim and every worker-owned DB state write. Never await a
+        // worker while holding this gate; the worker may need it to unwind.
+        await _downloadStateGate.WaitAsync(cancellationToken);
+        try
         {
-            // Cancel any running worker for this item
-            if (_activeDownloadCts.TryGetValue(item.Id, out var cts))
+            activeIds = await db.DownloadItems
+                .AsNoTracking()
+                .Where(d => d.ProfileId == profileId &&
+                            (d.Status == DownloadStatus.Queued ||
+                             d.Status == DownloadStatus.Downloading ||
+                             d.Status == DownloadStatus.Paused))
+                .Select(d => d.Id)
+                .ToArrayAsync(cancellationToken);
+
+            if (activeIds.Length == 0)
+            {
+                return;
+            }
+
+            foreach (var downloadId in activeIds)
+            {
+                // Mark before cancellation so a queued worker or a cancellation
+                // continuation cannot start/write this item while the final Failed
+                // state is being persisted.
+                _credentialFailureRequestedIds[downloadId] = 1;
+                if (_activeDownloadCts.TryGetValue(downloadId, out var cts))
+                {
+                    ctsToCancel.Add(cts);
+                }
+            }
+        }
+        finally
+        {
+            _downloadStateGate.Release();
+        }
+
+        // Cancellation can run continuations synchronously. Never invoke it
+        // while _downloadStateGate is held: the worker's finally block may need
+        // that gate to unwind. The worker may also have disposed a captured CTS
+        // after leaving the gate, so a disposed token source is a benign race.
+        foreach (var cts in ctsToCancel)
+        {
+            try
             {
                 cts.Cancel();
             }
-
-            // Mark as Failed in DB
-            item.Status = DownloadStatus.Failed;
-            item.ErrorMessage = errorMessage;
-            item.UpdatedAt = DateTime.UtcNow;
-            
-            _queuedIds.TryRemove(item.Id, out _);
-            _pauseRequestedIds.TryRemove(item.Id, out _);
-            _autoResumeAttempts.TryRemove(item.Id, out _);
+            catch (ObjectDisposedException)
+            {
+                _logger?.LogDebug("Download cancellation raced worker disposal.");
+            }
+            catch (Exception ex)
+            {
+                // Cancellation callbacks are allowed to fail independently;
+                // do not let one worker abort the credential invalidation
+                // pass before the remaining rows are persisted as Failed.
+                _logger?.LogWarning(ex, "Download cancellation callback failed.");
+            }
         }
 
-        await db.SaveChangesAsync(cancellationToken);
-        DownloadsChanged?.Invoke(this, EventArgs.Empty);
+        var workerTasks = new List<(int DownloadId, Task Worker)>();
+        var persisted = false;
+        try
+        {
+            foreach (var downloadId in activeIds)
+            {
+                await WaitForActiveWorkerAsync(downloadId, cancellationToken);
+                if (_activeDownloadTasks.TryGetValue(downloadId, out var worker))
+                {
+                    workerTasks.Add((downloadId, worker));
+                }
+            }
+
+            db.ChangeTracker.Clear();
+            await _downloadStateGate.WaitAsync(cancellationToken);
+            try
+            {
+                var activeItems = await db.DownloadItems
+                    .Where(d => activeIds.Contains(d.Id) &&
+                                (d.Status == DownloadStatus.Queued ||
+                                 d.Status == DownloadStatus.Downloading ||
+                                 d.Status == DownloadStatus.Paused))
+                    .ToListAsync(cancellationToken);
+
+                foreach (var item in activeItems)
+                {
+                    item.Status = DownloadStatus.Failed;
+                    item.ErrorMessage = errorMessage;
+                    item.UpdatedAt = DateTime.UtcNow;
+
+                    _queuedIds.TryRemove(item.Id, out _);
+                    _pauseRequestedIds.TryRemove(item.Id, out _);
+                    _cancelRequestedIds.TryRemove(item.Id, out _);
+                    _autoResumeAttempts.TryRemove(item.Id, out _);
+                }
+
+                const int maxAttempts = 5;
+                for (var attempt = 1; ; attempt++)
+                {
+                    try
+                    {
+                        await db.SaveChangesAsync(cancellationToken);
+                        persisted = true;
+                        break;
+                    }
+                    catch (Exception ex) when (
+                        IsDatabaseBusyException(ex) && attempt < maxAttempts)
+                    {
+                        await Task.Delay(50 * attempt, cancellationToken)
+                            .ConfigureAwait(false);
+                    }
+                }
+            }
+            finally
+            {
+                _downloadStateGate.Release();
+            }
+        }
+        finally
+        {
+            // Cleanup is guaranteed even when cancellation or an unexpected
+            // DB error happens before the final Failed write.
+            foreach (var downloadId in activeIds)
+            {
+                var observed = workerTasks.FirstOrDefault(
+                    entry => entry.DownloadId == downloadId);
+                if (observed.Worker is not null && !observed.Worker.IsCompleted)
+                {
+                    _ = ObserveCredentialFailureWorkerAsync(downloadId, observed.Worker);
+                }
+                else if (_activeDownloadTasks.ContainsKey(downloadId) ||
+                         _activeDownloadCts.ContainsKey(downloadId))
+                {
+                    _ = ObserveCredentialFailureWorkerAsync(downloadId, worker: null);
+                }
+                else
+                {
+                    _credentialFailureRequestedIds.TryRemove(downloadId, out _);
+                }
+            }
+        }
+
+        if (persisted)
+        {
+            DownloadsChanged?.Invoke(this, EventArgs.Empty);
+        }
     }
 
     public Task DeleteProfileDownloadsAsync(
@@ -531,19 +654,32 @@ public class ContentDownloadService : IContentDownloadService
             return;
         }
 
-        using var db = await _contextFactory.CreateDbContextAsync(cancellationToken);
-        var item = await db.DownloadItems.FirstOrDefaultAsync(d => d.Id == downloadId, cancellationToken);
-        if (item == null)
+        await _downloadStateGate.WaitAsync(cancellationToken);
+        try
         {
-            return;
-        }
+            if (_credentialFailureRequestedIds.ContainsKey(downloadId))
+            {
+                return;
+            }
 
-        if (item.Status is DownloadStatus.Queued or DownloadStatus.Downloading)
+            using var db = await _contextFactory.CreateDbContextAsync(cancellationToken);
+            var item = await db.DownloadItems.FirstOrDefaultAsync(d => d.Id == downloadId, cancellationToken);
+            if (item == null)
+            {
+                return;
+            }
+
+            if (item.Status is DownloadStatus.Queued or DownloadStatus.Downloading)
+            {
+                item.Status = DownloadStatus.Paused;
+                item.UpdatedAt = DateTime.UtcNow;
+                await db.SaveChangesAsync(cancellationToken);
+                DownloadsChanged?.Invoke(this, EventArgs.Empty);
+            }
+        }
+        finally
         {
-            item.Status = DownloadStatus.Paused;
-            item.UpdatedAt = DateTime.UtcNow;
-            await db.SaveChangesAsync(cancellationToken);
-            DownloadsChanged?.Invoke(this, EventArgs.Empty);
+            _downloadStateGate.Release();
         }
     }
 
@@ -556,14 +692,22 @@ public class ContentDownloadService : IContentDownloadService
             return;
         }
 
-        _pauseRequestedIds.TryRemove(downloadId, out _);
-
-        using var db = await _contextFactory.CreateDbContextAsync(cancellationToken);
-        var item = await db.DownloadItems.FirstOrDefaultAsync(d => d.Id == downloadId, cancellationToken);
-        if (item == null)
+        await _downloadStateGate.WaitAsync(cancellationToken);
+        try
         {
-            return;
-        }
+            if (_credentialFailureRequestedIds.ContainsKey(downloadId))
+            {
+                return;
+            }
+
+            _pauseRequestedIds.TryRemove(downloadId, out _);
+
+            using var db = await _contextFactory.CreateDbContextAsync(cancellationToken);
+            var item = await db.DownloadItems.FirstOrDefaultAsync(d => d.Id == downloadId, cancellationToken);
+            if (item == null)
+            {
+                return;
+            }
 
         // Phase 28: Enforce profile ownership. 
         // We do not have the current active profile ID here easily without changing the interface,
@@ -629,8 +773,13 @@ public class ContentDownloadService : IContentDownloadService
             _queueSignal.Release();
         }
 
-        EnsureQueueWorkerStarted();
-        DownloadsChanged?.Invoke(this, EventArgs.Empty);
+            EnsureQueueWorkerStarted();
+            DownloadsChanged?.Invoke(this, EventArgs.Empty);
+        }
+        finally
+        {
+            _downloadStateGate.Release();
+        }
     }
 
     private void EnsureQueueWorkerStarted()
@@ -682,67 +831,89 @@ public class ContentDownloadService : IContentDownloadService
             await ReconcileInvalidCompletedDownloadsAsync();
 
             using var db = await _contextFactory.CreateDbContextAsync();
-            var pendingItems = await db.DownloadItems
-                .Where(d => d.Status == DownloadStatus.Queued ||
-                            d.Status == DownloadStatus.Downloading ||
-                            d.Status == DownloadStatus.Failed)
-                .OrderBy(d => d.CreatedAt)
-                .ToListAsync();
-
-            var hasChanges = false;
-            foreach (var item in pendingItems)
+            await _downloadStateGate.WaitAsync();
+            try
             {
-                var isMissingFiles = item.BytesDownloaded > 0 && 
-                                     (!string.IsNullOrWhiteSpace(item.TempFilePath) && !File.Exists(item.TempFilePath)) && 
-                                     (!string.IsNullOrWhiteSpace(item.LocalFilePath) && !File.Exists(item.LocalFilePath));
+                var pendingItems = await db.DownloadItems
+                    .Where(d => d.Status == DownloadStatus.Queued ||
+                                d.Status == DownloadStatus.Downloading ||
+                                d.Status == DownloadStatus.Failed)
+                    .OrderBy(d => d.CreatedAt)
+                    .ToListAsync();
 
-                if (isMissingFiles)
+                var hasChanges = false;
+                foreach (var item in pendingItems)
                 {
-                    item.Status = DownloadStatus.Failed;
-                    item.ErrorMessage = _localizationService.GetString("Download.Error.MissingFiles");
-                    item.BytesDownloaded = 0;
-                    item.SpeedBytesPerSecond = 0;
-                    item.EstimatedSecondsRemaining = null;
-                    item.UpdatedAt = DateTime.UtcNow;
-                    hasChanges = true;
-                    continue; // Do not add to queue
-                }
-
-                if (item.Status == DownloadStatus.Downloading)
-                {
-                    // App unexpectedly closed; automatically resume by setting back to Queued
-                    item.Status = DownloadStatus.Queued;
-                    item.SpeedBytesPerSecond = 0;
-                    item.EstimatedSecondsRemaining = null;
-                    item.UpdatedAt = DateTime.UtcNow;
-                    hasChanges = true;
-                    // Fall through to add to memory queue below
-                }
-                else if (item.Status == DownloadStatus.Failed)
-                {
-                    var hasPartial = !string.IsNullOrWhiteSpace(item.TempFilePath) && File.Exists(item.TempFilePath);
-                    if (hasPartial)
+                    if (_credentialFailureRequestedIds.ContainsKey(item.Id))
                     {
-                        item.Status = DownloadStatus.Paused;
+                        continue;
+                    }
+
+                    var isMissingFiles = item.BytesDownloaded > 0 &&
+                                         (!string.IsNullOrWhiteSpace(item.TempFilePath) && !File.Exists(item.TempFilePath)) &&
+                                         (!string.IsNullOrWhiteSpace(item.LocalFilePath) && !File.Exists(item.LocalFilePath));
+
+                    if (isMissingFiles)
+                    {
+                        item.Status = DownloadStatus.Failed;
+                        item.ErrorMessage = _localizationService.GetString("Download.Error.MissingFiles");
+                        item.BytesDownloaded = 0;
                         item.SpeedBytesPerSecond = 0;
                         item.EstimatedSecondsRemaining = null;
                         item.UpdatedAt = DateTime.UtcNow;
                         hasChanges = true;
+                        continue; // Do not add to queue
                     }
 
-                    continue;
+                    if (item.Status == DownloadStatus.Downloading)
+                    {
+                        // App unexpectedly closed; automatically resume by setting back to Queued
+                        item.Status = DownloadStatus.Queued;
+                        item.SpeedBytesPerSecond = 0;
+                        item.EstimatedSecondsRemaining = null;
+                        item.UpdatedAt = DateTime.UtcNow;
+                        hasChanges = true;
+                        // Fall through to add to memory queue below
+                    }
+                    else if (item.Status == DownloadStatus.Failed)
+                    {
+                        if (IsCredentialFailureMessage(item.ErrorMessage))
+                        {
+                            // Credential invalidation is a terminal user-visible
+                            // failure until the user explicitly retries it. Do not
+                            // turn its partial file into Paused on app startup.
+                            continue;
+                        }
+
+                        var hasPartial = !string.IsNullOrWhiteSpace(item.TempFilePath) && File.Exists(item.TempFilePath);
+                        if (hasPartial)
+                        {
+                            item.Status = DownloadStatus.Paused;
+                            item.SpeedBytesPerSecond = 0;
+                            item.EstimatedSecondsRemaining = null;
+                            item.UpdatedAt = DateTime.UtcNow;
+                            hasChanges = true;
+                        }
+
+                        continue;
+                    }
+
+                    if (_queuedIds.TryAdd(item.Id, 1))
+                    {
+                        _pendingIds.Enqueue(item.Id);
+                        _queueSignal.Release();
+                    }
                 }
 
-                if (_queuedIds.TryAdd(item.Id, 1))
+                if (hasChanges)
                 {
-                    _pendingIds.Enqueue(item.Id);
-                    _queueSignal.Release();
+                    await db.SaveChangesAsync();
                 }
-            }
 
-            if (hasChanges)
+            }
+            finally
             {
-                await db.SaveChangesAsync();
+                _downloadStateGate.Release();
             }
 
             DownloadsChanged?.Invoke(this, EventArgs.Empty);
@@ -756,11 +927,27 @@ public class ContentDownloadService : IContentDownloadService
     private async Task ExecuteDownloadAsync(int downloadId)
     {
         using var startDb = await _contextFactory.CreateDbContextAsync();
-        var item = await startDb.DownloadItems.FirstOrDefaultAsync(d => d.Id == downloadId);
-        if (item == null || 
-            item.Status == DownloadStatus.Completed || 
-            item.Status == DownloadStatus.Canceled ||
-            item.Status == DownloadStatus.Paused)
+        DownloadItem? item = null;
+        await _downloadStateGate.WaitAsync();
+        try
+        {
+            item = await startDb.DownloadItems.FirstOrDefaultAsync(d => d.Id == downloadId);
+            if (item == null ||
+                item.Status == DownloadStatus.Completed ||
+                item.Status == DownloadStatus.Canceled ||
+                item.Status == DownloadStatus.Paused ||
+                item.Status == DownloadStatus.Failed ||
+                _credentialFailureRequestedIds.ContainsKey(downloadId))
+            {
+                return;
+            }
+        }
+        finally
+        {
+            _downloadStateGate.Release();
+        }
+
+        if (item is null)
         {
             return;
         }
@@ -769,11 +956,7 @@ public class ContentDownloadService : IContentDownloadService
         // download can never leak a token in _activeDownloadCts.
         if (!TryCheckWifiPolicy(out var wifiMessage))
         {
-            item.Status = DownloadStatus.Failed;
-            item.ErrorMessage = wifiMessage;
-            item.UpdatedAt = DateTime.UtcNow;
-            await startDb.SaveChangesAsync();
-            DownloadsChanged?.Invoke(this, EventArgs.Empty);
+            await MarkFailedAsync(downloadId, wifiMessage ?? string.Empty);
             return;
         }
 
@@ -835,22 +1018,46 @@ public class ContentDownloadService : IContentDownloadService
             }
         }
 
-        item.Status = DownloadStatus.Downloading;
-        item.ErrorMessage = null;
-        item.UpdatedAt = DateTime.UtcNow;
-        item.BytesDownloaded = resumedBytes;
-        item.SpeedBytesPerSecond = 0;
-        item.EstimatedSecondsRemaining = null;
-        item.LocalFilePath = finalPath;
-        item.TempFilePath = plainTempPath;
-        await startDb.SaveChangesAsync();
-        DownloadsChanged?.Invoke(this, EventArgs.Empty);
-
         // Registered only after every early-return path above, so a rejected or
         // already-complete download can never leak an entry in these dictionaries.
         var localCts = new CancellationTokenSource();
-        _activeDownloadCts[downloadId] = localCts;
-        _activeTempFiles[downloadId] = plainTempPath;
+        var registered = false;
+        await _downloadStateGate.WaitAsync();
+        try
+        {
+            // The credential invalidation marker may have been set while the
+            // worker was resolving paths. Recheck immediately before the first
+            // Downloading write and CTS registration.
+            if (_credentialFailureRequestedIds.ContainsKey(downloadId) ||
+                item.Status is DownloadStatus.Failed or DownloadStatus.Canceled or DownloadStatus.Completed)
+            {
+                return;
+            }
+
+            item.Status = DownloadStatus.Downloading;
+            item.ErrorMessage = null;
+            item.UpdatedAt = DateTime.UtcNow;
+            item.BytesDownloaded = resumedBytes;
+            item.SpeedBytesPerSecond = 0;
+            item.EstimatedSecondsRemaining = null;
+            item.LocalFilePath = finalPath;
+            item.TempFilePath = plainTempPath;
+            await startDb.SaveChangesAsync();
+
+            _activeDownloadCts[downloadId] = localCts;
+            _activeTempFiles[downloadId] = plainTempPath;
+            registered = true;
+        }
+        finally
+        {
+            _downloadStateGate.Release();
+            if (!registered)
+            {
+                localCts.Dispose();
+            }
+        }
+
+        DownloadsChanged?.Invoke(this, EventArgs.Empty);
 
         // A DeleteAllDownloadsAsync that raced this CTS registration (the item
         // was not yet visible as active, so DeleteAll removed the record and
@@ -989,12 +1196,26 @@ public class ContentDownloadService : IContentDownloadService
                             var shouldPersistByDelta = downloaded - lastPersistedBytes >= ProgressPersistMinDeltaBytes;
                             if (shouldPersistByTime || shouldPersistByDelta)
                             {
-                                item.BytesDownloaded = downloaded;
-                                item.BytesTotal = totalBytes;
-                                item.SpeedBytesPerSecond = speed;
-                                item.EstimatedSecondsRemaining = eta;
-                                item.UpdatedAt = DateTime.UtcNow;
-                                await startDb.SaveChangesAsync(localCts.Token);
+                                await _downloadStateGate.WaitAsync(localCts.Token);
+                                try
+                                {
+                                    if (_credentialFailureRequestedIds.ContainsKey(downloadId))
+                                    {
+                                        return;
+                                    }
+
+                                    item.BytesDownloaded = downloaded;
+                                    item.BytesTotal = totalBytes;
+                                    item.SpeedBytesPerSecond = speed;
+                                    item.EstimatedSecondsRemaining = eta;
+                                    item.UpdatedAt = DateTime.UtcNow;
+                                    await startDb.SaveChangesAsync(localCts.Token);
+                                }
+                                finally
+                                {
+                                    _downloadStateGate.Release();
+                                }
+
                                 DownloadsChanged?.Invoke(this, EventArgs.Empty);
                                 lastPersistTick = now;
                                 lastPersistedBytes = downloaded;
@@ -1062,7 +1283,13 @@ public class ContentDownloadService : IContentDownloadService
         {
             var pausedRequested = _pauseRequestedIds.TryRemove(downloadId, out _);
             var cancelRequested = _cancelRequestedIds.ContainsKey(downloadId);
-            if (pausedRequested)
+            var credentialFailureRequested = _credentialFailureRequestedIds.ContainsKey(downloadId);
+            if (credentialFailureRequested)
+            {
+                // Profile credential-change invalidation owns the final Failed
+                // write. Do not race it with a Paused update from cancellation.
+            }
+            else if (pausedRequested)
             {
                 await MarkPausedAsync(downloadId);
             }
@@ -1080,6 +1307,11 @@ public class ContentDownloadService : IContentDownloadService
         catch (Exception ex)
         {
             _logger?.LogWarning(ex, "Download failed for item {DownloadId}", downloadId);
+            if (_credentialFailureRequestedIds.ContainsKey(downloadId))
+            {
+                return;
+            }
+
             if (IsTransientDownloadException(ex))
             {
                 await TryAutoResumeAfterTransientInterruptionAsync(downloadId, ex.Message);
@@ -1098,9 +1330,29 @@ public class ContentDownloadService : IContentDownloadService
                 activeCts.Dispose();
             }
 
-            if (_cancelRequestedIds.TryRemove(downloadId, out _))
+            var ownsCancellationCleanup = false;
+            await _downloadStateGate.WaitAsync();
+            try
             {
-                await RemoveDownloadArtifactsAndRecordWithRetryAsync(downloadId, CancellationToken.None);
+                if (!_credentialFailureRequestedIds.ContainsKey(downloadId) &&
+                    _cancelRequestedIds.TryRemove(downloadId, out _))
+                {
+                    ownsCancellationCleanup = true;
+                    // Keep the gate until the row-removing transaction commits;
+                    // a credential invalidation cannot claim the same row in
+                    // the middle of this ownership decision.
+                    await RemoveDownloadArtifactsAndRecordWithRetryAsync(
+                        downloadId,
+                        CancellationToken.None);
+                }
+            }
+            finally
+            {
+                _downloadStateGate.Release();
+            }
+
+            if (ownsCancellationCleanup)
+            {
                 DownloadsChanged?.Invoke(this, EventArgs.Empty);
             }
         }
@@ -1162,6 +1414,11 @@ public class ContentDownloadService : IContentDownloadService
 
     private async Task TryAutoResumeAfterTransientInterruptionAsync(int downloadId, string detail)
     {
+        if (_credentialFailureRequestedIds.ContainsKey(downloadId))
+        {
+            return;
+        }
+
         var attempt = _autoResumeAttempts.AddOrUpdate(downloadId, 1, static (_, current) => current + 1);
         if (attempt > MaxAutoResumeAttempts)
         {
@@ -1179,6 +1436,11 @@ public class ContentDownloadService : IContentDownloadService
 
         var delayMs = Math.Min(4500, 1200 * attempt);
         await Task.Delay(delayMs);
+        if (_credentialFailureRequestedIds.ContainsKey(downloadId))
+        {
+            return;
+        }
+
         await ResumeDownloadAsync(downloadId, CancellationToken.None);
     }
 
@@ -1610,6 +1872,26 @@ public class ContentDownloadService : IContentDownloadService
         long? total,
         DateTime startedAtUtc)
     {
+        if (_credentialFailureRequestedIds.ContainsKey(downloadId))
+        {
+            return;
+        }
+
+        await MarkCompletedCoreAsync(
+            downloadId,
+            filePath,
+            downloaded,
+            total,
+            startedAtUtc);
+    }
+
+    private async Task MarkCompletedCoreAsync(
+        int downloadId,
+        string filePath,
+        long downloaded,
+        long? total,
+        DateTime startedAtUtc)
+    {
         _autoResumeAttempts.TryRemove(downloadId, out _);
 
         using var db = await _contextFactory.CreateDbContextAsync();
@@ -1660,22 +1942,38 @@ public class ContentDownloadService : IContentDownloadService
         }
         // --------------------------------
 
-        item.Status = DownloadStatus.Completed;
-        item.LocalFilePath = filePath;
-        item.TempFilePath = null;
-        item.BytesDownloaded = downloaded;
-        item.BytesTotal = total ?? downloaded;
-        var elapsed = Math.Max(0.5, (DateTime.UtcNow - startedAtUtc).TotalSeconds);
-        item.SpeedBytesPerSecond = downloaded / elapsed;
-        item.EstimatedSecondsRemaining = 0;
-        item.CompletedAt = DateTime.UtcNow;
-        item.UpdatedAt = DateTime.UtcNow;
-        item.ErrorMessage = null;
-        await db.SaveChangesAsync();
+        await _downloadStateGate.WaitAsync();
+        try
+        {
+            // Poster/network work above intentionally runs outside the gate.
+            // Recheck immediately before the terminal DB writes so a profile
+            // credential invalidation can win while poster loading is pending.
+            if (_credentialFailureRequestedIds.ContainsKey(downloadId))
+            {
+                return;
+            }
 
-        await UpdateMappedEntitiesToLocalPathAsync(db, item, filePath);
-        await db.SaveChangesAsync();
-        
+            item.Status = DownloadStatus.Completed;
+            item.LocalFilePath = filePath;
+            item.TempFilePath = null;
+            item.BytesDownloaded = downloaded;
+            item.BytesTotal = total ?? downloaded;
+            var elapsed = Math.Max(0.5, (DateTime.UtcNow - startedAtUtc).TotalSeconds);
+            item.SpeedBytesPerSecond = downloaded / elapsed;
+            item.EstimatedSecondsRemaining = 0;
+            item.CompletedAt = DateTime.UtcNow;
+            item.UpdatedAt = DateTime.UtcNow;
+            item.ErrorMessage = null;
+            await db.SaveChangesAsync();
+
+            await UpdateMappedEntitiesToLocalPathAsync(db, item, filePath);
+            await db.SaveChangesAsync();
+        }
+        finally
+        {
+            _downloadStateGate.Release();
+        }
+
         DownloadCompleted?.Invoke(this, item);
         DownloadsChanged?.Invoke(this, EventArgs.Empty);
     }
@@ -1690,8 +1988,15 @@ public class ContentDownloadService : IContentDownloadService
         const int maxAttempts = 5;
         for (var attempt = 1; attempt <= maxAttempts; attempt++)
         {
+            var retry = false;
+            await _downloadStateGate.WaitAsync(cancellationToken);
             try
             {
+                if (_credentialFailureRequestedIds.ContainsKey(downloadId))
+                {
+                    return;
+                }
+
                 using var db = await _contextFactory.CreateDbContextAsync(cancellationToken);
                 var item = await db.DownloadItems.FirstOrDefaultAsync(
                     d => d.Id == downloadId,
@@ -1714,6 +2019,15 @@ public class ContentDownloadService : IContentDownloadService
                 return;
             }
             catch (Exception ex) when (IsDatabaseBusyException(ex) && attempt < maxAttempts)
+            {
+                retry = true;
+            }
+            finally
+            {
+                _downloadStateGate.Release();
+            }
+
+            if (retry)
             {
                 await Task.Delay(50 * attempt, cancellationToken);
             }
@@ -1772,6 +2086,41 @@ public class ContentDownloadService : IContentDownloadService
         }
     }
 
+    private async Task ObserveCredentialFailureWorkerAsync(
+        int downloadId,
+        Task? worker)
+    {
+        try
+        {
+            if (worker is not null)
+            {
+                await worker.ConfigureAwait(false);
+            }
+            else
+            {
+                while (_activeDownloadTasks.ContainsKey(downloadId) ||
+                       _activeDownloadCts.ContainsKey(downloadId))
+                {
+                    await Task.Delay(50).ConfigureAwait(false);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogDebug(
+                ex,
+                "Credential-failure worker observation ended for {DownloadId}.",
+                downloadId);
+        }
+        finally
+        {
+            // Keep the tombstone until the worker has truly exited. A late
+            // cancellation/progress/completion continuation must never revive
+            // or overwrite the Failed row after this method returns.
+            _credentialFailureRequestedIds.TryRemove(downloadId, out _);
+        }
+    }
+
     private static bool IsDatabaseBusyException(Exception exception)
     {
         for (var current = exception; current is not null; current = current.InnerException)
@@ -1791,22 +2140,40 @@ public class ContentDownloadService : IContentDownloadService
         return false;
     }
 
+    private static bool IsCredentialFailureMessage(string? message)
+        => message?.StartsWith(
+            CredentialChangeFailureMessage,
+            StringComparison.Ordinal) == true;
+
     private async Task MarkInterruptedAsPausedAsync(int downloadId, string message)
     {
-        using var db = await _contextFactory.CreateDbContextAsync();
-        var item = await db.DownloadItems.FirstOrDefaultAsync(d => d.Id == downloadId);
-        if (item == null)
+        await _downloadStateGate.WaitAsync();
+        try
         {
-            return;
-        }
+            if (_credentialFailureRequestedIds.ContainsKey(downloadId))
+            {
+                return;
+            }
 
-        item.Status = DownloadStatus.Paused;
-        item.ErrorMessage = message;
-        item.SpeedBytesPerSecond = 0;
-        item.EstimatedSecondsRemaining = null;
-        item.UpdatedAt = DateTime.UtcNow;
-        await db.SaveChangesAsync();
-        DownloadsChanged?.Invoke(this, EventArgs.Empty);
+            using var db = await _contextFactory.CreateDbContextAsync();
+            var item = await db.DownloadItems.FirstOrDefaultAsync(d => d.Id == downloadId);
+            if (item == null)
+            {
+                return;
+            }
+
+            item.Status = DownloadStatus.Paused;
+            item.ErrorMessage = message;
+            item.SpeedBytesPerSecond = 0;
+            item.EstimatedSecondsRemaining = null;
+            item.UpdatedAt = DateTime.UtcNow;
+            await db.SaveChangesAsync();
+            DownloadsChanged?.Invoke(this, EventArgs.Empty);
+        }
+        finally
+        {
+            _downloadStateGate.Release();
+        }
     }
 
     private static async Task UpdateMappedEntitiesToLocalPathAsync(AppDbContext db, DownloadItem item, string localPath)
@@ -2147,22 +2514,35 @@ public class ContentDownloadService : IContentDownloadService
 
     private async Task MarkFailedAsync(int downloadId, string message)
     {
-        using var db = await _contextFactory.CreateDbContextAsync();
-        var item = await db.DownloadItems.FirstOrDefaultAsync(d => d.Id == downloadId);
-        if (item == null)
+        await _downloadStateGate.WaitAsync();
+        try
         {
-            return;
-        }
+            if (_credentialFailureRequestedIds.ContainsKey(downloadId))
+            {
+                return;
+            }
 
-        // Keep the record in the DB as Failed so the user sees the error card
-        // in the Downloads center and can retry or dismiss it explicitly.
-        item.Status = DownloadStatus.Failed;
-        item.ErrorMessage = message;
-        item.SpeedBytesPerSecond = 0;
-        item.EstimatedSecondsRemaining = null;
-        item.UpdatedAt = DateTime.UtcNow;
-        await db.SaveChangesAsync();
-        DownloadsChanged?.Invoke(this, EventArgs.Empty);
+            using var db = await _contextFactory.CreateDbContextAsync();
+            var item = await db.DownloadItems.FirstOrDefaultAsync(d => d.Id == downloadId);
+            if (item == null)
+            {
+                return;
+            }
+
+            // Keep the record in the DB as Failed so the user sees the error card
+            // in the Downloads center and can retry or dismiss it explicitly.
+            item.Status = DownloadStatus.Failed;
+            item.ErrorMessage = message;
+            item.SpeedBytesPerSecond = 0;
+            item.EstimatedSecondsRemaining = null;
+            item.UpdatedAt = DateTime.UtcNow;
+            await db.SaveChangesAsync();
+            DownloadsChanged?.Invoke(this, EventArgs.Empty);
+        }
+        finally
+        {
+            _downloadStateGate.Release();
+        }
     }
 
     /// <summary>

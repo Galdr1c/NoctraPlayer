@@ -10,14 +10,12 @@ public sealed class DownloadEtaTextConverter : IValueConverter
 {
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
-        if (value is not DownloadItem item ||
-            !item.EstimatedSecondsRemaining.HasValue ||
-            item.EstimatedSecondsRemaining.Value <= 0)
+        if (value is not int secondsRemaining || secondsRemaining <= 0)
         {
             return string.Empty;
         }
 
-        var ts = TimeSpan.FromSeconds(item.EstimatedSecondsRemaining.Value);
+        var ts = TimeSpan.FromSeconds(secondsRemaining);
         var source = LocalizationSource.Instance;
 
         if (ts.TotalHours >= 1)

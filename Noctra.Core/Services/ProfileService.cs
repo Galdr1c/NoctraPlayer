@@ -199,13 +199,32 @@ public class ProfileService : IProfileService
                 .Where(pl => pl.ProfileId == profile.Id)
                 .ExecuteDeleteAsync();
 
-            // Phase 28: Fail active downloads for this profile because credentials changed
-            // and the source URLs/tokens may no longer be valid.
-            await _contentDownloadService.FailActiveDownloadsForProfileAsync(
-                profile.Id, 
-                "Hesap bilgileri degistirildi. Indirmeyi yeni bilgilerle bastan baslatmaniz gerekiyor.");
         }
         await transaction.CommitAsync();
+
+        if (credentialsChanged)
+        {
+            // The profile transaction must be fully closed before the download
+            // service opens its own DbContext. SQLite permits concurrent readers
+            // but not a second writer while this transaction is active.
+            try
+            {
+                await _contentDownloadService.FailActiveDownloadsForProfileAsync(
+                    profile.Id,
+                    ContentDownloadService.CredentialChangeFailureMessage);
+            }
+            catch (Exception ex)
+            {
+                // The profile/account change is already committed. Keep that
+                // result authoritative and do not report a false profile-save
+                // failure because the separate download write failed.
+                _logger?.LogWarning(
+                    ex,
+                    "Download invalidation failed after profile commit for {ProfileId}",
+                    profile.Id);
+            }
+        }
+
         await DeleteUnreferencedImportedPlaylistCopiesAsync(importedPlaylistCandidates);
         return profile;
     }

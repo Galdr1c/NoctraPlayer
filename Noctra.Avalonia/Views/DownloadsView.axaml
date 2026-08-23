@@ -441,10 +441,10 @@
                           <StackPanel Spacing="2" VerticalAlignment="Center">
                             <TextBlock Text="{Binding SizeText}" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
                             <StackPanel Orientation="Horizontal" Spacing="6">
-                              <TextBlock Text="{Binding ., Converter={StaticResource DownloadSpeedTextConverter}}" FontSize="11" Foreground="{DynamicResource TextMutedBrush}" FontWeight="SemiBold"/>
+                              <TextBlock Text="{Binding SpeedBytesPerSecond, Converter={StaticResource DownloadSpeedTextConverter}}" FontSize="11" Foreground="{DynamicResource TextMutedBrush}" FontWeight="SemiBold"/>
                               <TextBlock Text="•" FontSize="11" Foreground="{DynamicResource TextMutedBrush}" Opacity="0.5"
                                          IsVisible="{Binding SpeedBytesPerSecond, Converter={StaticResource CountToVisibilityConverter}}"/>
-                              <TextBlock Text="{Binding ., Converter={StaticResource DownloadEtaTextConverter}}" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
+                              <TextBlock Text="{Binding EstimatedSecondsRemaining, Converter={StaticResource DownloadEtaTextConverter}}" FontSize="11" Foreground="{DynamicResource TextMutedBrush}"/>
                             </StackPanel>
                           </StackPanel>
 

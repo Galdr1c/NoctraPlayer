@@ -1369,14 +1369,12 @@ public class DownloadEtaTextConverter : IValueConverter
 {
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
-        if (value is not DownloadItem item ||
-            !item.EstimatedSecondsRemaining.HasValue ||
-            item.EstimatedSecondsRemaining.Value <= 0)
+        if (value is not int secondsRemaining || secondsRemaining <= 0)
         {
             return string.Empty;
         }
 
-        var ts = TimeSpan.FromSeconds(item.EstimatedSecondsRemaining.Value);
+        var ts = TimeSpan.FromSeconds(secondsRemaining);
         var source = LocalizationSource.Instance;
 
         if (ts.TotalHours >= 1)
@@ -1398,7 +1396,7 @@ public class DownloadSpeedTextConverter : IValueConverter
 {
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
-        if (value is not DownloadItem item || item.SpeedBytesPerSecond <= 0)
+        if (value is not double speedBytesPerSecond || speedBytesPerSecond <= 0)
         {
             return "-";
         }
@@ -1406,7 +1404,7 @@ public class DownloadSpeedTextConverter : IValueConverter
         return string.Format(
             CultureInfo.CurrentCulture,
             LocalizationSource.Instance["Downloads.Speed.PerSecondFormat"],
-            DownloadItem.FormatBytes((long)item.SpeedBytesPerSecond));
+            DownloadItem.FormatBytes((long)speedBytesPerSecond));
     }
 
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => null;

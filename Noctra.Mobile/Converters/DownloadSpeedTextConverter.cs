@@ -10,7 +10,7 @@ public sealed class DownloadSpeedTextConverter : IValueConverter
 {
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
-        if (value is not DownloadItem item || item.SpeedBytesPerSecond <= 0)
+        if (value is not double speedBytesPerSecond || speedBytesPerSecond <= 0)
         {
             return "-";
         }
@@ -18,7 +18,7 @@ public sealed class DownloadSpeedTextConverter : IValueConverter
         return string.Format(
             CultureInfo.CurrentCulture,
             LocalizationSource.Instance["Downloads.Speed.PerSecondFormat"],
-            DownloadItem.FormatBytes((long)item.SpeedBytesPerSecond));
+            DownloadItem.FormatBytes((long)speedBytesPerSecond));
     }
 
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => null;

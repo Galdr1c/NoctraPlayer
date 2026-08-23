@@ -472,7 +472,7 @@
                                      Foreground="{DynamicResource TextMutedBrush}"
                                      FontSize="{DynamicResource FCaption}" />
                           <StackPanel Orientation="Horizontal" Spacing="6">
-                            <TextBlock Text="{Binding ., Converter={StaticResource DownloadSpeedTextConverter}}"
+                            <TextBlock Text="{Binding SpeedBytesPerSecond, Converter={StaticResource DownloadSpeedTextConverter}}"
                                        Foreground="{DynamicResource TextMutedBrush}"
                                        FontSize="{DynamicResource FCaption}" />
                             <TextBlock Text="•"
@@ -480,7 +480,7 @@
                                        FontSize="{DynamicResource FCaption}"
                                        Opacity="0.5"
                                        IsVisible="{Binding SpeedBytesPerSecond, Converter={StaticResource CountToVisibility}}" />
-                            <TextBlock Text="{Binding ., Converter={StaticResource DownloadEtaTextConverter}}"
+                            <TextBlock Text="{Binding EstimatedSecondsRemaining, Converter={StaticResource DownloadEtaTextConverter}}"
                                        Foreground="{DynamicResource TextMutedBrush}"
                                        FontSize="{DynamicResource FCaption}" />
                           </StackPanel>
