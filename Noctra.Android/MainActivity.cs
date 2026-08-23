@@ -435,7 +435,20 @@ public class MainActivity : AvaloniaMainActivity
     public override void OnTrimMemory([GeneratedEnum] TrimMemory level)
     {
         base.OnTrimMemory(level);
-        RemoteImage.TrimImageCaches();
+
+        // UiHidden/RunningModerate bilgilendirme seviyesidir: kullanıcı her an
+        // dönebilir, temizlenmiş image cache dönüşü ekrandaki her posterin
+        // yeniden decode'uyla jank'a dönüşür. Yalnızca gerçek baskı
+        // seviyeleri bu bedeli öder.
+        if (level is TrimMemory.RunningLow or
+            TrimMemory.RunningCritical or
+            TrimMemory.Moderate or
+            TrimMemory.Background or
+            TrimMemory.Complete)
+        {
+            RemoteImage.TrimImageCaches();
+        }
+
         PerformanceTrace.Mark("android.memory.trim", (long)level);
     }
 

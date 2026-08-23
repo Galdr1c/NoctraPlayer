@@ -89,6 +89,7 @@ public sealed class MobileSectionedCardFeed : ListBox
     private int _fullRebuildRequired;
     private double _lastAvailableWidth;
     private bool _lifecycleSubscribed;
+    private bool _isAttachedToVisualTree;
 
     protected override Type StyleKeyOverride => typeof(ListBox);
 
@@ -131,12 +132,22 @@ public sealed class MobileSectionedCardFeed : ListBox
 
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
+        _isAttachedToVisualTree = true;
         SubscribeToLifecycle();
+        // Re-attach after page recycling: reclaim section/source ownership and
+        // rebuild from the current source state — changes while detached were
+        // intentionally not observed.
+        RefreshSectionSubscriptions();
+        QueueFullRebuild();
     }
 
     private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
+        _isAttachedToVisualTree = false;
         UnsubscribeFromLifecycle();
+        // VM-owned sections and their collections must not keep a detached
+        // feed (and its realized rows) alive.
+        ClearSectionSubscriptions();
     }
 
     private void SubscribeToLifecycle()
@@ -180,13 +191,12 @@ public sealed class MobileSectionedCardFeed : ListBox
 
     private void RefreshSectionSubscriptions()
     {
-        foreach (var section in _observedSources.Keys.ToArray())
+        ClearSectionSubscriptions();
+        if (!_isAttachedToVisualTree)
         {
-            section.PropertyChanged -= Section_PropertyChanged;
-            _observedSources[section].CollectionChanged -= Source_CollectionChanged;
+            return;
         }
 
-        _observedSources.Clear();
         foreach (var section in Sections)
         {
             section.PropertyChanged -= Section_PropertyChanged;
@@ -197,6 +207,17 @@ public sealed class MobileSectionedCardFeed : ListBox
                 _observedSources[section] = observable;
             }
         }
+    }
+
+    private void ClearSectionSubscriptions()
+    {
+        foreach (var section in _observedSources.Keys.ToArray())
+        {
+            section.PropertyChanged -= Section_PropertyChanged;
+            _observedSources[section].CollectionChanged -= Source_CollectionChanged;
+        }
+
+        _observedSources.Clear();
     }
 
     private void Section_PropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e)

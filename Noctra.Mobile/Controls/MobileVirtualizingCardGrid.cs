@@ -74,6 +74,7 @@ public sealed class MobileVirtualizingCardGrid : ListBox
     private double _cardWidth;
     private double _lastStableWidth = FallbackAvailableWidth;
     private bool _lifecycleSubscribed;
+    private bool _isVisualAttached;
     private int _layoutRetryArmed;
     private EventHandler? _layoutRetryHandler;
     protected override Type StyleKeyOverride => typeof(ListBox);
@@ -107,8 +108,8 @@ public sealed class MobileVirtualizingCardGrid : ListBox
             supportsRecycling: true);
         SelectionChanged += ClearTransientSelection;
         SizeChanged += (_, _) => QueueRebuildIfMetricsChanged();
-        AttachedToVisualTree += (_, _) => SubscribeToLifecycle();
-        DetachedFromVisualTree += (_, _) => UnsubscribeFromLifecycle();
+        AttachedToVisualTree += OnAttachedToVisualTreeCore;
+        DetachedFromVisualTree += OnDetachedFromVisualTreeCore;
         AddHandler(ScrollViewer.ScrollChangedEvent, OnInnerScrollChanged);
     }
 
@@ -189,6 +190,24 @@ public sealed class MobileVirtualizingCardGrid : ListBox
         DisarmLayoutUpdatedRetry();
         Interlocked.Increment(ref _resumeRecoveryVersion);
         MarkCounter("GridResumeGenerationCancelled", ref _gridResumeGenerationCancelled);
+    }
+
+    private void OnAttachedToVisualTreeCore(object? sender, VisualTreeAttachmentEventArgs e)
+    {
+        _isVisualAttached = true;
+        // A fresh subscribe also queues a full rebuild, so changes missed while
+        // detached are picked up from the current source state.
+        SubscribeToLifecycle();
+        ResubscribeSourceCollection();
+    }
+
+    private void OnDetachedFromVisualTreeCore(object? sender, VisualTreeAttachmentEventArgs e)
+    {
+        _isVisualAttached = false;
+        UnsubscribeFromLifecycle();
+        // A VM-owned source collection must not keep a detached grid (and its
+        // realized rows) alive through the CollectionChanged handler target.
+        UnsubscribeSourceCollection();
     }
 
     private void OnAppResumed(object? sender, EventArgs e)
@@ -384,18 +403,26 @@ public sealed class MobileVirtualizingCardGrid : ListBox
 
     private void OnSourceItemsChanged(IEnumerable? oldValue, IEnumerable? newValue)
     {
-        if (_observableSource != null)
-        {
-            _observableSource.CollectionChanged -= Source_CollectionChanged;
-        }
-
+        UnsubscribeSourceCollection();
         _observableSource = newValue as INotifyCollectionChanged;
-        if (_observableSource != null)
+        ResubscribeSourceCollection();
+        QueueFullRebuild();
+    }
+
+    private void UnsubscribeSourceCollection()
+        => _observableSource?.CollectionChanged -= Source_CollectionChanged;
+
+    private void ResubscribeSourceCollection()
+    {
+        if (!_isVisualAttached || _observableSource is null)
         {
-            _observableSource.CollectionChanged += Source_CollectionChanged;
+            return;
         }
 
-        QueueFullRebuild();
+        // Idempotent unsubscribe first: OnSourceItemsChanged may have already
+        // subscribed before a detach/attach cycle removed and re-added it.
+        _observableSource.CollectionChanged -= Source_CollectionChanged;
+        _observableSource.CollectionChanged += Source_CollectionChanged;
     }
 
     private void Source_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
