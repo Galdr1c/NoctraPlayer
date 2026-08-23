@@ -36,7 +36,7 @@ Noctra does **not** provide content. It only displays IPTV playlists and provide
 - **EPG**: playlist EPG, custom XMLTV sources, time offset, matching, refresh, and cleanup.
 - **Offline media**: encrypted local downloads for VOD and series episodes.
 - **Profiles**: avatar, provider credentials, PIN, favorites, watch history, and settings per profile.
-- **Mobile-first features**: Picture-in-Picture, gesture controls, background playback, sleep timer, and subtitle/audio track selection.
+- **Mobile-first features**: Picture-in-Picture, gesture controls, sleep timer, and subtitle/audio track selection.
 - **Store-ready editions**: Free/Premium build metadata and MSIX/AAB packaging flow.
 
 ---
@@ -115,7 +115,6 @@ Documents\Noctra\
 - ExoPlayer-based playback with DASH, HLS, SmoothStreaming, and RTSP support.
 - Gesture controls for volume and brightness.
 - Picture-in-Picture mode for multitasking.
-- Background playback with notification controls.
 - Sleep timer for automatic shutoff.
 - Subtitle and audio track selection.
 - Stream quality detection.

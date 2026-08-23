@@ -96,15 +96,16 @@ public class MobileReleaseGuardTests
     }
 
     [Fact]
-    public void AndroidPlaybackService_RespectsBackgroundSettingWhenTaskIsRemoved()
+    public void AndroidPlaybackService_StopsPlaybackWhenTaskIsRemoved()
     {
         var service = ReadProjectFile(
             "Noctra.Android", "Services", "NoctraPlaybackService.cs");
 
         Assert.Contains("override void OnTaskRemoved", service);
-        Assert.Contains("AllowBackgroundPlayback", service);
+        // Arka plan oynatma kaldırıldı: task removed her zaman oynatmayı durdurmalı.
         Assert.Contains("PauseAllPlayersAndStopSelf()", service);
-        Assert.Contains("base.OnTaskRemoved(rootIntent)", service);
+        Assert.DoesNotContain("AllowBackgroundPlayback", service);
+        Assert.DoesNotContain("base.OnTaskRemoved(rootIntent)", service);
     }
 
     [Fact]

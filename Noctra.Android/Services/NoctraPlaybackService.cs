@@ -7,7 +7,6 @@ using Android.Content.PM;
 using AndroidX.Media3.ExoPlayer;
 using AndroidX.Media3.Session;
 using Microsoft.Extensions.DependencyInjection;
-using Noctra.Services;
 
 namespace Noctra.Android.Services;
 
@@ -23,7 +22,6 @@ public sealed class NoctraPlaybackService : MediaSessionService
     private static bool _isReady;
 
     private AndroidVideoPlayerService? _videoPlayerService;
-    private ISettingsService? _settingsService;
     private MediaSession? _mediaSession;
 
     public static async Task EnsureStartedAsync(Context context)
@@ -88,8 +86,6 @@ public sealed class NoctraPlaybackService : MediaSessionService
 
             _videoPlayerService = nativeApplication.Services
                 .GetRequiredService<AndroidVideoPlayerService>();
-            _settingsService = nativeApplication.Services
-                .GetRequiredService<ISettingsService>();
             _videoPlayerService.PlayerChanged += OnPlayerChanged;
 
             var player = _videoPlayerService.AttachPlaybackHost();
@@ -123,12 +119,7 @@ public sealed class NoctraPlaybackService : MediaSessionService
 
     public override void OnTaskRemoved(Intent? rootIntent)
     {
-        if (_settingsService?.Settings.AllowBackgroundPlayback == true)
-        {
-            base.OnTaskRemoved(rootIntent);
-            return;
-        }
-
+        // Arka plan oynatma yok: task kalkınca oynatmayı durdur.
         PauseAllPlayersAndStopSelf();
     }
 
@@ -152,7 +143,6 @@ public sealed class NoctraPlaybackService : MediaSessionService
 
         _videoPlayerService?.DetachPlaybackHost();
         _videoPlayerService = null;
-        _settingsService = null;
 
         base.OnDestroy();
     }

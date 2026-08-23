@@ -146,7 +146,6 @@ public class SettingsService : ISettingsService
         target.DiagnosticDataConsent = source.DiagnosticDataConsent;
         target.PinSystemResetNoticePending = source.PinSystemResetNoticePending;
         target.ChildModeRemovedNoticePending = source.ChildModeRemovedNoticePending;
-        target.AllowBackgroundPlayback = source.AllowBackgroundPlayback;
         target.ReviewPromptLaunchCount = source.ReviewPromptLaunchCount;
         target.ReviewPromptLastShownAtUtc = source.ReviewPromptLastShownAtUtc;
         target.ReviewPromptSnoozedUntilUtc = source.ReviewPromptSnoozedUntilUtc;

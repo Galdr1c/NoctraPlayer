@@ -262,7 +262,6 @@
   "Settings.Playback.SubtitlesAuto": "Auto-enable subtitles",
   "Settings.Playback.SubtitlesAutoDescription": "Enables subtitles by default",
   "Settings.Playback.PreferredSubtitle": "Preferred Subtitle Language",
-  "Settings.Playback.BackgroundPlayback": "Background Playback",
   "Settings.Playback.PreferredAudio": "Preferred Audio Language",
   "Settings.Download.Title": "Download",
   "Settings.Download.WifiOnly": "Download on Wi-Fi only",

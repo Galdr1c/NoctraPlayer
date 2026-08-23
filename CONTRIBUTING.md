@@ -103,8 +103,7 @@ dotnet build .\Noctra.Android\Noctra.Android.csproj -c Release
 #### Mobile-Specific Features
 
 - **Gesture Controls**: Volume (left swipe) and brightness (right swipe)
-- **Picture-in-Picture**: Background playback with floating window
-- **Background Playback**: Continue playing when app is minimized
+- **Picture-in-Picture**: Background playback with floating window (premium)
 - **Sleep Timer**: Automatic playback shutoff
 - **Subtitle/Audio Track Selection**: Dynamic track switching
 - **Stream Quality Detection**: Automatic resolution detection

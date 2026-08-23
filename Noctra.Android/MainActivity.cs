@@ -519,20 +519,16 @@ public class MainActivity : AvaloniaMainActivity
 
     protected override void OnStop()
     {
-        // PiP modunda oynatma Android tarafından yönetilir; burada dokunmuyoruz.
-        // AllowBackgroundPlayback aktifse ve PiP değilse bile oynatmayı devam ettir.
-        // AllowBackgroundPlayback kapalıysa: arka plana geçerken duraklat.
+        // PiP gerçek background playback yoludur; PiP modunda oynatma
+        // Android tarafından yönetilir, burada dokunmuyoruz.
+        // PiP dışında oynatma arka plana taşınmaz.
         if (!IsInPictureInPictureMode &&
             Avalonia.Application.Current is Noctra.Mobile.App app &&
-            app.Services?.GetService<IVideoPlayerService>() is { IsPlaying: true })
+            app.Services?.GetService<IVideoPlayerService>()
+                is { IsPlaying: true } player)
         {
-            var settings = app.Services?.GetService<ISettingsService>()?.Settings;
-            if (settings is not { AllowBackgroundPlayback: true })
-            {
-                _pausedByLifecycle = true;
-                var videoService = app.Services?.GetService<IVideoPlayerService>();
-                videoService?.Pause();
-            }
+            _pausedByLifecycle = true;
+            player.Pause();
         }
 
         base.OnStop();

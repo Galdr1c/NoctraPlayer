@@ -82,7 +82,6 @@ public partial class SettingsViewModel : ObservableObject, IAsyncDisposable
         nameof(DownloadWifiOnly),
         nameof(DownloadPath),
         nameof(ShowDownloadNotification),
-        nameof(AllowBackgroundPlayback),
         nameof(IsDarkTheme),
         nameof(AppLanguage),
         nameof(ChannelListRefreshFrequencyHours),
@@ -147,9 +146,6 @@ public partial class SettingsViewModel : ObservableObject, IAsyncDisposable
     [ObservableProperty]
     private bool _showDownloadNotification;
 
-    [ObservableProperty]
-    private bool _allowBackgroundPlayback;
-    
     // ============ Görünüm ============
     
     [ObservableProperty]
@@ -1416,7 +1412,6 @@ public partial class SettingsViewModel : ObservableObject, IAsyncDisposable
         DownloadWifiOnly = s.DownloadWifiOnly;
         DownloadPath = NormalizeDownloadPath(s.DownloadPath);
         ShowDownloadNotification = s.ShowDownloadNotification;
-        AllowBackgroundPlayback = s.AllowBackgroundPlayback;
 
         // Privacy
         SaveWatchHistory = s.SaveWatchHistory;
@@ -1542,7 +1537,6 @@ public partial class SettingsViewModel : ObservableObject, IAsyncDisposable
             DownloadWifiOnly,
             normalizedDownloadPath,
             ShowDownloadNotification,
-            AllowBackgroundPlayback,
             IsDarkTheme,
             string.IsNullOrWhiteSpace(AppLanguage) ? "en" : AppLanguage,
             Math.Max(0, ChannelListRefreshFrequencyHours),
@@ -1603,7 +1597,6 @@ public partial class SettingsViewModel : ObservableObject, IAsyncDisposable
         bool DownloadWifiOnly,
         string DownloadPath,
         bool ShowDownloadNotification,
-        bool AllowBackgroundPlayback,
         bool IsDarkTheme,
         string Language,
         int ChannelListRefreshFrequencyHours,
@@ -1630,7 +1623,6 @@ public partial class SettingsViewModel : ObservableObject, IAsyncDisposable
             settings.DownloadWifiOnly = DownloadWifiOnly;
             settings.DownloadPath = DownloadPath;
             settings.ShowDownloadNotification = ShowDownloadNotification;
-            settings.AllowBackgroundPlayback = AllowBackgroundPlayback;
             settings.IsDarkTheme = IsDarkTheme;
             settings.Language = Language;
             settings.ChannelListRefreshFrequencyHours = ChannelListRefreshFrequencyHours;

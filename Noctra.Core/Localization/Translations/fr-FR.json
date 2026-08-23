@@ -263,7 +263,6 @@
   "Settings.Playback.SubtitlesAutoDescription": "Active les sous-titres par défaut",
   "Settings.Playback.PreferredSubtitle": "Langue des sous-titres préférée",
   "Settings.Playback.PreferredAudio": "Langue audio préférée",
-  "Settings.Playback.BackgroundPlayback": "Lecture en arrière-plan",
   "Settings.Download.Title": "Téléchargement",
   "Settings.Download.WifiOnly": "Télécharger uniquement en Wi-Fi",
   "Settings.Download.WifiOnlyDescription": "Empêche l'utilisation des données mobiles",

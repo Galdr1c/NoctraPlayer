@@ -262,7 +262,6 @@
   "Settings.Playback.SubtitlesAuto": "Altyazıları otomatik aç",
   "Settings.Playback.SubtitlesAutoDescription": "Altyazıyı varsayılan olarak etkinleştirir",
   "Settings.Playback.PreferredSubtitle": "Tercih Edilen Altyazı Dili",
-  "Settings.Playback.BackgroundPlayback": "Arka Plan Oynatma",
   "Settings.Playback.PreferredAudio": "Tercih Edilen Ses Dili",
   "Settings.Download.Title": "İndirme",
   "Settings.Download.WifiOnly": "Sadece Wi-Fi ile indir",
