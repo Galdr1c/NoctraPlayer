@@ -11,11 +11,20 @@ namespace Noctra.Mobile.Controls;
 /// The platform provider (e.g. AdMob) loads a banner ad into this control.
 /// Collapses to zero height when no ad is available, the user is premium,
 /// or the shell chrome is hidden (player / overlays).
+///
+/// Android suspend/resume safety net: a native creative that was backgrounded
+/// too long can die silently without raising a failure callback, leaving an
+/// empty, non-clickable shell. After a long foreground absence the current ad
+/// is destroyed and reloaded from scratch so a stale creative never survives.
 /// </summary>
 public sealed class MobileBannerAdControl : ContentControl
 {
+    private static readonly TimeSpan BannerStaleAfterBackground = ResolveStaleThreshold();
+
     private IDisposable? _adisposable;
     private readonly BannerAdPresentationState _adState = new();
+    private DateTimeOffset? _backgroundedAtUtc;
+    private bool _lifecycleSubscribed;
 
     public MobileBannerAdControl()
     {
@@ -88,6 +97,73 @@ public sealed class MobileBannerAdControl : ContentControl
         _adState.Clear();
         disposable?.Dispose();
         UpdateVisibility();
+    }
+
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+
+        if (_lifecycleSubscribed)
+        {
+            return;
+        }
+
+        _lifecycleSubscribed = true;
+        MobileAppLifecycle.Paused += OnAppPaused;
+        MobileAppLifecycle.Resumed += OnAppResumed;
+    }
+
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        if (_lifecycleSubscribed)
+        {
+            _lifecycleSubscribed = false;
+            MobileAppLifecycle.Paused -= OnAppPaused;
+            MobileAppLifecycle.Resumed -= OnAppResumed;
+        }
+
+        base.OnDetachedFromVisualTree(e);
+    }
+
+    private void OnAppPaused(object? sender, EventArgs e)
+        => _backgroundedAtUtc = DateTimeOffset.UtcNow;
+
+    private void OnAppResumed(object? sender, EventArgs e)
+    {
+        var pausedAt = _backgroundedAtUtc;
+        _backgroundedAtUtc = null;
+        if (pausedAt is null)
+        {
+            return;
+        }
+
+        var elapsed = DateTimeOffset.UtcNow - pausedAt.Value;
+        if (elapsed < BannerStaleAfterBackground)
+        {
+            return;
+        }
+
+        Console.WriteLine(
+            $"NoctraAds: banner stale after {elapsed.TotalSeconds:F0}s in background -> recreate");
+
+        // A dead creative keeps reporting Loaded and never raises a failure
+        // callback, so the only reliable fix is a full destroy + fresh request.
+        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        {
+            ClearAd();
+            LoadAd();
+        });
+    }
+
+    private static TimeSpan ResolveStaleThreshold()
+    {
+#if DEBUG
+        // Short threshold so the recreate path can be verified on device
+        // without waiting for a real long background session.
+        return TimeSpan.FromSeconds(15);
+#else
+        return TimeSpan.FromMinutes(2);
+#endif
     }
 
     private void OnAdLoadStateChanged(long generation, BannerAdLoadState state)

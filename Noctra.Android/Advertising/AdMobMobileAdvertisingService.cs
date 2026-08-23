@@ -799,12 +799,15 @@ public sealed class AdMobMobileAdvertisingService : IMobileAdvertisingService
 /// </summary>
 internal sealed class BannerNativeControlHost : NativeControlHost
 {
+    private static readonly global::Android.OS.Handler MainHandler =
+        new(global::Android.OS.Looper.MainLooper!);
     private readonly string _adUnitId;
     private readonly Action<BannerAdLoadState>? _stateChanged;
     private FrameLayout? _container;
     private Google.Android.Gms.Ads.AdView? _adView;
     private int _disposed;
     private int _nativeGeneration;
+    private int _lifecycleSubscribed;
 
     public BannerNativeControlHost(
         string adUnitId,
@@ -834,29 +837,9 @@ internal sealed class BannerNativeControlHost : NativeControlHost
         DestroyCurrentAd();
         var nativeGeneration = Interlocked.Increment(ref _nativeGeneration);
         var container = new FrameLayout(context);
-        var adView = new Google.Android.Gms.Ads.AdView(context)
-        {
-            AdSize = Google.Android.Gms.Ads.AdSize.Banner,
-            AdUnitId = _adUnitId
-        };
-        var layoutParams = new FrameLayout.LayoutParams(
-            ViewGroup.LayoutParams.WrapContent,
-            ViewGroup.LayoutParams.WrapContent,
-            GravityFlags.Center);
 
-        container.AddView(adView, layoutParams);
-        _container = container;
-        _adView = adView;
-        adView.AdListener = new AdMobMobileAdvertisingService.BannerAdListener(
-            adView,
-            _stateChanged,
-            () => Volatile.Read(ref _disposed) != 0 ||
-                  Volatile.Read(ref _nativeGeneration) != nativeGeneration);
-        _stateChanged?.Invoke(BannerAdLoadState.Loading);
-
-        // The view is now in Avalonia's native hierarchy, so start the request
-        // only after the host/container relationship exists.
-        adView.LoadAd(new AdRequest.Builder().Build());
+        SubscribeToLifecycle();
+        CreateAndLoadAd(context, container, nativeGeneration);
         return new AndroidViewControlHandle(container);
     }
 
@@ -876,7 +859,136 @@ internal sealed class BannerNativeControlHost : NativeControlHost
 
     private void DestroyCurrentAd()
     {
+        UnsubscribeFromLifecycle();
         Interlocked.Increment(ref _nativeGeneration);
+        DestroyAdView();
+
+        _container?.RemoveAllViews();
+        _container = null;
+    }
+
+    private void CreateAndLoadAd(
+        Context context,
+        FrameLayout container,
+        int generation)
+    {
+        var adView = new Google.Android.Gms.Ads.AdView(context)
+        {
+            AdSize = Google.Android.Gms.Ads.AdSize.Banner,
+            AdUnitId = _adUnitId
+        };
+        container.AddView(adView, new FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.WrapContent,
+            ViewGroup.LayoutParams.WrapContent,
+            GravityFlags.Center));
+
+        _container = container;
+        _adView = adView;
+        adView.AdListener = new AdMobMobileAdvertisingService.BannerAdListener(
+            adView,
+            _stateChanged,
+            () => Volatile.Read(ref _disposed) != 0 ||
+                  Volatile.Read(ref _nativeGeneration) != generation);
+        _stateChanged?.Invoke(BannerAdLoadState.Loading);
+
+        // The view is now in Avalonia's native hierarchy, so start the request
+        // only after the host/container relationship exists.
+        adView.LoadAd(new AdRequest.Builder().Build());
+    }
+
+    private void SubscribeToLifecycle()
+    {
+        if (Interlocked.Exchange(ref _lifecycleSubscribed, 1) != 0)
+        {
+            return;
+        }
+
+        MobileAppLifecycle.Paused += OnAppPaused;
+        MobileAppLifecycle.Resumed += OnAppResumed;
+    }
+
+    private void UnsubscribeFromLifecycle()
+    {
+        if (Interlocked.Exchange(ref _lifecycleSubscribed, 0) == 0)
+        {
+            return;
+        }
+
+        MobileAppLifecycle.Paused -= OnAppPaused;
+        MobileAppLifecycle.Resumed -= OnAppResumed;
+    }
+
+    private void OnAppPaused(object? sender, EventArgs e)
+    {
+        MainHandler.Post(() =>
+        {
+            if (Volatile.Read(ref _disposed) != 0)
+            {
+                return;
+            }
+
+            try
+            {
+                _adView?.Pause();
+            }
+            catch (Exception ex)
+            {
+                global::Android.Util.Log.Warn(
+                    "NoctraAds", $"AdMob banner pause failed: {ex.Message}");
+            }
+        });
+    }
+
+    private void OnAppResumed(object? sender, EventArgs e)
+    {
+        MainHandler.Post(() =>
+        {
+            if (Volatile.Read(ref _disposed) != 0)
+            {
+                return;
+            }
+
+            var adView = _adView;
+            try
+            {
+                adView?.Resume();
+            }
+            catch (Exception ex)
+            {
+                global::Android.Util.Log.Warn(
+                    "NoctraAds", $"AdMob banner resume failed: {ex.Message}");
+            }
+
+            // A suspended renderer can come back detached from its container;
+            // such a view cannot render or route clicks. A dead creative keeps
+            // reporting Loaded, so nothing else heals it — rebuild here.
+            if (adView is null || adView.Parent is null)
+            {
+                RecreateAdInContainer();
+            }
+        });
+    }
+
+    private void RecreateAdInContainer()
+    {
+        if (Volatile.Read(ref _disposed) != 0 ||
+            _container is not { } container)
+        {
+            return;
+        }
+
+        Interlocked.Increment(ref _nativeGeneration);
+        DestroyAdView();
+        container.RemoveAllViews();
+        var nextGeneration = Volatile.Read(ref _nativeGeneration);
+        CreateAndLoadAd(
+            container.Context ?? global::Android.App.Application.Context,
+            container,
+            nextGeneration);
+    }
+
+    private void DestroyAdView()
+    {
         var adView = _adView;
         _adView = null;
         if (adView is not null)
@@ -884,9 +996,6 @@ internal sealed class BannerNativeControlHost : NativeControlHost
             _container?.RemoveView(adView);
             adView.Destroy();
         }
-
-        _container?.RemoveAllViews();
-        _container = null;
     }
 }
 

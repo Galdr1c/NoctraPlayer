@@ -440,6 +440,67 @@ public sealed class AdvertisingAccessibilityContractTests
     }
 
     [Fact]
+    public void AdMobBanner_FollowsAndroidLifecyclePauseResume()
+    {
+        var source = File.ReadAllText(ProjectSource(
+            "Noctra.Android", "Advertising", "AdMobMobileAdvertisingService.cs"));
+        var hostStart = source.IndexOf(
+            "internal sealed class BannerNativeControlHost", StringComparison.Ordinal);
+        Assert.True(hostStart >= 0);
+        var host = source[hostStart..];
+
+        Assert.Contains("MobileAppLifecycle.Paused += OnAppPaused", host, StringComparison.Ordinal);
+        Assert.Contains("MobileAppLifecycle.Resumed += OnAppResumed", host, StringComparison.Ordinal);
+        Assert.Contains("adView?.Pause()", host, StringComparison.Ordinal);
+        Assert.Contains("adView?.Resume()", host, StringComparison.Ordinal);
+        // Lifecycle subscription must be released with the native view.
+        Assert.Contains("UnsubscribeFromLifecycle();", host, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void AdMobBanner_RecreatesDetachedNativeViewOnResume()
+    {
+        var source = File.ReadAllText(ProjectSource(
+            "Noctra.Android", "Advertising", "AdMobMobileAdvertisingService.cs"));
+        var hostStart = source.IndexOf(
+            "internal sealed class BannerNativeControlHost", StringComparison.Ordinal);
+        Assert.True(hostStart >= 0);
+        var host = source[hostStart..];
+        var resumeIndex = host.IndexOf(
+            "private void OnAppResumed", StringComparison.Ordinal);
+        Assert.True(resumeIndex >= 0);
+        var recreateIndex = host.IndexOf(
+            "RecreateAdInContainer()", resumeIndex, StringComparison.Ordinal);
+
+        // A suspended AdView can come back detached; a dead creative never
+        // raises OnAdFailedToLoad, so resume must heal unattached views.
+        Assert.True(recreateIndex > resumeIndex);
+        Assert.Contains("adView.Parent is null", host, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void BannerControl_RecreatesStaleCreativeAfterLongBackground()
+    {
+        var source = File.ReadAllText(ProjectSource(
+            "Noctra.Mobile", "Controls", "MobileBannerAdControl.cs"));
+
+        Assert.Contains("MobileAppLifecycle.Paused", source, StringComparison.Ordinal);
+        Assert.Contains("MobileAppLifecycle.Resumed", source, StringComparison.Ordinal);
+        Assert.Contains("_backgroundedAtUtc", source, StringComparison.Ordinal);
+        Assert.Contains("BannerStaleAfterBackground", source, StringComparison.Ordinal);
+        Assert.Contains("TimeSpan.FromMinutes(2)", source, StringComparison.Ordinal);
+        // Stale path must fully rebuild: the LoadAd early-return keeps a dead
+        // handle alive otherwise.
+        var staleIndex = source.IndexOf(
+            "banner stale after", StringComparison.OrdinalIgnoreCase);
+        Assert.True(staleIndex >= 0);
+        var clearIndex = source.IndexOf("ClearAd();", staleIndex, StringComparison.Ordinal);
+        var loadIndex = source.IndexOf("LoadAd();", clearIndex, StringComparison.Ordinal);
+        Assert.True(clearIndex > staleIndex);
+        Assert.True(loadIndex > clearIndex);
+    }
+
+    [Fact]
     public void HuaweiConsent_PrivacyChoicesRequireVerifiedProviderMetadata()
     {
         var provider = File.ReadAllText(ProjectSource(
