@@ -3617,6 +3617,14 @@ public partial class MainViewModel : ObservableObject
             }
             var effectiveGroup = hasSearch ? null : SelectedGroup;
             var effectiveType = hasSearch ? null : SelectedChannelType;
+            var knownAdultGroups = _groupMetadataPlaylistId == requestPlaylist.Id
+                ? _allGroupsCache
+                    .Where(AdultCategoryClassifier.IsAdultCategory)
+                    .ToArray()
+                : null;
+            var adultGroupsLast = !hasSearch && string.IsNullOrWhiteSpace(effectiveGroup)
+                ? knownAdultGroups
+                : null;
 
             List<Channel> page;
             if (isStableSearchRequest)
@@ -3647,7 +3655,8 @@ public partial class MainViewModel : ObservableObject
                     Cursor: requestedCursorId is > 0 &&
                             UsesKeysetChannelPagination(requestSortOrder)
                         ? new ContentPageCursor(requestedCursorId.Value)
-                        : null), effectiveCancellationToken);
+                        : null,
+                    AdultGroupsLast: adultGroupsLast), effectiveCancellationToken);
             }
 
             // If selected group returns nothing on first page, fallback to "all" to avoid false empty UI.
@@ -3664,7 +3673,8 @@ public partial class MainViewModel : ObservableObject
                     Group: null,
                     Type: effectiveType,
                     OnlyFavorites: ShowOnlyFavorites,
-                    SortOrder: requestSortOrder), effectiveCancellationToken);
+                    SortOrder: requestSortOrder,
+                    AdultGroupsLast: knownAdultGroups), effectiveCancellationToken);
 
                 if (effectiveCancellationToken.IsCancellationRequested ||
                     !IsIncrementalContentRequestCurrent(
@@ -4684,10 +4694,7 @@ public partial class MainViewModel : ObservableObject
     }
 
     private static bool IsAdultGroup(string? name)
-    {
-        if (string.IsNullOrWhiteSpace(name)) return false;
-        return AdultContentRegex().IsMatch(name);
-    }
+        => AdultCategoryClassifier.IsAdultCategory(name);
 
     private void EnsurePreferredDefaultGroupSelected()
     {
@@ -9628,16 +9635,27 @@ public partial class MainViewModel : ObservableObject
             : source.Where(series =>
                 series.GroupTitle == null || !hiddenGroupSet.Contains(series.GroupTitle));
 
+        var adultSeriesGroups = source
+            .Select(series => series.GroupTitle)
+            .Where(group => !string.IsNullOrWhiteSpace(group))
+            .OfType<string>()
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Where(AdultCategoryClassifier.IsAdultCategory)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var adultLast = visible
+            .OrderBy(series => series.GroupTitle is not null &&
+                adultSeriesGroups.Contains(series.GroupTitle) ? 1 : 0);
+
         cached = sortOrder switch
         {
-            ChannelSortOrder.NameAsc => visible.OrderBy(series => series.Name).ToList(),
-            ChannelSortOrder.NameDesc => visible.OrderByDescending(series => series.Name).ToList(),
-            ChannelSortOrder.OldestFirst => visible
-                .OrderBy(series => series.ReleaseYear ?? int.MaxValue)
+            ChannelSortOrder.NameAsc => adultLast.ThenBy(series => series.Name).ToList(),
+            ChannelSortOrder.NameDesc => adultLast.ThenByDescending(series => series.Name).ToList(),
+            ChannelSortOrder.OldestFirst => adultLast
+                .ThenBy(series => series.ReleaseYear ?? int.MaxValue)
                 .ThenBy(series => series.Name)
                 .ToList(),
-            _ => visible
-                .OrderByDescending(series => series.ReleaseYear ?? 0)
+            _ => adultLast
+                .ThenByDescending(series => series.ReleaseYear ?? 0)
                 .ThenBy(series => series.Name)
                 .ToList()
         };
@@ -12511,6 +12529,4 @@ public partial class MainViewModel : ObservableObject
         return true;
     }
 
-    [GeneratedRegex(@"(?:\b|_)(adult|xxx|porn|sexy|18\+| \+18|pink|redlight|erotik|erotic|lust|hentai|brazzers|bangbros|babes|realitykings|digitalplayground|naughtyamerica|passion|penthouse|hustler|playboy|blue movie|hardcore|softcore|x-rated|sex|cam|strip|fetish|bondage|bdsm|amateur|milf|gay|lesbian|pornstar|yetişkin|mature)(?:\b|_)", RegexOptions.IgnoreCase)]
-    private static partial Regex AdultContentRegex();
 }

@@ -168,6 +168,72 @@ namespace Noctra.Tests
             Assert.Equal(ChannelType.VOD, nextPage[0].Type);
         }
 
+        [Theory]
+        [InlineData(ChannelSortOrder.NewestFirst)]
+        [InlineData(ChannelSortOrder.OldestFirst)]
+        [InlineData(ChannelSortOrder.NameAsc)]
+        [InlineData(ChannelSortOrder.NameDesc)]
+        public async Task GetChannelsFilteredPageAsync_AllGroupsPlacesAdultCategoriesAfterNormalAcrossPages(
+            ChannelSortOrder sortOrder)
+        {
+            var service = CreateService();
+            var channels = BuildAdultLastPagingChannels(sortOrder);
+            var playlist = await service.AddFromChannelsAsync(
+                $"Adult-last {sortOrder}",
+                $"https://provider.test/adult-last/{sortOrder}",
+                channels);
+            var expectedNames = BuildExpectedAdultLastNames(channels, sortOrder);
+
+            var firstPage = await service.GetChannelsFilteredPageAsync(
+                playlist.Id,
+                skip: 0,
+                take: 2,
+                type: ChannelType.VOD,
+                sortOrder: sortOrder,
+                adultGroupsLast: ["For Adults", "Para Adultos"]);
+            var secondPage = await service.GetChannelsFilteredPageAsync(
+                playlist.Id,
+                skip: 2,
+                take: 2,
+                type: ChannelType.VOD,
+                sortOrder: sortOrder,
+                cursor: new ContentPageCursor(firstPage[^1].Id),
+                adultGroupsLast: ["For Adults", "Para Adultos"]);
+
+            Assert.Equal(2, firstPage.Count);
+            Assert.All(firstPage, channel => Assert.StartsWith("Normal", channel.GroupTitle));
+            Assert.Equal(2, secondPage.Count);
+            Assert.All(secondPage, channel =>
+                Assert.True(AdultCategoryClassifier.IsAdultCategory(channel.GroupTitle)));
+            Assert.Equal(
+                expectedNames,
+                firstPage.Concat(secondPage).Select(channel => channel.Name));
+        }
+
+        [Fact]
+        public async Task GetChannelsFilteredPageAsync_SelectedAdultGroupKeepsRequestedNameSort()
+        {
+            var service = CreateService();
+            var playlist = await service.AddFromChannelsAsync(
+                "Selected adult group",
+                "https://provider.test/selected-adult",
+                new[]
+                {
+                    new Channel { Name = "Zulu", StreamUrl = "https://provider.test/z", GroupTitle = "For Adults", Type = ChannelType.VOD },
+                    new Channel { Name = "Alpha", StreamUrl = "https://provider.test/a", GroupTitle = "For Adults", Type = ChannelType.VOD }
+                });
+
+            var page = await service.GetChannelsFilteredPageAsync(
+                playlist.Id,
+                skip: 0,
+                take: 10,
+                group: "For Adults",
+                type: ChannelType.VOD,
+                sortOrder: ChannelSortOrder.NameAsc);
+
+            Assert.Equal(new[] { "Alpha", "Zulu" }, page.Select(channel => channel.Name));
+        }
+
         [Fact]
         public async Task GetChannelGroupMetadataAsync_WhenCancelled_StopsAtSqliteBoundary()
         {
@@ -1833,6 +1899,60 @@ namespace Noctra.Tests
             var channel = Assert.Single(live);
             Assert.Equal("Canal 2026", channel.Name);
         }
+        private static IReadOnlyList<Channel> BuildAdultLastPagingChannels(
+            ChannelSortOrder sortOrder)
+        {
+            var normalNames = sortOrder == ChannelSortOrder.NameDesc
+                ? new[] { "Alpha Normal", "Beta Normal" }
+                : new[] { "Yankee Normal", "Zulu Normal" };
+            var adultNames = sortOrder == ChannelSortOrder.NameDesc
+                ? new[] { "Yankee Adult", "Zulu Adult" }
+                : new[] { "Alpha Adult", "Beta Adult" };
+
+            var normal = new[]
+            {
+                new Channel { Name = normalNames[0], StreamUrl = $"https://provider.test/{sortOrder}/normal-1", GroupTitle = "Normal News", Type = ChannelType.VOD },
+                new Channel { Name = normalNames[1], StreamUrl = $"https://provider.test/{sortOrder}/normal-2", GroupTitle = "Normal Sports", Type = ChannelType.VOD }
+            };
+            var adult = new[]
+            {
+                new Channel { Name = adultNames[0], StreamUrl = $"https://provider.test/{sortOrder}/adult-1", GroupTitle = " FOR ADULTS ", Type = ChannelType.VOD },
+                new Channel { Name = adultNames[1], StreamUrl = $"https://provider.test/{sortOrder}/adult-2", GroupTitle = "para adultos", Type = ChannelType.VOD }
+            };
+
+            return sortOrder == ChannelSortOrder.OldestFirst
+                ? [.. adult, .. normal]
+                : [.. normal, .. adult];
+        }
+
+        private static IReadOnlyList<string> BuildExpectedAdultLastNames(
+            IReadOnlyList<Channel> channels,
+            ChannelSortOrder sortOrder)
+        {
+            var indexed = channels
+                .Select((channel, index) => (Channel: channel, Index: index))
+                .ToArray();
+
+            static IEnumerable<(Channel Channel, int Index)> SortSegment(
+                IEnumerable<(Channel Channel, int Index)> segment,
+                ChannelSortOrder order)
+                => order switch
+                {
+                    ChannelSortOrder.OldestFirst => segment.OrderBy(item => item.Index),
+                    ChannelSortOrder.NameAsc => segment.OrderBy(item => item.Channel.Name).ThenBy(item => item.Index),
+                    ChannelSortOrder.NameDesc => segment.OrderByDescending(item => item.Channel.Name).ThenByDescending(item => item.Index),
+                    _ => segment.OrderByDescending(item => item.Index)
+                };
+
+            var normal = SortSegment(
+                indexed.Where(item => item.Channel.GroupTitle!.StartsWith("Normal", StringComparison.Ordinal)),
+                sortOrder);
+            var adult = SortSegment(
+                indexed.Where(item => AdultCategoryClassifier.IsAdultCategory(item.Channel.GroupTitle)),
+                sortOrder);
+            return normal.Concat(adult).Select(item => item.Channel.Name).ToArray();
+        }
+
         private PlaylistService CreateService(IImportJobService? importJobService = null)
         {
             return new PlaylistService(

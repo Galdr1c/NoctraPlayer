@@ -14,7 +14,8 @@ public sealed record ContentPageRequest(
     bool OnlyFavorites = false,
     ChannelSortOrder SortOrder = ChannelSortOrder.NewestFirst,
     bool ApplyHiddenGroups = true,
-    ContentPageCursor? Cursor = null);
+    ContentPageCursor? Cursor = null,
+    IReadOnlyCollection<string>? AdultGroupsLast = null);
 
 public interface IContentQueryService
 {

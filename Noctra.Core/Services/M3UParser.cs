@@ -614,18 +614,7 @@ public partial class M3UParser : IM3UParser
     }
 
     private static bool GroupTitleSuggestsAdult(string? groupTitle)
-    {
-        if (string.IsNullOrWhiteSpace(groupTitle))
-        {
-            return false;
-        }
-
-        var normalized = groupTitle.Trim().ToLowerInvariant();
-        return normalized.Contains("adult") ||
-               normalized.Contains("adulti") ||
-               normalized.Contains("xxx") ||
-               normalized.Contains("porn");
-    }
+        => AdultCategoryClassifier.IsAdultCategory(groupTitle);
 
     private static bool LooksLikeEpisodicName(string name)
     {

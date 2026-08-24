@@ -262,6 +262,25 @@ public class PlaylistOrganizerServiceTests
         Assert.Equal("AAA Kanal", sorted[0].Name);
     }
 
+    [Fact]
+    public void SmartSort_MultilingualAdultGroupsStayAfterNormalGroups()
+    {
+        var channels = new List<Channel>
+        {
+            Live("Adult English", "For Adults"),
+            Live("Normal News", "News"),
+            Live("Adult Spanish", "Para Adultos"),
+            Live("Normal Sports", "Sports"),
+            Live("Adult Russian", "Для взрослых")
+        };
+
+        var sorted = _sut.SmartSort(channels);
+
+        Assert.Equal(
+            new[] { "Normal News", "Normal Sports", "Adult English", "Adult Spanish", "Adult Russian" },
+            sorted.Select(channel => channel.Name));
+    }
+
     // =========================================================================
     // E — EnrichMetadata / GenerateEpgId
     // =========================================================================

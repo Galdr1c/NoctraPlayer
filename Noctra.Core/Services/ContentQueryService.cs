@@ -55,7 +55,8 @@ public sealed class ContentQueryService : IContentQueryService
                 request.SortOrder,
                 hiddenGroups,
                 token,
-                request.Cursor),
+                request.Cursor,
+                request.AdultGroupsLast),
             cancellationToken);
     }
 

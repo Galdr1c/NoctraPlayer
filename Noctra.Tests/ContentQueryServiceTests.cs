@@ -67,7 +67,9 @@ public sealed class ContentQueryServiceTests
                 ChannelSortOrder.NameAsc,
                 It.Is<List<string>>(groups => groups.SequenceEqual(new[] { "Hidden live" })),
                 It.IsAny<CancellationToken>(),
-                It.IsAny<ContentPageCursor?>()))
+                It.IsAny<ContentPageCursor?>(),
+                It.Is<IReadOnlyCollection<string>?>(groups =>
+                    groups != null && groups.SequenceEqual(new[] { "For Adults" }))))
             .ReturnsAsync([
                 new Channel
                 {
@@ -91,7 +93,8 @@ public sealed class ContentQueryServiceTests
             Group: "English",
             Type: ChannelType.Live,
             OnlyFavorites: true,
-            SortOrder: ChannelSortOrder.NameAsc), cancellationSource.Token);
+            SortOrder: ChannelSortOrder.NameAsc,
+            AdultGroupsLast: ["For Adults"]), cancellationSource.Token);
 
         Assert.Single(result);
         playlistService.VerifyAll();

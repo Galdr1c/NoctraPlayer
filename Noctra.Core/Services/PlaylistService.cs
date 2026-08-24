@@ -21,11 +21,18 @@ public partial class PlaylistService : IPlaylistService
 {
     private const int BulkInsertLogInterval = 1000;
     private const int ChannelTypeRepairAggregationPendingVersion = -1;
+    private static readonly TimeSpan AdultGroupCacheLifetime = TimeSpan.FromSeconds(30);
 
     private static readonly ConcurrentDictionary<string, SemaphoreSlim> AddPlaylistLocks = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<int, Dictionary<string, ChannelBackupData>> _refreshBackups = new();
     private readonly ConcurrentDictionary<int, byte> _linearStreamRepairCompleted = new();
+    private readonly ConcurrentDictionary<int, AdultGroupCacheEntry> _adultGroupCache = new();
     private record ChannelBackupData(bool Fav, bool List, TimeSpan? Pos, TimeSpan? Dur, bool Comp, DateTime? LastW);
+    private sealed record AdultGroupCacheEntry(
+        int ChannelCount,
+        DateTime? LastUpdated,
+        DateTime CachedAtUtc,
+        string[] ExactGroupTitles);
 
     /// <summary>WatchHistory onarımı için: playlistId → { fingerprint → (oldChannelId, watchHistoryIds) }</summary>
     private readonly ConcurrentDictionary<int, Dictionary<string, (int OldChannelId, List<int> WatchHistoryIds)>> _watchHistoryRepairData = new();
@@ -1960,12 +1967,18 @@ WHERE PlaylistId = {playlistId}
         using var context = await _contextFactory.CreateDbContextAsync();
         await EnsureLinearStreamChannelTypesRepairedOnceAsync(context, playlistId);
         var query = BuildFilteredChannelQuery(context, playlistId, searchText, group, type, onlyFavorites, hiddenGroups);
+        var adultGroups = ShouldPlaceAdultGroupsLast(searchText, group)
+            ? await GetAdultGroupsAsync(context, playlistId, CancellationToken.None)
+            : [];
+        var orderedQuery = adultGroups.Count > 0
+            ? ApplyAdultGroupsLastSort(query, sortOrder, adultGroups)
+            : ApplySort(query, sortOrder);
 
-        return await ApplySort(query, sortOrder)
+        return await orderedQuery
             .Take(limit)
             .ToListAsync();
     }
-    public async Task<List<Channel>> GetChannelsFilteredPageAsync(int playlistId, int skip, int take, string? searchText = null, string? group = null, ChannelType? type = null, bool onlyFavorites = false, ChannelSortOrder sortOrder = ChannelSortOrder.NewestFirst, List<string>? hiddenGroups = null, CancellationToken cancellationToken = default, ContentPageCursor? cursor = null)
+    public async Task<List<Channel>> GetChannelsFilteredPageAsync(int playlistId, int skip, int take, string? searchText = null, string? group = null, ChannelType? type = null, bool onlyFavorites = false, ChannelSortOrder sortOrder = ChannelSortOrder.NewestFirst, List<string>? hiddenGroups = null, CancellationToken cancellationToken = default, ContentPageCursor? cursor = null, IReadOnlyCollection<string>? adultGroupsLast = null)
     {
         await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
         await EnsureLinearStreamChannelTypesRepairedOnceAsync(
@@ -1974,11 +1987,19 @@ WHERE PlaylistId = {playlistId}
             cancellationToken);
         var query = BuildFilteredChannelQuery(context, playlistId, searchText, group, type, onlyFavorites, hiddenGroups);
         var prioritizeLiveForSearch = !string.IsNullOrWhiteSpace(searchText) && !type.HasValue;
+        var prioritizeAdultLast = ShouldPlaceAdultGroupsLast(searchText, group);
+        var adultGroups = prioritizeAdultLast
+            ? adultGroupsLast is { Count: 0 }
+                ? []
+                : await GetAdultGroupsAsync(context, playlistId, cancellationToken)
+            : [];
+        var hasAdultGroupOrdering = adultGroups.Count > 0;
 
         if (cursor is { } keysetCursor &&
             keysetCursor.LastId > 0 &&
             UsesKeysetPagination(sortOrder) &&
-            !prioritizeLiveForSearch)
+            !prioritizeLiveForSearch &&
+            !hasAdultGroupOrdering)
         {
             query = ApplyKeysetCursor(query, sortOrder, keysetCursor);
             return await ApplySort(query, sortOrder)
@@ -1986,9 +2007,11 @@ WHERE PlaylistId = {playlistId}
                 .ToListAsync(cancellationToken);
         }
 
-        var orderedQuery = prioritizeLiveForSearch
-            ? ApplySearchSort(query, sortOrder)
-            : ApplySort(query, sortOrder);
+        var orderedQuery = adultGroups.Count > 0
+            ? ApplyAdultGroupsLastSort(query, sortOrder, adultGroups)
+            : prioritizeLiveForSearch
+                ? ApplySearchSort(query, sortOrder)
+                : ApplySort(query, sortOrder);
 
         return await orderedQuery
             .Skip(Math.Max(0, skip))
@@ -2113,6 +2136,86 @@ WHERE PlaylistId = {playlistId}
             ChannelSortOrder.NameAsc => query.OrderBy(c => c.Name).ThenBy(c => c.Id),
             ChannelSortOrder.NameDesc => query.OrderByDescending(c => c.Name).ThenByDescending(c => c.Id),
             _ => query.OrderByDescending(c => c.Id)
+        };
+    }
+
+    private static bool ShouldPlaceAdultGroupsLast(string? searchText, string? group)
+        => string.IsNullOrWhiteSpace(searchText) && string.IsNullOrWhiteSpace(group);
+
+    private async Task<IReadOnlyCollection<string>> GetAdultGroupsAsync(
+        AppDbContext context,
+        int playlistId,
+        CancellationToken cancellationToken)
+    {
+        var nowUtc = DateTime.UtcNow;
+        var playlistState = await context.Playlists
+            .AsNoTracking()
+            .Where(playlist => playlist.Id == playlistId)
+            .Select(playlist => new
+            {
+                playlist.ChannelCount,
+                playlist.LastUpdated
+            })
+            .SingleOrDefaultAsync(cancellationToken);
+
+        if (playlistState is not null &&
+            _adultGroupCache.TryGetValue(playlistId, out var cached) &&
+            cached.ChannelCount == playlistState.ChannelCount &&
+            cached.LastUpdated == playlistState.LastUpdated &&
+            nowUtc - cached.CachedAtUtc <= AdultGroupCacheLifetime)
+        {
+            return cached.ExactGroupTitles;
+        }
+
+        var groups = await context.Channels
+            .AsNoTracking()
+            .Where(channel => channel.PlaylistId == playlistId &&
+                channel.GroupTitle != null &&
+                channel.GroupTitle != "")
+            .Select(channel => channel.GroupTitle!)
+            .Distinct()
+            .ToListAsync(cancellationToken);
+
+        var exactAdultGroups = groups
+            .Where(AdultCategoryClassifier.IsAdultCategory)
+            .ToArray();
+
+        if (playlistState is not null)
+        {
+            _adultGroupCache[playlistId] = new AdultGroupCacheEntry(
+                playlistState.ChannelCount,
+                playlistState.LastUpdated,
+                nowUtc,
+                exactAdultGroups);
+        }
+
+        return exactAdultGroups;
+    }
+
+    private static IOrderedQueryable<Channel> ApplyAdultGroupsLastSort(
+        IQueryable<Channel> query,
+        ChannelSortOrder sortOrder,
+        IReadOnlyCollection<string> adultGroups)
+    {
+        if (adultGroups.Count == 0)
+        {
+            return ApplySort(query, sortOrder);
+        }
+
+        var adultGroupList = adultGroups.ToList();
+        var adultLast = query.OrderBy(channel =>
+            channel.GroupTitle != null && adultGroupList.Contains(channel.GroupTitle));
+
+        return sortOrder switch
+        {
+            ChannelSortOrder.OldestFirst => adultLast.ThenBy(channel => channel.Id),
+            ChannelSortOrder.NameAsc => adultLast
+                .ThenBy(channel => channel.Name)
+                .ThenBy(channel => channel.Id),
+            ChannelSortOrder.NameDesc => adultLast
+                .ThenByDescending(channel => channel.Name)
+                .ThenByDescending(channel => channel.Id),
+            _ => adultLast.ThenByDescending(channel => channel.Id)
         };
     }
 

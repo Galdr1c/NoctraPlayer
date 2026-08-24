@@ -115,7 +115,7 @@ public partial class PlaylistOrganizerService : IPlaylistOrganizerService
     {
         return channels
             .OrderBy(c => c.Type) // Live -> VOD -> Series
-            .ThenBy(c => IsAdultContent(c.GroupTitle) ? 1 : 0) // Adult kategoriler en sona
+            .ThenBy(c => AdultCategoryClassifier.GetSortRank(c.GroupTitle)) // Adult kategoriler en sona
             .ThenBy(c => c.GroupTitle ?? "zzz") // Alfabetik grup (Uncategorized sonlarda)
             .ThenBy(c => GetChannelNumber(c.Name) ?? int.MaxValue) // Numaralı kanallar öne
             .ThenBy(c => c.Name, StringComparer.OrdinalIgnoreCase) // Alfabetik kanal adı
@@ -303,12 +303,6 @@ public partial class PlaylistOrganizerService : IPlaylistOrganizerService
         return null;
     }
 
-    private static bool IsAdultContent(string? text)
-    {
-        if (string.IsNullOrWhiteSpace(text)) return false;
-        return AdultContentRegex().IsMatch(text);
-    }
-
     private static string GenerateEpgId(string name)
     {
         // Use central cleaner to get a consistent base name
@@ -324,6 +318,4 @@ public partial class PlaylistOrganizerService : IPlaylistOrganizerService
     [GeneratedRegex(@"\b(4k|uhd|2160p|1080p|fhd|hd|720p|sd|480p)\b", RegexOptions.IgnoreCase)]
     private static partial Regex QualityTagRegex();
 
-    [GeneratedRegex(@"(?:\b|_)(adult|xxx|porn|sexy|18\+| \+18|pink|redlight|erotik|erotic|lust|hentai|brazzers|bangbros|babes|realitykings|digitalplayground|naughtyamerica|passion|penthouse|hustler|playboy|blue movie|hardcore|softcore|x-rated|sex|cam|strip|fetish|bondage|bdsm|amateur|milf|gay|lesbian|pornstar|yetişkin|mature)(?:\b|_)", RegexOptions.IgnoreCase)]
-    private static partial Regex AdultContentRegex();
 }
