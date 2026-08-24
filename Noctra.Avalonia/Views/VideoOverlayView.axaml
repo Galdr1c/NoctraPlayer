@@ -496,11 +496,8 @@
                                         Spacing="8"
                                         IsVisible="{Binding IsEpgLoading}"
                                         Margin="0,0,24,0">
-                                <ProgressBar IsIndeterminate="True"
-                                             Width="80" Height="3"
-                                             Foreground="{DynamicResource AccentBrush}"
-                                             Background="#1AFFFFFF"
-                                             VerticalAlignment="Center"/>
+                                <controls:PremiumSpinner Width="28" Height="28"
+                                        HorizontalAlignment="Center" />
                                 <TextBlock Text="{loc:Translate Common.Loading}"
                                            FontSize="12"
                                            Foreground="{DynamicResource TextMutedBrush}"

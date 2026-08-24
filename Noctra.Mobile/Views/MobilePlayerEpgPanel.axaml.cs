@@ -10,6 +10,7 @@ using Avalonia.Interactivity;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Microsoft.Extensions.DependencyInjection;
+using Noctra.Mobile.Controls;
 using Noctra.Mobile.Localization;
 using Noctra.Mobile.Services;
 using Noctra.Mobile.ViewModels;
@@ -111,6 +112,7 @@ public partial class MobilePlayerEpgPanel : UserControl
             Guide.Rebuild(DateTime.Now);
             ApplyAdaptiveLayout();
             WireVerticalScrollers();
+            QueueImageLoadRefresh();
             _liveTimer.Start();
             QueueInitialFocusAndScroll();
         }
@@ -139,6 +141,24 @@ public partial class MobilePlayerEpgPanel : UserControl
         }
 
         _focusBeforeOpen = null;
+    }
+
+    private void QueueImageLoadRefresh()
+    {
+        if (!_isOpen)
+        {
+            return;
+        }
+
+        Dispatcher.UIThread.Post(
+            () =>
+            {
+                if (_isOpen && EpgModeRoot.IsEffectivelyVisible)
+                {
+                    RemoteImage.SetDescendantLoadsActive(EpgModeRoot, true);
+                }
+            },
+            DispatcherPriority.Loaded);
     }
 
     private void OnDataContextChanged(object? sender, EventArgs e)

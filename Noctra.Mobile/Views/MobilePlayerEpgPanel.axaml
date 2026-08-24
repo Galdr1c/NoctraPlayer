@@ -310,11 +310,8 @@
                 BorderThickness="0,0,0,1"
                 IsVisible="{Binding IsEpgLoading}">
           <StackPanel Orientation="Horizontal" Spacing="10">
-            <ProgressBar IsIndeterminate="True"
-                         Width="72" Height="4"
-                         Foreground="{DynamicResource AccentBrush}"
-                         Background="{DynamicResource Surface0Brush}"
-                         VerticalAlignment="Center" />
+            <controls:PremiumSpinner Width="28" Height="28"
+                                 HorizontalAlignment="Center" />
             <TextBlock Text="{loc:Translate Player.Epg.LoadingDescription}"
                        FontSize="{DynamicResource FCaption}"
                        Foreground="{DynamicResource TextSecondaryBrush}"
