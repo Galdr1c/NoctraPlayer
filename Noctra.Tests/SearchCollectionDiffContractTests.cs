@@ -65,6 +65,8 @@ public sealed class SearchCollectionDiffContractTests
             "Opacity=\"{Binding IsSearching, Converter={StaticResource BoolToOpacityConverter}, ConverterParameter=0.4}\"",
             desktop,
             StringComparison.Ordinal);
+        Assert.Contains("IsVisible=\"{Binding IsSearching}\"", desktop, StringComparison.Ordinal);
+        Assert.Contains("Search.Searching", desktop, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -86,6 +88,19 @@ public sealed class SearchCollectionDiffContractTests
 
         Assert.Contains("private readonly int _filterDelayMs = 75;", source, StringComparison.Ordinal);
         Assert.DoesNotContain("private readonly int _filterDelayMs = 300;", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void SeriesPaging_MarshalsObservableCollectionMutationThroughDispatcher()
+    {
+        var source = Source("Noctra.Core", "ViewModels", "MainViewModel.cs");
+        var start = source.IndexOf("public Task LoadMoreSeriesAsync()", StringComparison.Ordinal);
+        var end = source.IndexOf("private bool ShouldUseTmdbVisualEnrichment", start, StringComparison.Ordinal);
+        Assert.True(start >= 0 && end > start);
+        var method = source[start..end];
+
+        Assert.Contains("_dispatcherService.Invoke", method, StringComparison.Ordinal);
+        Assert.Contains("SeriesViewItems.AddRange", method, StringComparison.Ordinal);
     }
 
     private static int Count(string source, string value)

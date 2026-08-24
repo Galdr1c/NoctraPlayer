@@ -228,6 +228,47 @@ public sealed class MainViewModelIncrementalCancellationTests
     }
 
     [Fact]
+    public async Task SearchFailure_SameQueryCommitRetriesTheSearch()
+    {
+        var candidateCalls = 0;
+        var contentQuery = new Mock<IContentQueryService>();
+        contentQuery
+            .Setup(service => service.GetChannelGroupMetadataAsync(7, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((0, new List<string>(), new List<string>(), new List<string>(), new List<string>()));
+        contentQuery
+            .Setup(service => service.GetSeriesListAsync(7, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([new Series { Id = 702, PlaylistId = 7, Name = "Dark Series" }]);
+        contentQuery
+            .Setup(service => service.GetChannelPageAsync(
+                It.IsAny<ContentPageRequest>(),
+                It.IsAny<CancellationToken>()))
+            .Returns((ContentPageRequest _, CancellationToken _) =>
+            {
+                var call = Interlocked.Increment(ref candidateCalls);
+                return call <= 2
+                    ? Task.FromException<List<Channel>>(new InvalidOperationException("first search failed"))
+                    : Task.FromResult(new List<Channel>());
+            });
+
+        var viewModel = CreateViewModel(contentQuery.Object);
+        viewModel.ActiveView = AppView.Search;
+        SetPrivateField(viewModel, "_suppressSelectedPlaylistChanged", true);
+        viewModel.SelectedPlaylist = new Playlist { Id = 7, Name = "Search" };
+        SetPrivateField(viewModel, "_suppressSelectedPlaylistChanged", false);
+        SetPrivateField(viewModel, "_suppressNavigationFilterRefresh", true);
+        viewModel.SearchText = "dark";
+        viewModel.SearchQuery = "dark";
+        SetPrivateField(viewModel, "_suppressNavigationFilterRefresh", false);
+
+        await InvokeLoadChannelsAsync(viewModel, 7);
+        Assert.Equal(2, Volatile.Read(ref candidateCalls));
+        Assert.True(viewModel.ShowSearchEmptyState);
+
+        viewModel.CommitSearchCommand.Execute(null);
+        await WaitForAsync(() => Volatile.Read(ref candidateCalls) > 2);
+    }
+
+    [Fact]
     public void PlaylistChange_DuringSearchMarksOldResultsBusyImmediately()
     {
         var metadata = new TaskCompletionSource<(int, List<string>, List<string>, List<string>, List<string>)>(

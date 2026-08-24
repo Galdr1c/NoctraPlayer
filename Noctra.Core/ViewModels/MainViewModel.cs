@@ -778,6 +778,9 @@ public partial class MainViewModel : ObservableObject
         var isSearch = ActiveView == AppView.Search &&
             SelectedPlaylist?.Id == playlistId &&
             SearchDocumentCache.Normalize(SearchText).Length >= MinSearchQueryLength;
+        var expectedSearchQuery = isSearch
+            ? SearchDocumentCache.Normalize(SearchText)
+            : string.Empty;
         if (!isSearch)
         {
             await LoadHomeContentAsync(preserveEmptyVisibleSeriesItems: true);
@@ -811,7 +814,11 @@ public partial class MainViewModel : ObservableObject
                 updateVisibleSeriesItems: false,
                 preserveEmptyVisibleSeriesItems: true);
             if (linkedCancellation.IsCancellationRequested ||
-                !IsPlaylistLoadCurrent(generation, playlistId.Value))
+                !IsPlaylistLoadCurrent(generation, playlistId.Value) ||
+                (isSearch && !string.Equals(
+                    SearchDocumentCache.Normalize(SearchText),
+                    expectedSearchQuery,
+                    StringComparison.Ordinal)))
             {
                 return;
             }
@@ -3577,6 +3584,9 @@ public partial class MainViewModel : ObservableObject
         var requestView = ActiveView;
         var requestChannelType = SelectedChannelType;
         var requestSortOrder = SelectedSortOrder;
+        var requestSearchQuery = requestView == AppView.Search
+            ? SearchDocumentCache.Normalize(SearchText)
+            : string.Empty;
         var requestPlaylist = SelectedPlaylist;
         if (requestPlaylist == null ||
             !_hasMoreChannels ||
@@ -3598,6 +3608,13 @@ public partial class MainViewModel : ObservableObject
         {
             var hasSearch = !string.IsNullOrWhiteSpace(SearchText);
             var isStableSearchRequest = requestView == AppView.Search && hasSearch;
+            if (isStableSearchRequest && !string.Equals(
+                    SearchDocumentCache.Normalize(SearchText),
+                    requestSearchQuery,
+                    StringComparison.Ordinal))
+            {
+                return;
+            }
             var effectiveGroup = hasSearch ? null : SelectedGroup;
             var effectiveType = hasSearch ? null : SelectedChannelType;
 
@@ -3834,20 +3851,29 @@ public partial class MainViewModel : ObservableObject
 
         try
         {
-            var start = _currentSeriesPage * IncrementalPageSize;
-            var page = _seriesFilteredSource.Skip(start).Take(IncrementalPageSize).ToList();
-            if (page.Count == 0)
+            List<Series>? page = null;
+            _dispatcherService.Invoke(() =>
             {
-                _hasMoreSeriesItems = false;
+                var start = _currentSeriesPage * IncrementalPageSize;
+                page = _seriesFilteredSource.Skip(start).Take(IncrementalPageSize).ToList();
+                if (page.Count == 0)
+                {
+                    _hasMoreSeriesItems = false;
+                    return;
+                }
+
+                _currentSeriesPage++;
+                _hasMoreSeriesItems = page.Count == IncrementalPageSize;
+
+                SeriesViewItems.AddRange(page);
+                OnPropertyChanged(nameof(SeriesViewItems));
+                NotifyContentStateChanged();
+            });
+
+            if (page is not { Count: > 0 })
+            {
                 return Task.CompletedTask;
             }
-
-            _currentSeriesPage++;
-            _hasMoreSeriesItems = page.Count == IncrementalPageSize;
-
-            SeriesViewItems.AddRange(page);
-            OnPropertyChanged(nameof(SeriesViewItems));
-            NotifyContentStateChanged();
 
             // M3U lists often lack poster metadata, so only they use TMDB enrichment here.
             if (ShouldUseTmdbVisualEnrichment() &&
@@ -9653,11 +9679,23 @@ public partial class MainViewModel : ObservableObject
             SearchDocumentCache.Normalize(SearchText),
             SearchDocumentCache.Normalize(nextQuery),
             StringComparison.Ordinal);
+        var retryFailedSearch = !changed &&
+            ActiveView == AppView.Search &&
+            ShowSearchEmptyState &&
+            SelectedPlaylist is not null;
         SearchText = nextQuery;
         Navigate(AppView.Search);
         if (changed)
         {
             SearchScrollResetRequested?.Invoke(this, EventArgs.Empty);
+        }
+        else if (retryFailedSearch)
+        {
+            IsSearching = true;
+            ShowSearchEmptyState = false;
+            OnPropertyChanged(nameof(ShowSearchIdleState));
+            SearchScrollResetRequested?.Invoke(this, EventArgs.Empty);
+            ScheduleImmediateFilter("retry-search");
         }
     }
 

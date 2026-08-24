@@ -31,6 +31,25 @@
           <controls:DesktopCardSection GroupHeader="{loc:Translate Search.SimilarResults}" Header="{loc:Translate History.Movies}" CardKind="Vod" SourceItems="{Binding SearchSimilarVodChannels}" />
         </controls:DesktopSectionedCardFeed.Sections>
       </controls:DesktopSectionedCardFeed>
+      <Border Grid.Row="2"
+              HorizontalAlignment="Center"
+              VerticalAlignment="Center"
+              Padding="24,18"
+              Background="{DynamicResource OverlayPanelBrush}"
+              BorderBrush="{DynamicResource BorderBrush}"
+              BorderThickness="1"
+              CornerRadius="10"
+              ZIndex="10"
+              IsVisible="{Binding IsSearching}">
+        <StackPanel Spacing="12" HorizontalAlignment="Center">
+          <controls:PremiumSpinner Width="54" Height="54"
+                                 HorizontalAlignment="Center" />
+          <TextBlock Text="{loc:Translate Search.Searching}"
+                     HorizontalAlignment="Center"
+                     Foreground="{DynamicResource TextPrimaryBrush}"
+                     FontWeight="SemiBold" />
+        </StackPanel>
+      </Border>
       <StackPanel Grid.Row="2" HorizontalAlignment="Center" VerticalAlignment="Center"
                   IsVisible="{Binding ShowSearchEmptyState}">
         <icons:MaterialIcon Kind="Magnify" Width="64" Height="64" Foreground="{DynamicResource TextMutedBrush}" Opacity="0.5" />
