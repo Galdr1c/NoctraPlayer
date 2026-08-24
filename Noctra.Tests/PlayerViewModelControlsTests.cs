@@ -47,7 +47,7 @@ namespace Noctra.Tests
         public string? CurrentUrl { get; private set; }
         public StreamQualityInfo? StreamQuality => null;
         public bool IsPlaying { get; private set; }
-        public PlaybackState State => IsPlaying ? PlaybackState.Playing : PlaybackState.Stopped;
+        public PlaybackState State { get; private set; } = PlaybackState.Stopped;
         public bool HasLoadedMedia => CurrentUrl != null;
         public long CurrentTimeMilliseconds => (long)(Position * 1000);
         public double Position { get; set; }
@@ -61,6 +61,9 @@ namespace Noctra.Tests
         public PlaybackMediaMetadata? LastMetadata { get; private set; }
         public PlaybackMediaMetadata? MetadataAtPlay { get; private set; }
         public bool FailNextPlay { get; set; }
+        public bool IgnoreResumeRequests { get; set; }
+        public int PlayCallCount { get; private set; }
+        public double LastPlayStartTimeSeconds { get; private set; }
 
         public event EventHandler? PlayerReady;
         public event EventHandler? MediaPlayerReleasing;
@@ -84,7 +87,11 @@ namespace Noctra.Tests
 
             MetadataAtPlay = LastMetadata;
             CurrentUrl = url;
+            Position = startTimeSeconds;
             IsPlaying = true;
+            State = PlaybackState.Playing;
+            PlayCallCount++;
+            LastPlayStartTimeSeconds = startTimeSeconds;
             PlayingChanged?.Invoke(this, true);
             return Task.CompletedTask;
         }
@@ -93,9 +100,31 @@ namespace Noctra.Tests
         public void UpdateMediaMetadata(PlaybackMediaMetadata metadata) => LastMetadata = metadata;
 
         public Task HardSeekAsync(double seconds) { Position = seconds; return Task.CompletedTask; }
-        public void Pause() { IsPlaying = false; PlayingChanged?.Invoke(this, false); }
-        public void Resume() { IsPlaying = true; PlayingChanged?.Invoke(this, true); }
-        public void Stop() { IsPlaying = false; CurrentUrl = null; }
+        public void Pause()
+        {
+            IsPlaying = false;
+            State = PlaybackState.Paused;
+            PlayingChanged?.Invoke(this, false);
+        }
+
+        public void Resume()
+        {
+            if (IgnoreResumeRequests)
+            {
+                return;
+            }
+
+            IsPlaying = true;
+            State = PlaybackState.Playing;
+            PlayingChanged?.Invoke(this, true);
+        }
+
+        public void Stop()
+        {
+            IsPlaying = false;
+            State = PlaybackState.Stopped;
+            CurrentUrl = null;
+        }
         public Task EndSessionAsync(CancellationToken cancellationToken = default)
         {
             if (EndSessionHandler != null)
@@ -117,7 +146,20 @@ namespace Noctra.Tests
         public void Dispose() { }
 
         public void SimulatePositionChanged(double pos) => PositionChanged?.Invoke(this, pos);
-        public void SimulatePlayingChanged(bool playing) { IsPlaying = playing; PlayingChanged?.Invoke(this, playing); }
+        public void SimulatePlayingChanged(bool playing)
+        {
+            IsPlaying = playing;
+            State = playing ? PlaybackState.Playing : PlaybackState.Paused;
+            PlayingChanged?.Invoke(this, playing);
+        }
+        public void SimulateLoadedPaused(string url, double position, bool ignoreResumeRequests)
+        {
+            CurrentUrl = url;
+            Position = position;
+            IsPlaying = false;
+            State = PlaybackState.Paused;
+            IgnoreResumeRequests = ignoreResumeRequests;
+        }
         public void SimulateError(string msg) => ErrorOccurred?.Invoke(this, msg);
         public void SimulatePlaybackEnded() => PlaybackEnded?.Invoke(this, EventArgs.Empty);
         public void SimulateVolumeChanged(int vol) => VolumeChanged?.Invoke(this, vol);

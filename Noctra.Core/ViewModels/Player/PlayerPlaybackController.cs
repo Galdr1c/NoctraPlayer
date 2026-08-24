@@ -505,7 +505,12 @@ public class PlayerPlaybackController
             else if (hasLoadedMedia)
             {
                 if (!IsStillCurrent()) return;
-                _vm.VideoPlayerService.Resume();
+                await ResumeLoadedPlaybackWithRecoveryAsync(
+                    streamUrl,
+                    treatAsLivePlayback: true,
+                    preferredPosition: 0,
+                    requestVersion,
+                    channelId);
             }
             else
             {
@@ -522,7 +527,12 @@ public class PlayerPlaybackController
             if (hasLoadedMedia)
             {
                 if (!IsStillCurrent()) return;
-                _vm.VideoPlayerService.Resume();
+                await ResumeLoadedPlaybackWithRecoveryAsync(
+                    streamUrl,
+                    treatAsLivePlayback: false,
+                    preferredPosition: ResolveResumeRecoveryPosition(),
+                    requestVersion,
+                    channelId);
             }
             else
             {
@@ -541,7 +551,20 @@ public class PlayerPlaybackController
         if (hasLoadedMedia)
         {
             if (!IsStillCurrent()) return;
-            _vm.VideoPlayerService.Resume();
+            var reopened = await ResumeLoadedPlaybackWithRecoveryAsync(
+                streamUrl,
+                treatAsLivePlayback: false,
+                preferredPosition: targetPosition,
+                requestVersion,
+                channelId);
+            if (!IsStillCurrent()) return;
+            if (reopened)
+            {
+                _vm._pendingResumeSeekPosition = 0;
+                _vm._pendingResumeSeekAttempts = 0;
+                return;
+            }
+
             await Task.Delay(220);
             if (!IsStillCurrent()) return;
 
@@ -650,6 +673,86 @@ public class PlayerPlaybackController
         await EnsurePlaybackStartedAsync(streamUrl);
     }
 
+    private async Task<bool> ResumeLoadedPlaybackWithRecoveryAsync(
+        string streamUrl,
+        bool treatAsLivePlayback,
+        double preferredPosition,
+        int requestVersion,
+        int? channelId)
+    {
+        bool IsStillCurrent()
+            => channelId.HasValue &&
+               _vm.IsPlaybackIntentCurrent(requestVersion) &&
+               _vm.CurrentChannel?.Id == channelId.Value;
+
+        if (!IsStillCurrent())
+        {
+            return false;
+        }
+
+        _vm.VideoPlayerService.Resume();
+
+        // A normal loaded player resumes immediately or after a very short
+        // decoder transition. Huawei hibernation can leave HasLoadedMedia=true
+        // while PlayWhenReady no longer starts the pipeline, so verify the
+        // backend's authoritative state before trusting the fast path.
+        for (var attempt = 0; attempt < 6; attempt++)
+        {
+            if (_vm.VideoPlayerService.IsPlaying)
+            {
+                return false;
+            }
+
+            await Task.Delay(120);
+            if (!IsStillCurrent())
+            {
+                return false;
+            }
+        }
+
+        if (_vm.VideoPlayerService.IsPlaying || !IsStillCurrent())
+        {
+            return false;
+        }
+
+        _vm.LogDebug(
+            $"Resume recovery: loaded pipeline did not start " +
+            $"(Live={treatAsLivePlayback}, State={_vm.VideoPlayerService.State}).");
+        _vm.IsBuffering = true;
+        _vm.BufferingProgress = 0;
+
+        if (treatAsLivePlayback)
+        {
+            _vm.VideoPlayerService.Stop();
+            await Task.Delay(120);
+            if (!IsStillCurrent())
+            {
+                return false;
+            }
+
+            await _vm.VideoPlayerService.PlayAsync(streamUrl);
+            return true;
+        }
+
+        var recoveryPosition = ResolveResumeRecoveryPosition(preferredPosition);
+        await _vm.VideoPlayerService.PlayAsync(streamUrl, recoveryPosition);
+        return true;
+    }
+
+    private double ResolveResumeRecoveryPosition(double preferredPosition = 0)
+    {
+        var backendPosition = Math.Max(
+            0,
+            _vm.VideoPlayerService.CurrentTimeMilliseconds / 1000d);
+        var best = Math.Max(
+            Math.Max(preferredPosition, backendPosition),
+            Math.Max(
+                Math.Max(_vm.Position, _vm._lastPausedPosition),
+                _vm._lastKnownValidPosition));
+
+        return double.IsFinite(best) && best > 0 ? best : 0;
+    }
+
     public async Task EnsurePlaybackStartedAsync(string streamUrl)
     {
         var requestVersion = Volatile.Read(ref _vm._playRequestVersion);
@@ -660,13 +763,13 @@ public class PlayerPlaybackController
                _vm.IsPlaybackIntentCurrent(requestVersion) &&
                _vm.CurrentChannel?.Id == channelId.Value;
 
-        if (_vm.IsPlaying || !IsStillCurrent() || _vm.IsLiveContent)
+        if (_vm.VideoPlayerService.IsPlaying || !IsStillCurrent() || _vm.IsLiveContent)
         {
             return;
         }
 
         await Task.Delay(280);
-        if (_vm.IsPlaying || !IsStillCurrent())
+        if (_vm.VideoPlayerService.IsPlaying || !IsStillCurrent())
         {
             return;
         }

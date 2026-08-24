@@ -196,5 +196,111 @@ namespace Noctra.Tests
                 (double)pendingField!.GetValue(ctx.VM)!,
                 precision: 3);
         }
+
+        [Fact]
+        public async Task PlayPause_HibernatedLoadedVod_ReopensAtCurrentPositionWhenResumeIsIgnored()
+        {
+            var ctx = new PlayerTestContext();
+            const string streamUrl = "file:///downloads/episode.mp4";
+            const double currentPosition = 47;
+            ctx.VM.CurrentChannel = new Channel
+            {
+                Id = 21,
+                Name = "Downloaded episode",
+                StreamUrl = streamUrl,
+                Type = ChannelType.Series
+            };
+            ctx.VM.IsLiveContent = false;
+            ctx.VM.Position = currentPosition;
+            ctx.VM._lastKnownValidPosition = currentPosition;
+            ctx.VideoService.SimulateLoadedPaused(
+                streamUrl,
+                currentPosition,
+                ignoreResumeRequests: true);
+
+            await ctx.VM.PlaybackController.PlayPause();
+
+            Assert.Equal(1, ctx.VideoService.PlayCallCount);
+            Assert.Equal(
+                currentPosition,
+                ctx.VideoService.LastPlayStartTimeSeconds,
+                precision: 3);
+            Assert.True(ctx.VideoService.IsPlaying);
+        }
+
+        [Fact]
+        public async Task PlayPause_HibernatedLoadedLive_ReopensAtLiveEdgeWhenResumeIsIgnored()
+        {
+            var ctx = new PlayerTestContext();
+            const string streamUrl = "https://example.test/live/channel.m3u8";
+            ctx.VM.CurrentChannel = new Channel
+            {
+                Id = 22,
+                Name = "Live channel",
+                StreamUrl = streamUrl,
+                Type = ChannelType.Live
+            };
+            ctx.VM.IsLiveContent = true;
+            ctx.VideoService.SimulateLoadedPaused(
+                streamUrl,
+                position: 0,
+                ignoreResumeRequests: true);
+
+            await ctx.VM.PlaybackController.PlayPause();
+
+            Assert.Equal(1, ctx.VideoService.PlayCallCount);
+            Assert.Equal(0, ctx.VideoService.LastPlayStartTimeSeconds);
+            Assert.True(ctx.VideoService.IsPlaying);
+        }
+
+        [Fact]
+        public async Task PlayPause_LoadedMedia_DoesNotReopenWhenNormalResumeSucceeds()
+        {
+            var ctx = new PlayerTestContext();
+            const string streamUrl = "https://example.test/movie.mp4";
+            ctx.VM.CurrentChannel = new Channel
+            {
+                Id = 23,
+                Name = "Movie",
+                StreamUrl = streamUrl,
+                Type = ChannelType.VOD
+            };
+            ctx.VideoService.SimulateLoadedPaused(
+                streamUrl,
+                position: 30,
+                ignoreResumeRequests: false);
+
+            await ctx.VM.PlaybackController.PlayPause();
+
+            Assert.Equal(0, ctx.VideoService.PlayCallCount);
+            Assert.True(ctx.VideoService.IsPlaying);
+        }
+
+        [Fact]
+        public async Task PlayPause_NormalResume_DoesNotReopenWhileUiCallbackIsQueued()
+        {
+            var dispatcher = new QueuedDispatcher();
+            var ctx = new PlayerTestContext(dispatcher: dispatcher);
+            dispatcher.RunAll();
+            const string streamUrl = "https://example.test/movie.mp4";
+            const double currentPosition = 30;
+            ctx.VM.CurrentChannel = new Channel
+            {
+                Id = 24,
+                Name = "Movie",
+                StreamUrl = streamUrl,
+                Type = ChannelType.VOD
+            };
+            ctx.VM.SetResumePosition(currentPosition);
+            ctx.VideoService.SimulateLoadedPaused(
+                streamUrl,
+                currentPosition,
+                ignoreResumeRequests: false);
+
+            await ctx.VM.PlaybackController.PlayPause();
+
+            Assert.Equal(0, ctx.VideoService.PlayCallCount);
+            Assert.True(ctx.VideoService.IsPlaying);
+        }
     }
 }
