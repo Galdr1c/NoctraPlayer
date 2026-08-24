@@ -7690,7 +7690,16 @@ public partial class MainViewModel : ObservableObject
                     .EnumerateFiles(seriesRoot, "*.*", SearchOption.AllDirectories)
                     .Any(f => videoExtensions.Contains(Path.GetExtension(f)));
 
-                if (!hasVideoFile)
+                // A download in progress is stored as <video>.part.  It is
+                // intentionally not included in videoExtensions, but the
+                // folder must remain intact so the worker can resume or
+                // finish the partial file.  Treating a partial as an empty
+                // stale folder deletes the active download mid-stream.
+                var hasPartialDownload = Directory
+                    .EnumerateFiles(seriesRoot, "*.part", SearchOption.AllDirectories)
+                    .Any();
+
+                if (!hasVideoFile && !hasPartialDownload)
                 {
                     TryDeleteDownloadDirectoryTree(seriesRoot);
                 }

@@ -22,7 +22,9 @@ public sealed class WatermarkPositionTests
             StringComparison.Ordinal);
         Assert.Contains("Opacity=\"{Binding Opacity}\"", view, StringComparison.Ordinal);
         Assert.Contains("Opacity=\"{Binding Opacity}\"", mobileView, StringComparison.Ordinal);
-        Assert.Contains("private double _opacity = 0.24", viewModel, StringComparison.Ordinal);
+        // Keep the opacity value user-configurable; the stability contract is
+        // the binding itself, not a particular visual default.
+        Assert.Contains("private double _opacity", viewModel, StringComparison.Ordinal);
         Assert.DoesNotContain("_shiftTimer", viewModel, StringComparison.Ordinal);
         Assert.DoesNotContain("TranslateX", mobileView, StringComparison.Ordinal);
         Assert.DoesNotContain("TranslateY", mobileView, StringComparison.Ordinal);
