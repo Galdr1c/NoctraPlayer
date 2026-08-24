@@ -164,6 +164,96 @@ public sealed class MainViewModelIncrementalCancellationTests
     }
 
     [Fact]
+    public async Task DeferredSeriesRefresh_DuringSearch_RefreshesSearchSeriesBucket()
+    {
+        var contentQuery = new Mock<IContentQueryService>();
+        contentQuery
+            .Setup(service => service.GetSeriesListAsync(7, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([new Series { Id = 700, PlaylistId = 7, Name = "Dark Deferred Series" }]);
+        contentQuery
+            .Setup(service => service.GetChannelPageAsync(
+                It.IsAny<ContentPageRequest>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Channel>());
+
+        var viewModel = CreateViewModel(contentQuery.Object);
+        viewModel.ActiveView = AppView.Search;
+        SetPrivateField(viewModel, "_suppressSelectedPlaylistChanged", true);
+        viewModel.SelectedPlaylist = new Playlist { Id = 7, Name = "Search" };
+        SetPrivateField(viewModel, "_suppressSelectedPlaylistChanged", false);
+        SetPrivateField(viewModel, "_suppressNavigationFilterRefresh", true);
+        viewModel.SearchText = "dark";
+        SetPrivateField(viewModel, "_suppressNavigationFilterRefresh", false);
+        SetPrivateField(viewModel, "_deferredSeriesRefreshAfterChannelLoad", 1);
+
+        var complete = typeof(MainViewModel).GetMethod(
+            "CompleteChannelRefreshProgress",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        Assert.NotNull(complete);
+        complete!.Invoke(viewModel, new object[] { "done" });
+
+        await WaitForAsync(() =>
+            viewModel.SearchSeriesChannels.Any(series => series.Id == 700));
+    }
+
+    [Fact]
+    public async Task SearchLoadFailure_ClearsSearchingState()
+    {
+        var contentQuery = new Mock<IContentQueryService>();
+        contentQuery
+            .Setup(service => service.GetChannelGroupMetadataAsync(7, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((0, new List<string>(), new List<string>(), new List<string>(), new List<string>()));
+        contentQuery
+            .Setup(service => service.GetSeriesListAsync(7, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([new Series { Id = 701, PlaylistId = 7, Name = "Dark Series" }]);
+        contentQuery
+            .Setup(service => service.GetChannelPageAsync(
+                It.IsAny<ContentPageRequest>(),
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("candidate query failed"));
+
+        var viewModel = CreateViewModel(contentQuery.Object);
+        viewModel.ActiveView = AppView.Search;
+        SetPrivateField(viewModel, "_suppressSelectedPlaylistChanged", true);
+        viewModel.SelectedPlaylist = new Playlist { Id = 7, Name = "Search" };
+        SetPrivateField(viewModel, "_suppressSelectedPlaylistChanged", false);
+        SetPrivateField(viewModel, "_suppressNavigationFilterRefresh", true);
+        viewModel.SearchText = "dark";
+        SetPrivateField(viewModel, "_suppressNavigationFilterRefresh", false);
+        viewModel.IsSearching = true;
+
+        await InvokeLoadChannelsAsync(viewModel, 7);
+
+        Assert.False(viewModel.IsSearching);
+    }
+
+    [Fact]
+    public void PlaylistChange_DuringSearchMarksOldResultsBusyImmediately()
+    {
+        var metadata = new TaskCompletionSource<(int, List<string>, List<string>, List<string>, List<string>)>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        var contentQuery = new Mock<IContentQueryService>();
+        contentQuery
+            .Setup(service => service.GetChannelGroupMetadataAsync(8, It.IsAny<CancellationToken>()))
+            .Returns(metadata.Task);
+
+        var viewModel = CreateViewModel(contentQuery.Object);
+        viewModel.ActiveView = AppView.Search;
+        SetPrivateField(viewModel, "_suppressSelectedPlaylistChanged", true);
+        viewModel.SelectedPlaylist = new Playlist { Id = 7, Name = "Old" };
+        SetPrivateField(viewModel, "_suppressSelectedPlaylistChanged", false);
+        SetPrivateField(viewModel, "_suppressNavigationFilterRefresh", true);
+        viewModel.SearchText = "dark";
+        SetPrivateField(viewModel, "_suppressNavigationFilterRefresh", false);
+        viewModel.IsSearching = false;
+
+        viewModel.SelectedPlaylist = new Playlist { Id = 8, Name = "New" };
+
+        Assert.True(viewModel.IsSearching);
+        metadata.SetResult((0, new List<string>(), new List<string>(), new List<string>(), new List<string>()));
+    }
+
+    [Fact]
     public async Task SearchRankingCompletion_AfterLeavingSearch_CannotCommitOldResults()
     {
         var contentQuery = new Mock<IContentQueryService>();
@@ -792,6 +882,15 @@ public sealed class MainViewModelIncrementalCancellationTests
         return (Task)method.Invoke(
             viewModel,
             new object[] { Array.Empty<Channel>(), generation, 7, CancellationToken.None })!;
+    }
+
+    private static Task InvokeLoadChannelsAsync(MainViewModel viewModel, int playlistId)
+    {
+        var method = typeof(MainViewModel).GetMethod(
+            "LoadChannelsAsync",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        Assert.NotNull(method);
+        return (Task)method!.Invoke(viewModel, new object[] { playlistId, null })!;
     }
 
     private static async Task WaitForAsync(Func<bool> condition)

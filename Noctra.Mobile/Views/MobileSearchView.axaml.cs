@@ -36,9 +36,18 @@ public partial class MobileSearchView : UserControl, IMobileNavigationStateParti
 
     private void SubscribeToSearchReset()
     {
-        if (!_isAttachedToVisualTree ||
-            DataContext is not MainViewModel viewModel ||
-            ReferenceEquals(_subscribedViewModel, viewModel))
+        if (!_isAttachedToVisualTree)
+        {
+            return;
+        }
+
+        if (DataContext is not MainViewModel viewModel)
+        {
+            UnsubscribeFromSearchReset();
+            return;
+        }
+
+        if (ReferenceEquals(_subscribedViewModel, viewModel))
         {
             return;
         }

@@ -600,7 +600,7 @@ public partial class MainViewModel : ObservableObject
                         }
 
                         // Refresh content from DB (Aggregation finished)
-                        await LoadHomeContentAsync(preserveEmptyVisibleSeriesItems: true);
+                        await RefreshSeriesAfterAggregationAsync(playlistId);
                         if (!IsChannelLoading)
                         {
                             StatusMessage = _localizationService.GetString("Main.Status.ChannelsReady");
@@ -757,13 +757,75 @@ public partial class MainViewModel : ObservableObject
             {
                 try
                 {
-                    await LoadHomeContentAsync(preserveEmptyVisibleSeriesItems: true);
+                    await RefreshSeriesAfterAggregationAsync(SelectedPlaylist?.Id);
                 }
                 catch (Exception ex)
                 {
                     _logger?.LogDebug(ex, "Deferred series refresh failed after channel load");
                 }
             });
+        }
+    }
+
+    private async Task RefreshSeriesAfterAggregationAsync(int? requestedPlaylistId)
+    {
+        var playlistId = requestedPlaylistId ?? SelectedPlaylist?.Id;
+        if (playlistId is not > 0)
+        {
+            return;
+        }
+
+        var isSearch = ActiveView == AppView.Search &&
+            SelectedPlaylist?.Id == playlistId &&
+            SearchDocumentCache.Normalize(SearchText).Length >= MinSearchQueryLength;
+        if (!isSearch)
+        {
+            await LoadHomeContentAsync(preserveEmptyVisibleSeriesItems: true);
+            return;
+        }
+
+        var generation = BeginIncrementalContentGeneration();
+        using var linkedCancellation = _incrementalContentCancellation.CreateLinkedTokenSource(
+            CancellationToken.None,
+            out var observedGeneration);
+        if (observedGeneration != generation)
+        {
+            return;
+        }
+
+        IsSearching = true;
+        ShowSearchEmptyState = false;
+        OnPropertyChanged(nameof(ShowSearchIdleState));
+        ResetIncrementalState();
+        _seriesFilteredSource.Clear();
+        SeriesViewItems.Clear();
+        _currentSeriesPage = 0;
+        _hasMoreSeriesItems = false;
+
+        try
+        {
+            await LoadHomeContentAsync(
+                linkedCancellation.Token,
+                generation,
+                playlistId,
+                updateVisibleSeriesItems: false,
+                preserveEmptyVisibleSeriesItems: true);
+            if (linkedCancellation.IsCancellationRequested ||
+                !IsPlaylistLoadCurrent(generation, playlistId.Value))
+            {
+                return;
+            }
+
+            await LoadMoreChannelsAsync(linkedCancellation.Token, generation);
+        }
+        catch (OperationCanceledException) when (linkedCancellation.IsCancellationRequested)
+        {
+            // A newer query, playlist, or view owns the next Search snapshot.
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogDebug(ex, "Deferred Search series refresh failed");
+            ClearSearchResultsAfterFailure();
         }
     }
 
@@ -2433,6 +2495,15 @@ public partial class MainViewModel : ObservableObject
             return;
         }
 
+        if (value != null &&
+            ActiveView == AppView.Search &&
+            !string.IsNullOrWhiteSpace(SearchText))
+        {
+            IsSearching = true;
+            ShowSearchEmptyState = false;
+            OnPropertyChanged(nameof(ShowSearchIdleState));
+        }
+
         CancelPendingFilterRequests();
         AbandonNavigationContentReset();
 
@@ -2581,6 +2652,7 @@ public partial class MainViewModel : ObservableObject
         {
             _logger?.LogDebug($"LoadChannels error: {ex}");
             StatusMessage = UserFriendlyErrorMessage.WithPrefix(_localizationService.GetString("Main.Status.LoadingChannelsFailed"), ex);
+            ClearSearchResultsAfterFailure();
         }
         finally
         {
@@ -4367,8 +4439,7 @@ public partial class MainViewModel : ObservableObject
             _logger?.LogError(ex, "Search filter failed");
             _dispatcherService.BeginInvoke(() =>
             {
-                IsSearching = false;
-                OnPropertyChanged(nameof(ShowSearchIdleState));
+                ClearSearchResultsAfterFailure();
             });
         }
     }
@@ -5071,6 +5142,7 @@ public partial class MainViewModel : ObservableObject
 
             _logger?.LogDebug($"ApplyFilters error: {ex}");
             StatusMessage = _localizationService.GetString("Main.Status.FilterError");
+            ClearSearchResultsAfterFailure();
             return false;
         }
         finally
@@ -6485,6 +6557,26 @@ public partial class MainViewModel : ObservableObject
             _visibleEpgChannelsVersion++;
             return true;
         }
+    }
+
+    private void ClearSearchResultsAfterFailure()
+    {
+        if (ActiveView != AppView.Search || string.IsNullOrWhiteSpace(SearchText))
+        {
+            return;
+        }
+
+        IsSearching = false;
+        SynchronizeSearchItems(SearchLiveChannels, Enumerable.Empty<Channel>());
+        SynchronizeSearchItems(SearchSeriesChannels, Enumerable.Empty<Series>());
+        SynchronizeSearchItems(SearchVodChannels, Enumerable.Empty<Channel>());
+        SynchronizeSearchItems(SearchSimilarLiveChannels, Enumerable.Empty<Channel>());
+        SynchronizeSearchItems(SearchSimilarSeriesChannels, Enumerable.Empty<Series>());
+        SynchronizeSearchItems(SearchSimilarVodChannels, Enumerable.Empty<Channel>());
+        SearchSuggestion = string.Empty;
+        ShowSearchSimilarSection = false;
+        ShowSearchEmptyState = true;
+        OnPropertyChanged(nameof(ShowSearchIdleState));
     }
 
     internal long VisibleEpgChannelsInvalidationGeneration

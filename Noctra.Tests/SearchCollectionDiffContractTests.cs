@@ -68,6 +68,18 @@ public sealed class SearchCollectionDiffContractTests
     }
 
     [Fact]
+    public void SearchViews_UnsubscribeWhenDataContextIsCleared()
+    {
+        var mobile = Source("Noctra.Mobile", "Views", "MobileSearchView.axaml.cs");
+        var desktop = Source("Noctra.Avalonia", "Views", "SearchView.axaml.cs");
+
+        Assert.Contains("DataContext is not MainViewModel", mobile, StringComparison.Ordinal);
+        Assert.Contains("ViewModel is not", desktop, StringComparison.Ordinal);
+        Assert.Contains("UnsubscribeFromSearchReset();", mobile, StringComparison.Ordinal);
+        Assert.Contains("UnsubscribeFromSearchReset();", desktop, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void ExplicitSearch_UsesShortCoalescingDelayInsteadOfTypingDebounce()
     {
         var source = Source("Noctra.Core", "ViewModels", "MainViewModel.cs");

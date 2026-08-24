@@ -37,9 +37,18 @@ public partial class SearchView : UserControl
 
     private void SubscribeToSearchReset()
     {
-        if (!_isAttachedToVisualTree ||
-            ViewModel is not { } viewModel ||
-            ReferenceEquals(_subscribedViewModel, viewModel))
+        if (!_isAttachedToVisualTree)
+        {
+            return;
+        }
+
+        if (ViewModel is not { } viewModel)
+        {
+            UnsubscribeFromSearchReset();
+            return;
+        }
+
+        if (ReferenceEquals(_subscribedViewModel, viewModel))
         {
             return;
         }
