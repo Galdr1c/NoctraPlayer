@@ -11,7 +11,7 @@ public partial class WatermarkViewModel : ObservableObject, IDisposable
     private readonly IDispatcherService _dispatcherService;
     
     [ObservableProperty]
-    private double _opacity = 0.24;
+    private double _opacity = 0.44;
 
     [ObservableProperty]
     private bool _isVisible;
