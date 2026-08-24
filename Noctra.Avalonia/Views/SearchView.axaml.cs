@@ -1,6 +1,9 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Threading;
+using Avalonia.VisualTree;
 using Noctra.ViewModels;
 using Noctra.Models;
 
@@ -11,25 +14,63 @@ public partial class SearchView : UserControl
     public SearchView()
     {
         InitializeComponent();
+        AttachedToVisualTree += OnAttachedToVisualTree;
+        DetachedFromVisualTree += OnDetachedFromVisualTree;
+        DataContextChanged += (_, _) => SubscribeToSearchReset();
     }
 
     private MainViewModel? ViewModel => DataContext as MainViewModel;
+    private MainViewModel? _subscribedViewModel;
+    private bool _isAttachedToVisualTree;
 
-    private async void SearchView_ScrollChanged(object? sender, ScrollChangedEventArgs e)
+    private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
-        try
+        _isAttachedToVisualTree = true;
+        SubscribeToSearchReset();
+    }
+
+    private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
+    {
+        _isAttachedToVisualTree = false;
+        UnsubscribeFromSearchReset();
+    }
+
+    private void SubscribeToSearchReset()
+    {
+        if (!_isAttachedToVisualTree ||
+            ViewModel is not { } viewModel ||
+            ReferenceEquals(_subscribedViewModel, viewModel))
         {
-            await ScrollPaging.LoadMoreIfNeededAsync(ViewModel, sender);
+            return;
         }
-        catch (Exception ex)
+
+        UnsubscribeFromSearchReset();
+        _subscribedViewModel = viewModel;
+        viewModel.SearchScrollResetRequested += OnSearchScrollResetRequested;
+    }
+
+    private void UnsubscribeFromSearchReset()
+    {
+        if (_subscribedViewModel is not null)
         {
-            if (ViewModel != null) ViewModel.StatusMessage = $"Kaydırma hatası: {ex.Message}";
+            _subscribedViewModel.SearchScrollResetRequested -= OnSearchScrollResetRequested;
+            _subscribedViewModel = null;
         }
     }
 
-    private void SearchView_PointerWheelChanged(object? sender, PointerWheelEventArgs e)
+    private void OnSearchScrollResetRequested(object? sender, EventArgs e)
     {
-        ScrollPaging.QueueLoadMoreAfterWheel(ViewModel, sender, e);
+        Dispatcher.UIThread.Post(() =>
+        {
+            var scrollViewer = SearchResultsFeed
+                .GetVisualDescendants()
+                .OfType<ScrollViewer>()
+                .FirstOrDefault();
+            if (scrollViewer is not null)
+            {
+                scrollViewer.Offset = new global::Avalonia.Vector(0, 0);
+            }
+        }, DispatcherPriority.Loaded);
     }
 
     

@@ -111,7 +111,8 @@
     <controls:MobileSectionedCardFeed Grid.Row="2"
                                       x:Name="PrimaryScrollContent"
         Margin="20,0,20,0"
-        ScrollChanged="SearchScrollViewer_ScrollChanged"
+        IsHitTestVisible="{Binding IsSearching, Converter={StaticResource InverseBoolConverter}}"
+        Opacity="{Binding IsSearching, Converter={StaticResource BoolToOpacityConverter}, ConverterParameter=0.4}"
         ItemContainerTheme="{StaticResource TransparentListBoxItemTheme}">
       <controls:MobileSectionedCardFeed.Sections>
         <controls:MobileCardSection Header="{loc:Translate History.LiveTv}"

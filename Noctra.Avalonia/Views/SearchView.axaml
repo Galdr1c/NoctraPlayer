@@ -18,7 +18,10 @@
                   Command="{Binding ApplySearchSuggestionCommand}" Classes="DesktopFilterButton" />
         </StackPanel>
       </Border>
-      <controls:DesktopSectionedCardFeed Grid.Row="2" ScrollChanged="SearchView_ScrollChanged">
+      <controls:DesktopSectionedCardFeed Grid.Row="2"
+                                         x:Name="SearchResultsFeed"
+                                         IsHitTestVisible="{Binding IsSearching, Converter={StaticResource InverseBoolConverter}}"
+                                         Opacity="{Binding IsSearching, Converter={StaticResource BoolToOpacityConverter}, ConverterParameter=0.4}">
         <controls:DesktopSectionedCardFeed.Sections>
           <controls:DesktopCardSection Header="{loc:Translate History.LiveTv}" CardKind="Live" SourceItems="{Binding SearchLiveChannels}" />
           <controls:DesktopCardSection Header="{loc:Translate History.Series}" CardKind="Series" SourceItems="{Binding SearchSeriesChannels}" />

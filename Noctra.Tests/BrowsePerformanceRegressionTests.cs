@@ -27,7 +27,7 @@ public sealed class BrowsePerformanceRegressionTests
     [Fact]
     public void SeriesAllFilter_ReusesProviderNeutralSortedCache()
     {
-        var method = MainViewModelMethod("private void UpdateSeriesViewItems()", "[RelayCommand]\r\n    private void CommitSearch");
+        var method = MainViewModelMethod("private void UpdateSeriesViewItems()", "private void CommitSearch");
 
         Assert.Contains("GetOrBuildAllSeriesSort", method, StringComparison.Ordinal);
     }

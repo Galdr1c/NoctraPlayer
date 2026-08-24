@@ -50,6 +50,7 @@ public enum DownloadSortOrder
 public partial class MainViewModel : ObservableObject
 {
     private const int IncrementalPageSize = 30;
+    private const int SearchCandidateLimitPerType = 192;
     private const double LoadMoreThreshold = 0.8;
 
     private readonly IDispatcherService _dispatcherService;
@@ -2528,15 +2529,32 @@ public partial class MainViewModel : ObservableObject
 
             ResetIncrementalState();
 
-            await Task.WhenAll(
-                LoadMoreChannelsAsync(cancellationToken, contentGeneration),
-                LoadHomeContentAsync(cancellationToken, contentGeneration, playlistId));
+            var isStableSearch = ActiveView == AppView.Search &&
+                SearchDocumentCache.Normalize(SearchText).Length >= MinSearchQueryLength;
+            if (isStableSearch)
+            {
+                // Search ranking needs the complete Series snapshot before the
+                // single bounded Live/VOD candidate load commits its result.
+                // Avoid the generic SeriesViewItems paging path entirely.
+                await LoadHomeContentAsync(
+                    cancellationToken,
+                    contentGeneration,
+                    playlistId,
+                    updateVisibleSeriesItems: false);
+                await LoadMoreChannelsAsync(cancellationToken, contentGeneration);
+            }
+            else
+            {
+                await Task.WhenAll(
+                    LoadMoreChannelsAsync(cancellationToken, contentGeneration),
+                    LoadHomeContentAsync(cancellationToken, contentGeneration, playlistId));
+            }
             if (!IsPlaylistLoadCurrent(contentGeneration, playlistId))
             {
                 return;
             }
 
-            if (ActiveView == AppView.Search && !string.IsNullOrWhiteSpace(SearchText))
+            if (!isStableSearch && ActiveView == AppView.Search && !string.IsNullOrWhiteSpace(SearchText))
             {
                 await UpdateSearchBucketsIncrementallyAsync(
                     Array.Empty<Channel>(),
@@ -3209,7 +3227,7 @@ public partial class MainViewModel : ObservableObject
     private const int DownloadsRefreshMinIntervalMs = 750;
     private const int ImmediateFilterCoalesceDelayMs = 75;
     private const int DuplicateFilterSuppressWindowMs = 350;
-    private readonly int _filterDelayMs = 300;
+    private readonly int _filterDelayMs = 75;
     private int _filterRequestVersion;
     private int _isFilterApplyRunning;
     private int _pendingFilterRequest;
@@ -3507,22 +3525,41 @@ public partial class MainViewModel : ObservableObject
         try
         {
             var hasSearch = !string.IsNullOrWhiteSpace(SearchText);
+            var isStableSearchRequest = requestView == AppView.Search && hasSearch;
             var effectiveGroup = hasSearch ? null : SelectedGroup;
             var effectiveType = hasSearch ? null : SelectedChannelType;
 
-            var page = await _contentQueryService.GetChannelPageAsync(new ContentPageRequest(
-                PlaylistId: requestPlaylist.Id,
-                Skip: requestedPage * IncrementalPageSize,
-                Take: IncrementalPageSize,
-                SearchText: SearchText,
-                Group: effectiveGroup,
-                Type: effectiveType,
-                OnlyFavorites: ShowOnlyFavorites,
-                SortOrder: requestSortOrder,
-                Cursor: requestedCursorId is > 0 &&
-                        UsesKeysetChannelPagination(requestSortOrder)
-                    ? new ContentPageCursor(requestedCursorId.Value)
-                    : null), effectiveCancellationToken);
+            List<Channel> page;
+            if (isStableSearchRequest)
+            {
+                if (requestedPage > 0)
+                {
+                    _hasMoreChannels = false;
+                    return;
+                }
+
+                page = await LoadStableSearchChannelCandidatesAsync(
+                    requestPlaylist.Id,
+                    SearchText,
+                    requestSortOrder,
+                    effectiveCancellationToken);
+            }
+            else
+            {
+                page = await _contentQueryService.GetChannelPageAsync(new ContentPageRequest(
+                    PlaylistId: requestPlaylist.Id,
+                    Skip: requestedPage * IncrementalPageSize,
+                    Take: IncrementalPageSize,
+                    SearchText: SearchText,
+                    Group: effectiveGroup,
+                    Type: effectiveType,
+                    OnlyFavorites: ShowOnlyFavorites,
+                    SortOrder: requestSortOrder,
+                    Cursor: requestedCursorId is > 0 &&
+                            UsesKeysetChannelPagination(requestSortOrder)
+                        ? new ContentPageCursor(requestedCursorId.Value)
+                        : null), effectiveCancellationToken);
+            }
 
             // If selected group returns nothing on first page, fallback to "all" to avoid false empty UI.
             if (requestedPage == 0 &&
@@ -3620,8 +3657,8 @@ public partial class MainViewModel : ObservableObject
                 }
 
                 _currentPage = requestedPage + 1;
-                _hasMoreChannels = page.Count == IncrementalPageSize;
-                if (UsesKeysetChannelPagination(requestSortOrder))
+                _hasMoreChannels = !isStableSearchRequest && page.Count == IncrementalPageSize;
+                if (!isStableSearchRequest && UsesKeysetChannelPagination(requestSortOrder))
                 {
                     _lastChannelCursorId = page
                         .Where(channel => channel.Id > 0)
@@ -3650,7 +3687,10 @@ public partial class MainViewModel : ObservableObject
                 return;
             }
 
-            QueueVisibleChannelVisualEnrichment(page);
+            if (!isStableSearchRequest)
+            {
+                QueueVisibleChannelVisualEnrichment(page);
+            }
         }
         catch (OperationCanceledException) when (effectiveCancellationToken.IsCancellationRequested)
         {
@@ -3916,6 +3956,42 @@ public partial class MainViewModel : ObservableObject
             ((ICollection<KeyValuePair<string, DateTime>>)_vodVisualNoPosterUntilUtc)
                 .Remove(entry);
         }
+    }
+
+    private async Task<List<Channel>> LoadStableSearchChannelCandidatesAsync(
+        int playlistId,
+        string? searchText,
+        ChannelSortOrder sortOrder,
+        CancellationToken cancellationToken)
+    {
+        var liveTask = _contentQueryService.GetChannelPageAsync(new ContentPageRequest(
+            PlaylistId: playlistId,
+            Skip: 0,
+            Take: SearchCandidateLimitPerType,
+            SearchText: searchText,
+            Group: null,
+            Type: ChannelType.Live,
+            OnlyFavorites: ShowOnlyFavorites,
+            SortOrder: sortOrder,
+            Cursor: null), cancellationToken);
+        var vodTask = _contentQueryService.GetChannelPageAsync(new ContentPageRequest(
+            PlaylistId: playlistId,
+            Skip: 0,
+            Take: SearchCandidateLimitPerType,
+            SearchText: searchText,
+            Group: null,
+            Type: ChannelType.VOD,
+            OnlyFavorites: ShowOnlyFavorites,
+            SortOrder: sortOrder,
+            Cursor: null), cancellationToken);
+
+        await Task.WhenAll(liveTask, vodTask);
+        var live = await liveTask;
+        var vod = await vodTask;
+        var candidates = new List<Channel>(live.Count + vod.Count);
+        candidates.AddRange(live);
+        candidates.AddRange(vod);
+        return candidates;
     }
 
     private void QueueVisibleChannelVisualEnrichment(IReadOnlyCollection<Channel> page)
@@ -4862,6 +4938,7 @@ public partial class MainViewModel : ObservableObject
         var view = default(AppView);
         var needsChannels = false;
         var needsSeries = false;
+        var isStableSearch = false;
         NavigationContentResetOwner? preparedResetOwner = null;
         BeginLoading();
 
@@ -4887,6 +4964,8 @@ public partial class MainViewModel : ObservableObject
                 view = ActiveView;
                 needsChannels = view is AppView.Home or AppView.Live or AppView.Movies or AppView.Search;
                 needsSeries = view is AppView.Home or AppView.Series or AppView.Search;
+                isStableSearch = view == AppView.Search &&
+                    SearchDocumentCache.Normalize(SearchText).Length >= MinSearchQueryLength;
                 preparedResetOwner = GetPreparedNavigationContentReset(view, request.Version);
                 if (preparedResetOwner != null)
                 {
@@ -4917,20 +4996,10 @@ public partial class MainViewModel : ObservableObject
 
             if (token.IsCancellationRequested) return false;
 
-            if (needsChannels)
-            {
-                await LoadMoreChannelsAsync(token, contentGeneration);
-            }
-            else
-            {
-            }
-
-            if (token.IsCancellationRequested) return false;
-
-            if (needsSeries)
+            if (isStableSearch)
             {
                 if (_seriesCachePlaylistId != requestedPlaylistId ||
-                    (view == AppView.Series && _allSeriesCache.Count == 0 && IsChannelLoading))
+                    (_allSeriesCache.Count == 0 && IsChannelLoading))
                 {
                     await LoadHomeContentAsync(
                         token,
@@ -4945,18 +5014,41 @@ public partial class MainViewModel : ObservableObject
                     return false;
                 }
 
-                UpdateSeriesViewItems(resetVisibleItems: false);
-                if (view == AppView.Search && !string.IsNullOrWhiteSpace(SearchText))
-                {
-                    await UpdateSearchBucketsIncrementallyAsync(
-                        Array.Empty<Channel>(),
-                        contentGeneration,
-                        requestedPlaylistId,
-                        token);
-                }
+                _seriesFilteredSource.Clear();
+                SeriesViewItems.Clear();
+                _currentSeriesPage = 0;
+                _hasMoreSeriesItems = false;
+                await LoadMoreChannelsAsync(token, contentGeneration);
             }
             else
             {
+                if (needsChannels)
+                {
+                    await LoadMoreChannelsAsync(token, contentGeneration);
+                }
+
+                if (token.IsCancellationRequested) return false;
+
+                if (needsSeries)
+                {
+                    if (_seriesCachePlaylistId != requestedPlaylistId ||
+                        (view == AppView.Series && _allSeriesCache.Count == 0 && IsChannelLoading))
+                    {
+                        await LoadHomeContentAsync(
+                            token,
+                            contentGeneration,
+                            requestedPlaylistId,
+                            updateVisibleSeriesItems: false);
+                    }
+
+                    if (token.IsCancellationRequested ||
+                        !IsPlaylistLoadCurrent(contentGeneration, requestedPlaylistId))
+                    {
+                        return false;
+                    }
+
+                    UpdateSeriesViewItems(resetVisibleItems: false);
+                }
             }
 
             // Navigation can supersede the profile's first metadata query before it commits.
@@ -9440,12 +9532,7 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void CommitSearch()
     {
-        if (!string.IsNullOrWhiteSpace(SearchQuery))
-        {
-            // Sync with global search and navigate
-            SearchText = SearchQuery;
-            Navigate(AppView.Search);
-        }
+        CommitSearchText(SearchQuery);
     }
 
     [RelayCommand]
@@ -9457,8 +9544,29 @@ public partial class MainViewModel : ObservableObject
         }
 
         SearchQuery = SearchSuggestion;
-        SearchText = SearchSuggestion;
+        CommitSearchText(SearchSuggestion);
+    }
+
+    public event EventHandler? SearchScrollResetRequested;
+
+    private void CommitSearchText(string? value)
+    {
+        var nextQuery = value?.Trim() ?? string.Empty;
+        if (nextQuery.Length == 0)
+        {
+            return;
+        }
+
+        var changed = !string.Equals(
+            SearchDocumentCache.Normalize(SearchText),
+            SearchDocumentCache.Normalize(nextQuery),
+            StringComparison.Ordinal);
+        SearchText = nextQuery;
         Navigate(AppView.Search);
+        if (changed)
+        {
+            SearchScrollResetRequested?.Invoke(this, EventArgs.Empty);
+        }
     }
 
     [RelayCommand]

@@ -29,6 +29,53 @@ public sealed class SearchCollectionDiffContractTests
         Assert.Contains("ShouldRefreshFollowingGroupHeader", desktop, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void SearchViews_DoNotTriggerGenericPagingWhileUserScrolls()
+    {
+        var mobileView = Source("Noctra.Mobile", "Views", "MobileSearchView.axaml");
+        var mobileCode = Source("Noctra.Mobile", "Views", "MobileSearchView.axaml.cs");
+        var desktopView = Source("Noctra.Avalonia", "Views", "SearchView.axaml");
+        var desktopCode = Source("Noctra.Avalonia", "Views", "SearchView.axaml.cs");
+
+        Assert.DoesNotContain("ScrollChanged=", mobileView, StringComparison.Ordinal);
+        Assert.DoesNotContain("MobileScrollPaging", mobileCode, StringComparison.Ordinal);
+        Assert.DoesNotContain("ScrollChanged=", desktopView, StringComparison.Ordinal);
+        Assert.DoesNotContain("ScrollPaging", desktopCode, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void SearchFeeds_DimAndRejectInputWhileNewQueryIsLoading()
+    {
+        var mobile = Source("Noctra.Mobile", "Views", "MobileSearchView.axaml");
+        var desktop = Source("Noctra.Avalonia", "Views", "SearchView.axaml");
+
+        Assert.Contains(
+            "IsHitTestVisible=\"{Binding IsSearching, Converter={StaticResource InverseBoolConverter}}\"",
+            mobile,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "Opacity=\"{Binding IsSearching, Converter={StaticResource BoolToOpacityConverter}, ConverterParameter=0.4}\"",
+            mobile,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "IsHitTestVisible=\"{Binding IsSearching, Converter={StaticResource InverseBoolConverter}}\"",
+            desktop,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "Opacity=\"{Binding IsSearching, Converter={StaticResource BoolToOpacityConverter}, ConverterParameter=0.4}\"",
+            desktop,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ExplicitSearch_UsesShortCoalescingDelayInsteadOfTypingDebounce()
+    {
+        var source = Source("Noctra.Core", "ViewModels", "MainViewModel.cs");
+
+        Assert.Contains("private readonly int _filterDelayMs = 75;", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("private readonly int _filterDelayMs = 300;", source, StringComparison.Ordinal);
+    }
+
     private static int Count(string source, string value)
         => source.Split(value, StringSplitOptions.None).Length - 1;
 

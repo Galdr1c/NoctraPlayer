@@ -27,76 +27,140 @@ public sealed class MainViewModelIncrementalCancellationTests
     }
 
     [Fact]
-    public async Task SearchSecondPage_EvaluatesOnlyNewChannelsAndDoesNotRescoreSeries()
+    public async Task SearchInitialLoad_UsesOneBoundedPagePerChannelTypeAndDoesNotPageAgain()
     {
-        var firstPage = Enumerable.Range(1, 30)
-            .Select(id => new Channel
-            {
-                Id = id,
-                PlaylistId = 7,
-                Name = $"Dark item {id}",
-                StreamUrl = $"https://stream.test/{id}",
-                Type = ChannelType.VOD
-            })
-            .ToList();
-        var secondPage = new List<Channel>
+        var requests = new List<ContentPageRequest>();
+        var live = new Channel
         {
-            new()
-            {
-                Id = 31,
-                PlaylistId = 7,
-                Name = "Dark item 31",
-                StreamUrl = "https://stream.test/31",
-                Type = ChannelType.VOD
-            }
+            Id = 1,
+            PlaylistId = 7,
+            Name = "Dark Live",
+            StreamUrl = "https://stream.test/live",
+            Type = ChannelType.Live
+        };
+        var vod = new Channel
+        {
+            Id = 2,
+            PlaylistId = 7,
+            Name = "Dark Movie",
+            StreamUrl = "https://stream.test/vod",
+            Type = ChannelType.VOD
         };
         var contentQuery = new Mock<IContentQueryService>();
-        contentQuery
-            .Setup(service => service.GetChannelGroupMetadataAsync(7, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((31, new List<string>(), new List<string>(), new List<string>(), new List<string>()));
-        contentQuery
-            .Setup(service => service.GetSeriesListAsync(7, It.IsAny<CancellationToken>()))
-            .ReturnsAsync([
-                new Series { Id = 100, PlaylistId = 7, Name = "Dark Series" }
-            ]);
         contentQuery
             .Setup(service => service.GetChannelPageAsync(
                 It.IsAny<ContentPageRequest>(),
                 It.IsAny<CancellationToken>()))
-            .Returns((ContentPageRequest request, CancellationToken _) => Task.FromResult(
-                request.Skip == 0 ? firstPage : request.Skip == 30 ? secondPage : new List<Channel>()));
+            .Returns((ContentPageRequest request, CancellationToken _) =>
+            {
+                lock (requests)
+                {
+                    requests.Add(request);
+                }
+
+                return Task.FromResult(request.Type switch
+                {
+                    ChannelType.Live => new List<Channel> { live },
+                    ChannelType.VOD => new List<Channel> { vod },
+                    _ => new List<Channel>()
+                });
+            });
+
+        var viewModel = CreateViewModel(contentQuery.Object);
+        viewModel.ActiveView = AppView.Search;
+        SetPrivateField(viewModel, "_suppressSelectedPlaylistChanged", true);
+        viewModel.SelectedPlaylist = new Playlist { Id = 7, Name = "Search" };
+        SetPrivateField(viewModel, "_suppressSelectedPlaylistChanged", false);
+        SetPrivateField(viewModel, "_suppressNavigationFilterRefresh", true);
+        viewModel.SearchText = "dark";
+        SetPrivateField(viewModel, "_suppressNavigationFilterRefresh", false);
+        SetPrivateField(viewModel, "_hasMoreChannels", true);
+        var generation = BeginContentGeneration(viewModel);
+
+        await viewModel.LoadMoreChannelsAsync(CancellationToken.None, generation);
+
+        Assert.Equal(2, requests.Count);
+        Assert.Equal(
+            [ChannelType.Live, ChannelType.VOD],
+            requests.Select(request => request.Type).OrderBy(type => type).ToArray());
+        Assert.All(requests, request =>
+        {
+            Assert.Equal(0, request.Skip);
+            Assert.Equal(192, request.Take);
+            Assert.NotEqual(ChannelType.Series, request.Type);
+        });
+        Assert.Contains(live, viewModel.SearchLiveChannels);
+        Assert.Contains(vod, viewModel.SearchVodChannels);
+        Assert.False(GetPrivateField<bool>(viewModel, "_hasMoreChannels"));
+        Assert.Equal(1, GetPrivateField<int>(viewModel, "_currentPage"));
+
+        await viewModel.LoadMoreChannelsAsync(CancellationToken.None, generation);
+
+        Assert.Equal(2, requests.Count);
+    }
+
+    [Fact]
+    public async Task SearchInitialFilter_RanksCompleteSeriesCacheWithoutGenericSeriesPaging()
+    {
+        var contentQuery = new Mock<IContentQueryService>();
+        contentQuery
+            .Setup(service => service.GetChannelGroupMetadataAsync(7, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((0, new List<string>(), new List<string>(), new List<string>(), new List<string>()));
+        contentQuery
+            .Setup(service => service.GetSeriesListAsync(7, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Enumerable.Range(1, 40).Select(id => new Series
+            {
+                Id = id,
+                PlaylistId = 7,
+                Name = $"Dark Series {id}"
+            }).ToList());
+        contentQuery
+            .Setup(service => service.GetChannelPageAsync(
+                It.IsAny<ContentPageRequest>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Channel>());
 
         var viewModel = CreateViewModel(contentQuery.Object);
         viewModel.ActiveView = AppView.Search;
         viewModel.SearchText = "dark";
         viewModel.SelectedPlaylist = new Playlist { Id = 7, Name = "Search" };
+
         await WaitForAsync(() =>
-            viewModel.SearchRankingChannelEvaluationCount == 30 &&
-            viewModel.SearchRankingSeriesEvaluationCount == 1 &&
-            viewModel.SearchVodChannels.Any(channel => channel.Id == 1));
-        Assert.Equal(1, viewModel.SearchRankingSeriesInputVisitCount);
-        var vodCollection = viewModel.SearchVodChannels;
-        var seriesCollection = viewModel.SearchSeriesChannels;
-        var existingVod = viewModel.SearchVodChannels.First(channel => channel.Id == 1);
-        var vodChanges = new List<System.Collections.Specialized.NotifyCollectionChangedEventArgs>();
-        var seriesChanges = new List<System.Collections.Specialized.NotifyCollectionChangedEventArgs>();
-        vodCollection.CollectionChanged += (_, change) => vodChanges.Add(change);
-        seriesCollection.CollectionChanged += (_, change) => seriesChanges.Add(change);
+            !viewModel.IsSearching &&
+            viewModel.SearchSeriesChannels.Count == 40);
 
-        await viewModel.LoadMoreChannelsAsync();
-        await WaitForAsync(() => viewModel.SearchRankingChannelEvaluationCount == 31);
+        Assert.Empty(viewModel.SeriesViewItems);
+        Assert.Empty(GetPrivateField<List<Series>>(viewModel, "_seriesFilteredSource"));
+        Assert.False(GetPrivateField<bool>(viewModel, "_hasMoreSeriesItems"));
+    }
 
-        Assert.Equal(31, viewModel.SearchRankingChannelEvaluationCount);
-        Assert.Equal(1, viewModel.SearchRankingSeriesEvaluationCount);
-        Assert.Equal(1, viewModel.SearchRankingSeriesInputVisitCount);
-        Assert.Same(vodCollection, viewModel.SearchVodChannels);
-        Assert.Same(seriesCollection, viewModel.SearchSeriesChannels);
-        Assert.Same(existingVod, viewModel.SearchVodChannels.First(channel => channel.Id == 1));
-        Assert.Contains(viewModel.SearchVodChannels, channel => channel.Id == 31);
-        Assert.DoesNotContain(
-            vodChanges,
-            change => change.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Reset);
-        Assert.Empty(seriesChanges);
+    [Fact]
+    public void CommitSearch_ChangedNormalizedQueryRequestsScrollResetOnlyOnce()
+    {
+        var viewModel = CreateViewModel(new Mock<IContentQueryService>().Object);
+        viewModel.ActiveView = AppView.Search;
+        SetPrivateField(viewModel, "_suppressNavigationFilterRefresh", true);
+        viewModel.SearchText = "dark";
+        var eventInfo = typeof(MainViewModel).GetEvent("SearchScrollResetRequested");
+
+        Assert.NotNull(eventInfo);
+
+        var resetCount = 0;
+        EventHandler handler = (_, _) => resetCount++;
+        eventInfo!.AddEventHandler(viewModel, handler);
+        viewModel.SearchQuery = "dark";
+        viewModel.CommitSearchCommand.Execute(null);
+        Assert.Equal(0, resetCount);
+
+        viewModel.SearchQuery = "breaking bad";
+        viewModel.CommitSearchCommand.Execute(null);
+        Assert.Equal(1, resetCount);
+
+        viewModel.SearchQuery = "BREAKING   BAD";
+        viewModel.CommitSearchCommand.Execute(null);
+        Assert.Equal(1, resetCount);
+        eventInfo.RemoveEventHandler(viewModel, handler);
+        SetPrivateField(viewModel, "_suppressNavigationFilterRefresh", false);
     }
 
     [Fact]
