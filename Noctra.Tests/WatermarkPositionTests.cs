@@ -1,60 +1,37 @@
-using System.Reflection;
-using Moq;
-using Noctra.Services;
-using Noctra.Services.Interfaces;
-using Noctra.ViewModels;
-
 namespace Noctra.Tests;
 
 public sealed class WatermarkPositionTests
 {
     [Fact]
-    public void WatermarkView_TranslatesTheControlInsteadOfItsClippedInnerBorder()
+    public void WatermarkViewKeepsTheBrandingPositionStable()
     {
-        var view = File.ReadAllText(Path.Combine(
-            FindRepositoryRoot(),
-            "Noctra.Avalonia",
-            "Views",
-            "WatermarkView.axaml"));
+        var view = ReadProjectFile("Noctra.Avalonia", "Views", "WatermarkView.axaml");
+        var mobileView = ReadProjectFile("Noctra.Mobile", "Views", "MobileWatermarkView.axaml");
+        var viewModel = ReadProjectFile("Noctra.Core", "ViewModels", "WatermarkViewModel.cs");
 
-        Assert.Contains("<UserControl.RenderTransform>", view, StringComparison.Ordinal);
+        Assert.DoesNotContain("<UserControl.RenderTransform>", view, StringComparison.Ordinal);
+        Assert.DoesNotContain("TranslateX", view, StringComparison.Ordinal);
+        Assert.DoesNotContain("TranslateY", view, StringComparison.Ordinal);
         Assert.Contains(
-            "<TranslateTransform X=\"{Binding TranslateX}\" Y=\"{Binding TranslateY}\"/>",
+            "FontSize=\"{DynamicResource FWatermark}\"",
             view,
             StringComparison.Ordinal);
-        Assert.DoesNotContain("<Border.RenderTransform>", view, StringComparison.Ordinal);
+        Assert.Contains(
+            "FontSize=\"{DynamicResource FWatermark}\"",
+            mobileView,
+            StringComparison.Ordinal);
+        Assert.Contains("Opacity=\"{Binding Opacity}\"", view, StringComparison.Ordinal);
+        Assert.Contains("Opacity=\"{Binding Opacity}\"", mobileView, StringComparison.Ordinal);
+        Assert.Contains("private double _opacity = 0.24", viewModel, StringComparison.Ordinal);
+        Assert.DoesNotContain("_shiftTimer", viewModel, StringComparison.Ordinal);
+        Assert.DoesNotContain("TranslateX", mobileView, StringComparison.Ordinal);
+        Assert.DoesNotContain("TranslateY", mobileView, StringComparison.Ordinal);
     }
 
-    [Fact]
-    public void ShiftPosition_NeverMovesBottomRightWatermarkOutsidePlayerBounds()
+    private static string ReadProjectFile(params string[] parts)
     {
-        var licenseService = new Mock<ILicenseService>();
-        licenseService
-            .Setup(service => service.IsFeatureAvailable(LicenseService.Features.AdFree))
-            .Returns(false);
-
-        var dispatcherService = new Mock<IDispatcherService>();
-        dispatcherService
-            .Setup(service => service.BeginInvoke(It.IsAny<Action>()))
-            .Callback<Action>(action => action());
-
-        using var viewModel = new WatermarkViewModel(
-            licenseService.Object,
-            dispatcherService.Object);
-
-        var shiftPosition = typeof(WatermarkViewModel).GetMethod(
-            "ShiftPosition",
-            BindingFlags.Instance | BindingFlags.NonPublic);
-
-        Assert.NotNull(shiftPosition);
-
-        for (var iteration = 0; iteration < 200; iteration++)
-        {
-            shiftPosition.Invoke(viewModel, null);
-
-            Assert.InRange(viewModel.TranslateX, -20, 0);
-            Assert.InRange(viewModel.TranslateY, -20, 0);
-        }
+        var path = Path.Combine(new[] { FindRepositoryRoot() }.Concat(parts).ToArray());
+        return File.ReadAllText(path);
     }
 
     private static string FindRepositoryRoot()

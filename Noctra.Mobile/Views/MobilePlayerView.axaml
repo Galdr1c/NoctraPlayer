@@ -37,7 +37,7 @@
                                  ZIndex="{x:Static controls:MobileZIndex.PlayerWatermark}"
                                  HorizontalAlignment="Right"
                                  VerticalAlignment="Bottom"
-                                 Margin="0,0,24,120"
+                                 Margin="0,0,24,72"
                                  IsHitTestVisible="False" />
     </Grid>
 

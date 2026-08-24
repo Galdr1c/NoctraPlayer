@@ -170,25 +170,19 @@ public partial class MobilePlayerView : UserControl
     public void ApplyWatermarkInsets(Thickness safeArea, bool isFullScreen, bool isPictureInPicture)
     {
         const double normalRight = 24;
-        const double normalBottom = 120;
-        const double controlsVisibleBottom = 180;
-        const double detailPanelBottom = 560;
-        const double fullScreenBottom = 72;
+        const double stableBottom = 72;
         const double pictureInPictureRight = 14;
         const double pictureInPictureBottom = 18;
 
-        var right = (isPictureInPicture ? pictureInPictureRight : normalRight) + safeArea.Right;
-        var normalPlayerBottom = _boundVm?.IsMobileDetailPanelOpen == true
-            ? detailPanelBottom
-            : _boundVm?.AreMobileControlsVisible == true
-                ? controlsVisibleBottom
-                : normalBottom;
+        // Fullscreen is the normal mobile player mode. Keep the watermark
+        // stable while controls animate; PlayerControls has the higher z-index
+        // and can cover it without making the watermark jump.
+        _ = isFullScreen;
+        var isDetailPanelOpen = _boundVm?.IsMobileDetailPanelOpen == true;
+        MobileWatermark.IsVisible = !isDetailPanelOpen;
 
-        var bottom = (isPictureInPicture
-            ? pictureInPictureBottom
-            : isFullScreen
-                ? fullScreenBottom
-                : normalPlayerBottom) + safeArea.Bottom;
+        var right = (isPictureInPicture ? pictureInPictureRight : normalRight) + safeArea.Right;
+        var bottom = (isPictureInPicture ? pictureInPictureBottom : stableBottom) + safeArea.Bottom;
 
         MobileWatermark.Margin = new Thickness(0, 0, right, bottom);
     }

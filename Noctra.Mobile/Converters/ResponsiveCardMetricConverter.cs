@@ -182,7 +182,7 @@ public sealed class ResponsiveCardMetricConverter : IValueConverter
             {
                 // Avatar picker için ayrı mod (K-3 çözümü): daha küçük kareler,
                 // telefonda 4-6 sütun sığar. Eski profileWidth paylaşımı kalktı.
-                return new CardMetricProfile(128, 192, 128, 1.0, 8, 6);
+                return new CardMetricProfile(120, 200, 170, 1.0, 32, 5);
             }
 
             if (mode.StartsWith("profile", StringComparison.OrdinalIgnoreCase))

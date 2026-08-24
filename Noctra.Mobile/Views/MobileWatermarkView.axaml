@@ -4,23 +4,18 @@
              x:Class="Noctra.Mobile.Views.MobileWatermarkView"
              x:DataType="vm:WatermarkViewModel"
              IsHitTestVisible="False">
-  <UserControl.RenderTransform>
-    <TranslateTransform X="{Binding TranslateX}" Y="{Binding TranslateY}" />
-  </UserControl.RenderTransform>
-
   <Grid IsVisible="{Binding IsVisible}">
     <Border Background="Transparent"
-            CornerRadius="8"
             Padding="6,6"
             HorizontalAlignment="Right"
             VerticalAlignment="Bottom"
             Margin="0">
       <!-- Desktop watermark preserved, with a slightly smaller mobile font so it does not dominate narrow screens. -->
       <TextBlock Text="Noctra - Free"
-                 FontWeight="Bold"
-                 FontSize="{DynamicResource FDisplay}"
+                 FontWeight="SemiBold"
+                 FontSize="{DynamicResource FWatermark}"
                  Foreground="{DynamicResource PlayerOverlayTextBrush}"
-                 Opacity="0.27" />
+                 Opacity="{Binding Opacity}" />
     </Border>
   </Grid>
 </UserControl>

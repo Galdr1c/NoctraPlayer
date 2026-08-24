@@ -19,6 +19,7 @@
   <x:Double x:Key="FDisplaySmall">28</x:Double>
   <x:Double x:Key="FDisplayLarge">36</x:Double>
   <x:Double x:Key="FDisplay">32</x:Double>
+  <x:Double x:Key="FWatermark">34</x:Double>
   <x:Double x:Key="FHeadline">22</x:Double>
   <x:Double x:Key="FTitleL">18</x:Double>
   <x:Double x:Key="FTitleM">16</x:Double>
