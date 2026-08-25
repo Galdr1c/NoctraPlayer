@@ -28,6 +28,7 @@ public sealed class KeysetPaginationContractTests
         Assert.Equal(new[] { 10 }, oldest);
         Assert.False(Noctra.Services.PlaylistService.UsesKeysetPagination(
             Noctra.Models.ChannelSortOrder.NameAsc));
+        Assert.False(cursor.AdultPhase);
     }
 
     [Fact]

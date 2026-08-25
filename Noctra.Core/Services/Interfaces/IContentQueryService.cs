@@ -2,7 +2,12 @@ using Noctra.Models;
 
 namespace Noctra.Services.Interfaces;
 
-public readonly record struct ContentPageCursor(int LastId);
+/// <summary>
+/// Keyset pagination cursor. <paramref name="AdultPhase"/> marks that every
+/// normal (non-adult) row has already been served and only adult-group rows
+/// remain, so the next page must continue inside the adult segment only.
+/// </summary>
+public readonly record struct ContentPageCursor(int LastId, bool AdultPhase = false);
 
 public sealed record ContentPageRequest(
     int PlaylistId,

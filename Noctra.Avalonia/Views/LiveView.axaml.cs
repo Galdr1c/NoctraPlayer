@@ -84,6 +84,14 @@ public partial class LiveView : UserControl
 
     private void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
+        if (!Dispatcher.UIThread.CheckAccess())
+        {
+            // MainViewModel raises PropertyChanged from background threads while
+            // the profile is loading; control access must stay on the UI thread.
+            Dispatcher.UIThread.Post(() => ViewModel_PropertyChanged(sender, e), DispatcherPriority.Background);
+            return;
+        }
+
         if (e.PropertyName is nameof(MainViewModel.SelectedSortOrder) or nameof(MainViewModel.SortOptions))
         {
             UpdateSortSelection();
@@ -122,25 +130,31 @@ public partial class LiveView : UserControl
 
     private void QueueVisibleEpgSnapshot()
     {
+        // The filter pipeline can raise FilteredChannels changes from background
+        // threads (profile load); DataContext is UI-thread only.
+        var publishGeneration = Interlocked.Increment(ref _visibleEpgPublishGeneration);
+        if (Dispatcher.UIThread.CheckAccess())
+        {
+            PublishQueuedVisibleEpgSnapshot(publishGeneration);
+            return;
+        }
+
+        Dispatcher.UIThread.Post(
+            () => PublishQueuedVisibleEpgSnapshot(publishGeneration),
+            DispatcherPriority.Background);
+    }
+
+    private void PublishQueuedVisibleEpgSnapshot(long publishGeneration)
+    {
         var viewModel = ViewModel;
-        if (viewModel is null)
+        if (viewModel is null ||
+            publishGeneration != Volatile.Read(ref _visibleEpgPublishGeneration))
         {
             return;
         }
 
         var expectedGeneration = viewModel.VisibleEpgChannelsInvalidationGeneration;
-        var publishGeneration = Interlocked.Increment(ref _visibleEpgPublishGeneration);
-        Dispatcher.UIThread.Post(
-            () =>
-            {
-                if (publishGeneration != Volatile.Read(ref _visibleEpgPublishGeneration))
-                {
-                    return;
-                }
-
-                PublishVisibleEpgSnapshot(viewModel, expectedGeneration);
-            },
-            DispatcherPriority.Background);
+        PublishVisibleEpgSnapshot(viewModel, expectedGeneration);
     }
 
     private void UpdateSortSelection()

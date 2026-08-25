@@ -1988,23 +1988,37 @@ WHERE PlaylistId = {playlistId}
         var query = BuildFilteredChannelQuery(context, playlistId, searchText, group, type, onlyFavorites, hiddenGroups);
         var prioritizeLiveForSearch = !string.IsNullOrWhiteSpace(searchText) && !type.HasValue;
         var prioritizeAdultLast = ShouldPlaceAdultGroupsLast(searchText, group);
+        // A caller-supplied set is authoritative (the ViewModel derives it from its
+        // own metadata cache); only a null set falls back to discovering groups in the DB.
+        IReadOnlyCollection<string>? callerAdultGroups = prioritizeAdultLast ? adultGroupsLast : null;
         var adultGroups = prioritizeAdultLast
-            ? adultGroupsLast is { Count: 0 }
-                ? []
-                : await GetAdultGroupsAsync(context, playlistId, cancellationToken)
+            ? callerAdultGroups ?? await GetAdultGroupsAsync(context, playlistId, cancellationToken)
             : [];
         var hasAdultGroupOrdering = adultGroups.Count > 0;
 
         if (cursor is { } keysetCursor &&
             keysetCursor.LastId > 0 &&
             UsesKeysetPagination(sortOrder) &&
-            !prioritizeLiveForSearch &&
-            !hasAdultGroupOrdering)
+            !prioritizeLiveForSearch)
         {
-            query = ApplyKeysetCursor(query, sortOrder, keysetCursor);
-            return await ApplySort(query, sortOrder)
-                .Take(Math.Max(1, take))
-                .ToListAsync(cancellationToken);
+            if (callerAdultGroups != null)
+            {
+                return await GetTwoPhaseKeysetPageAsync(
+                    query,
+                    sortOrder,
+                    keysetCursor,
+                    take,
+                    callerAdultGroups,
+                    cancellationToken);
+            }
+
+            if (!hasAdultGroupOrdering)
+            {
+                query = ApplyKeysetCursor(query, sortOrder, keysetCursor);
+                return await ApplySort(query, sortOrder)
+                    .Take(Math.Max(1, take))
+                    .ToListAsync(cancellationToken);
+            }
         }
 
         var orderedQuery = adultGroups.Count > 0
@@ -2031,6 +2045,64 @@ WHERE PlaylistId = {playlistId}
             ChannelSortOrder.OldestFirst => query.Where(channel => channel.Id > cursor.LastId),
             _ => query.Where(channel => channel.Id < cursor.LastId)
         };
+
+    /// <summary>
+    /// Keyset page for the adult-last composite order
+    /// [normal segment | adult segment] without OFFSET scanning. The normal
+    /// segment continues past the cursor until exhausted, then the page is
+    /// filled from the start of the adult segment. A cursor carrying
+    /// AdultPhase continues inside the adult segment only, so deep scroll
+    /// cost stays constant per page. Caller-provided group names are
+    /// metadata-trimmed values, hence the TRIM match on the column side.
+    /// </summary>
+    private static async Task<List<Channel>> GetTwoPhaseKeysetPageAsync(
+        IQueryable<Channel> query,
+        ChannelSortOrder sortOrder,
+        ContentPageCursor cursor,
+        int take,
+        IReadOnlyCollection<string> adultGroups,
+        CancellationToken cancellationToken)
+    {
+        var pageSize = Math.Max(1, take);
+        var trimmedAdultGroups = adultGroups
+            .Where(groupTitle => !string.IsNullOrWhiteSpace(groupTitle))
+            .Select(groupTitle => groupTitle.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        var page = new List<Channel>(pageSize);
+
+        if (!cursor.AdultPhase)
+        {
+            var normalSegment = trimmedAdultGroups.Length == 0
+                ? query
+                : ApplyKeysetCursor(query, sortOrder, cursor).Where(channel =>
+                    channel.GroupTitle == null ||
+                    !trimmedAdultGroups.Contains(channel.GroupTitle.Trim()));
+            page.AddRange(await ApplySort(normalSegment, sortOrder)
+                .Take(pageSize)
+                .ToListAsync(cancellationToken));
+        }
+
+        var remaining = pageSize - page.Count;
+        if (remaining <= 0 || trimmedAdultGroups.Length == 0)
+        {
+            return page;
+        }
+
+        var adultSegment = query.Where(channel =>
+            channel.GroupTitle != null &&
+            trimmedAdultGroups.Contains(channel.GroupTitle.Trim()));
+        if (cursor.AdultPhase)
+        {
+            adultSegment = ApplyKeysetCursor(adultSegment, sortOrder, cursor);
+        }
+
+        page.AddRange(await ApplySort(adultSegment, sortOrder)
+            .Take(remaining)
+            .ToListAsync(cancellationToken));
+
+        return page;
+    }
 
     public async Task<List<string>> GetGroupsAsync(int playlistId)
     {
@@ -2202,9 +2274,13 @@ WHERE PlaylistId = {playlistId}
             return ApplySort(query, sortOrder);
         }
 
-        var adultGroupList = adultGroups.ToList();
+        var adultGroupList = adultGroups
+            .Where(groupTitle => !string.IsNullOrWhiteSpace(groupTitle))
+            .Select(groupTitle => groupTitle.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
         var adultLast = query.OrderBy(channel =>
-            channel.GroupTitle != null && adultGroupList.Contains(channel.GroupTitle));
+            channel.GroupTitle != null && adultGroupList.Contains(channel.GroupTitle.Trim()));
 
         return sortOrder switch
         {

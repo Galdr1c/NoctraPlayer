@@ -183,6 +183,8 @@ namespace Noctra.Tests
                 $"https://provider.test/adult-last/{sortOrder}",
                 channels);
             var expectedNames = BuildExpectedAdultLastNames(channels, sortOrder);
+            // Metadata-cache casing (Trim()med originals of the raw DB values).
+            string[] adultGroups = ["FOR ADULTS", "para adultos"];
 
             var firstPage = await service.GetChannelsFilteredPageAsync(
                 playlist.Id,
@@ -190,7 +192,7 @@ namespace Noctra.Tests
                 take: 2,
                 type: ChannelType.VOD,
                 sortOrder: sortOrder,
-                adultGroupsLast: ["For Adults", "Para Adultos"]);
+                adultGroupsLast: adultGroups);
             var secondPage = await service.GetChannelsFilteredPageAsync(
                 playlist.Id,
                 skip: 2,
@@ -198,7 +200,7 @@ namespace Noctra.Tests
                 type: ChannelType.VOD,
                 sortOrder: sortOrder,
                 cursor: new ContentPageCursor(firstPage[^1].Id),
-                adultGroupsLast: ["For Adults", "Para Adultos"]);
+                adultGroupsLast: adultGroups);
 
             Assert.Equal(2, firstPage.Count);
             Assert.All(firstPage, channel => Assert.StartsWith("Normal", channel.GroupTitle));
@@ -232,6 +234,89 @@ namespace Noctra.Tests
                 sortOrder: ChannelSortOrder.NameAsc);
 
             Assert.Equal(new[] { "Alpha", "Zulu" }, page.Select(channel => channel.Name));
+        }
+
+        [Theory]
+        [InlineData(ChannelSortOrder.NewestFirst)]
+        [InlineData(ChannelSortOrder.OldestFirst)]
+        public async Task GetChannelsFilteredPageAsync_TwoPhaseKeysetCrossesAdultBoundaryWithoutGapsOrDupes(
+            ChannelSortOrder sortOrder)
+        {
+            var service = CreateService();
+            var playlist = await service.AddFromChannelsAsync(
+                $"Two-phase {sortOrder}",
+                $"https://provider.test/two-phase/{sortOrder}",
+                new[]
+                {
+                    new Channel { Name = "N1", StreamUrl = "https://provider.test/n1", GroupTitle = "News", Type = ChannelType.VOD },
+                    new Channel { Name = "N2", StreamUrl = "https://provider.test/n2", GroupTitle = "Sports", Type = ChannelType.VOD },
+                    new Channel { Name = "N3", StreamUrl = "https://provider.test/n3", GroupTitle = "News", Type = ChannelType.VOD },
+                    // Spaced raw value pins the TRIM match against metadata-trimmed caller names.
+                    new Channel { Name = "A1", StreamUrl = "https://provider.test/a1", GroupTitle = " FOR ADULTS ", Type = ChannelType.VOD },
+                    new Channel { Name = "A2", StreamUrl = "https://provider.test/a2", GroupTitle = "para adultos", Type = ChannelType.VOD },
+                    new Channel { Name = "A3", StreamUrl = "https://provider.test/a3", GroupTitle = " FOR ADULTS ", Type = ChannelType.VOD }
+                });
+            // Names mirror what GetChannelGroupMetadataAsync feeds the ViewModel:
+            // Trim()med originals, so the SQL IN match stays byte-exact like production.
+            string[] adultGroups = ["FOR ADULTS", "para adultos"];
+
+            var firstPage = await service.GetChannelsFilteredPageAsync(
+                playlist.Id,
+                skip: 0,
+                take: 2,
+                type: ChannelType.VOD,
+                sortOrder: sortOrder,
+                adultGroupsLast: adultGroups);
+            var secondPage = await service.GetChannelsFilteredPageAsync(
+                playlist.Id,
+                skip: 2,
+                take: 2,
+                type: ChannelType.VOD,
+                sortOrder: sortOrder,
+                cursor: new ContentPageCursor(firstPage[^1].Id),
+                adultGroupsLast: adultGroups);
+            Assert.True(secondPage.Count < 2 || AdultCategoryClassifier.IsAdultCategory(secondPage[^1].GroupTitle),
+                "boundary page must end inside the adult segment");
+            var thirdPage = await service.GetChannelsFilteredPageAsync(
+                playlist.Id,
+                skip: 4,
+                take: 2,
+                type: ChannelType.VOD,
+                sortOrder: sortOrder,
+                cursor: new ContentPageCursor(secondPage[^1].Id, AdultPhase: true),
+                adultGroupsLast: adultGroups);
+
+            var expected = sortOrder == ChannelSortOrder.OldestFirst
+                ? new[] { "N1", "N2", "N3", "A1", "A2", "A3" }
+                : new[] { "N3", "N2", "N1", "A3", "A2", "A1" };
+            var combined = firstPage.Concat(secondPage).Concat(thirdPage).Select(channel => channel.Name).ToArray();
+            Assert.Equal(expected, combined);
+        }
+
+        [Fact]
+        public async Task GetChannelsFilteredPageAsync_CallerSuppliedAdultGroupsOverrideDbDiscovery()
+        {
+            var service = CreateService();
+            var playlist = await service.AddFromChannelsAsync(
+                "Caller authority",
+                "https://provider.test/caller-authority",
+                new[]
+                {
+                    // Classifier would flag "XXX Zone"; the caller deliberately does not include it.
+                    new Channel { Name = "X1", StreamUrl = "https://provider.test/x1", GroupTitle = "XXX Zone", Type = ChannelType.VOD },
+                    new Channel { Name = "N1", StreamUrl = "https://provider.test/n1", GroupTitle = "News", Type = ChannelType.VOD },
+                    new Channel { Name = "N2", StreamUrl = "https://provider.test/n2", GroupTitle = "News", Type = ChannelType.VOD }
+                });
+
+            var page = await service.GetChannelsFilteredPageAsync(
+                playlist.Id,
+                skip: 0,
+                take: 10,
+                type: ChannelType.VOD,
+                sortOrder: ChannelSortOrder.NewestFirst,
+                adultGroupsLast: ["News"]);
+
+            Assert.Equal(new[] { "X1", "N2", "N1" }, page.Select(channel => channel.Name));
         }
 
         [Fact]

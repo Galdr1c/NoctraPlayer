@@ -1510,22 +1510,41 @@ public partial class MainViewModel : ObservableObject
 
     private void ClearProfileState()
     {
+        CancelPendingFilterRequests();
         CancelSeriesDetailLoad();
         ClearActiveImportJobStatus();
 
-        // Reset selections and filters
-        SelectedPlaylist = null;
-        SelectedChannel = null;
-        SelectedSeries = null;
-        SelectedGroup = null;
-        IsSeriesDetailVisible = false;
-        SearchText = string.Empty;
-        SearchQuery = string.Empty;
-        SelectedSortOrder = ChannelSortOrder.NewestFirst;
+        // Reset selections and filters. Observable writes below each have change
+        // handlers that would schedule filter pipelines; profile reset must stay
+        // atomic, so every filter side effect is suppressed for the duration.
+        // Cleanup owned by the SelectedPlaylist=null transition still runs because
+        // OnSelectedPlaylistChanged is gated by _suppressSelectedPlaylistChanged,
+        // not by the filter flags.
+        var previousSuppressFilterRefresh = _suppressFilterRefresh;
+        var previousSuppressNavigationFilterRefresh = _suppressNavigationFilterRefresh;
+        _suppressFilterRefresh = true;
+        _suppressNavigationFilterRefresh = true;
+        try
+        {
+            SelectedPlaylist = null;
+            SelectedChannel = null;
+            SelectedSeries = null;
+            SelectedGroup = null;
+            IsSeriesDetailVisible = false;
+            SearchText = string.Empty;
+            SearchQuery = string.Empty;
+            SelectedSortOrder = ChannelSortOrder.NewestFirst;
+        }
+        finally
+        {
+            _suppressFilterRefresh = previousSuppressFilterRefresh;
+            _suppressNavigationFilterRefresh = previousSuppressNavigationFilterRefresh;
+        }
 
         // Reset pagination and internal caches
         _currentPage = 0;
         _lastChannelCursorId = null;
+        _lastChannelCursorAdultPhase = false;
         _hasMoreChannels = false;
         _isLoadingMoreChannels = false;
         _currentSeriesPage = 0;
@@ -1606,6 +1625,7 @@ public partial class MainViewModel : ObservableObject
         // Reset pagination and internal caches
         _currentPage = 0;
         _lastChannelCursorId = null;
+        _lastChannelCursorAdultPhase = false;
         _hasMoreChannels = false;
         _isLoadingMoreChannels = false;
         _currentSeriesPage = 0;
@@ -3316,6 +3336,7 @@ public partial class MainViewModel : ObservableObject
     private DateTime _lastCompletedFilterUtc;
     private int _currentPage;
     private int? _lastChannelCursorId;
+    private bool _lastChannelCursorAdultPhase;
     private bool _hasMoreChannels;
     private bool _isLoadingMoreChannels;
     private int _currentSeriesPage;
@@ -3504,6 +3525,7 @@ public partial class MainViewModel : ObservableObject
     {
         _currentPage = 0;
         _lastChannelCursorId = null;
+        _lastChannelCursorAdultPhase = false;
         _hasMoreChannels = true;
         _isLoadingMoreChannels = false;
         if (ReferenceEquals(Channels, FilteredChannels))
@@ -3654,7 +3676,7 @@ public partial class MainViewModel : ObservableObject
                     SortOrder: requestSortOrder,
                     Cursor: requestedCursorId is > 0 &&
                             UsesKeysetChannelPagination(requestSortOrder)
-                        ? new ContentPageCursor(requestedCursorId.Value)
+                        ? new ContentPageCursor(requestedCursorId.Value, _lastChannelCursorAdultPhase)
                         : null,
                     AdultGroupsLast: adultGroupsLast), effectiveCancellationToken);
             }
@@ -3763,6 +3785,12 @@ public partial class MainViewModel : ObservableObject
                         .Where(channel => channel.Id > 0)
                         .Select(channel => (int?)channel.Id)
                         .LastOrDefault();
+                    // The next keyset request continues inside the adult segment only
+                    // when this page already reached it (its last row is adult).
+                    var cursorRow = page.Count > 0 ? page[^1] : null;
+                    _lastChannelCursorAdultPhase = knownAdultGroups is { Length: > 0 } &&
+                        cursorRow?.GroupTitle != null &&
+                        knownAdultGroups.Contains(cursorRow.GroupTitle);
                 }
                 FilteredChannels.AddRange(page);
                 if (!ReferenceEquals(Channels, FilteredChannels))
@@ -4856,6 +4884,12 @@ public partial class MainViewModel : ObservableObject
     partial void OnSelectedSortOrderChanged(ChannelSortOrder value)
     {
         ClearVisibleEpgChannels();
+
+        if (_suppressFilterRefresh || _suppressNavigationFilterRefresh)
+        {
+            return;
+        }
+
         ScheduleImmediateFilter();
     }
 
@@ -5171,9 +5205,30 @@ public partial class MainViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            if (ex is OperationCanceledException) return false;
+            if (ex is OperationCanceledException ||
+                request.Token.IsCancellationRequested ||
+                !ReferenceEquals(Volatile.Read(ref _activeFilterRequest), request))
+            {
+                // Superseded/cancelled requests belong to state the user no longer
+                // asked for; their failures must never surface as a filter error.
+                return false;
+            }
 
-            _logger?.LogDebug($"ApplyFilters error: {ex}");
+            _logger?.LogWarning($"ApplyFilters error: {ex}");
+            try
+            {
+                Directory.CreateDirectory(Noctra.Core.Services.AppPaths.LogsDirectory);
+                var line = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] ApplyFilters error{Environment.NewLine}" +
+                           $"{ex}{Environment.NewLine}{Environment.NewLine}";
+                File.AppendAllText(
+                    Path.Combine(Noctra.Core.Services.AppPaths.LogsDirectory, "filter_errors.log"),
+                    line);
+            }
+            catch
+            {
+                // Diagnostics must never mask the original failure.
+            }
+
             StatusMessage = _localizationService.GetString("Main.Status.FilterError");
             ClearSearchResultsAfterFailure();
             return false;
