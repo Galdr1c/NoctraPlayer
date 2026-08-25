@@ -29,14 +29,17 @@
       * NU1608 comes from Avalonia.Android's AppCompat -> Emoji2 -> Lifecycle
         Process 2.10 binding while another AndroidX dependency resolves Runtime
         2.11. Pinning either side would downgrade a larger AndroidX graph.
-      * XA0141 is emitted for the prebuilt FFmpeg JNI binaries in libs/ffmpeg;
-        replacing them requires a rebuilt 16-KB-page-aligned native artifact.
-        Keep the diagnostics documented until that upstream binary is replaced.
       * BG8605/BG8606 are binding-parser diagnostics for the extension's
         version-specific generic Java base type; the jar is packaged and loaded
         reflectively by Media3, so no generated C# binding is consumed.
+
+      XA0141 (16-KB ELF page alignment) was previously suppressed here because
+      libs/ffmpeg/*/libffmpegJNI.so were built with 4-KB alignment. The binaries
+      were rebuilt from media3 decoder_ffmpeg @1.4.1 + FFmpeg n6.0.1 with
+      -Wl,-z,max-page-size=16384, so the suppression is no longer needed — do
+      not re-add it; fix the native artifact instead if XA0141 reappears.
     -->
-    <NoWarn>$(NoWarn);NU1608;XA0141;BG8605;BG8606</NoWarn>
+    <NoWarn>$(NoWarn);NU1608;BG8605;BG8606</NoWarn>
 
     <!--
       AdMob production identifiers. Defaults are the production values; override
