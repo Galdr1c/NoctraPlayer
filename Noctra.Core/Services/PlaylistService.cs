@@ -2001,7 +2001,9 @@ WHERE PlaylistId = {playlistId}
             UsesKeysetPagination(sortOrder) &&
             !prioritizeLiveForSearch)
         {
-            if (callerAdultGroups != null)
+            // An explicitly empty caller set means "no adult groups": it must take
+            // the plain keyset path, never the two-phase helper.
+            if (callerAdultGroups is { Count: > 0 })
             {
                 return await GetTwoPhaseKeysetPageAsync(
                     query,
@@ -2073,11 +2075,14 @@ WHERE PlaylistId = {playlistId}
 
         if (!cursor.AdultPhase)
         {
-            var normalSegment = trimmedAdultGroups.Length == 0
-                ? query
-                : ApplyKeysetCursor(query, sortOrder, cursor).Where(channel =>
+            var normalSegment = ApplyKeysetCursor(query, sortOrder, cursor);
+            if (trimmedAdultGroups.Length > 0)
+            {
+                normalSegment = normalSegment.Where(channel =>
                     channel.GroupTitle == null ||
                     !trimmedAdultGroups.Contains(channel.GroupTitle.Trim()));
+            }
+
             page.AddRange(await ApplySort(normalSegment, sortOrder)
                 .Take(pageSize)
                 .ToListAsync(cancellationToken));

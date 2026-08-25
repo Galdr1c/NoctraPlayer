@@ -3565,6 +3565,23 @@ public partial class MainViewModel : ObservableObject
     private static bool UsesKeysetChannelPagination(ChannelSortOrder sortOrder)
         => sortOrder is ChannelSortOrder.NewestFirst or ChannelSortOrder.OldestFirst;
 
+    /// <summary>
+    /// Decides whether the next keyset request must continue inside the adult
+    /// segment. Metadata group names are trimmed originals while a row's raw
+    /// GroupTitle can carry padding, so the comparison trims both sides.
+    /// Deliberately case-sensitive (ordinal): the service matches groups with a
+    /// binary SQL IN, and a case-insensitive phase here would skip rows there.
+    /// </summary>
+    internal static bool ComputeAdultSegmentCursorPhase(string[]? knownAdultGroups, Channel? cursorRow)
+        => knownAdultGroups is { Length: > 0 } &&
+           cursorRow?.GroupTitle is { } groupTitle &&
+           Array.Exists(
+               knownAdultGroups,
+               adultGroup => string.Equals(
+                   adultGroup.Trim(),
+                   groupTitle.Trim(),
+                   StringComparison.Ordinal));
+
     private void ResetSeriesIncrementalState()
     {
         _currentSeriesPage = 0;
@@ -3788,9 +3805,7 @@ public partial class MainViewModel : ObservableObject
                     // The next keyset request continues inside the adult segment only
                     // when this page already reached it (its last row is adult).
                     var cursorRow = page.Count > 0 ? page[^1] : null;
-                    _lastChannelCursorAdultPhase = knownAdultGroups is { Length: > 0 } &&
-                        cursorRow?.GroupTitle != null &&
-                        knownAdultGroups.Contains(cursorRow.GroupTitle);
+                    _lastChannelCursorAdultPhase = ComputeAdultSegmentCursorPhase(knownAdultGroups, cursorRow);
                 }
                 FilteredChannels.AddRange(page);
                 if (!ReferenceEquals(Channels, FilteredChannels))

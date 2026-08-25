@@ -18,6 +18,34 @@ public sealed class MainViewModelAdultCategoryOrderingTests
         Assert.NotNull(typeof(ContentPageRequest).GetProperty("AdultGroupsLast"));
     }
 
+    [Theory]
+    [InlineData(" FOR ADULTS ", true)]
+    [InlineData("FOR ADULTS", true)]
+    [InlineData("\tFOR ADULTS ", true)]
+    [InlineData("for adults", false)]
+    [InlineData("News", false)]
+    [InlineData(null, false)]
+    public void ComputeAdultSegmentCursorPhase_TrimsRawGroupTitleAgainstMetadataNames(
+        string? rawGroupTitle,
+        bool expectedPhase)
+    {
+        var cursorRow = new Channel { GroupTitle = rawGroupTitle };
+
+        var phase = MainViewModel.ComputeAdultSegmentCursorPhase(["FOR ADULTS"], cursorRow);
+
+        Assert.Equal(expectedPhase, phase);
+    }
+
+    [Fact]
+    public void ComputeAdultSegmentCursorPhase_RequiresKnownGroupsAndCursorRow()
+    {
+        var adultRow = new Channel { GroupTitle = " FOR ADULTS " };
+
+        Assert.False(MainViewModel.ComputeAdultSegmentCursorPhase(null, adultRow));
+        Assert.False(MainViewModel.ComputeAdultSegmentCursorPhase([], adultRow));
+        Assert.False(MainViewModel.ComputeAdultSegmentCursorPhase(["FOR ADULTS"], null));
+    }
+
     [Fact]
     public void CategoryOrder_KeepsPreferredNormalGroupsFirstAndAdultGroupsLast()
     {

@@ -319,6 +319,61 @@ namespace Noctra.Tests
             Assert.Equal(new[] { "X1", "N2", "N1" }, page.Select(channel => channel.Name));
         }
 
+        [Theory]
+        [InlineData(ChannelSortOrder.NewestFirst)]
+        [InlineData(ChannelSortOrder.OldestFirst)]
+        public async Task GetChannelsFilteredPageAsync_EmptyAuthoritativeAdultSetWithCursor_PagesWithoutDuplication(
+            ChannelSortOrder sortOrder)
+        {
+            var service = CreateService();
+            var channels = Enumerable.Range(1, 65)
+                .Select(index => new Channel
+                {
+                    Name = $"VOD {index:000}",
+                    StreamUrl = $"https://provider.test/no-adult/{index}",
+                    Type = ChannelType.VOD
+                })
+                .ToArray();
+            var playlist = await service.AddFromChannelsAsync(
+                $"No adult paging {sortOrder}",
+                $"https://provider.test/no-adult/{sortOrder}",
+                channels);
+
+            // Explicitly empty authoritative set: must behave as plain keyset.
+            var firstPage = await service.GetChannelsFilteredPageAsync(
+                playlist.Id,
+                skip: 0,
+                take: 30,
+                type: ChannelType.VOD,
+                sortOrder: sortOrder,
+                adultGroupsLast: []);
+            var secondPage = await service.GetChannelsFilteredPageAsync(
+                playlist.Id,
+                skip: 30,
+                take: 30,
+                type: ChannelType.VOD,
+                sortOrder: sortOrder,
+                cursor: new ContentPageCursor(firstPage[^1].Id),
+                adultGroupsLast: []);
+            var thirdPage = await service.GetChannelsFilteredPageAsync(
+                playlist.Id,
+                skip: 60,
+                take: 30,
+                type: ChannelType.VOD,
+                sortOrder: sortOrder,
+                cursor: new ContentPageCursor(secondPage[^1].Id),
+                adultGroupsLast: []);
+
+            var expectedIds = sortOrder == ChannelSortOrder.OldestFirst
+                ? Enumerable.Range(1, 65).ToArray()
+                : Enumerable.Range(1, 65).Reverse().ToArray();
+            var combinedIds = firstPage.Concat(secondPage).Concat(thirdPage)
+                .Select(channel => channel.Id)
+                .ToArray();
+            Assert.Equal(expectedIds, combinedIds);
+            Assert.Equal(65, combinedIds.Distinct().Count());
+        }
+
         [Fact]
         public async Task GetChannelGroupMetadataAsync_WhenCancelled_StopsAtSqliteBoundary()
         {
