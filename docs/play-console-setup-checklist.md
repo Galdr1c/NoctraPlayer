@@ -71,6 +71,37 @@ Farklıysa deploy komutundaki `NOCTRA_SUBSCRIPTION_PRODUCT_IDS` /
 
 ---
 
+## 5. Upload key ve imzalı AAB (Play'e yükleme için)
+
+Play Console'a yüklenen her AAB **kendi upload key'inizle imzalı** olmalıdır.
+Bu, AdMob/Huawei ID'lerinden bağımsız bir zorunluluktur: "All uploaded bundles
+must be signed" hatası imza eksikliği anlamına gelir.
+
+Tek seferlik:
+
+```powershell
+# 1. Upload keystore oluştur (şifreleri sorar)
+.\build\package-play.ps1 -CreateKeystore -KeystorePath C:\Keys\noctra-upload.keystore
+
+# 2. Keystore'u İKİ ayrı güvenli yerde yedekle. Kaybedilirse uygulama
+#    aynı sertifika ile güncellenemez.
+```
+
+Her release'te:
+
+```powershell
+$env:NOCTRA_ANDROID_STORE_PASS = '...'
+$env:NOCTRA_ANDROID_KEY_PASS   = '...'
+.\build\package-play.ps1
+```
+
+Script `artifacts\play\*.aab` altına imzalı bundle'ı koyar ve `jarsigner`
+ile doğrular. Şifreler repo'da hiçbir dosyaya yazılmaz; istenirse
+`build/android-signing.local.env` (gitignored) içine KEY=VALUE olarak
+konabilir. Ayrıntılar: `build/package-play.ps1` açıklama başlığı.
+
+---
+
 ## Sonraki adım
 
 ```

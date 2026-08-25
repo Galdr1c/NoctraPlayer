@@ -18,6 +18,11 @@ secrets.json
 # Play Console service account (asla commit edilmemeli)
 service-account.json
 noctra-service-account.json
+
+# Android upload key + signing secrets (asla commit edilmemeli)
+*.keystore
+*.jks
+build/android-signing.local.env
 *.crt
 *.cer
 Noctra.Mobile/Services/MobileAppConfig.cs
