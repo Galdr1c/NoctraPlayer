@@ -2,6 +2,10 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net10.0-android36.0</TargetFramework>
+    <!-- Deliberately 28 (Android 9): DECISION AFTER MIN-SDK REVIEW (Aug 2026).
+         README says "Android 12+" — that text is aspirational, not the build
+         reality; Play WILL serve this app to untested Android 9-11 devices.
+         Keep in sync with tools/android/build-ffmpeg-16k.sh. -->
     <SupportedOSPlatformVersion>28</SupportedOSPlatformVersion>
     <Nullable>enable</Nullable>
     <ApplicationId>studio.kynora.noctra</ApplicationId>
