@@ -1,7 +1,13 @@
 <Project>
 
   <!-- ===== Noctra Version & Metadata Defaults ===== -->
-  <!-- These can be overridden via CLI: dotnet build -p:NoctraVersionPrefix=1.2.0 -->
+  <!-- These can be overridden via CLI: dotnet build -p:NoctraVersionPrefix=1.2.0
+
+       IMPORTANT: NoctraVersionPrefix/NoctraPackageVersion are DESKTOP-ONLY.
+       Only Noctra.Avalonia consumes them. The Android app (Noctra.Android)
+       intentionally manages its own ApplicationDisplayVersion/ApplicationVersion
+       (currently 1.0.0 / 1) and must NOT be wired to these properties —
+       see the version note in Noctra.Android.csproj. -->
   <PropertyGroup>
     <AvaloniaVersion>12.1.0</AvaloniaVersion>
     <NoctraVersionPrefix Condition="'$(NoctraVersionPrefix)' == ''">1.2.0</NoctraVersionPrefix>

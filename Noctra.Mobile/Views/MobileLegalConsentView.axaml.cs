@@ -130,7 +130,7 @@ public partial class MobileLegalConsentView : UserControl
         {
             LegalDocumentHost.ShowDocument(
                 _localizationService.GetString("GlobalSettings.Privacy.Title"),
-                _localizationService.GetString("GlobalSettings.Privacy.Message.Current"));
+                _localizationService.GetString("GlobalSettings.Privacy.Message.Mobile"));
         }
     }
 
@@ -141,7 +141,7 @@ public partial class MobileLegalConsentView : UserControl
         {
             LegalDocumentHost.ShowDocument(
                 _localizationService.GetString("GlobalSettings.Terms.Title"),
-                _localizationService.GetString("GlobalSettings.Terms.Message.Current"));
+                _localizationService.GetString("GlobalSettings.Terms.Message.Mobile"));
         }
     }
 }

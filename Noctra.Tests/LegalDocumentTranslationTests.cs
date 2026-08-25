@@ -57,6 +57,74 @@ public class LegalDocumentTranslationTests
         }
     }
 
+    private static readonly IReadOnlyDictionary<string, MobileLegalExpectations> MobileExpectations =
+        new Dictionary<string, MobileLegalExpectations>
+        {
+            ["en-US.json"] = new(
+                "Last updated: August 26, 2026",
+                ["Advertising in the Free Version", "Consent", "Provider Connections", "Metadata (TMDB)", "Purchases, Subscriptions, and Backend Verification", "Data Sharing"],
+                ["Free and Premium Features", "Advertising Consent", "Google Play Purchases and Subscriptions"],
+                ["watch history", "purchase token"]),
+            ["tr-TR.json"] = new(
+                "Son güncelleme: 26 Ağustos 2026",
+                ["Ücretsiz Sürümde Reklamlar", "Onam", "Sağlayıcı Bağlantıları", "Meta Veri (TMDB)", "Satın Alımlar, Abonelikler ve Backend Doğrulaması", "Veri Paylaşımı"],
+                ["Free ve Premium Özellikler", "Reklam Onamı", "Google Play Satın Alımları ve Abonelikler"],
+                ["izleme geçmişi", "satın alma jetonu"]),
+            ["de-DE.json"] = new(
+                "Letzte Aktualisierung: 26. August 2026",
+                ["Werbung in der kostenlosen Version", "Einwilligung", "Anbieterverbindungen", "Metadaten (TMDB)", "Käufe, Abos und Backend-Verifizierung", "Datenweitergabe"],
+                ["Free- und Premium-Funktionen", "Werbeeinwilligung", "Google Play-Käufe und Abos"],
+                ["Wiedergabeverlauf", "Kauf-Token"]),
+            ["fr-FR.json"] = new(
+                "Dernière mise à jour : 26 août 2026",
+                ["Publicité dans la version gratuite", "Consentement", "Connexions aux fournisseurs", "Métadonnées (TMDB)", "Achats, abonnements et vérification backend", "Partage des données"],
+                ["Fonctions Free et Premium", "Consentement publicitaire", "Achats et abonnements Google Play"],
+                ["historique de visionnage", "jeton d'achat"]),
+            ["es-ES.json"] = new(
+                "Última actualización: 26 de agosto de 2026",
+                ["Publicidad en la versión gratuita", "Consentimiento", "Conexiones del proveedor", "Metadatos (TMDB)", "Compras, suscripciones y verificación backend", "Compartición de datos"],
+                ["Funciones Free y Premium", "Consentimiento publicitario", "Compras y suscripciones Google Play"],
+                ["historial de visualización", "token de compra"])
+        };
+
+    [Fact]
+    public void MobileLegalDocument_DeclaresAndroidAdBillingAndNetworkPractices()
+    {
+        foreach (var (fileName, expected) in MobileExpectations)
+        {
+            using var document = JsonDocument.Parse(File.ReadAllText(FindTranslation(fileName)));
+            var root = document.RootElement;
+            var privacy = root.GetProperty("GlobalSettings.Privacy.Message.Mobile").GetString()!;
+            var terms = root.GetProperty("GlobalSettings.Terms.Message.Mobile").GetString()!;
+
+            foreach (var text in new[] { privacy, terms })
+            {
+                Assert.Contains(expected.Revision, text, StringComparison.Ordinal);
+                Assert.Contains("kynora.studio@gmail.com", text, StringComparison.Ordinal);
+                Assert.Contains("Google AdMob", text, StringComparison.Ordinal);
+                Assert.Contains("Huawei Petal Ads", text, StringComparison.Ordinal);
+            }
+
+            foreach (var heading in expected.PrivacyHeadings)
+            {
+                Assert.Contains(heading, privacy, StringComparison.Ordinal);
+            }
+
+            foreach (var heading in expected.TermsHeadings)
+            {
+                Assert.Contains(heading, terms, StringComparison.Ordinal);
+            }
+
+            Assert.Contains("Google Mobile Ads SDK", privacy, StringComparison.Ordinal);
+            Assert.Contains("User Messaging Platform (UMP)", privacy, StringComparison.Ordinal);
+            Assert.Contains("Android Keystore", privacy, StringComparison.Ordinal);
+            Assert.Contains("http://", privacy, StringComparison.Ordinal);
+
+            Assert.Contains(expected.PrivacyMarkers[0], privacy, StringComparison.Ordinal);
+            Assert.Contains(expected.PrivacyMarkers[1], privacy, StringComparison.Ordinal);
+        }
+    }
+
     private static string FindTranslation(string fileName)
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
@@ -78,4 +146,10 @@ public class LegalDocumentTranslationTests
         string Revision,
         IReadOnlyList<string> PrivacyHeadings,
         IReadOnlyList<string> TermsHeadings);
+
+    private sealed record MobileLegalExpectations(
+        string Revision,
+        IReadOnlyList<string> PrivacyHeadings,
+        IReadOnlyList<string> TermsHeadings,
+        IReadOnlyList<string> PrivacyMarkers);
 }

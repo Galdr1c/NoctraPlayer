@@ -200,14 +200,14 @@ public partial class MobileSettingsView : UserControl, IMobileNavigationStatePar
     {
         LegalDocumentHost.ShowDocument(
             LocalizationSource.Instance["GlobalSettings.Privacy.Title"],
-            LocalizationSource.Instance["GlobalSettings.Privacy.Message.Current"]);
+            LocalizationSource.Instance["GlobalSettings.Privacy.Message.Mobile"]);
     }
 
     private void Terms_Click(object? sender, RoutedEventArgs e)
     {
         LegalDocumentHost.ShowDocument(
             LocalizationSource.Instance["GlobalSettings.Terms.Title"],
-            LocalizationSource.Instance["GlobalSettings.Terms.Message.Current"]);
+            LocalizationSource.Instance["GlobalSettings.Terms.Message.Mobile"]);
     }
 
     private void ShowUpsell_Click(object? sender, RoutedEventArgs e)

@@ -13,6 +13,7 @@ secrets.json
 *.pem
 *.pfx
 *.key
+*.ffmpeg-build
 
 # Play Console service account (asla commit edilmemeli)
 service-account.json
