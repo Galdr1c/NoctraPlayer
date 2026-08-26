@@ -63,27 +63,25 @@ public sealed class AndroidStorePurchaseService : IStorePurchaseService, IDispos
         ThrowIfDisposed();
         var client = await EnsureBillingClientAsync(cancellationToken).ConfigureAwait(false);
 
-        var entries = new List<QueryProductDetailsParams.Product>
-        {
-            BuildProductListEntry(StoreProducts.MonthlySubscription, BillingClient.ProductType.Subs),
-            BuildProductListEntry(StoreProducts.LifetimePurchase, BillingClient.ProductType.Inapp)
-        };
+        // Ürün türleri ve katalog erişimi birbirinden bağımsızdır. Örneğin
+        // lifetime ürünü henüz Play Console'da yoksa aylık aboneliğin fiyatı
+        // kaybolmamalıdır; iki sorguyu ayrı yürütüp yalnızca başarısız ürünü
+        // yoksayıyoruz. İki istek eşzamanlı başlatılır, böylece toplam ağ
+        // gecikmesi iki ardışık istek kadar büyümez.
+        var monthlyTask = QueryAvailableProductDetailsAsync(
+            client,
+            StoreProducts.MonthlySubscription,
+            BillingClient.ProductType.Subs,
+            cancellationToken);
+        var lifetimeTask = QueryAvailableProductDetailsAsync(
+            client,
+            StoreProducts.LifetimePurchase,
+            BillingClient.ProductType.Inapp,
+            cancellationToken);
+        var detailBatches = await Task.WhenAll(monthlyTask, lifetimeTask).ConfigureAwait(false);
 
-        var @params = QueryProductDetailsParams.NewBuilder()
-            .SetProductList(entries)
-            .Build();
-
-        var result = await RunOnUiThreadTaskAsync(
-            () => client.QueryProductDetailsAsync(@params),
-            cancellationToken).ConfigureAwait(false);
-
-        if (result.Result.ResponseCode != BillingResponseCode.Ok)
-        {
-            return Array.Empty<StoreProduct>();
-        }
-
-        var products = new List<StoreProduct>(result.ProductDetailsList.Count);
-        foreach (var details in result.ProductDetailsList)
+        var products = new List<StoreProduct>();
+        foreach (var details in detailBatches.SelectMany(batch => batch))
         {
             var product = MapProductDetails(details);
             if (product is not null)
@@ -410,6 +408,28 @@ public sealed class AndroidStorePurchaseService : IStorePurchaseService, IDispos
             ? BillingClient.ProductType.Subs
             : BillingClient.ProductType.Inapp;
 
+        var details = await QueryAvailableProductDetailsAsync(
+            client,
+            productId,
+            productType,
+            cancellationToken).ConfigureAwait(false);
+
+        return details.FirstOrDefault(p =>
+            string.Equals(p.ProductId, productId, StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>
+    /// Tek bir ürünün ayrıntılarını sorgular. Ürün bulunamadığında veya Play
+    /// geçici/kalıcı bir hata döndürdüğünde diğer ürün sorgusunu etkilememesi
+    /// için boş liste döner. Log yalnızca katalog tanısı içerir; satın alma
+    /// token'ı, hesap veya kişisel veri yazılmaz.
+    /// </summary>
+    private async Task<IReadOnlyList<ProductDetails>> QueryAvailableProductDetailsAsync(
+        BillingClient client,
+        string productId,
+        string productType,
+        CancellationToken cancellationToken)
+    {
         var @params = QueryProductDetailsParams.NewBuilder()
             .SetProductList(new List<QueryProductDetailsParams.Product>
             {
@@ -417,17 +437,35 @@ public sealed class AndroidStorePurchaseService : IStorePurchaseService, IDispos
             })
             .Build();
 
-        var result = await RunOnUiThreadTaskAsync(
-            () => client.QueryProductDetailsAsync(@params),
-            cancellationToken).ConfigureAwait(false);
-
-        if (result.Result.ResponseCode != BillingResponseCode.Ok)
+        try
         {
-            return null;
-        }
+            var result = await RunOnUiThreadTaskAsync(
+                () => client.QueryProductDetailsAsync(@params),
+                cancellationToken).ConfigureAwait(false);
+            var billingResult = result.Result;
+            var details = billingResult.ResponseCode == BillingResponseCode.Ok
+                ? result.ProductDetailsList?.ToArray() ?? Array.Empty<ProductDetails>()
+                : Array.Empty<ProductDetails>();
 
-        return result.ProductDetailsList.FirstOrDefault(p =>
-            string.Equals(p.ProductId, productId, StringComparison.OrdinalIgnoreCase));
+            global::Android.Util.Log.Info(
+                "NoctraBilling",
+                $"product query id={productId} type={productType} " +
+                $"response={billingResult.ResponseCode} message={billingResult.DebugMessage} " +
+                $"fetched={details.Length}");
+
+            return details;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            global::Android.Util.Log.Warn(
+                "NoctraBilling",
+                $"product query failed id={productId} type={productType} error={ex.GetType().Name}");
+            return Array.Empty<ProductDetails>();
+        }
     }
 
     private StoreProduct? MapProductDetails(ProductDetails details)

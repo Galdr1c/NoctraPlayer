@@ -122,6 +122,28 @@ function Read-SecretsFile {
     return $map
 }
 
+function Get-EndpointConfigValue {
+    param([Parameter(Mandatory)][string]$Name)
+
+    $environmentValue = [Environment]::GetEnvironmentVariable($Name)
+    if (-not [string]::IsNullOrWhiteSpace($environmentValue)) {
+        return $environmentValue.Trim()
+    }
+
+    $envPath = Join-Path $RepoRoot ".env"
+    if (Test-Path $envPath) {
+        $prefix = $Name + "="
+        foreach ($line in Get-Content $envPath) {
+            $trimmed = $line.Trim()
+            if ($trimmed.StartsWith($prefix, [StringComparison]::Ordinal)) {
+                return $trimmed.Substring($prefix.Length).Trim()
+            }
+        }
+    }
+
+    return ""
+}
+
 $secrets = Read-SecretsFile $SecretsFileDefault
 
 if (-not $KeystorePath -and $secrets.ContainsKey("KeystorePath")) { $KeystorePath = $secrets["KeystorePath"] }
@@ -211,10 +233,33 @@ if ($StorePass.Length -lt 6) {
     Write-Host "[WARN] Store password looks short (<6 chars); keytool requires >=6." -ForegroundColor Yellow
 }
 
+# A Play bundle without the verifier URL can display a Play purchase window,
+# but it can never verify the resulting token and therefore cannot grant the
+# Premium entitlement. Fail before publishing instead of producing a broken
+# Internal Testing artifact. -CreateKeystore exits earlier and remains usable
+# without a configured billing backend.
+$BillingVerifyUrl = Get-EndpointConfigValue "NOCTRA_BILLING_VERIFY_URL"
+if ([string]::IsNullOrWhiteSpace($BillingVerifyUrl)) {
+    Write-Host "[ERROR] NOCTRA_BILLING_VERIFY_URL is missing." -ForegroundColor Red
+    Write-Host "        Deploy Noctra.Billing.Api first or set it in .env / the process environment." -ForegroundColor White
+    exit 1
+}
+
+$billingUri = $null
+if (-not [Uri]::TryCreate($BillingVerifyUrl, [UriKind]::Absolute, [ref]$billingUri) -or
+    $billingUri.Scheme -ne "https" -or
+    [string]::IsNullOrWhiteSpace($billingUri.Host)) {
+    Write-Host "[ERROR] NOCTRA_BILLING_VERIFY_URL must be an absolute HTTPS URL." -ForegroundColor Red
+    exit 1
+}
+
+$BillingApiKey = Get-EndpointConfigValue "NOCTRA_BILLING_API_KEY"
+
 Write-Host "Project:   $AndroidProject"
 Write-Host "Config:    $Configuration ($TargetFramework)"
 Write-Host "Keystore:  $keystoreResolved"
 Write-Host "Alias:     $KeyAlias"
+Write-Host "Billing:   configured (URL is not printed)"
 Write-Host ""
 
 # ------------------------------------------------------------------
@@ -232,8 +277,12 @@ $publishArgs = @(
     "-p:AndroidSigningKeyStore=$keystoreResolved",
     "-p:AndroidSigningKeyAlias=$KeyAlias",
     "-p:AndroidSigningStorePass=$StorePass",
-    "-p:AndroidSigningKeyPass=$KeyPass"
+    "-p:AndroidSigningKeyPass=$KeyPass",
+    "-p:NOCTRA_BILLING_VERIFY_URL=$BillingVerifyUrl"
 )
+if (-not [string]::IsNullOrWhiteSpace($BillingApiKey)) {
+    $publishArgs += "-p:NOCTRA_BILLING_API_KEY=$BillingApiKey"
+}
 Write-Host "[..] dotnet publish (this can take several minutes)..." -ForegroundColor DarkGray
 & dotnet @publishArgs
 if ($LASTEXITCODE -ne 0) {

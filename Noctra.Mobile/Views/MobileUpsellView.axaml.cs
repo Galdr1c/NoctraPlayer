@@ -191,6 +191,7 @@ public partial class MobileUpsellView : UserControl
             {
                 PlanStatusText.Text = LocalizationSource.Instance["Upsell.Plan.Unavailable"];
                 PlanStatusText.IsVisible = true;
+                RetryPricingButton.IsVisible = true;
             }
         }
         catch (Exception ex)

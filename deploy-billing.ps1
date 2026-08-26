@@ -21,11 +21,34 @@ $Region = "us-central1"
 $ServiceName = "noctra-billing-api"
 $ServiceAccountName = "noctra-billing-runtime"
 
+# Windows'ta Google Cloud SDK hem gcloud.ps1 hem de gcloud.cmd yayımlar.
+# PowerShell wrapper'ı, beklenen NOT_FOUND gibi native stderr çıktısını
+# $ErrorActionPreference=Stop altında terminating error'a dönüştürebilir;
+# doğrudan .cmd kullanmak script'in "yoksa oluştur" akışını güvenilir kılar.
+$GcloudCommand = Get-Command gcloud.cmd -ErrorAction SilentlyContinue
+if (-not $GcloudCommand) {
+    $GcloudCommand = Get-Command gcloud -ErrorAction SilentlyContinue
+}
+$GcloudPath = if ($GcloudCommand) { $GcloudCommand.Source } else { $null }
+
 # gcloud hatalarinda script durur (native komutlar $ErrorActionPreference'a takilmaz)
 function Invoke-Gcloud {
     param([Parameter(ValueFromRemainingArguments = $true)][string[]]$Args)
-    gcloud @Args
-    if ($LASTEXITCODE -ne 0) { throw "gcloud komutu başarısız (exit $LASTEXITCODE): gcloud $($Args -join ' ')" }
+    $previousErrorActionPreference = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    try {
+        $output = & $GcloudPath @Args 2>&1
+        $exitCode = $LASTEXITCODE
+    }
+    finally {
+        $ErrorActionPreference = $previousErrorActionPreference
+    }
+
+    if ($exitCode -ne 0) {
+        throw "gcloud komutu başarısız (exit $exitCode): gcloud $($Args -join ' ')`n$($output -join [Environment]::NewLine)"
+    }
+
+    return $output
 }
 $PackageName = if ($env:NOCTRA_PACKAGE_NAME) { $env:NOCTRA_PACKAGE_NAME } else { "studio.kynora.noctra" }
 $SubscriptionIds = if ($env:NOCTRA_SUBSCRIPTION_PRODUCT_IDS) { $env:NOCTRA_SUBSCRIPTION_PRODUCT_IDS } else { "noctra_premium_monthly" }
@@ -39,7 +62,7 @@ if ([string]::IsNullOrWhiteSpace($ApiKey) -and (Test-Path ".env")) {
 }
 
 # ---------- 1) gcloud kontrol ----------
-if (-not (Get-Command gcloud -ErrorAction SilentlyContinue)) {
+if (-not $GcloudPath) {
     Write-Host "`n❌ gcloud CLI bulunamadı. Kurulum:" -ForegroundColor Red
     Write-Host "   winget install Google.CloudSDK"
     Write-Host "   (veya https://cloud.google.com/sdk/docs/install → Windows installer)"
@@ -48,16 +71,16 @@ if (-not (Get-Command gcloud -ErrorAction SilentlyContinue)) {
 }
 
 # ---------- 2) Kimlik doğrulama ----------
-$Accounts = gcloud auth list --filter=status:ACTIVE --format="value(account)" 2>$null
+$Accounts = Invoke-Gcloud auth list --filter=status:ACTIVE --format="value(account)"
 if (-not $Accounts) {
     Write-Host "`n⚠️  gcloud ile giriş yapılmamış. Tarayıcıda Google hesabınızla giriş yapın:" -ForegroundColor Yellow
     Invoke-Gcloud auth login
 }
-$Account = (gcloud auth list --filter=status:ACTIVE --format="value(account)" | Select-Object -First 1)
+$Account = (Invoke-Gcloud auth list --filter=status:ACTIVE --format="value(account)" | Select-Object -First 1)
 Write-Host "✅ Kimlik: $Account" -ForegroundColor Green
 
 # ---------- 3) Proje ----------
-$Project = gcloud config get-value project 2>$null
+$Project = Invoke-Gcloud config get-value project
 if ([string]::IsNullOrWhiteSpace($Project)) {
     Write-Host ""
     Write-Host "GCP proje ID'si girin:"
@@ -74,8 +97,17 @@ Invoke-Gcloud services enable run.googleapis.com cloudbuild.googleapis.com artif
 # Cloud Run'a bağlanacak service account — private key YOK, ADC ile
 # metadata üzerinden token alır. Yalnızca oluşturulmamışsa oluşturulur.
 $SaEmail = "$ServiceAccountName@$Project.iam.gserviceaccount.com"
-$SaExists = gcloud iam service-accounts describe $SaEmail --project=$Project 2>$null
-if (-not $SaExists) {
+$previousErrorActionPreference = $ErrorActionPreference
+$ErrorActionPreference = "Continue"
+try {
+    $saDescribeOutput = & $GcloudPath iam service-accounts describe $SaEmail --project=$Project 2>&1
+    $saDescribeExit = $LASTEXITCODE
+}
+finally {
+    $ErrorActionPreference = $previousErrorActionPreference
+}
+$SaExists = if ($saDescribeExit -eq 0) { $saDescribeOutput } else { $null }
+if ($saDescribeExit -ne 0) {
     Write-Host "🔐 Service account oluşturuluyor: $SaEmail" -ForegroundColor Cyan
     Invoke-Gcloud iam service-accounts create $ServiceAccountName --display-name="Noctra Billing Runtime" --project=$Project
 }
@@ -122,7 +154,7 @@ foreach ($EnvVar in $EnvArgs) {
 Invoke-Gcloud @DeployArgs
 
 # ---------- 6) URL'yi .env'e yaz ----------
-$Url = gcloud run services describe $ServiceName --region=$Region --project=$Project --format="value(status.url)" 2>$null
+$Url = Invoke-Gcloud run services describe $ServiceName --region=$Region --project=$Project --format="value(status.url)"
 if ([string]::IsNullOrWhiteSpace($Url)) {
     Write-Host "⚠️  URL otomatik alınamadı - Cloud Console'dan kopyalayın." -ForegroundColor Yellow
     exit 0
