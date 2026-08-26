@@ -45,6 +45,10 @@
 .PARAMETER SkipVerification
     Skips the jarsigner verification pass.
 
+.PARAMETER NoRestore
+    Passes --no-restore to dotnet publish. Use this when all packages are
+    already restored and the build host is offline.
+
 .EXAMPLE
     # One-time: create the upload key (back it up afterwards!)
     .\build\package-play.ps1 -CreateKeystore
@@ -67,6 +71,7 @@ param(
 
     [switch]$CreateKeystore,
     [switch]$SkipVerification,
+    [switch]$NoRestore,
 
     [int]$ValidityDays = 10000,
     [string]$DistinguishedName = "CN=Kynora Studio, OU=Mobile, O=Kynora Studio, C=TR"
@@ -282,6 +287,9 @@ $publishArgs = @(
 )
 if (-not [string]::IsNullOrWhiteSpace($BillingApiKey)) {
     $publishArgs += "-p:NOCTRA_BILLING_API_KEY=$BillingApiKey"
+}
+if ($NoRestore) {
+    $publishArgs += "--no-restore"
 }
 Write-Host "[..] dotnet publish (this can take several minutes)..." -ForegroundColor DarkGray
 & dotnet @publishArgs

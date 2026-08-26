@@ -20,6 +20,151 @@ public sealed class PlayBillingCatalogTests
     }
 
     [Fact]
+    public void AndroidCatalog_ReadsProductDetailsFromAsyncResultCallbackList()
+    {
+        var source = File.ReadAllText(ProjectFile(
+            "Noctra.Android", "Services", "AndroidStorePurchaseService.cs"));
+
+        Assert.Contains("result.ProductDetails?.ToArray()", source);
+        Assert.DoesNotContain("result.ProductDetailsList?.ToArray()", source);
+    }
+
+    [Fact]
+    public void AndroidCatalog_UsesNestedPricingPhasesJniSignature()
+    {
+        var source = File.ReadAllText(ProjectFile(
+            "Noctra.Android", "Services", "AndroidStorePurchaseService.cs"));
+
+        Assert.Contains(
+            "getPricingPhases", source);
+        Assert.Contains(
+            "()Lcom/android/billingclient/api/ProductDetails$PricingPhases;",
+            source);
+        Assert.DoesNotContain(
+            "()Lcom/android/billingclient/api/PricingPhases;",
+            source);
+    }
+
+    [Fact]
+    public void MobileUpsell_SuccessStartsEntitlementCompletionWatch()
+    {
+        var source = File.ReadAllText(ProjectFile(
+            "Noctra.Mobile", "Views", "MobileUpsellView.axaml.cs"));
+        var successBranch = source.IndexOf("if (result.Success)", StringComparison.Ordinal);
+        var cancelledBranch = source.IndexOf("if (result.CancelledByUser)", successBranch, StringComparison.Ordinal);
+
+        Assert.True(successBranch >= 0, "The purchase success branch must remain explicit.");
+        Assert.True(cancelledBranch > successBranch,
+            "The success branch must precede cancellation handling.");
+        var successBody = source.Substring(successBranch, cancelledBranch - successBranch);
+        Assert.Contains("StartPurchaseCompletionWatch", successBody);
+    }
+
+    [Fact]
+    public void MobileUpsell_HidesOnlyAfterPlayBillingFlowStartsSuccessfully()
+    {
+        var source = File.ReadAllText(ProjectFile(
+            "Noctra.Mobile", "Views", "MobileUpsellView.axaml.cs"));
+        var launch = source.IndexOf(
+            "var result = await store.LaunchPurchaseAsync(product)",
+            StringComparison.Ordinal);
+        var success = source.IndexOf("if (result.Success)", launch, StringComparison.Ordinal);
+        var cancelled = source.IndexOf(
+            "if (result.CancelledByUser)", success, StringComparison.Ordinal);
+        var hide = source.IndexOf("HideForPurchaseFlow();", success, StringComparison.Ordinal);
+
+        Assert.True(launch >= 0, "The Play Billing launch call must remain explicit.");
+        Assert.True(success > launch, "The success branch must follow the Billing launch call.");
+        Assert.True(hide > success && hide < cancelled,
+            "The sheet may be hidden only after Play reports that its billing flow started.");
+        Assert.DoesNotContain(
+            "HideForPurchaseFlow();\n            var result = await store.LaunchPurchaseAsync(product)",
+            source,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void MobileUpsell_CompletionWatchRefreshesAuthoritativeEntitlement()
+    {
+        var source = File.ReadAllText(ProjectFile(
+            "Noctra.Mobile", "Views", "MobileUpsellView.axaml.cs"));
+        var watch = source.IndexOf(
+            "private async Task WatchForPurchaseCompletionAsync",
+            StringComparison.Ordinal);
+        var stop = source.IndexOf(
+            "private void StopPurchaseCompletionWatch",
+            watch,
+            StringComparison.Ordinal);
+
+        Assert.True(watch >= 0, "The post-purchase entitlement watcher must remain explicit.");
+        Assert.True(stop > watch, "The watcher must precede its cancellation helper.");
+        var body = source.Substring(watch, stop - watch);
+        Assert.Contains("RefreshLicenseStatusAsync", body);
+    }
+
+    [Fact]
+    public void AndroidActivity_AttachesAnInitialLicenseRefreshAfterActivityIsReady()
+    {
+        var source = File.ReadAllText(ProjectFile("Noctra.Android", "MainActivity.cs"));
+        var setCurrent = source.IndexOf("SetCurrent(this)", StringComparison.Ordinal);
+        var bootstrap = source.IndexOf(
+            "RunAdvertisingBootstrapSafelyAsync",
+            setCurrent,
+            StringComparison.Ordinal);
+
+        Assert.True(setCurrent >= 0, "The Android activity provider must be attached in OnCreate.");
+        Assert.True(bootstrap > setCurrent, "The initial license refresh must be queued after Activity attachment.");
+        var attachedBody = source.Substring(setCurrent, bootstrap - setCurrent);
+        Assert.Contains("QueueInitialLicenseRefresh", attachedBody);
+    }
+
+    [Fact]
+    public void MobileUpsell_ShowClosesImmediatelyForExistingPremiumLicense()
+    {
+        var source = File.ReadAllText(ProjectFile(
+            "Noctra.Mobile", "Views", "MobileUpsellView.axaml.cs"));
+        var showStart = source.IndexOf("public void Show()", StringComparison.Ordinal);
+        var tryCloseStart = source.IndexOf("public bool TryClose()", showStart, StringComparison.Ordinal);
+
+        Assert.True(showStart >= 0, "The upsell Show method must remain explicit.");
+        Assert.True(tryCloseStart > showStart,
+            "The Show method must precede TryClose.");
+        var showBody = source.Substring(showStart, tryCloseStart - showStart);
+        Assert.Contains("if (_licenseService?.IsPremium == true)", showBody);
+        Assert.Contains("TryClose();", showBody);
+    }
+
+    [Fact]
+    public void MobileUpsell_ShowRefreshesStoreEntitlement()
+    {
+        var source = File.ReadAllText(ProjectFile(
+            "Noctra.Mobile", "Views", "MobileUpsellView.axaml.cs"));
+        var showStart = source.IndexOf("public void Show()", StringComparison.Ordinal);
+        var tryCloseStart = source.IndexOf("public bool TryClose()", showStart, StringComparison.Ordinal);
+
+        Assert.True(showStart >= 0, "The upsell Show method must remain explicit.");
+        Assert.True(tryCloseStart > showStart, "The Show method must precede TryClose.");
+        var showBody = source.Substring(showStart, tryCloseStart - showStart);
+        Assert.Contains("RefreshLicenseStatusAsync", showBody);
+    }
+
+    [Fact]
+    public void MobileUpsell_AlreadyOwnedRefreshesEntitlementBeforeShowingError()
+    {
+        var source = File.ReadAllText(ProjectFile(
+            "Noctra.Mobile", "Views", "MobileUpsellView.axaml.cs"));
+        var ownedBranch = source.IndexOf("if (result.AlreadyOwned)", StringComparison.Ordinal);
+        var failureLog = source.IndexOf("Purchase failed:", ownedBranch, StringComparison.Ordinal);
+
+        Assert.True(ownedBranch >= 0, "The already-owned branch must remain explicit.");
+        Assert.True(failureLog > ownedBranch,
+            "The already-owned branch must precede the generic failure path.");
+        var ownedBody = source.Substring(ownedBranch, failureLog - ownedBranch);
+        Assert.Contains("RefreshSubscriptionStatusAsync", ownedBody);
+        Assert.Contains("TryClose();", ownedBody);
+    }
+
+    [Fact]
     public void MobileUpsell_EmptyCatalogExposesRetry()
     {
         var source = File.ReadAllText(ProjectFile(
@@ -51,6 +196,15 @@ public sealed class PlayBillingCatalogTests
     }
 
     [Fact]
+    public void PlayBundlePackaging_OffersOfflineNoRestoreMode()
+    {
+        var source = File.ReadAllText(ProjectFile("build", "package-play.ps1"));
+
+        Assert.Contains("[switch]$NoRestore", source);
+        Assert.Contains("$publishArgs += \"--no-restore\"", source);
+    }
+
+    [Fact]
     public void BillingDeployScript_UsesGcloudCmdInsteadOfPowerShellWrapper()
     {
         var source = File.ReadAllText(ProjectFile("deploy-billing.ps1"));
@@ -62,6 +216,14 @@ public sealed class PlayBillingCatalogTests
         Assert.Contains("$saDescribeExit = $LASTEXITCODE", source);
         Assert.Contains("$previousErrorActionPreference = $ErrorActionPreference", source);
         Assert.Contains("$ErrorActionPreference = \"Continue\"", source);
+    }
+
+    [Fact]
+    public void BillingDeployScript_EnablesAndroidPublisherApi()
+    {
+        var source = File.ReadAllText(ProjectFile("deploy-billing.ps1"));
+
+        Assert.Contains("androidpublisher.googleapis.com", source);
     }
 
     private static string ProjectFile(params string[] parts)

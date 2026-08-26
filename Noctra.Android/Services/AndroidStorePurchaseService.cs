@@ -168,6 +168,11 @@ public sealed class AndroidStorePurchaseService : IStorePurchaseService, IDispos
         var subscriptionPurchases = await QueryPurchasesAsync(client, BillingClient.ProductType.Subs, cancellationToken)
             .ConfigureAwait(false);
 
+        global::Android.Util.Log.Info(
+            "NoctraBilling",
+            $"entitlement query inapp={inappPurchases?.Count.ToString() ?? "null"} " +
+            $"subs={subscriptionPurchases?.Count.ToString() ?? "null"}");
+
         // Onaylama (acknowledge) sorgu sonucundan ve doğrulama istemcisinden
         // BAĞIMSIZDIR: liste geldiyse abonelik dahil her PURCHASED kayıt
         // (kalıcı paket dahil) tek tek acknowledge edilir. Google Play,
@@ -197,6 +202,10 @@ public sealed class AndroidStorePurchaseService : IStorePurchaseService, IDispos
         // doğrulanmış önbelleği kullanır (fail-safe; hak asla erken düşmez).
         if (inappPurchases is null || subscriptionPurchases is null || _billingVerifier is null)
         {
+            global::Android.Util.Log.Warn(
+                "NoctraBilling",
+                $"entitlement verification unavailable inappNull={inappPurchases is null} " +
+                $"subsNull={subscriptionPurchases is null} verifierNull={_billingVerifier is null}");
             return new StoreEntitlement { IsVerified = false };
         }
 
@@ -228,9 +237,17 @@ public sealed class AndroidStorePurchaseService : IStorePurchaseService, IDispos
             var verified = await VerifyTokenAsync(purchase, packageName, cancellationToken);
             if (verified is null)
             {
+                global::Android.Util.Log.Warn(
+                    "NoctraBilling",
+                    $"lifetime verification unavailable product={StoreProducts.LifetimePurchase}");
                 anyVerificationFailed = true;
                 continue;
             }
+
+            global::Android.Util.Log.Info(
+                "NoctraBilling",
+                $"lifetime verification active={verified.IsActive} " +
+                $"type={verified.EntitlementType} state={verified.State}");
 
             if (verified.IsActive && string.Equals(verified.EntitlementType, "Lifetime", StringComparison.OrdinalIgnoreCase))
             {
@@ -245,9 +262,18 @@ public sealed class AndroidStorePurchaseService : IStorePurchaseService, IDispos
             var verified = await VerifyTokenAsync(purchase, packageName, cancellationToken);
             if (verified is null)
             {
+                global::Android.Util.Log.Warn(
+                    "NoctraBilling",
+                    $"subscription verification unavailable product={StoreProducts.MonthlySubscription}");
                 anyVerificationFailed = true;
                 continue;
             }
+
+            global::Android.Util.Log.Info(
+                "NoctraBilling",
+                $"subscription verification active={verified.IsActive} " +
+                $"type={verified.EntitlementType} state={verified.State} " +
+                $"expiry={verified.ExpiresAtUtc:O}");
 
             if (verified.IsActive && verified.ExpiresAtUtc.HasValue &&
                 (subscriptionEnd is null || verified.ExpiresAtUtc.Value > subscriptionEnd.Value))
@@ -267,7 +293,7 @@ public sealed class AndroidStorePurchaseService : IStorePurchaseService, IDispos
             inappPurchases.Any(p => p.PurchaseState == PurchaseState.Pending) ||
             subscriptionPurchases.Any(p => p.PurchaseState == PurchaseState.Pending);
 
-        return new StoreEntitlement
+        var entitlement = new StoreEntitlement
         {
             HasLifetimePremium = hasLifetime,
             SubscriptionExpiresAtUtc = subscriptionEnd,
@@ -275,6 +301,15 @@ public sealed class AndroidStorePurchaseService : IStorePurchaseService, IDispos
             HasPendingPurchase = hasPendingPurchase,
             IsVerified = !anyVerificationFailed
         };
+
+        global::Android.Util.Log.Info(
+            "NoctraBilling",
+            $"entitlement result verified={entitlement.IsVerified} " +
+            $"lifetime={entitlement.HasLifetimePremium} " +
+            $"subscriptionExpiry={entitlement.SubscriptionExpiresAtUtc:O} " +
+            $"pending={entitlement.HasPendingPurchase}");
+
+        return entitlement;
     }
 
     private async Task<BillingVerifiedEntitlement?> VerifyTokenAsync(
@@ -371,6 +406,11 @@ public sealed class AndroidStorePurchaseService : IStorePurchaseService, IDispos
 
     private void OnPurchasesUpdated(BillingResult billingResult, IList<Purchase>? purchases)
     {
+        global::Android.Util.Log.Info(
+            "NoctraBilling",
+            $"purchase update response={billingResult.ResponseCode} " +
+            $"count={purchases?.Count ?? 0}");
+
         if (billingResult.ResponseCode != BillingResponseCode.Ok)
         {
             return;
@@ -380,6 +420,11 @@ public sealed class AndroidStorePurchaseService : IStorePurchaseService, IDispos
         {
             foreach (var purchase in purchases)
             {
+                global::Android.Util.Log.Info(
+                    "NoctraBilling",
+                    $"purchase state={purchase.PurchaseState} " +
+                    $"products={string.Join(',', purchase.Products ?? Array.Empty<string>())} " +
+                    $"acknowledged={purchase.IsAcknowledged}");
                 AcknowledgeIfNeeded(purchase);
             }
         }
@@ -443,8 +488,13 @@ public sealed class AndroidStorePurchaseService : IStorePurchaseService, IDispos
                 () => client.QueryProductDetailsAsync(@params),
                 cancellationToken).ConfigureAwait(false);
             var billingResult = result.Result;
+            // QueryProductDetailsAsync's Xamarin binding stores the callback
+            // list in the managed ProductDetails property. ProductDetailsList
+            // calls the Java getProductDetailsList() method, which is not the
+            // source populated by the v9 async adapter and therefore appears
+            // empty even when Play has returned valid products.
             var details = billingResult.ResponseCode == BillingResponseCode.Ok
-                ? result.ProductDetailsList?.ToArray() ?? Array.Empty<ProductDetails>()
+                ? result.ProductDetails?.ToArray() ?? Array.Empty<ProductDetails>()
                 : Array.Empty<ProductDetails>();
 
             global::Android.Util.Log.Info(
@@ -640,7 +690,13 @@ public sealed class AndroidStorePurchaseService : IStorePurchaseService, IDispos
         // (NON_RECURRING=2, FINITE_RECURRING=3) trial/intro anlamına gelir.
         const int recurrenceModeRecurring = 1;
 
-        var phasesHandle = CallJavaObject(offer, "getPricingPhases", "()Lcom/android/billingclient/api/PricingPhases;");
+        // PricingPhases is a nested ProductDetails class. The outer class
+        // segment is part of the JNI return descriptor; omitting it makes
+        // GetMethodID fail and silently removes every subscription offer.
+        var phasesHandle = CallJavaObject(
+            offer,
+            "getPricingPhases",
+            "()Lcom/android/billingclient/api/ProductDetails$PricingPhases;");
         if (phasesHandle == IntPtr.Zero)
         {
             return (null, null, false);

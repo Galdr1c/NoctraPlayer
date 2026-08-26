@@ -320,9 +320,8 @@ public partial class MobileSettingsView : UserControl, IMobileNavigationStatePar
             return true;
         }
 
-        if (UpsellHost.IsVisible)
+        if (UpsellHost.TryClose())
         {
-            UpsellHost.IsVisible = false;
             return true;
         }
 

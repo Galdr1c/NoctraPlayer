@@ -44,6 +44,37 @@ public sealed class PlayBillingApiClientTests
     }
 
     [Fact]
+    public async Task VerifyAsync_ActiveSubscription_UsesSubscriptionsV2TokensPath()
+    {
+        using var env = new BillingEnvScope();
+        Uri? requestUri = null;
+        var handler = ScriptedHttpMessageHandler.PlayApi(request =>
+        {
+            requestUri = request.RequestUri;
+            return ScriptedHttpMessageHandler.Json(HttpStatusCode.OK, """
+                {
+                  "subscriptionState": "SUBSCRIPTION_STATE_ACTIVE",
+                  "lineItems": [
+                    {
+                      "productId": "noctra_premium_monthly",
+                      "expiryTime": "2099-01-01T00:00:00Z"
+                    }
+                  ]
+                }
+                """);
+        });
+
+        var client = CreateClient(handler);
+
+        await client.VerifyAsync("noctra_premium_monthly", "token-abc", "studio.kynora.noctra");
+
+        Assert.NotNull(requestUri);
+        Assert.Equal(
+            "/androidpublisher/v3/applications/studio.kynora.noctra/purchases/subscriptionsv2/tokens/token-abc",
+            requestUri!.AbsolutePath);
+    }
+
+    [Fact]
     public async Task VerifyAsync_CanceledSubscription_KeepsAccessUntilPaidThroughExpiry()
     {
         using var env = new BillingEnvScope();

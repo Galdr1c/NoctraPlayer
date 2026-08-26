@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Avalonia.Threading;
 using Microsoft.Extensions.DependencyInjection;
 using Noctra.Mobile.Localization;
 using Noctra.Models;
@@ -19,6 +21,21 @@ public partial class MobileUpsellView : UserControl
     private bool _isPurchasing;
     private ILicenseService? _licenseService;
     private bool _licenseSubscribed;
+    private CancellationTokenSource? _purchaseCompletionCts;
+    private bool _purchaseFlowActive;
+
+    // Play Billing may deliver the purchase callback a little after the
+    // billing Activity closes. Keep the fallback bounded so a missed callback
+    // cannot leave an unbounded network loop running in the background.
+    private static readonly TimeSpan[] PurchaseRefreshDelays =
+    {
+        TimeSpan.Zero,
+        TimeSpan.FromSeconds(1),
+        TimeSpan.FromSeconds(2),
+        TimeSpan.FromSeconds(4),
+        TimeSpan.FromSeconds(8),
+        TimeSpan.FromSeconds(12)
+    };
 
     public MobileUpsellView()
     {
@@ -27,33 +44,68 @@ public partial class MobileUpsellView : UserControl
 
     public void Show()
     {
+        // A Play purchase is already being completed. Do not reopen the
+        // sheet over the Play billing Activity; the completion watcher will
+        // clean up the subscription when entitlement becomes authoritative.
+        if (_purchaseFlowActive)
+        {
+            return;
+        }
+
+        StopPurchaseCompletionWatch();
         IsVisible = true;
         HideStatusMessages();
         RetryPricingButton.IsVisible = false;
         ManageSubscriptionButton.IsVisible = false;
 
         EnsureLicenseSubscription();
+
+        // A purchase may have completed while this host was being resumed or
+        // recreated. Do not render an upsell over an already-paid account.
+        if (_licenseService?.IsPremium == true)
+        {
+            TryClose();
+            return;
+        }
+
         UpdatePlanCardVisibility();
 
+        // Android cold-start can create the singleton before an Activity is
+        // available, so its deferred initial refresh may be skipped. Refresh
+        // when the sheet is actually requested as well; this also restores a
+        // purchase made on another device without requiring an app restart.
+        _ = RefreshLicenseStatusAsync();
         _ = RefreshProductPricingAsync();
     }
 
     public bool TryClose()
     {
-        if (!IsVisible)
-            return false;
-
+        var wasVisible = IsVisible;
+        StopPurchaseCompletionWatch();
+        _purchaseFlowActive = false;
         IsVisible = false;
         UnsubscribeLicense();
-        return true;
+        return wasVisible;
     }
 
     /// <summary>
-    /// Satın alma akışının GERÇEK sonucu için lisansa abone olur. Play penceresi
-    /// açıldıktan sonra sheet AÇIK kalır (kapanmaz); ödeme gerçekten tamamlanınca
-    /// (SubscriptionChanged → Premium) kapanır, pending ise "ödeme bekleniyor"
-    /// bildirimi gösterilir, iptalde kullanıcı zaten sheet'e döner. Tekrar
-    /// abone olmayı önler.
+    /// Hides the sheet only after Play Billing confirms that its purchase
+    /// Activity was successfully launched. License subscription remains alive
+    /// until the entitlement watcher has finished, so a verified purchase is
+    /// still propagated to the shared LicenseService while the sheet is hidden.
+    /// </summary>
+    private void HideForPurchaseFlow()
+    {
+        StopPurchaseCompletionWatch();
+        _purchaseFlowActive = true;
+        IsVisible = false;
+    }
+
+    /// <summary>
+    /// Satın alma akışının gerçek entitlement sonucunu takip etmek için lisansa
+    /// abone olur. Play Activity'si açıldığında sheet gizlenir; callback veya
+    /// sınırlı fallback yenilemesi Premium'u doğruladığında ortak lisans state'i
+    /// reklam ve diğer Premium tüketicilerine yayılır. Tekrar abone olmayı önler.
     /// </summary>
     private void EnsureLicenseSubscription()
     {
@@ -84,6 +136,111 @@ public partial class MobileUpsellView : UserControl
         _licenseService.SubscriptionChanged -= OnLicenseSubscriptionChanged;
         _licenseService = null;
         _licenseSubscribed = false;
+    }
+
+    private void StartPurchaseCompletionWatch()
+    {
+        StopPurchaseCompletionWatch();
+
+        var cts = new CancellationTokenSource();
+        _purchaseCompletionCts = cts;
+        _ = WatchForPurchaseCompletionAsync(cts);
+    }
+
+    /// <summary>
+    /// Play Billing returns success when its purchase UI opens, not when the
+    /// entitlement has been verified. The normal SubscriptionChanged event is
+    /// still the primary path, but this short UI-safe watchdog closes a host if
+    /// that event races with the billing Activity resume callback.
+    /// </summary>
+    private async Task WatchForPurchaseCompletionAsync(CancellationTokenSource cts)
+    {
+        try
+        {
+            foreach (var delay in PurchaseRefreshDelays)
+            {
+                if (delay > TimeSpan.Zero)
+                {
+                    await Task.Delay(delay, cts.Token).ConfigureAwait(false);
+                }
+
+                if (cts.IsCancellationRequested)
+                {
+                    break;
+                }
+
+                // Do not only inspect the cached IsPremium value. A Play
+                // callback can race with Activity resume and leave the cache
+                // stale; this refresh queries Play and the backend again.
+                await RefreshLicenseStatusAsync().ConfigureAwait(false);
+
+                if (_licenseService?.IsPremium == true)
+                {
+                    break;
+                }
+            }
+        }
+        catch (OperationCanceledException) when (cts.IsCancellationRequested)
+        {
+            // The user closed the sheet or a newer purchase replaced this
+            // watcher; no status message is needed.
+        }
+        finally
+        {
+            if (ReferenceEquals(_purchaseCompletionCts, cts))
+            {
+                _purchaseCompletionCts = null;
+                _purchaseFlowActive = false;
+            }
+
+            cts.Dispose();
+        }
+    }
+
+    private void StopPurchaseCompletionWatch()
+    {
+        var cts = _purchaseCompletionCts;
+        _purchaseCompletionCts = null;
+        cts?.Cancel();
+    }
+
+    private async Task RefreshLicenseStatusAsync()
+    {
+        var licenseService = _licenseService;
+        if (licenseService is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await licenseService.RefreshSubscriptionStatusAsync().ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine(
+                $"[Upsell] Store entitlement refresh failed: {ex.Message}");
+        }
+
+        // RefreshSubscriptionStatusAsync may complete on a Billing/HTTP
+        // thread. Keep all control-tree changes on Avalonia's UI thread.
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (!ReferenceEquals(_licenseService, licenseService))
+            {
+                return;
+            }
+
+            if (licenseService.IsPremium)
+            {
+                // Also cleans the hidden-flow subscription/watcher.
+                TryClose();
+            }
+            else if (IsVisible)
+            {
+                UpdatePlanCardVisibility();
+            }
+        });
     }
 
     private void OnLicenseSubscriptionChanged()
@@ -256,11 +413,11 @@ public partial class MobileUpsellView : UserControl
 
     /// <summary>
     /// Seçilen türdeki mağaza ürünü için satın alma akışını başlatır.
-    /// Sheet YALNIZCA gerçek satın alma tamamlandığında kapanır
-    /// (OnPurchasesUpdated → EntitlementChanged → SubscriptionChanged →
-    /// Premium). Play penceresinin açılması (Success) kapatmak için yeterli
-    /// DEĞİLDİR: iptalde kullanıcı sheet'e döner, pending'de bildirim görür,
-    /// teknik hatada hata gösterilir — hiçbirinde sheet erken kapanmaz.
+    /// Play penceresi başarıyla açıldığı anda sheet gizlenir. Play penceresi
+    /// açılmazsa (ürün/aktivite/teknik hata) sheet açık kalır. Gizlendikten
+    /// sonra entitlement callback'i ve bounded refresh watcher'ı ortak
+    /// LicenseService'i günceller; Premium doğrulaması reklam ve UI katmanına
+    /// aynı singleton state üzerinden yayılır.
     ///
     /// KRİTİK: Seçilen plan Play'de yoksa (örn. lifetime henüz yayınlanmadı)
     /// BAŞKA plana düşülmez — genel StartPurchaseFlowAsync aylık aboneliği
@@ -322,10 +479,10 @@ public partial class MobileUpsellView : UserControl
 
             if (result.Success)
             {
-                // Play penceresi açıldı — sheet KAPANMAZ. Gerçek sonuç
-                // OnPurchasesUpdated → EntitlementChanged → SubscriptionChanged
-                // ile gelir: ödeme tamamlanınca sheet kapanır (OnLicenseSubscriptionChanged),
-                // iptal edilirse kullanıcı sheet'e döner, pending ise bildirim görür.
+                // LaunchBillingFlow başarıyla döndüyse Play satın alma
+                // Activity'si açılmıştır; yalnızca bu noktada sheet'i gizle.
+                HideForPurchaseFlow();
+                StartPurchaseCompletionWatch();
                 return;
             }
             if (result.CancelledByUser)
@@ -336,6 +493,28 @@ public partial class MobileUpsellView : UserControl
             }
             if (result.AlreadyOwned)
             {
+                // A canceled test subscription remains owned until its paid
+                // period expires. Refresh the authoritative entitlement before
+                // telling the user that the plan is unavailable; if the
+                // existing purchase is still active, the upsell is obsolete.
+                if (_licenseService is not null)
+                {
+                    try
+                    {
+                        await _licenseService.RefreshSubscriptionStatusAsync();
+                        if (_licenseService.IsPremium)
+                        {
+                            TryClose();
+                            return;
+                        }
+                    }
+                    catch (Exception refreshEx)
+                    {
+                        System.Diagnostics.Debug.WriteLine(
+                            $"[Upsell] Already-owned entitlement refresh failed: {refreshEx.Message}");
+                    }
+                }
+
                 ShowInfo(LocalizationSource.Instance["Upsell.Plan.AlreadyOwned"]);
                 return;
             }

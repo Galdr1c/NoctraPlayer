@@ -29,7 +29,16 @@ $GcloudCommand = Get-Command gcloud.cmd -ErrorAction SilentlyContinue
 if (-not $GcloudCommand) {
     $GcloudCommand = Get-Command gcloud -ErrorAction SilentlyContinue
 }
-$GcloudPath = if ($GcloudCommand) { $GcloudCommand.Source } else { $null }
+$defaultGcloudPath = Join-Path $env:LOCALAPPDATA "Google\Cloud SDK\google-cloud-sdk\bin\gcloud.cmd"
+if (-not $GcloudCommand -and (Test-Path $defaultGcloudPath)) {
+    $GcloudCommand = Get-Item $defaultGcloudPath
+}
+$GcloudPath = if ($GcloudCommand) {
+    if ($GcloudCommand.Source) { $GcloudCommand.Source } else { $GcloudCommand.FullName }
+}
+else {
+    $null
+}
 
 # gcloud hatalarinda script durur (native komutlar $ErrorActionPreference'a takilmaz)
 function Invoke-Gcloud {
@@ -91,7 +100,7 @@ if ([string]::IsNullOrWhiteSpace($Project)) {
 Write-Host "✅ Proje: $Project" -ForegroundColor Green
 # Source deployment Cloud Build + Artifact Registry altyapısını kullanır;
 # Artifact Registry API'si ilk deploy'da istendiği için önceden etkinleştirilir.
-Invoke-Gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com | Out-Null
+Invoke-Gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com androidpublisher.googleapis.com | Out-Null
 
 # ---------- 4) Service account (service identity) ----------
 # Cloud Run'a bağlanacak service account — private key YOK, ADC ile

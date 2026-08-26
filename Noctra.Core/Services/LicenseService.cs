@@ -275,6 +275,12 @@ public class LicenseService : ObservableObject, ILicenseService, IDisposable
             }
 
             var entitlement = await storePurchaseService.GetEntitlementAsync(cancellationToken);
+            Debug.WriteLine(
+                $"[LicenseService] Store entitlement fetched: " +
+                $"verified={entitlement.IsVerified}, " +
+                $"lifetime={entitlement.HasLifetimePremium}, " +
+                $"subscriptionExpiry={entitlement.SubscriptionExpiresAtUtc:O}, " +
+                $"pending={entitlement.HasPendingPurchase}");
             if (entitlement.IsVerified)
             {
                 // Backend doğrulaması geçti: hem kullan hem önbelleğe yaz.
@@ -293,6 +299,10 @@ public class LicenseService : ObservableObject, ILicenseService, IDisposable
             }
 
             SyncSubscriptionFromSettings(notify: true);
+            Debug.WriteLine(
+                $"[LicenseService] Subscription state: tier={_currentSubscription.Tier}, " +
+                $"source={_currentSubscription.Source}, " +
+                $"expiry={_currentSubscription.ExpiresAt:O}");
         }
         catch (Exception ex)
         {

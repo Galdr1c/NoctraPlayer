@@ -75,11 +75,18 @@ public sealed class PlayBillingApiClient : IPlayBillingApi
         string accessToken,
         CancellationToken cancellationToken)
     {
-        var url = $"{ApiBase}/{Uri.EscapeDataString(packageName)}/purchases/subscriptionsv2/{Uri.EscapeDataString(purchaseToken)}";
-        var body = await GetJsonAsync(url, accessToken, cancellationToken).ConfigureAwait(false);
+        var url = $"{ApiBase}/{Uri.EscapeDataString(packageName)}/purchases/subscriptionsv2/tokens/{Uri.EscapeDataString(purchaseToken)}";
+        var body = await GetJsonAsync(
+                url,
+                accessToken,
+                cancellationToken,
+                operation: "subscription")
+            .ConfigureAwait(false);
         if (body is null)
         {
             // 404: token bu paket için geçerli değil → fail-closed inaktif.
+            Console.WriteLine(
+                $"[Billing] subscription verification returned 404 product={productId}");
             return new PlayPurchaseVerification
             {
                 EntitlementType = "Subscription",
@@ -159,6 +166,11 @@ public sealed class PlayBillingApiClient : IPlayBillingApi
                        expiry.HasValue &&
                        expiry.Value > DateTime.UtcNow;
 
+        Console.WriteLine(
+            $"[Billing] subscription verification product={productId} " +
+            $"state={state} matched={productMatched} " +
+            $"expiry={expiry?.ToString("O") ?? "none"} active={isActive}");
+
         return new PlayPurchaseVerification
         {
             EntitlementType = "Subscription",
@@ -207,10 +219,17 @@ public sealed class PlayBillingApiClient : IPlayBillingApi
         CancellationToken cancellationToken)
     {
         var url = $"{ApiBase}/{Uri.EscapeDataString(packageName)}/purchases/products/{Uri.EscapeDataString(productId)}/tokens/{Uri.EscapeDataString(purchaseToken)}";
-        var body = await GetJsonAsync(url, accessToken, cancellationToken).ConfigureAwait(false);
+        var body = await GetJsonAsync(
+                url,
+                accessToken,
+                cancellationToken,
+                operation: "lifetime")
+            .ConfigureAwait(false);
         if (body is null)
         {
             // 404: token geçersiz → fail-closed inaktif.
+            Console.WriteLine(
+                $"[Billing] lifetime verification returned 404 product={productId}");
             return new PlayPurchaseVerification
             {
                 EntitlementType = "Lifetime",
@@ -235,6 +254,10 @@ public sealed class PlayBillingApiClient : IPlayBillingApi
 
         var isActive = purchaseState == 0;
 
+        Console.WriteLine(
+            $"[Billing] lifetime verification product={productId} " +
+            $"purchaseState={purchaseState} active={isActive}");
+
         return new PlayPurchaseVerification
         {
             EntitlementType = "Lifetime",
@@ -255,7 +278,11 @@ public sealed class PlayBillingApiClient : IPlayBillingApi
     // HTTP helpers
     // ==========================================
 
-    private async Task<string?> GetJsonAsync(string url, string accessToken, CancellationToken cancellationToken)
+    private async Task<string?> GetJsonAsync(
+        string url,
+        string accessToken,
+        CancellationToken cancellationToken,
+        string operation)
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, url);
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
@@ -266,6 +293,9 @@ public sealed class PlayBillingApiClient : IPlayBillingApi
 
         if (!response.IsSuccessStatusCode)
         {
+            Console.WriteLine(
+                $"[Billing] Play API {operation} request failed status={(int)response.StatusCode} " +
+                $"body={Truncate(body, 300)}");
             // 404 = token bu paket/ürün için geçerli değil (iptal edilmiş veya
             // başka pakete ait). Çağıran fail-closed inaktif sonuç üretir;
             // diğer hatalar sunucu hatası olarak fırlatılır.

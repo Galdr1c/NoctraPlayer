@@ -106,6 +106,16 @@ public class MainActivity : AvaloniaMainActivity
         {
             app.Services?.GetRequiredService<AndroidActivityProvider>().SetCurrent(this);
             services = app.Services;
+
+            // The first OnResume can happen while Avalonia is still creating
+            // the visual tree. LicenseService intentionally defers its first
+            // store query until an Activity exists; queue a second, explicit
+            // refresh after attaching this Activity so a Play purchase is not
+            // missed on a cold start.
+            if (services?.GetService<ILicenseService>() is { } licenseService)
+            {
+                QueueInitialLicenseRefresh(licenseService);
+            }
         }
 
         if (services?.GetService<MobileAdvertisingBootstrapper>() is { } bootstrapper)
@@ -492,6 +502,31 @@ public class MainActivity : AvaloniaMainActivity
 
         _ = Task.Delay(500).ContinueWith(
             _ => RefreshWhenSurfaceIsReady(),
+            TaskScheduler.Default);
+    }
+
+    private void QueueInitialLicenseRefresh(ILicenseService licenseService)
+    {
+        async void RefreshWhenActivityIsReady()
+        {
+            try
+            {
+                await licenseService.RefreshSubscriptionStatusAsync().ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                Log.Warn("Noctra", $"Initial license refresh failed: {ex}");
+            }
+        }
+
+        if (Window?.DecorView is { } decorView)
+        {
+            decorView.PostDelayed(RefreshWhenActivityIsReady, 750);
+            return;
+        }
+
+        _ = Task.Delay(750).ContinueWith(
+            _ => RefreshWhenActivityIsReady(),
             TaskScheduler.Default);
     }
 
