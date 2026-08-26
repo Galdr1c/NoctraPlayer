@@ -16,15 +16,22 @@ namespace Noctra.Mobile.Controls;
 /// too long can die silently without raising a failure callback, leaving an
 /// empty, non-clickable shell. After a long foreground absence the current ad
 /// is destroyed and reloaded from scratch so a stale creative never survives.
+/// A provider no-fill result collapses the host and uses a bounded exponential
+/// retry so Free users do not lose the banner permanently while no inventory is
+/// temporarily available.
 /// </summary>
 public sealed class MobileBannerAdControl : ContentControl
 {
     private static readonly TimeSpan BannerStaleAfterBackground = ResolveStaleThreshold();
+    private static readonly TimeSpan BannerRetryBaseDelay = ResolveRetryBaseDelay();
+    private static readonly TimeSpan BannerRetryMaxDelay = TimeSpan.FromMinutes(5);
 
     private IDisposable? _adisposable;
     private readonly BannerAdPresentationState _adState = new();
     private DateTimeOffset? _backgroundedAtUtc;
     private bool _lifecycleSubscribed;
+    private Avalonia.Threading.DispatcherTimer? _retryTimer;
+    private int _retryAttempt;
 
     public MobileBannerAdControl()
     {
@@ -48,6 +55,16 @@ public sealed class MobileBannerAdControl : ContentControl
             }
 
             _adState.SetSuppressed(value);
+            if (value)
+            {
+                StopAdRetry(resetAttempt: false);
+            }
+            else if (_adisposable is null)
+            {
+                // A no-fill result while the shell was suppressed should be
+                // retried once the navigation chrome is visible again.
+                LoadAdCore(resetRetry: false);
+            }
             UpdateVisibility();
         }
     }
@@ -59,7 +76,15 @@ public sealed class MobileBannerAdControl : ContentControl
     /// screen; a later call reloads when eligibility returns.
     /// </summary>
     public void LoadAd()
+        => LoadAdCore(resetRetry: true);
+
+    private void LoadAdCore(bool resetRetry)
     {
+        if (resetRetry)
+        {
+            StopAdRetry();
+        }
+
         var service = MobileAdvertisingServices.TryGet();
         if (service is null || !service.CanServeAds)
         {
@@ -81,6 +106,7 @@ public sealed class MobileBannerAdControl : ContentControl
         if (_adisposable is null)
         {
             _adState.Clear();
+            ScheduleAdRetry();
         }
 
         UpdateVisibility();
@@ -90,6 +116,12 @@ public sealed class MobileBannerAdControl : ContentControl
     /// Releases the current banner ad and collapses the control.
     /// </summary>
     public void ClearAd()
+    {
+        StopAdRetry();
+        ClearAdCore();
+    }
+
+    private void ClearAdCore()
     {
         var disposable = _adisposable;
         _adisposable = null;
@@ -111,6 +143,11 @@ public sealed class MobileBannerAdControl : ContentControl
         _lifecycleSubscribed = true;
         MobileAppLifecycle.Paused += OnAppPaused;
         MobileAppLifecycle.Resumed += OnAppResumed;
+
+        if (_adisposable is null && _retryAttempt > 0)
+        {
+            ScheduleAdRetry();
+        }
     }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
@@ -121,6 +158,10 @@ public sealed class MobileBannerAdControl : ContentControl
             MobileAppLifecycle.Paused -= OnAppPaused;
             MobileAppLifecycle.Resumed -= OnAppResumed;
         }
+
+        // Keep the backoff attempt across a temporary detach, but never leave
+        // a DispatcherTimer subscribed to a detached visual tree.
+        StopAdRetry(resetAttempt: false);
 
         base.OnDetachedFromVisualTree(e);
     }
@@ -155,6 +196,64 @@ public sealed class MobileBannerAdControl : ContentControl
         });
     }
 
+    private void ScheduleAdRetry()
+    {
+        if (_retryTimer is not null ||
+            _adState.IsSuppressed ||
+            !_lifecycleSubscribed)
+        {
+            return;
+        }
+
+        var exponent = Math.Min(_retryAttempt, 3);
+        var multiplier = Math.Pow(2, exponent);
+        var delay = TimeSpan.FromTicks(Math.Min(
+            BannerRetryMaxDelay.Ticks,
+            (long)(BannerRetryBaseDelay.Ticks * multiplier)));
+        _retryAttempt++;
+
+        var timer = new Avalonia.Threading.DispatcherTimer
+        {
+            Interval = delay
+        };
+        EventHandler? tick = null;
+        tick = (_, _) =>
+        {
+            timer.Stop();
+            timer.Tick -= tick;
+            if (ReferenceEquals(_retryTimer, timer))
+            {
+                _retryTimer = null;
+            }
+
+            if (!_adState.IsSuppressed && _adisposable is null)
+            {
+                LoadAdCore(resetRetry: false);
+            }
+        };
+        timer.Tick += tick;
+        _retryTimer = timer;
+        timer.Start();
+
+        Console.WriteLine(
+            $"NoctraAds: banner retry scheduled in {delay.TotalSeconds:F0}s (attempt {_retryAttempt})");
+    }
+
+    private void StopAdRetry(bool resetAttempt = true)
+    {
+        var timer = _retryTimer;
+        _retryTimer = null;
+        if (timer is not null)
+        {
+            timer.Stop();
+        }
+
+        if (resetAttempt)
+        {
+            _retryAttempt = 0;
+        }
+    }
+
     private static TimeSpan ResolveStaleThreshold()
     {
 #if DEBUG
@@ -163,6 +262,15 @@ public sealed class MobileBannerAdControl : ContentControl
         return TimeSpan.FromSeconds(15);
 #else
         return TimeSpan.FromMinutes(2);
+#endif
+    }
+
+    private static TimeSpan ResolveRetryBaseDelay()
+    {
+#if DEBUG
+        return TimeSpan.FromSeconds(5);
+#else
+        return TimeSpan.FromSeconds(30);
 #endif
     }
 
@@ -177,12 +285,26 @@ public sealed class MobileBannerAdControl : ContentControl
 
             if (state == BannerAdLoadState.Failed)
             {
-                ClearAd();
+                // Keep the current backoff attempt so a persistent no-fill
+                // response does not turn into a fixed-rate request loop.
+                ClearAdForRetry();
+                ScheduleAdRetry();
                 return;
+            }
+
+            if (state == BannerAdLoadState.Loaded)
+            {
+                StopAdRetry();
             }
 
             UpdateVisibility();
         });
+    }
+
+    private void ClearAdForRetry()
+    {
+        StopAdRetry(resetAttempt: false);
+        ClearAdCore();
     }
 
     private void UpdateVisibility()

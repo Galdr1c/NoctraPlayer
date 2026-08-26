@@ -501,6 +501,49 @@ public sealed class AdvertisingAccessibilityContractTests
     }
 
     [Fact]
+    public void BannerControl_RetriesAfterNoFillWithoutKeepingBlankShell()
+    {
+        var source = File.ReadAllText(ProjectSource(
+            "Noctra.Mobile", "Controls", "MobileBannerAdControl.cs"));
+
+        var failedIndex = source.IndexOf(
+            "BannerAdLoadState.Failed", StringComparison.Ordinal);
+        var clearIndex = source.IndexOf("ClearAdForRetry();", failedIndex, StringComparison.Ordinal);
+        var retryIndex = source.IndexOf("ScheduleAdRetry();", clearIndex, StringComparison.Ordinal);
+
+        Assert.True(failedIndex >= 0, "The failed banner state must remain explicit.");
+        Assert.True(clearIndex > failedIndex,
+            "A no-fill result must clear the native banner before retrying.");
+        Assert.True(retryIndex > clearIndex,
+            "A no-fill result must schedule a later retry instead of leaving a blank slot.");
+        Assert.Contains("DispatcherTimer", source, StringComparison.Ordinal);
+        Assert.Contains("TimeSpan.FromSeconds(30)", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void AdMobAndHuaweiBannersReportFailuresThroughSharedState()
+    {
+        var admob = File.ReadAllText(ProjectSource(
+            "Noctra.Android", "Advertising", "AdMobMobileAdvertisingService.cs"));
+        var huawei = File.ReadAllText(ProjectSource(
+            "Noctra.Android", "Advertising", "HuaweiMobileAdvertisingService.cs"));
+
+        var admobFailure = admob.IndexOf("OnAdFailedToLoad", StringComparison.Ordinal);
+        var huaweiFailure = huawei.IndexOf("public override void OnAdFailed(int errorCode)", StringComparison.Ordinal);
+
+        Assert.True(admobFailure >= 0, "AdMob failure callback must remain explicit.");
+        Assert.True(huaweiFailure >= 0, "Huawei failure callback must remain explicit.");
+        Assert.Contains(
+            "_stateChanged?.Invoke(BannerAdLoadState.Failed)",
+            admob[admobFailure..],
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "_stateChanged?.Invoke(BannerAdLoadState.Failed)",
+            huawei[huaweiFailure..],
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void HuaweiConsent_PrivacyChoicesRequireVerifiedProviderMetadata()
     {
         var provider = File.ReadAllText(ProjectSource(
