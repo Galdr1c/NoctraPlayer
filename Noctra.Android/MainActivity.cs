@@ -330,12 +330,6 @@ public class MainActivity : AvaloniaMainActivity
     {
         if (Avalonia.Application.Current is Noctra.Mobile.App app)
         {
-            if (app.Services?.GetService<GooglePlayUpdateService>() is { } updateService &&
-                updateService.TryHandleActivityResult(requestCode, resultCode))
-            {
-                return;
-            }
-
             if (app.Services?.GetService<AndroidFilePickerService>() is { } filePicker &&
                 filePicker.TryHandleActivityResult(requestCode, resultCode, data))
             {
@@ -404,11 +398,6 @@ public class MainActivity : AvaloniaMainActivity
         {
             app.Services?.GetService<AndroidActivityProvider>()?.SetCurrent(this);
 
-            if (app.Services?.GetService<GooglePlayUpdateService>() is { } updateService)
-            {
-                _ = ResumeUpdateFlowSafelyAsync(updateService);
-            }
-
             // Resume/focus sonrası Premium süresi yeniden kontrol edilir;
             // süre uygulama kapalıyken dolduysa UI burada güncellenir.
             if (app.Services?.GetService<ILicenseService>() is { } licenseService)
@@ -474,18 +463,6 @@ public class MainActivity : AvaloniaMainActivity
         }
 
         NotifyVisualTree();
-    }
-
-    private static async Task ResumeUpdateFlowSafelyAsync(GooglePlayUpdateService updateService)
-    {
-        try
-        {
-            await updateService.ResumeUpdateAsync().ConfigureAwait(false);
-        }
-        catch (Exception ex)
-        {
-            Log.Warn("Noctra", $"Update resume check failed: {ex}");
-        }
     }
 
     private void QueueLicenseRefresh(ILicenseService licenseService, long resumeGeneration)

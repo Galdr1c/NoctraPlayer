@@ -26,7 +26,7 @@ whenever dependencies change.
 | System.Security.Cryptography.ProtectedData | 8.0.0 | MIT | Core |
 | .NET runtime / Mono runtime | net8/net10 | MIT | All |
 | Xamarin.AndroidX.* bindings (Media3 ExoPlayer/HLS/DASH/SS/RTSP, Session, SplashScreen) | 1.4.1.1 etc. | Apache-2.0 (AndroidX); bindings MIT | Android |
-| Xamarin.Google.Android.Play.Review / App.Update | 2.x | Apache-2.0 | Android |
+| Xamarin.Google.Android.Play.Review | 2.x | Apache-2.0 | Android |
 | Xamarin.Android.Google.BillingClient | 9.1.0.1 | Apache-2.0 | Android |
 | Xamarin.GooglePlayServices.Ads (Google Mobile Ads SDK) | 125.4.0.2 | Google Play Services SDK license (Apache-2.0-based terms) | Android |
 | Xamarin.Google.UserMessagingPlatform (UMP) | 4.0.0.3 | Apache-2.0 | Android |

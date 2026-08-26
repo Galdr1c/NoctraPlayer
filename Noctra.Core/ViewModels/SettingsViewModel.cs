@@ -35,7 +35,6 @@ public partial class SettingsViewModel : ObservableObject, IAsyncDisposable
     private readonly IAppPathService _appPaths;
     private readonly ICacheService _cacheService;
     private readonly IProfileService? _profileService;
-    private readonly IAppUpdateService _appUpdateService;
     private readonly IDispatcherService? _dispatcherService;
     private readonly SettingsAutoSaveCoordinator _autoSaveCoordinator;
     private readonly SettingsChangeOriginGate _settingsChangeOriginGate = new();
@@ -356,7 +355,6 @@ public partial class SettingsViewModel : ObservableObject, IAsyncDisposable
         IAppVersionService appVersionService,
         ILocalizationService localizationService,
         ISecurityService securityService,
-        IAppUpdateService appUpdateService,
         IAppPathService? appPaths = null,
         ICacheService? cacheService = null,
         IProfileService? profileService = null,
@@ -375,7 +373,6 @@ public partial class SettingsViewModel : ObservableObject, IAsyncDisposable
         _appVersionService = appVersionService;
         _localizationService = localizationService;
         _securityService = securityService;
-        _appUpdateService = appUpdateService;
         _dispatcherService = dispatcherService;
         _appPaths = appPaths ?? new DesktopAppPathService();
         _cacheService = cacheService ?? new CacheService(_appPaths);
@@ -385,7 +382,6 @@ public partial class SettingsViewModel : ObservableObject, IAsyncDisposable
         _mainViewModel.PropertyChanged += MainViewModel_PropertyChanged;
         _settingsService.SettingsChanged += OnSettingsService_Changed;
         _licenseService.SubscriptionChanged += OnLicenseSubscriptionChanged;
-        _appUpdateService.UpdateStateChanged += OnUpdateStateChanged;
         
         ChannelListLastError = _mainViewModel.ChannelListLastError;
         
@@ -395,8 +391,6 @@ public partial class SettingsViewModel : ObservableObject, IAsyncDisposable
         _initialStatisticsTask = LoadInitialStatisticsAsync();
         _ = _mainViewModel.RefreshCurrentProfileExpirationAsync();
         _ = UpdateCacheSizeAsync();
-        // Bekleyen flexible update kontrolü
-        _ = CheckPendingUpdateAsync();
     }
 
     private async Task LoadInitialStatisticsAsync()
@@ -420,131 +414,6 @@ public partial class SettingsViewModel : ObservableObject, IAsyncDisposable
         => !_lifetimeCts.IsCancellationRequested &&
            _mainViewModel.CurrentProfile?.Id == profileId &&
            _mainViewModel.SelectedPlaylist?.Id == playlistId;
-
-    private void OnUpdateStateChanged(object? sender, UpdateStateChangedEventArgs e)
-    {
-        if (_dispatcherService is not null)
-        {
-            _dispatcherService.BeginInvoke(() => ApplyUpdateState(e));
-            return;
-        }
-
-        ApplyUpdateState(e);
-    }
-
-    private void ApplyUpdateState(UpdateStateChangedEventArgs e)
-    {
-        IsCheckingForUpdates = false;
-
-        switch (e.Status)
-        {
-            case UpdateCheckStatus.Downloading:
-                IsUpdateUnsupported = false;
-                IsStartingUpdate = false;
-                IsUpdateAvailable = false;
-                IsUpdateDownloaded = false;
-                IsUpdateDownloading = true;
-                UpdateStatusText = e.ProgressPercent.HasValue
-                    ? string.Format(
-                        _localizationService.GetString("Settings.Update.DownloadingProgressFormat"),
-                        e.ProgressPercent.Value)
-                    : _localizationService.GetString("Settings.Update.Downloading");
-                break;
-
-            case UpdateCheckStatus.Downloaded:
-                IsUpdateUnsupported = false;
-                IsStartingUpdate = false;
-                IsUpdateAvailable = false;
-                IsUpdateDownloading = false;
-                IsUpdateDownloaded = true;
-                UpdateStatusText = _localizationService.GetString("Settings.Update.Downloaded");
-                break;
-
-            case UpdateCheckStatus.UpdateAvailable:
-                IsUpdateUnsupported = false;
-                IsStartingUpdate = false;
-                IsUpdateDownloading = false;
-                IsUpdateDownloaded = false;
-                IsUpdateAvailable = true;
-                UpdateStatusText = GetAvailableUpdateText(AvailableVersion);
-                break;
-
-            case UpdateCheckStatus.UpToDate:
-                IsUpdateUnsupported = false;
-                IsStartingUpdate = false;
-                IsUpdateAvailable = false;
-                IsUpdateDownloading = false;
-                IsUpdateDownloaded = false;
-                AvailableVersion = null;
-                UpdateStatusText = _localizationService.GetString("Settings.Update.UpToDate");
-                break;
-
-            case UpdateCheckStatus.Canceled:
-            {
-                IsUpdateUnsupported = false;
-                var hadDownloadedUpdate = IsUpdateDownloaded;
-                var hadKnownUpdate = IsUpdateAvailable || IsUpdateDownloading || IsStartingUpdate;
-
-                IsStartingUpdate = false;
-                IsUpdateDownloading = false;
-
-                if (hadDownloadedUpdate)
-                {
-                    IsUpdateAvailable = false;
-                    IsUpdateDownloaded = true;
-                    UpdateStatusText = _localizationService.GetString("Settings.Update.Downloaded");
-                }
-                else if (hadKnownUpdate)
-                {
-                    IsUpdateDownloaded = false;
-                    IsUpdateAvailable = true;
-                    UpdateStatusText = GetAvailableUpdateText(AvailableVersion);
-                }
-                else
-                {
-                    ResetUpdateFlags();
-                    UpdateStatusText = _localizationService.GetString("Settings.Update.CheckFailed");
-                }
-
-                break;
-            }
-
-            case UpdateCheckStatus.Unsupported:
-                ResetUpdateFlags();
-                IsUpdateUnsupported = true;
-                UpdateStatusText = _localizationService.GetString("Settings.Update.Unsupported");
-                break;
-
-            case UpdateCheckStatus.Error:
-            {
-                var wasInstalling = IsStartingUpdate || IsUpdateDownloading || IsUpdateDownloaded;
-                ResetUpdateFlags();
-                IsUpdateUnsupported = false;
-                UpdateStatusText = _localizationService.GetString(
-                    wasInstalling
-                        ? "Settings.Update.StartFailed"
-                        : "Settings.Update.CheckFailed");
-                break;
-            }
-        }
-    }
-
-    private string GetAvailableUpdateText(string? version)
-    {
-        return string.IsNullOrWhiteSpace(version)
-            ? _localizationService.GetString("Settings.Update.AvailableGeneric")
-            : string.Format(
-                _localizationService.GetString("Settings.Update.AvailableFormat"),
-                version);
-    }
-
-    private void ResetUpdateFlags()
-    {
-        IsStartingUpdate = false;
-        IsUpdateAvailable = false;
-        IsUpdateDownloading = false;
-        IsUpdateDownloaded = false;
-    }
 
     public string CurrentVersion => _appVersionService.DisplayVersion;
     public bool IsPremium => _licenseService.IsPremium;
@@ -699,185 +568,6 @@ public partial class SettingsViewModel : ObservableObject, IAsyncDisposable
 
     public string PromoGrantCorruptedMessage =>
         _localizationService.GetString("GlobalSettings.Promo.Error.GrantCorrupted");
-
-    [ObservableProperty]
-    private string _updateStatusText = string.Empty;
-
-    [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(CheckForUpdatesCommand), nameof(StartUpdateCommand), nameof(CompleteUpdateCommand))]
-    [NotifyPropertyChangedFor(nameof(ShowUpdateCheckButton))]
-    private bool _isCheckingForUpdates;
-
-    [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(CheckForUpdatesCommand), nameof(StartUpdateCommand), nameof(CompleteUpdateCommand))]
-    [NotifyPropertyChangedFor(nameof(ShowUpdateCheckButton))]
-    private bool _isUpdateAvailable;
-
-    [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(CheckForUpdatesCommand), nameof(StartUpdateCommand), nameof(CompleteUpdateCommand))]
-    [NotifyPropertyChangedFor(nameof(ShowUpdateCheckButton))]
-    private bool _isStartingUpdate;
-
-    [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(CheckForUpdatesCommand), nameof(StartUpdateCommand), nameof(CompleteUpdateCommand))]
-    [NotifyPropertyChangedFor(nameof(ShowUpdateCheckButton))]
-    private bool _isUpdateDownloaded;
-
-    [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(CheckForUpdatesCommand), nameof(StartUpdateCommand), nameof(CompleteUpdateCommand))]
-    [NotifyPropertyChangedFor(nameof(ShowUpdateCheckButton))]
-    private bool _isUpdateDownloading;
-
-    [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(CheckForUpdatesCommand))]
-    [NotifyPropertyChangedFor(nameof(ShowUpdateCheckButton))]
-    private bool _isUpdateUnsupported;
-
-    [ObservableProperty]
-    private string? _availableVersion;
-
-    public bool ShowUpdateCheckButton => CanCheckForUpdates;
-
-    private bool CanCheckForUpdates =>
-        !IsCheckingForUpdates &&
-        !IsStartingUpdate &&
-        !IsUpdateAvailable &&
-        !IsUpdateDownloading &&
-        !IsUpdateDownloaded &&
-        !IsUpdateUnsupported;
-
-    private bool CanStartUpdate =>
-        IsUpdateAvailable &&
-        !IsCheckingForUpdates &&
-        !IsStartingUpdate &&
-        !IsUpdateDownloading &&
-        !IsUpdateDownloaded;
-
-    private bool CanCompleteUpdate =>
-        IsUpdateDownloaded &&
-        !IsCheckingForUpdates &&
-        !IsStartingUpdate &&
-        !IsUpdateDownloading;
-
-    [RelayCommand(CanExecute = nameof(CanCheckForUpdates))]
-    private async Task CheckForUpdatesAsync()
-    {
-        if (!CanCheckForUpdates)
-        {
-            return;
-        }
-
-        IsCheckingForUpdates = true;
-        IsUpdateUnsupported = false;
-        IsUpdateAvailable = false;
-        AvailableVersion = null;
-        UpdateStatusText = _localizationService.GetString("Settings.Update.Checking");
-
-        try
-        {
-            var result = await _appUpdateService.CheckAsync();
-            AvailableVersion = result.LatestVersion;
-            ApplyUpdateState(new UpdateStateChangedEventArgs(
-                result.Status,
-                result.ErrorMessage ?? string.Empty));
-        }
-        catch (OperationCanceledException)
-        {
-            ApplyUpdateState(new UpdateStateChangedEventArgs(UpdateCheckStatus.Canceled));
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"[SettingsViewModel] CheckForUpdates failed: {ex.Message}");
-            ApplyUpdateState(new UpdateStateChangedEventArgs(UpdateCheckStatus.Error));
-        }
-        finally
-        {
-            IsCheckingForUpdates = false;
-        }
-    }
-
-    [RelayCommand(CanExecute = nameof(CanStartUpdate))]
-    private async Task StartUpdateAsync()
-    {
-        if (!CanStartUpdate)
-        {
-            return;
-        }
-
-        IsStartingUpdate = true;
-        var started = false;
-        try
-        {
-            started = await _appUpdateService.StartUpdateAsync();
-            // Platform servisi terminal bir state event'i yayınladıysa o mesajı koru.
-            // Hiç event gelmeden false dönerse kontrollü bir başlangıç hatası göster.
-            if (!started && IsStartingUpdate)
-            {
-                ResetUpdateFlags();
-                UpdateStatusText = _localizationService.GetString("Settings.Update.StartFailed");
-            }
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"[SettingsViewModel] StartUpdate failed: {ex.Message}");
-            ResetUpdateFlags();
-            UpdateStatusText = _localizationService.GetString("Settings.Update.StartFailed");
-        }
-        finally
-        {
-            // Android'de Store onay ekranı sonuçlanana, Windows'ta Store işlemi event ile
-            // terminal duruma geçene kadar butonları kilitli tut.
-            if (!started)
-            {
-                IsStartingUpdate = false;
-            }
-        }
-    }
-
-    [RelayCommand(CanExecute = nameof(CanCompleteUpdate))]
-    private async Task CompleteUpdateAsync()
-    {
-        if (!CanCompleteUpdate)
-        {
-            return;
-        }
-
-        IsStartingUpdate = true;
-        try
-        {
-            var completed = await _appUpdateService.CompleteUpdateAsync();
-            if (!completed && IsUpdateDownloaded)
-            {
-                UpdateStatusText = _localizationService.GetString("Settings.Update.StartFailed");
-            }
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"[SettingsViewModel] CompleteUpdate failed: {ex.Message}");
-            UpdateStatusText = _localizationService.GetString("Settings.Update.StartFailed");
-        }
-        finally
-        {
-            IsStartingUpdate = false;
-        }
-    }
-
-    private async Task CheckPendingUpdateAsync()
-    {
-        try
-        {
-            var pending = await _appUpdateService.CheckPendingUpdateAsync();
-            if (pending.Status is UpdateCheckStatus.Downloaded or UpdateCheckStatus.Downloading)
-            {
-                AvailableVersion = pending.LatestVersion;
-                ApplyUpdateState(new UpdateStateChangedEventArgs(pending.Status));
-            }
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"[SettingsViewModel] CheckPendingUpdate failed: {ex.Message}");
-        }
-    }
 
     [RelayCommand]
     private async Task ShowUpsell()
@@ -2483,7 +2173,6 @@ public partial class SettingsViewModel : ObservableObject, IAsyncDisposable
     public async ValueTask DisposeAsync()
     {
         _lifetimeCts.Cancel();
-        _appUpdateService.UpdateStateChanged -= OnUpdateStateChanged;
         _mainViewModel.PropertyChanged -= MainViewModel_PropertyChanged;
         _settingsService.SettingsChanged -= OnSettingsService_Changed;
         _licenseService.SubscriptionChanged -= OnLicenseSubscriptionChanged;

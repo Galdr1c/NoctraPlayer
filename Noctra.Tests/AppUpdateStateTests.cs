@@ -75,17 +75,13 @@ public sealed class AppUpdateStateTests
     }
 
     [Fact]
-    public void PlatformServices_UseTheSharedStatePublisher()
+    public void DesktopPlatformService_UsesTheSharedStatePublisher()
     {
-        var android = ReadProjectFile("Noctra.Android", "Services", "GooglePlayUpdateService.cs");
         var windows = ReadProjectFile("Noctra.Avalonia", "Services", "MicrosoftStoreUpdateService.cs");
 
-        foreach (var service in new[] { android, windows })
-        {
-            Assert.Contains("UpdateStatePublisher", service, StringComparison.Ordinal);
-            Assert.Contains("_statePublisher.Publish(this", service, StringComparison.Ordinal);
-            Assert.DoesNotContain("UpdateStateChanged?.Invoke", service, StringComparison.Ordinal);
-        }
+        Assert.Contains("UpdateStatePublisher", windows, StringComparison.Ordinal);
+        Assert.Contains("_statePublisher.Publish(this", windows, StringComparison.Ordinal);
+        Assert.DoesNotContain("UpdateStateChanged?.Invoke", windows, StringComparison.Ordinal);
     }
 
     private static string ReadProjectFile(params string[] parts)

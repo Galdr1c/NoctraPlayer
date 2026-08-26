@@ -44,8 +44,6 @@ public static class AndroidServiceCollectionExtensions
         services.AddSingleton(SqliteConnectionTuningOptions.Mobile);
         services.AddNoctraCoreServices();
         services.AddSingleton<IAppVersionService, AndroidAppVersionService>();
-        services.AddSingleton<GooglePlayUpdateService>();
-        services.AddSingleton<IAppUpdateService>(sp => sp.GetRequiredService<GooglePlayUpdateService>());
         services.AddSingleton<IPlatformActionService, AndroidPlatformActionService>();
         services.AddSingleton<IBillingVerificationClient>(serviceProvider =>
             new HttpBillingVerificationClient(serviceProvider.GetRequiredService<HttpClient>()));

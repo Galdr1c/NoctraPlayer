@@ -3,7 +3,6 @@ namespace Noctra.Services.Interfaces;
 /// <summary>
 /// Uygulama güncelleme servisi arayüzü.
 /// Platforma göre farklı implementasyonlar kullanılır:
-/// - Android: Google Play In-App Updates (flexible/immediate)
 /// - Windows Store: StoreContext API
 /// - Debug/Unpackaged: NoOp (güncelleme kontrolü yapmaz)
 /// </summary>
