@@ -896,6 +896,29 @@ internal sealed class BannerNativeControlHost : NativeControlHost
         adView.LoadAd(new AdRequest.Builder().Build());
     }
 
+    public void RequestRefresh()
+    {
+        MainHandler.Post(() =>
+        {
+            if (Volatile.Read(ref _disposed) != 0 || _adView is null)
+            {
+                return;
+            }
+
+            try
+            {
+                // Reusing AdView preserves the currently rendered creative;
+                // the result is delivered through the existing listener.
+                _adView.LoadAd(new AdRequest.Builder().Build());
+            }
+            catch (Exception ex)
+            {
+                global::Android.Util.Log.Warn(
+                    "NoctraAds", $"AdMob banner refresh threw: {ex.Message}");
+            }
+        });
+    }
+
     private void SubscribeToLifecycle()
     {
         if (Interlocked.Exchange(ref _lifecycleSubscribed, 1) != 0)
@@ -999,7 +1022,7 @@ internal sealed class BannerNativeControlHost : NativeControlHost
     }
 }
 
-internal sealed class BannerAdHandle : IDisposable
+internal sealed class BannerAdHandle : IBannerAdRefreshHandle
 {
     private readonly BannerNativeControlHost _nativeHost;
     private int _disposed;
@@ -1016,4 +1039,7 @@ internal sealed class BannerAdHandle : IDisposable
 
         _nativeHost.DestroyAd();
     }
+
+    public void RequestRefresh()
+        => _nativeHost.RequestRefresh();
 }

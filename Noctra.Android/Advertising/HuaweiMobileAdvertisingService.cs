@@ -990,6 +990,29 @@ internal sealed class HuaweiBannerNativeControlHost : NativeControlHost
         base.DestroyNativeControlCore(control);
     }
 
+    public void RequestRefresh()
+    {
+        MainHandler.Post(() =>
+        {
+            if (Volatile.Read(ref _disposed) != 0 || _bannerView is null)
+            {
+                return;
+            }
+
+            try
+            {
+                // Reuse BannerView so a currently rendered creative remains
+                // visible while Petal Ads searches for replacement inventory.
+                _bannerView.LoadAd(new AdParam.Builder().Build());
+            }
+            catch (Exception ex)
+            {
+                global::Android.Util.Log.Warn(
+                    "NoctraAds", "HMS banner refresh threw: " + ex.Message);
+            }
+        });
+    }
+
     public void DestroyAd()
     {
         if (Interlocked.Exchange(ref _disposed, 1) == 0)
@@ -1201,7 +1224,7 @@ internal sealed class HuaweiBannerNativeControlHost : NativeControlHost
     }
 }
 
-internal sealed class HuaweiBannerAdHandle : IDisposable
+internal sealed class HuaweiBannerAdHandle : IBannerAdRefreshHandle
 {
     private readonly HuaweiBannerNativeControlHost _host;
     private int _disposed;
@@ -1215,6 +1238,9 @@ internal sealed class HuaweiBannerAdHandle : IDisposable
             _host.DestroyAd();
         }
     }
+
+    public void RequestRefresh()
+        => _host.RequestRefresh();
 }
 
 internal sealed class HuaweiBannerListener : AdListener

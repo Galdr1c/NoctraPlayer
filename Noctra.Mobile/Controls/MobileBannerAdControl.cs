@@ -16,9 +16,9 @@ namespace Noctra.Mobile.Controls;
 /// too long can die silently without raising a failure callback, leaving an
 /// empty, non-clickable shell. After a long foreground absence the current ad
 /// is destroyed and reloaded from scratch so a stale creative never survives.
-/// A provider no-fill result collapses the host and uses a bounded exponential
-/// retry so Free users do not lose the banner permanently while no inventory is
-/// temporarily available.
+/// A provider no-fill result preserves an already-loaded creative and uses a
+/// bounded exponential refresh retry; an initial no-fill still collapses the
+/// host so no blank slot is presented.
 /// </summary>
 public sealed class MobileBannerAdControl : ContentControl
 {
@@ -32,6 +32,7 @@ public sealed class MobileBannerAdControl : ContentControl
     private bool _lifecycleSubscribed;
     private Avalonia.Threading.DispatcherTimer? _retryTimer;
     private int _retryAttempt;
+    private bool _hasLoadedCreative;
 
     public MobileBannerAdControl()
     {
@@ -118,6 +119,7 @@ public sealed class MobileBannerAdControl : ContentControl
     public void ClearAd()
     {
         StopAdRetry();
+        _hasLoadedCreative = false;
         ClearAdCore();
     }
 
@@ -226,7 +228,19 @@ public sealed class MobileBannerAdControl : ContentControl
                 _retryTimer = null;
             }
 
-            if (!_adState.IsSuppressed && _adisposable is null)
+            if (_adState.IsSuppressed)
+            {
+                return;
+            }
+
+            if (_hasLoadedCreative && _adisposable is IBannerAdRefreshHandle refreshHandle)
+            {
+                // Reuse the native view so the currently displayed creative
+                // remains visible while the provider looks for replacement
+                // inventory.
+                refreshHandle.RequestRefresh();
+            }
+            else if (_adisposable is null)
             {
                 LoadAdCore(resetRetry: false);
             }
@@ -285,6 +299,17 @@ public sealed class MobileBannerAdControl : ContentControl
 
             if (state == BannerAdLoadState.Failed)
             {
+                if (_hasLoadedCreative && _adisposable is not null)
+                {
+                    // A refresh no-fill does not invalidate the creative that
+                    // is already on screen. Keep it visible/clickable while a
+                    // later request looks for replacement inventory.
+                    _adState.ApplyLoadState(generation, BannerAdLoadState.Loaded);
+                    ScheduleAdRetry();
+                    UpdateVisibility();
+                    return;
+                }
+
                 // Keep the current backoff attempt so a persistent no-fill
                 // response does not turn into a fixed-rate request loop.
                 ClearAdForRetry();
@@ -294,6 +319,7 @@ public sealed class MobileBannerAdControl : ContentControl
 
             if (state == BannerAdLoadState.Loaded)
             {
+                _hasLoadedCreative = true;
                 StopAdRetry();
             }
 

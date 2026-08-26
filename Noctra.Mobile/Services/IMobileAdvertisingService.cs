@@ -80,6 +80,16 @@ public interface IMobileAdvertisingService
 }
 
 /// <summary>
+/// Optional capability implemented by native banner handles. A refresh request
+/// reuses the current native view, allowing a previously loaded creative to
+/// remain visible while a replacement request is in flight or returns no-fill.
+/// </summary>
+public interface IBannerAdRefreshHandle : IDisposable
+{
+    void RequestRefresh();
+}
+
+/// <summary>
 /// Store-safe fallback. Ads are fail-closed: a missing SDK/configuration never
 /// blocks navigation and never creates an empty ad row.
 /// </summary>

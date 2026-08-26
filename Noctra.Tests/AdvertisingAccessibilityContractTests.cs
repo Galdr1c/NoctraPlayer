@@ -521,6 +521,35 @@ public sealed class AdvertisingAccessibilityContractTests
     }
 
     [Fact]
+    public void BannerControl_PreservesLoadedCreativeDuringRefreshNoFill()
+    {
+        var source = File.ReadAllText(ProjectSource(
+            "Noctra.Mobile", "Controls", "MobileBannerAdControl.cs"));
+
+        var failedIndex = source.IndexOf(
+            "BannerAdLoadState.Failed", StringComparison.Ordinal);
+        var preserveIndex = source.IndexOf(
+            "_hasLoadedCreative && _adisposable is not null",
+            failedIndex,
+            StringComparison.Ordinal);
+        var restoreIndex = source.IndexOf(
+            "_adState.ApplyLoadState(generation, BannerAdLoadState.Loaded)",
+            preserveIndex,
+            StringComparison.Ordinal);
+        var refreshCapability = source.IndexOf(
+            "IBannerAdRefreshHandle refreshHandle",
+            StringComparison.Ordinal);
+
+        Assert.True(failedIndex >= 0);
+        Assert.True(preserveIndex > failedIndex,
+            "A refresh failure must detect that a previous creative was loaded.");
+        Assert.True(restoreIndex > preserveIndex,
+            "A preserved creative must remain in the Loaded presentation state.");
+        Assert.True(refreshCapability >= 0,
+            "The retry must be able to request a refresh without destroying the native view.");
+    }
+
+    [Fact]
     public void AdMobAndHuaweiBannersReportFailuresThroughSharedState()
     {
         var admob = File.ReadAllText(ProjectSource(
@@ -541,6 +570,8 @@ public sealed class AdvertisingAccessibilityContractTests
             "_stateChanged?.Invoke(BannerAdLoadState.Failed)",
             huawei[huaweiFailure..],
             StringComparison.Ordinal);
+        Assert.Contains("RequestRefresh()", admob, StringComparison.Ordinal);
+        Assert.Contains("RequestRefresh()", huawei, StringComparison.Ordinal);
     }
 
     [Fact]
