@@ -15,7 +15,29 @@
             VerticalAlignment="Bottom"
             BoxShadow="{DynamicResource OverlaySheetShadow}">
       <Grid RowDefinitions="Auto,*">
-        <ScrollViewer Grid.Row="0"
+        <!-- Sağ üstte sabit kapatma (X) — MobileSelectionSheet ile aynı desen.
+             Başlık metni 28px yatay margin ile ortalandığı için çakışmaz. -->
+        <Grid Grid.Row="0"
+              MinHeight="44"
+              IsHitTestVisible="True">
+          <Button Grid.Row="0"
+                  Background="Transparent"
+                  BorderThickness="0"
+                  Width="44"
+                  Height="44"
+                  Margin="0,-8,-8,0"
+                  HorizontalAlignment="Right"
+                  VerticalAlignment="Top"
+                  Click="Close_Click"
+                  AutomationProperties.Name="{loc:Translate Common.Close}"
+                  AutomationProperties.HelpText="{loc:Translate Common.Close}">
+            <icons:MaterialIcon Kind="Close"
+                                Width="22"
+                                Height="22"
+                                Foreground="{DynamicResource TextMutedBrush}" />
+          </Button>
+        </Grid>
+        <ScrollViewer Grid.Row="1"
                       MaxHeight="{DynamicResource SheetMaxHeight}">
           <StackPanel Spacing="16">
             <StackPanel Spacing="6"

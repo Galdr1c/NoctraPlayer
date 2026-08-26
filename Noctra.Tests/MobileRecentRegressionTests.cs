@@ -535,6 +535,35 @@ public sealed class MobileRecentRegressionTests
     }
 
     [Fact]
+    public void MainView_CoreContentHostIsClippedAboveTheNativeBannerRow()
+    {
+        var xaml = XDocument.Load(ProjectFile("Noctra.Mobile", "Views", "MainView.axaml"));
+        XNamespace x = "http://schemas.microsoft.com/winfx/2006/xaml";
+        var coreHost = xaml.Descendants()
+            .First(element => (string?)element.Attribute(x + "Name") == "CoreContentHost");
+        var banner = xaml.Descendants()
+            .First(element => (string?)element.Attribute(x + "Name") == "BannerAd");
+
+        Assert.Equal("0", (string?)coreHost.Attribute("Grid.Row"));
+        Assert.Equal("True", (string?)coreHost.Attribute("ClipToBounds"));
+        Assert.Equal("1", (string?)banner.Attribute("Grid.Row"));
+    }
+
+    [Fact]
+    public void MobileUpsell_CloseButtonHasDedicatedHeaderRowAboveScrollViewer()
+    {
+        var xaml = XDocument.Load(ProjectFile("Noctra.Mobile", "Views", "MobileUpsellView.axaml"));
+        var closeButton = xaml.Descendants()
+            .First(element => (string?)element.Attribute("Click") == "Close_Click" &&
+                              (string?)element.Attribute("Width") == "44");
+        var scrollViewer = xaml.Descendants().First(element => element.Name.LocalName == "ScrollViewer");
+
+        Assert.Equal("0", (string?)closeButton.Attribute("Grid.Row"));
+        Assert.Equal("1", (string?)scrollViewer.Attribute("Grid.Row"));
+        Assert.Equal("Grid", closeButton.Parent?.Name.LocalName);
+    }
+
+    [Fact]
     public void MobilePlayerSheet_StretchesAcrossTheViewportWhileOnlyItsSurfaceAlignsToTheBottom()
     {
         var playerView = XDocument.Load(

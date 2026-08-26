@@ -510,6 +510,8 @@
       </ScrollViewer>
 
       <Grid x:Name="CoreContentHost"
+            Grid.Row="0"
+            ClipToBounds="True"
             IsVisible="False">
         <ContentControl x:Name="ActiveCorePageHost" />
         <ContentControl x:Name="SeriesDetailHost" />
