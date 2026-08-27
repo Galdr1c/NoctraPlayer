@@ -46,6 +46,59 @@ public sealed class PlayBillingCatalogTests
     }
 
     [Fact]
+    public void AndroidPurchases_AcknowledgeOnlyAfterBackendVerification()
+    {
+        var source = File.ReadAllText(ProjectFile(
+            "Noctra.Android", "Services", "AndroidStorePurchaseService.cs"));
+        var entitlementStart = source.IndexOf(
+            "public async Task<StoreEntitlement> GetEntitlementAsync",
+            StringComparison.Ordinal);
+        var verifierStart = source.IndexOf(
+            "private async Task<BillingVerifiedEntitlement?> VerifyTokenAsync",
+            entitlementStart,
+            StringComparison.Ordinal);
+        var callbackStart = source.IndexOf(
+            "private void OnPurchasesUpdated",
+            StringComparison.Ordinal);
+        var callbackEnd = source.IndexOf(
+            "// ==========================================",
+            callbackStart,
+            StringComparison.Ordinal);
+
+        Assert.True(entitlementStart >= 0, "The entitlement query method must remain explicit.");
+        Assert.True(verifierStart > entitlementStart, "Token verification must remain below entitlement queries.");
+        Assert.True(callbackStart > verifierStart, "The purchase callback must remain below the entitlement logic.");
+        Assert.True(callbackEnd > callbackStart, "The purchase callback boundary must remain explicit.");
+
+        var entitlementBody = source.Substring(entitlementStart, verifierStart - entitlementStart);
+        var firstVerification = entitlementBody.IndexOf(
+            "var verified = await VerifyTokenAsync(purchase",
+            StringComparison.Ordinal);
+        var firstAcknowledgement = entitlementBody.IndexOf(
+            "AcknowledgeIfNeeded(purchase);",
+            StringComparison.Ordinal);
+        var secondVerification = entitlementBody.IndexOf(
+            "var verified = await VerifyTokenAsync(purchase",
+            firstVerification + 1,
+            StringComparison.Ordinal);
+        var secondAcknowledgement = entitlementBody.IndexOf(
+            "AcknowledgeIfNeeded(purchase);",
+            firstAcknowledgement + 1,
+            StringComparison.Ordinal);
+
+        Assert.True(firstVerification >= 0, "The lifetime token must be backend-verified.");
+        Assert.True(secondVerification > firstVerification, "The subscription token must be backend-verified separately.");
+        Assert.True(firstAcknowledgement > firstVerification,
+            "The lifetime purchase must be acknowledged only after backend verification.");
+        Assert.True(secondAcknowledgement > secondVerification,
+            "The subscription purchase must be acknowledged only after backend verification.");
+
+        var callbackBody = source.Substring(callbackStart, callbackEnd - callbackStart);
+        Assert.DoesNotContain("AcknowledgeIfNeeded(purchase);", callbackBody,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void MobileUpsell_SuccessStartsEntitlementCompletionWatch()
     {
         var source = File.ReadAllText(ProjectFile(

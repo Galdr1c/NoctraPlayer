@@ -173,30 +173,6 @@ public sealed class AndroidStorePurchaseService : IStorePurchaseService, IDispos
             $"entitlement query inapp={inappPurchases?.Count.ToString() ?? "null"} " +
             $"subs={subscriptionPurchases?.Count.ToString() ?? "null"}");
 
-        // Onaylama (acknowledge) sorgu sonucundan ve doğrulama istemcisinden
-        // BAĞIMSIZDIR: liste geldiyse abonelik dahil her PURCHASED kayıt
-        // (kalıcı paket dahil) tek tek acknowledge edilir. Google Play,
-        // onaylanmayan non-consumable satın alımları 3 gün içinde otomatik
-        // iade eder; callback kaçırıldığında (yarım kalan satın alma, uygulama
-        // kapanması, başka cihazda yapılan satın alma, restore) bu döngü
-        // acknowledge'ı telafi eder. Sorgu başarısızsa liste null gelir ve
-        // döngü zaten çalışmaz.
-        if (inappPurchases is not null)
-        {
-            foreach (var purchase in inappPurchases)
-            {
-                AcknowledgeIfNeeded(purchase);
-            }
-        }
-
-        if (subscriptionPurchases is not null)
-        {
-            foreach (var purchase in subscriptionPurchases)
-            {
-                AcknowledgeIfNeeded(purchase);
-            }
-        }
-
         // Play sorgusu başarısız olduysa veya doğrulama istemcisi yoksa hak
         // doğrulanamadı (IsVerified=false) — LicenseService son bilinen
         // doğrulanmış önbelleği kullanır (fail-safe; hak asla erken düşmez).
@@ -251,6 +227,11 @@ public sealed class AndroidStorePurchaseService : IStorePurchaseService, IDispos
 
             if (verified.IsActive && string.Equals(verified.EntitlementType, "Lifetime", StringComparison.OrdinalIgnoreCase))
             {
+                // Acknowledge yalnızca backend token doğrulaması olumlu
+                // sonuçlandıktan sonra yapılır. Geçici veya negatif doğrulama
+                // sonucunda sonraki entitlement sorgusu yeniden deneyebilir;
+                // hak akışı acknowledge sonucuna bağlı değildir.
+                AcknowledgeIfNeeded(purchase);
                 hasLifetime = true;
             }
         }
@@ -278,6 +259,10 @@ public sealed class AndroidStorePurchaseService : IStorePurchaseService, IDispos
             if (verified.IsActive && verified.ExpiresAtUtc.HasValue &&
                 (subscriptionEnd is null || verified.ExpiresAtUtc.Value > subscriptionEnd.Value))
             {
+                // Abonelik için de güvenli sıra: olumlu backend doğrulaması,
+                // ardından acknowledge. Pending veya inaktif kayıtlar helper
+                // çağrısına hiç ulaşmaz.
+                AcknowledgeIfNeeded(purchase);
                 subscriptionEnd = verified.ExpiresAtUtc;
                 isTrialPeriod = verified.IsTrialPeriod;
             }
@@ -425,7 +410,6 @@ public sealed class AndroidStorePurchaseService : IStorePurchaseService, IDispos
                     $"purchase state={purchase.PurchaseState} " +
                     $"products={string.Join(',', purchase.Products ?? Array.Empty<string>())} " +
                     $"acknowledged={purchase.IsAcknowledged}");
-                AcknowledgeIfNeeded(purchase);
             }
         }
 

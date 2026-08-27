@@ -64,12 +64,18 @@ repository:
 2. The unmodified upstream sources used (FFmpeg 6.0.1 tarball,
    androidx/media tag 1.4.1) are publicly downloadable from their official
    locations referenced by that script.
-3. **Before public distribution:** provide a written offer (or direct download)
-   for the complete corresponding object files / relinkable artifacts of
-   `libffmpegJNI.so`. Concretely: publish the unstripped `.so` and/or the
-   compiled object archives next to the release, or state an e-mail contact
-   that fulfils requests for three years (LGPL §6). Suggested contact to fill
-   in before release: `kynora.studio@gmail.com`.
+3. **Written offer for public distribution (LGPL §6):** Kynora Studio will
+   provide, on written request to `kynora.studio@gmail.com`, the complete
+   corresponding object files / relinkable artifacts for the exact
+   `libffmpegJNI.so` binaries shipped in each public release. The offer is
+   valid for at least three years from the date of that distribution. The
+   release owner must retain the unstripped `.so` and compiled object archives
+   for that period; publishing them beside the release is preferred when
+   practical. This notice is the written-offer contact for the Android
+   FFmpeg build and must remain with every redistributed copy.
+   Before each public release, the release owner must confirm that the mailbox
+   is monitored and that the corresponding artifacts are archived; this
+   repository declaration alone does not replace fulfilling requests.
 
 ## libVLC / LibVLCSharp — desktop notes
 
