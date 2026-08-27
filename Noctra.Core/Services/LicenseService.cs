@@ -47,6 +47,14 @@ public class LicenseService : ObservableObject, ILicenseService, IDisposable
     private DateTime? _scheduledExpiryUtc;
 
     /// <summary>
+    /// Google Play aboneliğinin yerel expiry sınırında mağaza/backend
+    /// doğrulaması sürerken Premium durumunun erken Free'e düşmesini önler.
+    /// Semaphore store sorgularını serileştirir; bu bayrak yalnızca UI state
+    /// hesaplamasının doğrulama tamamlanana kadar eski hakkı koruması içindir.
+    /// </summary>
+    private int _storeExpiryRefreshInFlight;
+
+    /// <summary>
     /// Mağazadan (Google Play) doğrulanan Premium hakları. Yalnızca mağaza
     /// desteği olan platformlarda güncellenir; haklar değişince veya platform
     /// yüzeyi hazır olduktan sonra çağıran tarafından yenilenir. Constructor,
@@ -911,6 +919,10 @@ public class LicenseService : ObservableObject, ILicenseService, IDisposable
         // ancak "ödeme bekleniyor" banner'ının açılıp kapanması için durum
         // değişiminde bildirim gerekir.
         var oldPendingPurchase = _storeEntitlement.HasPendingPurchase;
+        var preserveStorePremiumDuringExpiryRefresh =
+            Volatile.Read(ref _storeExpiryRefreshInFlight) == 1 &&
+            oldTier == SubscriptionTier.Premium &&
+            oldSource == PremiumSource.GooglePlaySubscription;
 
         if (_appEditionService.IsPremiumEdition)
         {
@@ -975,6 +987,17 @@ public class LicenseService : ObservableObject, ILicenseService, IDisposable
                     _currentSubscription.IsTrialPeriod =
                         source == PremiumSource.GooglePlaySubscription && store.IsTrialPeriod;
                     _currentSubscription.Source = source;
+                }
+                else if (preserveStorePremiumDuringExpiryRefresh)
+                {
+                    // Play test renewals (ve gerçek yenilemeler) yeni expiry'yi
+                    // birkaç saniye gecikmeli bildirebilir. Store/backend sorgusu
+                    // sürerken eski Premium state'i koru; sorgu tamamlandığında
+                    // handler bayrağı temizleyip authoritative state'i uygular.
+                    _currentSubscription.Tier = SubscriptionTier.Premium;
+                    _currentSubscription.ExpiresAt = oldExpiresAt;
+                    _currentSubscription.IsTrialPeriod = oldIsTrial;
+                    _currentSubscription.Source = PremiumSource.GooglePlaySubscription;
                 }
                 else
                 {
@@ -1076,6 +1099,16 @@ public class LicenseService : ObservableObject, ILicenseService, IDisposable
             _scheduledExpiryUtc = null;
         }
 
+        if (_storePurchaseService is not null &&
+            _currentSubscription.Source == PremiumSource.GooglePlaySubscription &&
+            Interlocked.CompareExchange(ref _storeExpiryRefreshInFlight, 1, 0) == 0)
+        {
+            Console.WriteLine(
+                "NoctraBilling: subscription expiry reached; refreshing store before downgrade");
+            _ = RefreshStoreSubscriptionAtExpiryAsync();
+            return;
+        }
+
         try
         {
             SyncSubscriptionFromSettings(notify: true);
@@ -1083,6 +1116,33 @@ public class LicenseService : ObservableObject, ILicenseService, IDisposable
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[LicenseService] Expiry check failed: {ex.Message}");
+        }
+    }
+
+    private async Task RefreshStoreSubscriptionAtExpiryAsync()
+    {
+        try
+        {
+            await RefreshStoreEntitlementAsync().ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            // RefreshStoreEntitlementCoreAsync kendi store/backend hatalarını
+            // yakalar; bu catch semaphore/cancellation gibi dış hatalar için
+            // son savunmadır. Son state finally bloğunda uygulanır.
+            System.Diagnostics.Debug.WriteLine(
+                $"[LicenseService] Store expiry refresh failed: {ex.Message}");
+        }
+        finally
+        {
+            Interlocked.Exchange(ref _storeExpiryRefreshInFlight, 0);
+            if (!_disposed)
+            {
+                // Yenilenmiş expiry geldiyse Premium kesintisiz devam eder;
+                // authoritative sonuç aktif hak içermiyorsa ancak şimdi Free
+                // bildirimi yayımlanır.
+                SyncSubscriptionFromSettings(notify: true);
+            }
         }
     }
 

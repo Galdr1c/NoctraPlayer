@@ -336,6 +336,84 @@ namespace Noctra.Tests
         }
 
         [Fact]
+        public async Task ExpiryTimer_WhenPlaySubscriptionRenews_DoesNotPublishIntermediateFreeState()
+        {
+            var firstExpiry = DateTime.UtcNow.AddMilliseconds(700);
+            var renewedExpiry = DateTime.UtcNow.AddMinutes(5);
+            var queryCount = 0;
+            var store = new Mock<IStorePurchaseService>();
+            store.Setup(m => m.IsSupported).Returns(true);
+            store.Setup(m => m.GetEntitlementAsync(It.IsAny<CancellationToken>()))
+                .ReturnsAsync(() => new StoreEntitlement
+                {
+                    SubscriptionExpiresAtUtc =
+                        Interlocked.Increment(ref queryCount) == 1
+                            ? firstExpiry
+                            : renewedExpiry
+                });
+
+            using var service = new LicenseService(
+                CreateFreeEditionMock().Object,
+                new TestSettingsService(),
+                new HttpClient(new NotFoundHttpMessageHandler()),
+                securityService: new SecurityService(),
+                storePurchaseService: store.Object,
+                deferInitialStoreRefresh: true);
+
+            await service.RefreshSubscriptionStatusAsync();
+            Assert.True(service.IsPremium);
+
+            var observedFree = 0;
+            service.SubscriptionChanged += () =>
+            {
+                if (!service.IsPremium)
+                {
+                    Interlocked.Exchange(ref observedFree, 1);
+                }
+            };
+
+            await WaitUntilAsync(() => Volatile.Read(ref queryCount) >= 2, timeoutMs: 5000);
+            await WaitUntilAsync(
+                () => service.PremiumExpiresAtUtc == renewedExpiry,
+                timeoutMs: 5000);
+
+            Assert.True(service.IsPremium);
+            Assert.Equal(PremiumSource.GooglePlaySubscription, service.CurrentPremiumSource);
+            Assert.Equal(0, Volatile.Read(ref observedFree));
+        }
+
+        [Fact]
+        public async Task ExpiryTimer_WhenPlaySubscriptionDoesNotRenew_PublishesFreeAfterRefresh()
+        {
+            var firstExpiry = DateTime.UtcNow.AddMilliseconds(700);
+            var queryCount = 0;
+            var store = new Mock<IStorePurchaseService>();
+            store.Setup(m => m.IsSupported).Returns(true);
+            store.Setup(m => m.GetEntitlementAsync(It.IsAny<CancellationToken>()))
+                .ReturnsAsync(() =>
+                    Interlocked.Increment(ref queryCount) == 1
+                        ? new StoreEntitlement { SubscriptionExpiresAtUtc = firstExpiry }
+                        : StoreEntitlement.None);
+
+            using var service = new LicenseService(
+                CreateFreeEditionMock().Object,
+                new TestSettingsService(),
+                new HttpClient(new NotFoundHttpMessageHandler()),
+                securityService: new SecurityService(),
+                storePurchaseService: store.Object,
+                deferInitialStoreRefresh: true);
+
+            await service.RefreshSubscriptionStatusAsync();
+            Assert.True(service.IsPremium);
+
+            await WaitUntilAsync(() => Volatile.Read(ref queryCount) >= 2, timeoutMs: 5000);
+            await WaitUntilAsync(() => !service.IsPremium, timeoutMs: 5000);
+
+            Assert.Equal(SubscriptionTier.Free, service.CurrentTier);
+            Assert.Equal(PremiumSource.None, service.CurrentPremiumSource);
+        }
+
+        [Fact]
         public async Task ExpiryTimer_NotScheduled_ForLifetimeOrFree()
         {
             // Kalıcı paket: süre yok → timer kurulmaz (beklemede state değişmez).
