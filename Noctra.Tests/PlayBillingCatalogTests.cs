@@ -99,6 +99,113 @@ public sealed class PlayBillingCatalogTests
     }
 
     [Fact]
+    public void MobileUpsell_OffersPurchaseRestoreInsteadOfFreeContinuation()
+    {
+        var xaml = File.ReadAllText(ProjectFile(
+            "Noctra.Mobile", "Views", "MobileUpsellView.axaml"));
+
+        Assert.Contains("x:Name=\"RestorePurchasesButton\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Click=\"RestorePurchases_Click\"", xaml, StringComparison.Ordinal);
+        Assert.Contains("Upsell.Action.Restore", xaml, StringComparison.Ordinal);
+        var restoreStart = xaml.IndexOf(
+            "x:Name=\"RestorePurchasesButton\"",
+            StringComparison.Ordinal);
+        var restoreEnd = xaml.IndexOf("</Button>", restoreStart, StringComparison.Ordinal);
+        Assert.True(restoreEnd > restoreStart, "The restore button must have a complete XAML element.");
+        var restoreMarkup = xaml.Substring(restoreStart, restoreEnd - restoreStart);
+        Assert.DoesNotContain("Upsell.Action.Dismiss", restoreMarkup, StringComparison.Ordinal);
+        Assert.DoesNotContain("Close_Click", restoreMarkup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void MobileUpsell_RestoreRefreshesAuthoritativeStoreEntitlement()
+    {
+        var source = File.ReadAllText(ProjectFile(
+            "Noctra.Mobile", "Views", "MobileUpsellView.axaml.cs"));
+        var restoreStart = source.IndexOf(
+            "private async void RestorePurchases_Click",
+            StringComparison.Ordinal);
+        var nextHandlerStart = source.IndexOf(
+            "private async void MonthlyBuy_Click",
+            restoreStart,
+            StringComparison.Ordinal);
+
+        Assert.True(restoreStart >= 0, "The mobile upsell must expose a restore handler.");
+        Assert.True(nextHandlerStart > restoreStart, "The restore handler must have a bounded method body.");
+
+        var restoreBody = source.Substring(restoreStart, nextHandlerStart - restoreStart);
+        var restoreCall = restoreBody.IndexOf(
+            "RestorePurchasesAsync",
+            StringComparison.Ordinal);
+        var refreshCall = restoreBody.IndexOf(
+            "RefreshSubscriptionStatusAsync",
+            StringComparison.Ordinal);
+
+        Assert.True(restoreCall >= 0, "Restore must query the platform purchase service.");
+        Assert.True(refreshCall > restoreCall,
+            "Restore must refresh the shared entitlement after the store query.");
+        Assert.Contains("Upsell.Restore.Unavailable", restoreBody, StringComparison.Ordinal);
+        Assert.Contains("Upsell.Restore.NotFound", restoreBody, StringComparison.Ordinal);
+        Assert.Contains("Upsell.Restore.Failed", restoreBody, StringComparison.Ordinal);
+        Assert.Contains("Upsell.Restore.Success", restoreBody, StringComparison.Ordinal);
+        Assert.Contains("Upsell.Restore.SuccessTitle", restoreBody, StringComparison.Ordinal);
+        var notificationCall = restoreBody.IndexOf("ShowNotificationAsync", StringComparison.Ordinal);
+        var closeCall = restoreBody.IndexOf("TryClose();", notificationCall, StringComparison.Ordinal);
+        Assert.True(notificationCall >= 0, "A successful restore must use the existing notification service.");
+        Assert.True(closeCall > notificationCall,
+            "The success notification must be scheduled before the upsell closes.");
+        Assert.Contains("SetRestoring", restoreBody, StringComparison.Ordinal);
+        Assert.DoesNotContain("StartPurchaseFlowAsync", restoreBody, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void AndroidRestore_UsesAuthoritativeBackendEntitlementPath()
+    {
+        var source = File.ReadAllText(ProjectFile(
+            "Noctra.Android", "Services", "AndroidStorePurchaseService.cs"));
+        var restoreStart = source.IndexOf(
+            "public async Task RestorePurchasesAsync",
+            StringComparison.Ordinal);
+        var lifecycleStart = source.IndexOf(
+            "// BillingClient lifecycle",
+            restoreStart,
+            StringComparison.Ordinal);
+
+        Assert.True(restoreStart >= 0, "The Android restore entry point must remain explicit.");
+        Assert.True(lifecycleStart > restoreStart, "The restore method must precede billing lifecycle helpers.");
+        var restoreBody = source.Substring(restoreStart, lifecycleStart - restoreStart);
+        Assert.Contains("GetEntitlementAsync(cancellationToken)", restoreBody, StringComparison.Ordinal);
+        Assert.Contains("EntitlementChanged?.Invoke", restoreBody, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void MobileUpsell_RestoreMessagesExistInEverySupportedTranslation()
+    {
+        var translations = new[] { "tr-TR.json", "en-US.json", "de-DE.json", "es-ES.json", "fr-FR.json" };
+        var requiredKeys = new[]
+        {
+            "Upsell.Action.Restore",
+            "Upsell.Restore.Unavailable",
+            "Upsell.Restore.NotFound",
+            "Upsell.Restore.Failed",
+            "Upsell.Restore.Success",
+            "Upsell.Restore.SuccessTitle"
+        };
+
+        foreach (var translation in translations)
+        {
+            using var document = System.Text.Json.JsonDocument.Parse(File.ReadAllText(ProjectFile(
+                "Noctra.Core", "Localization", "Translations", translation)));
+            foreach (var key in requiredKeys)
+            {
+                var value = document.RootElement.GetProperty(key).GetString();
+                Assert.False(string.IsNullOrWhiteSpace(value),
+                    $"{key} must be translated in {translation}.");
+            }
+        }
+    }
+
+    [Fact]
     public void MobileUpsell_SuccessStartsEntitlementCompletionWatch()
     {
         var source = File.ReadAllText(ProjectFile(

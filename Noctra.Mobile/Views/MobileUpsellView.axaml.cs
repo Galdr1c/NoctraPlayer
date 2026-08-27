@@ -19,6 +19,7 @@ public partial class MobileUpsellView : UserControl
 {
     private IReadOnlyList<StoreProduct> _products = Array.Empty<StoreProduct>();
     private bool _isPurchasing;
+    private bool _isRestoring;
     private ILicenseService? _licenseService;
     private bool _licenseSubscribed;
     private CancellationTokenSource? _purchaseCompletionCts;
@@ -47,7 +48,7 @@ public partial class MobileUpsellView : UserControl
         // A Play purchase is already being completed. Do not reopen the
         // sheet over the Play billing Activity; the completion watcher will
         // clean up the subscription when entitlement becomes authoritative.
-        if (_purchaseFlowActive)
+        if (_purchaseFlowActive || _isRestoring)
         {
             return;
         }
@@ -245,7 +246,7 @@ public partial class MobileUpsellView : UserControl
 
     private void OnLicenseSubscriptionChanged()
     {
-        if (!IsVisible || _licenseService is null)
+        if (!IsVisible || _licenseService is null || _isRestoring)
         {
             return;
         }
@@ -303,9 +304,22 @@ public partial class MobileUpsellView : UserControl
     private void SetPurchasing(bool purchasing)
     {
         _isPurchasing = purchasing;
-        MonthlyBuyButton.IsEnabled = !purchasing;
-        LifetimeBuyButton.IsEnabled = !purchasing;
-        BuySpinner.IsVisible = purchasing;
+        UpdateBusyState();
+    }
+
+    private void SetRestoring(bool restoring)
+    {
+        _isRestoring = restoring;
+        UpdateBusyState();
+    }
+
+    private void UpdateBusyState()
+    {
+        var busy = _isPurchasing || _isRestoring;
+        MonthlyBuyButton.IsEnabled = !busy;
+        LifetimeBuyButton.IsEnabled = !busy;
+        RestorePurchasesButton.IsEnabled = !busy;
+        BuySpinner.IsVisible = busy;
     }
 
     /// <summary>
@@ -365,6 +379,99 @@ public partial class MobileUpsellView : UserControl
     private async void RetryPricing_Click(object? sender, RoutedEventArgs e)
     {
         await RefreshProductPricingAsync();
+    }
+
+    private async void RestorePurchases_Click(object? sender, RoutedEventArgs e)
+    {
+        if (_isPurchasing || _isRestoring)
+        {
+            return;
+        }
+
+        EnsureLicenseSubscription();
+        HideStatusMessages();
+        SetRestoring(true);
+
+        try
+        {
+            if (Application.Current is not App app)
+            {
+                ShowError(LocalizationSource.Instance["Upsell.Restore.Failed"]);
+                return;
+            }
+
+            var store = app.EnsureServices()?.GetService<IStorePurchaseService>();
+            if (store is not { IsSupported: true })
+            {
+                ShowInfo(LocalizationSource.Instance["Upsell.Restore.Unavailable"]);
+                return;
+            }
+
+            // AndroidStorePurchaseService queries Play and verifies each
+            // recognized purchase token through the secure backend.
+            await store.RestorePurchasesAsync();
+
+            // RestorePurchasesAsync raises EntitlementChanged asynchronously;
+            // await the shared LicenseService refresh so the decision below is
+            // based on the authoritative entitlement, not a stale cache.
+            if (_licenseService is not null)
+            {
+                await _licenseService.RefreshSubscriptionStatusAsync();
+            }
+
+            if (!IsVisible)
+            {
+                return;
+            }
+
+            if (_licenseService?.IsPremium == true)
+            {
+                // Keep the success state visible in the sheet while the
+                // existing platform notification/toast is dispatched.
+                ShowInfo(LocalizationSource.Instance["Upsell.Restore.Success"]);
+                var notificationService = app.EnsureServices()?.GetService<IDialogService>();
+                if (notificationService is not null)
+                {
+                    try
+                    {
+                        await notificationService.ShowNotificationAsync(
+                            LocalizationSource.Instance["Upsell.Restore.SuccessTitle"],
+                            LocalizationSource.Instance["Upsell.Restore.Success"]);
+                    }
+                    catch (Exception notificationEx)
+                    {
+                        // The entitlement is already active; a notification
+                        // failure must never turn a successful restore into an
+                        // error state.
+                        System.Diagnostics.Debug.WriteLine(
+                            $"[Upsell] Restore success notification failed: {notificationEx.Message}");
+                    }
+                }
+
+                TryClose();
+                return;
+            }
+
+            if (_licenseService?.HasPendingStorePurchase == true)
+            {
+                ShowInfo(LocalizationSource.Instance["Settings.Store.PurchasePending"]);
+                return;
+            }
+
+            ShowInfo(LocalizationSource.Instance["Upsell.Restore.NotFound"]);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[Upsell] Restore purchases failed: {ex}");
+            if (IsVisible)
+            {
+                ShowError(LocalizationSource.Instance["Upsell.Restore.Failed"]);
+            }
+        }
+        finally
+        {
+            SetRestoring(false);
+        }
     }
 
     private async void MonthlyBuy_Click(object? sender, RoutedEventArgs e)

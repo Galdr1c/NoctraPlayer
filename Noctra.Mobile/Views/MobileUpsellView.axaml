@@ -243,11 +243,15 @@
                          FontWeight="SemiBold" />
             </Button>
 
-            <Button Background="Transparent"
+            <!-- Existing Google Play purchases are restored through the
+                 authoritative Play + backend entitlement path. The X button
+                 remains the explicit dismiss action for free users. -->
+            <Button x:Name="RestorePurchasesButton"
+                    Background="Transparent"
                     BorderThickness="0"
-                    Click="Close_Click"
+                    Click="RestorePurchases_Click"
                     HorizontalAlignment="Center">
-              <TextBlock Text="{loc:Translate Upsell.Action.Dismiss}"
+              <TextBlock Text="{loc:Translate Upsell.Action.Restore}"
                          Foreground="{DynamicResource TextMutedBrush}"
                          FontSize="{DynamicResource FCaption}"
                          FontWeight="SemiBold" />
