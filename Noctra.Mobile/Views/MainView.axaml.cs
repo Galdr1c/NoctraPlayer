@@ -2080,7 +2080,7 @@ public partial class MainView : UserControl
             _adPlaybackIsLive = _playerViewModel.IsLiveContent;
             _adPlaybackWasDownloaded = _playerViewModel.IsDownloadedPlayback;
             UpdatePlaybackAdClock(_playerViewModel.IsPlaying);
-            if (!_adPlaybackIsLive && !_adPlaybackWasDownloaded)
+            if (!_adPlaybackWasDownloaded)
             {
                 MobileAdvertisingServices.TryGet()?.PrimeInterstitial();
             }
@@ -2790,7 +2790,20 @@ public partial class MainView : UserControl
 
         // EligibilityChanged fires from the bootstrap thread; banner creation and
         // adView.LoadAd() require the UI thread (AdMob #008 otherwise).
-        Dispatcher.UIThread.Post(LoadBannerAdIfEligible);
+        Dispatcher.UIThread.Post(() =>
+        {
+            LoadBannerAdIfEligible();
+
+            // Playback may have started while UMP/SDK initialization was still
+            // in flight. Prime the exit ad once the provider becomes eligible so
+            // a slow startup cannot permanently miss the current session.
+            if (PlayerHost.IsVisible &&
+                _adPlaybackEstablished &&
+                !_adPlaybackWasDownloaded)
+            {
+                MobileAdvertisingServices.TryGet()?.PrimeInterstitial();
+            }
+        });
     }
 
     private sealed record ActiveCorePage(string Destination, Control Page, long Generation);

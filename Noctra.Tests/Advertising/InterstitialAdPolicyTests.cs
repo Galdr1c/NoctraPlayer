@@ -24,7 +24,6 @@ public sealed class InterstitialAdPolicyTests
     [InlineData(true, false, false, false, AdDecisionReason.PlaybackFailed)]
     [InlineData(false, true, false, false, AdDecisionReason.PictureInPicture)]
     [InlineData(false, false, true, false, AdDecisionReason.BlockingOverlay)]
-    [InlineData(false, false, false, true, AdDecisionReason.LiveContent)]
     public void PlaybackSafetyVetoesAreRespected(
         bool failed,
         bool pip,
@@ -48,6 +47,40 @@ public sealed class InterstitialAdPolicyTests
 
         Assert.False(decision.ShouldShow);
         Assert.Equal(expected, decision.Reason);
+    }
+
+    [Fact]
+    public void LivePlayback_IsAllowedAfterEligibilityThreshold()
+    {
+        var context = EligibleContext() with { IsLiveContent = true };
+
+        var decision = InterstitialAdPolicy.Evaluate(
+            context,
+            EligibleRuntime(),
+            AdvertisingOptions.ConservativeDefault.PlaybackExit,
+            InterstitialAdHistory.Empty);
+
+        Assert.True(decision.ShouldShow);
+        Assert.Equal(AdDecisionReason.Eligible, decision.Reason);
+    }
+
+    [Fact]
+    public void LivePlayback_CanStillBeDisabledByProviderPolicy()
+    {
+        var context = EligibleContext() with { IsLiveContent = true };
+        var options = AdvertisingOptions.ConservativeDefault.PlaybackExit with
+        {
+            AllowLiveContent = false
+        };
+
+        var decision = InterstitialAdPolicy.Evaluate(
+            context,
+            EligibleRuntime(),
+            options,
+            InterstitialAdHistory.Empty);
+
+        Assert.False(decision.ShouldShow);
+        Assert.Equal(AdDecisionReason.LiveContent, decision.Reason);
     }
 
     [Fact]

@@ -577,6 +577,7 @@
                              FontSize="{DynamicResource FCaption}"
                              FontWeight="SemiBold"
                              TextWrapping="Wrap"
+                             MaxLines="2"
                              VerticalAlignment="Center" />
                 </StackPanel>
               </Border>

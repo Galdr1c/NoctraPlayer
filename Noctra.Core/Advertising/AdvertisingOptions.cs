@@ -31,5 +31,5 @@ public sealed class AdvertisingOptions
         Cooldown: TimeSpan.FromMinutes(18),
         MaxPerHour: 2,
         MaxPerDay: 4,
-        AllowLiveContent: false);
+        AllowLiveContent: true);
 }

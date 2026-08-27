@@ -45,15 +45,19 @@ public partial class MobileUpsellView : UserControl
 
     public void Show()
     {
-        // A Play purchase is already being completed. Do not reopen the
-        // sheet over the Play billing Activity; the completion watcher will
-        // clean up the subscription when entitlement becomes authoritative.
-        if (_purchaseFlowActive || _isRestoring)
+        // A Play purchase restore may still be running. Do not reopen the
+        // sheet until it finishes.
+        if (_isRestoring)
         {
             return;
         }
 
+        // If a purchase flow was active (Play Activity was launched and the
+        // user navigated back after cancelling), stop the background watcher
+        // and allow the sheet to reopen.
         StopPurchaseCompletionWatch();
+        _purchaseFlowActive = false;
+
         IsVisible = true;
         HideStatusMessages();
         RetryPricingButton.IsVisible = false;

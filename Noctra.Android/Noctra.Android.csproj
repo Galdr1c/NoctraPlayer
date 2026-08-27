@@ -12,11 +12,11 @@
     <!--
       Mobile versioning is INTENTIONALLY DECOUPLED from the desktop
       NoctraVersionPrefix defined in Directory.Build.props (desktop = 1.2.x).
-      The Android app ships its own versionName/versionCode below (1.0.0 / 12);
+      The Android app ships its own versionName/versionCode below (1.0.0 / 13);
       runtime reads them via PackageManager (AndroidAppVersionService).
       Do NOT replace these with $(NoctraVersionPrefix)/$(NoctraPackageVersion).
     -->
-    <ApplicationVersion>12</ApplicationVersion>
+    <ApplicationVersion>13</ApplicationVersion>
     <ApplicationDisplayVersion>1.0.0</ApplicationDisplayVersion>
     <RuntimeIdentifiers Condition="'$(Configuration)' == 'Debug'">android-arm64;android-x64</RuntimeIdentifiers>
     <RuntimeIdentifier Condition="'$(Configuration)' == 'Release'">android-arm64</RuntimeIdentifier>

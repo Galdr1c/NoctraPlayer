@@ -103,8 +103,9 @@ public sealed class AdvertisingAccessibilityContractTests
         Assert.True(methodStart >= 0);
         var method = source[methodStart..];
         var postIndex = method.IndexOf(
-            "Dispatcher.UIThread.Post(LoadBannerAdIfEligible)", StringComparison.Ordinal);
+            "Dispatcher.UIThread.Post(() =>", StringComparison.Ordinal);
         Assert.True(postIndex >= 0);
+        Assert.Contains("LoadBannerAdIfEligible();", method, StringComparison.Ordinal);
         Assert.DoesNotContain(
             "if (!_startupFlowCompleted)",
             method[..postIndex],
@@ -264,14 +265,18 @@ public sealed class AdvertisingAccessibilityContractTests
     }
 
     [Fact]
-    public void MainView_TracksDownloadedPlaybackAndRepairsGridAfterInterstitialDismissal()
+    public void MainView_PrimesPlaybackExitForLiveAndVODButNotDownloads()
     {
         var source = File.ReadAllText(ProjectSource(
             "Noctra.Mobile", "Views", "MainView.axaml.cs"));
 
         Assert.Contains("_adPlaybackWasDownloaded", source, StringComparison.Ordinal);
         Assert.Contains("IsDownloadedContent: _adPlaybackWasDownloaded", source, StringComparison.Ordinal);
-        Assert.Contains("if (!_adPlaybackIsLive && !_adPlaybackWasDownloaded)", source, StringComparison.Ordinal);
+        Assert.Contains("if (!_adPlaybackWasDownloaded)", source, StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            "if (!_adPlaybackIsLive && !_adPlaybackWasDownloaded)",
+            source,
+            StringComparison.Ordinal);
         Assert.Contains("var shown = await ads.TryShowInterstitialAsync(adContext);", source, StringComparison.Ordinal);
         Assert.Contains("RecoverActivePageAfterInterstitial", source, StringComparison.Ordinal);
         Assert.Contains("_interstitialRecoveryPending", source, StringComparison.Ordinal);
@@ -285,6 +290,28 @@ public sealed class AdvertisingAccessibilityContractTests
             source,
             StringComparison.Ordinal);
         Assert.Contains("grid.RefreshAfterResume();", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void MainView_ReprimesInterstitialWhenAdEligibilityBecomesReadyDuringPlayback()
+    {
+        var source = File.ReadAllText(ProjectSource(
+            "Noctra.Mobile", "Views", "MainView.axaml.cs"));
+        var handlerStart = source.IndexOf(
+            "private void OnAdvertisingEligibilityChanged",
+            StringComparison.Ordinal);
+        var handlerEnd = source.IndexOf(
+            "private sealed record ActiveCorePage",
+            handlerStart,
+            StringComparison.Ordinal);
+
+        Assert.True(handlerStart >= 0 && handlerEnd > handlerStart);
+        var handler = source[handlerStart..handlerEnd];
+
+        Assert.Contains("LoadBannerAdIfEligible", handler, StringComparison.Ordinal);
+        Assert.Contains("PrimeInterstitial", handler, StringComparison.Ordinal);
+        Assert.Contains("_adPlaybackEstablished", handler, StringComparison.Ordinal);
+        Assert.Contains("_adPlaybackWasDownloaded", handler, StringComparison.Ordinal);
     }
 
     [Fact]
