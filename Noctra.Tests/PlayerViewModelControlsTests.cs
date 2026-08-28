@@ -472,27 +472,22 @@ namespace Noctra.Tests
             var viewModelType = typeof(PlayerViewModel);
             var playPauseName = viewModelType.GetProperty("PlayPauseAccessibilityName");
             var muteName = viewModelType.GetProperty("MuteAccessibilityName");
-            var favoriteName = viewModelType.GetProperty("LiveFavoriteAccessibilityName");
             var lockName = viewModelType.GetProperty("LockAccessibilityName");
 
             Assert.NotNull(playPauseName);
             Assert.NotNull(muteName);
-            Assert.NotNull(favoriteName);
             Assert.NotNull(lockName);
 
             Assert.Equal("Play video", playPauseName!.GetValue(ctx.VM));
             Assert.Equal("Mute", muteName!.GetValue(ctx.VM));
-            Assert.Equal("Add to favorites", favoriteName!.GetValue(ctx.VM));
             Assert.Equal("Lock player", lockName!.GetValue(ctx.VM));
 
             ctx.VM.IsPlaying = true;
             ctx.VM.IsMuted = true;
-            ctx.VM.IsCurrentChannelFavorite = true;
             ctx.VM.IsLocked = true;
 
             Assert.Equal("Pause video", playPauseName.GetValue(ctx.VM));
             Assert.Equal("Unmute", muteName.GetValue(ctx.VM));
-            Assert.Equal("Remove from favorites", favoriteName.GetValue(ctx.VM));
             Assert.Equal("Unlock player", lockName.GetValue(ctx.VM));
         }
 

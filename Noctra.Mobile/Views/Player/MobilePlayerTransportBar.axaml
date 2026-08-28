@@ -67,7 +67,7 @@
 
     <Grid Grid.Row="2"
           Height="56"
-           ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,*,Auto,Auto,Auto"
+           ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,*,Auto,Auto"
           ColumnSpacing="6">
 
       <Button Classes="playerTransport"
@@ -169,23 +169,6 @@
       <Button Grid.Column="6"
               Classes="playerAction"
               IsVisible="{Binding IsLiveContent}"
-              Command="{Binding ToggleLiveFavoriteCommand}"
-              AutomationProperties.Name="{Binding LiveFavoriteAccessibilityName}">
-        <Panel Width="24" Height="24">
-          <icons:MaterialIcon Kind="Heart"
-                              Width="24" Height="24"
-                              Foreground="{DynamicResource PlayerOverlayTextBrush}"
-                              IsVisible="{Binding IsCurrentChannelFavorite}" />
-          <icons:MaterialIcon Kind="HeartOutline"
-                              Width="24" Height="24"
-                              Foreground="{DynamicResource PlayerOverlayTextBrush}"
-                              IsVisible="{Binding IsCurrentChannelFavorite, Converter={StaticResource InverseBoolConverter}}" />
-        </Panel>
-      </Button>
-
-      <Button Grid.Column="7"
-              Classes="playerAction"
-              IsVisible="{Binding IsLiveContent}"
               Command="{Binding ToggleEpgPanelCommand}"
               ToolTip.Tip="{loc:Translate Player.Epg.GuideTooltip}"
               AutomationProperties.Name="{loc:Translate Player.Epg.GuideTooltip}">
@@ -194,7 +177,7 @@
                             Foreground="{DynamicResource PlayerOverlayTextBrush}" />
       </Button>
 
-      <Button Grid.Column="8"
+      <Button Grid.Column="7"
               Classes="playerAction"
               Command="{Binding OpenActionsPanelCommand}"
               ToolTip.Tip="{loc:Translate Mobile.Nav.More}"

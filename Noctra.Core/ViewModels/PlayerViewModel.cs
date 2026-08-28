@@ -475,10 +475,6 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     private Channel? _currentChannel;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(LiveFavoriteAccessibilityName))]
-    private bool _isCurrentChannelFavorite;
-
-    [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsLiveInfoVisible))]
     [NotifyPropertyChangedFor(nameof(LiveProgramProgress))]
     [NotifyPropertyChangedFor(nameof(TimelineAccessibilityName))]
@@ -538,12 +534,6 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
             IsMuted
                 ? "Player.Accessibility.Unmute"
                 : "Player.Accessibility.Mute");
-
-    public string LiveFavoriteAccessibilityName =>
-        _localizationService.GetString(
-            IsCurrentChannelFavorite
-                ? "Player.Accessibility.RemoveFavorite"
-                : "Player.Accessibility.AddFavorite");
 
     public string LockAccessibilityName =>
         _localizationService.GetString(
@@ -1891,26 +1881,6 @@ public bool CanShowDownloadButton => CurrentChannel != null && !IsLiveContent &&
     [RelayCommand]
     private void CycleVideoFillMode() => SettingsAdapter.CycleVideoFillMode();
 
-    [RelayCommand]
-    private async Task ToggleLiveFavoriteAsync()
-    {
-        var channel = CurrentChannel;
-        if (channel == null) return;
-
-        try
-        {
-            await _mainViewModel.ToggleFavoriteCommand.ExecuteAsync(channel);
-            if (CurrentChannel?.Id == channel.Id)
-            {
-                IsCurrentChannelFavorite = channel.IsFavorite;
-            }
-        }
-        catch (Exception ex)
-        {
-            LogDebug($"ToggleLiveFavoriteAsync failed: {ex.Message}");
-        }
-    }
-
 [RelayCommand]
     private void OpenPremiumUpsell() => PremiumUpsellRequested?.Invoke(this, EventArgs.Empty);
 
@@ -2848,7 +2818,6 @@ PiPRequested?.Invoke(this, EventArgs.Empty);
     // ── Property / State Changed Interceptions ──────────────────────────────
     partial void OnCurrentChannelChanged(Channel? value)
     {
-        IsCurrentChannelFavorite = value?.IsFavorite ?? false;
         DownloadStatusMessage = string.Empty;
         IsDownloadInProgress = false;
         Interlocked.Exchange(ref _isDownloadActionRunning, 0);

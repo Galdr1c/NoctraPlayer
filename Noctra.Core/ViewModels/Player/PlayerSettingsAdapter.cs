@@ -121,7 +121,6 @@ public class PlayerSettingsAdapter
             _vm.RaisePropertyChanged(nameof(PlayerViewModel.QualityAudioText));
             _vm.RaisePropertyChanged(nameof(PlayerViewModel.PlayPauseAccessibilityName));
             _vm.RaisePropertyChanged(nameof(PlayerViewModel.MuteAccessibilityName));
-            _vm.RaisePropertyChanged(nameof(PlayerViewModel.LiveFavoriteAccessibilityName));
             _vm.RaisePropertyChanged(nameof(PlayerViewModel.LockAccessibilityName));
             _vm.RaisePropertyChanged(nameof(PlayerViewModel.TimelineAccessibilityName));
             _vm.RaisePropertyChanged(nameof(PlayerViewModel.NextEpisodeCountdownText));

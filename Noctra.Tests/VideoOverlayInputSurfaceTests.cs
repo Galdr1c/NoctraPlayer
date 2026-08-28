@@ -260,7 +260,6 @@ public sealed class VideoOverlayInputSurfaceTests
                      "SkipForwardCommand",
                      "PlayNextLiveChannelCommand",
                      "ToggleMuteCommand",
-                     "ToggleLiveFavoriteCommand",
                      "ToggleEpgPanelCommand",
                      "OpenActionsPanelCommand"
                  })
