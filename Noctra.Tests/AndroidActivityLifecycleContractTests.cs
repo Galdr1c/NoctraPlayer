@@ -33,6 +33,23 @@ public sealed class AndroidActivityLifecycleContractTests
     }
 
     [Fact]
+    public void ColdStart_LicenseRefresh_RetriesUntilAvaloniaServicesExist()
+    {
+        var source = File.ReadAllText(ProjectSource(
+            "Noctra.Android", "MainActivity.cs"));
+
+        Assert.Contains("QueueLicenseRefreshWhenServicesReady", source, StringComparison.Ordinal);
+        Assert.Contains("LicenseServiceReadyRetryDelayMs", source, StringComparison.Ordinal);
+        Assert.Contains("LicenseServiceReadyMaxAttempts", source, StringComparison.Ordinal);
+        Assert.Contains("TryResolveLicenseServices", source, StringComparison.Ordinal);
+        Assert.Contains("decorView.PostDelayed(", source, StringComparison.Ordinal);
+        Assert.Contains(
+            "License refresh bootstrap exhausted before Avalonia services became ready",
+            source,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void OnStop_PausesOpeningAndBufferingPlaybackOutsidePip()
     {
         var source = File.ReadAllText(ProjectSource(

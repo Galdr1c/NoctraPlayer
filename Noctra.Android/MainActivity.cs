@@ -41,10 +41,15 @@ namespace Noctra.Android;
                            ConfigChanges.UiMode)]
 public class MainActivity : AvaloniaMainActivity
 {
+    private const int LicenseServiceReadyRetryDelayMs = 250;
+    private const int LicenseServiceReadyMaxAttempts = 20;
+
     // OnStop'ta bizim duraklattığımız oynatmayı OnStart'ta devam ettirmek için işaret.
     // Kullanıcının manuel duraklatmasını geri almamak adına yalnızca bu flag set ise resume edilir.
     private bool _pausedByLifecycle;
     private bool _playerOverlaySurfaceActive;
+    private bool _licenseRefreshBootstrapQueued;
+    private bool _licenseRefreshServicesReady;
 #if DEBUG
     private IDisposable? _performanceProbe;
 #endif
@@ -104,8 +109,8 @@ public class MainActivity : AvaloniaMainActivity
         IServiceProvider? services = null;
         if (Avalonia.Application.Current is Noctra.Mobile.App app)
         {
-            app.Services?.GetRequiredService<AndroidActivityProvider>().SetCurrent(this);
-            services = app.Services;
+            services = app.EnsureServices();
+            services?.GetService<AndroidActivityProvider>()?.SetCurrent(this);
 
             // The first OnResume can happen while Avalonia is still creating
             // the visual tree. LicenseService intentionally defers its first
@@ -114,8 +119,14 @@ public class MainActivity : AvaloniaMainActivity
             // missed on a cold start.
             if (services?.GetService<ILicenseService>() is { } licenseService)
             {
+                _licenseRefreshServicesReady = true;
                 QueueInitialLicenseRefresh(licenseService);
             }
+        }
+
+        if (!_licenseRefreshServicesReady)
+        {
+            QueueLicenseRefreshWhenServicesReady();
         }
 
         if (services?.GetService<MobileAdvertisingBootstrapper>() is { } bootstrapper)
@@ -406,20 +417,28 @@ public class MainActivity : AvaloniaMainActivity
 
         if (Avalonia.Application.Current is Noctra.Mobile.App app)
         {
-            app.Services?.GetService<AndroidActivityProvider>()?.SetCurrent(this);
+            var services = app.EnsureServices();
+            services?.GetService<AndroidActivityProvider>()?.SetCurrent(this);
 
             // Resume/focus sonrası Premium süresi yeniden kontrol edilir;
             // süre uygulama kapalıyken dolduysa UI burada güncellenir.
-            if (app.Services?.GetService<ILicenseService>() is { } licenseService)
+            if (services?.GetService<ILicenseService>() is { } licenseService)
             {
+                _licenseRefreshServicesReady = true;
+                _licenseRefreshBootstrapQueued = false;
                 QueueLicenseRefresh(licenseService, resumeGeneration);
             }
 
             // Resume sonrasında immersive mode durumunu yeniden uygula.
-            if (app.Services?.GetService<IPlayerWindowService>() is AndroidPlayerWindowService windowService)
+            if (services?.GetService<IPlayerWindowService>() is AndroidPlayerWindowService windowService)
             {
                 Window?.DecorView?.Post(() => windowService.ReapplyImmersiveMode());
             }
+        }
+
+        if (!_licenseRefreshServicesReady)
+        {
+            QueueLicenseRefreshWhenServicesReady();
         }
 
         QueueVisualTreeRecovery(resumeGeneration);
@@ -503,6 +522,67 @@ public class MainActivity : AvaloniaMainActivity
         _ = Task.Delay(500).ContinueWith(
             _ => RefreshWhenSurfaceIsReady(),
             TaskScheduler.Default);
+    }
+
+    private void QueueLicenseRefreshWhenServicesReady()
+    {
+        if (_licenseRefreshServicesReady || _licenseRefreshBootstrapQueued)
+        {
+            return;
+        }
+
+        _licenseRefreshBootstrapQueued = true;
+        var attempts = 0;
+
+        void TryResolveLicenseServices()
+        {
+            if (_licenseRefreshServicesReady || IsFinishing || IsDestroyed)
+            {
+                _licenseRefreshBootstrapQueued = false;
+                return;
+            }
+
+            attempts++;
+            if (Avalonia.Application.Current is Noctra.Mobile.App app &&
+                app.EnsureServices() is { } services &&
+                services.GetService<ILicenseService>() is { } licenseService)
+            {
+                services.GetService<AndroidActivityProvider>()?.SetCurrent(this);
+                _licenseRefreshServicesReady = true;
+                _licenseRefreshBootstrapQueued = false;
+                QueueInitialLicenseRefresh(licenseService);
+                return;
+            }
+
+            if (attempts >= LicenseServiceReadyMaxAttempts)
+            {
+                _licenseRefreshBootstrapQueued = false;
+                Log.Warn(
+                    "Noctra",
+                    "License refresh bootstrap exhausted before Avalonia services became ready");
+                return;
+            }
+
+            if (Window?.DecorView is { } decorView)
+            {
+                decorView.PostDelayed(
+                    TryResolveLicenseServices,
+                    LicenseServiceReadyRetryDelayMs);
+                return;
+            }
+
+            _ = Task.Delay(LicenseServiceReadyRetryDelayMs).ContinueWith(
+                _ => RunOnUiThread(TryResolveLicenseServices),
+                TaskScheduler.Default);
+        }
+
+        if (Window?.DecorView is { } decorView)
+        {
+            decorView.Post(TryResolveLicenseServices);
+            return;
+        }
+
+        TryResolveLicenseServices();
     }
 
     private void QueueInitialLicenseRefresh(ILicenseService licenseService)
