@@ -208,20 +208,12 @@ public partial class MainView : UserControl
         }
 
         // Çentik / sistem çubukları (safe-area) padding'lerini uygula ve değişimleri dinle.
-        var topLevel = TopLevel.GetTopLevel(this);
-        if (OperatingSystem.IsAndroid() && topLevel is not null)
-        {
-            // The native TextureView lives below Avalonia's SurfaceView so player
-            // controls can stay above the video. Transparent top-level composition
-            // lets pixels not painted by the player overlay reveal that native view.
-            topLevel.TransparencyLevelHint =
-            [
-                WindowTransparencyLevel.Transparent,
-                WindowTransparencyLevel.None
-            ];
-            topLevel.Background = Brushes.Transparent;
-        }
+        // The top-level is transparent only while the native video surface is
+        // visible; shell/profile pages get an opaque backdrop so Android's
+        // transparent status bar cannot reveal the launcher wallpaper.
+        ApplyTopLevelComposition(PlayerHost.IsVisible);
 
+        var topLevel = TopLevel.GetTopLevel(this);
         if (topLevel?.InsetsManager is { } insets)
         {
             insets.SafeAreaChanged -= OnSafeAreaChanged;
@@ -719,15 +711,70 @@ public partial class MainView : UserControl
     private void OnSafeAreaChanged(object? sender, SafeAreaChangedArgs e)
         => ApplySafeArea(e.SafeAreaPadding);
 
+    private void ApplyTopLevelComposition(bool playerVisible)
+    {
+        if (!OperatingSystem.IsAndroid())
+        {
+            return;
+        }
+
+        var topLevel = TopLevel.GetTopLevel(this);
+        if (topLevel is null)
+        {
+            return;
+        }
+
+        if (playerVisible)
+        {
+            // The native TextureView lives below Avalonia's SurfaceView so
+            // player controls can stay above the video. Transparent top-level
+            // composition is required only for that playback layer.
+            topLevel.TransparencyLevelHint =
+            [
+                WindowTransparencyLevel.Transparent,
+                WindowTransparencyLevel.None
+            ];
+            topLevel.Background = Brushes.Transparent;
+            return;
+        }
+
+        // Shell/profile pages do not need transparent composition. Keep the
+        // status-bar/cutout backdrop opaque on Android 15+ edge-to-edge hosts.
+        topLevel.TransparencyLevelHint = [WindowTransparencyLevel.None];
+        topLevel.Background = Brushes.Black;
+    }
+
+    /// <summary>
+    /// Avalonia's Android host already places the visual tree below the status
+    /// bar on Android 15+ (the platform-enforced edge-to-edge path). Applying
+    /// the reported top inset to the header a second time creates a large blank
+    /// band on tall API 35/36 devices. Older Android versions still need the
+    /// explicit top inset because their content bounds do not include it.
+    /// </summary>
+    private static Thickness GetContentSafeArea(Thickness safe)
+    {
+        var hostInsetsSystemBars = OperatingSystem.IsAndroidVersionAtLeast(35);
+        var top = hostInsetsSystemBars
+            ? 0
+            : safe.Top;
+        var bottom = hostInsetsSystemBars
+            ? 0
+            : safe.Bottom;
+
+        return new Thickness(safe.Left, top, safe.Right, bottom);
+    }
+
     /// <summary>
     /// Çentik / gesture bar ile çakışmayı önlemek için header üst + yanlar,
     /// alt navigasyon alt + yanlar safe-area kadar genişletilir.
     /// </summary>
     private void ApplySafeArea(Thickness safe)
     {
+        var contentSafe = GetContentSafeArea(safe);
+
         HeaderBar.Padding = new Thickness(
             _headerBasePadding.Left + safe.Left,
-            _headerBasePadding.Top + safe.Top,
+            _headerBasePadding.Top + contentSafe.Top,
             _headerBasePadding.Right + safe.Right,
             _headerBasePadding.Bottom);
 
@@ -735,15 +782,27 @@ public partial class MainView : UserControl
             _bottomNavBasePadding.Left + safe.Left,
             _bottomNavBasePadding.Top,
             _bottomNavBasePadding.Right + safe.Right,
-            _bottomNavBasePadding.Bottom + safe.Bottom);
+            _bottomNavBasePadding.Bottom + contentSafe.Bottom);
 
         BannerAd.Margin = new Thickness(safe.Left, 0, safe.Right, 0);
 
-        LegalConsentOverlay.Padding = new Thickness(safe.Left, safe.Top, safe.Right, safe.Bottom);
-        ReviewPromptOverlay.Padding = new Thickness(safe.Left, 0, safe.Right, safe.Bottom);
-        ProfilesOverlay.Padding = new Thickness(safe.Left, safe.Top, safe.Right, safe.Bottom);
-        CategorySelectionOverlay.ApplySafeArea(safe);
-        CardActionsSheet.ApplySafeArea(safe);
+        LegalConsentOverlay.Padding = new Thickness(
+            contentSafe.Left,
+            contentSafe.Top,
+            contentSafe.Right,
+            contentSafe.Bottom);
+        ReviewPromptOverlay.Padding = new Thickness(
+            contentSafe.Left,
+            0,
+            contentSafe.Right,
+            contentSafe.Bottom);
+        ProfilesOverlay.Padding = new Thickness(
+            safe.Left,
+            contentSafe.Top,
+            safe.Right,
+            contentSafe.Bottom);
+        CategorySelectionOverlay.ApplySafeArea(contentSafe);
+        CardActionsSheet.ApplySafeArea(contentSafe);
         _lastSafeArea = safe;
         if (_playerViewModel is not null)
         {
@@ -2520,6 +2579,8 @@ public partial class MainView : UserControl
     {
         var isPlayerVisible = PlayerHost.IsVisible;
         _isPlayerFullScreen = isPlayerVisible && _playerViewModel?.IsFullScreen == true;
+
+        ApplyTopLevelComposition(isPlayerVisible);
 
         ShellLayer.IsVisible = !isPlayerVisible;
         HeaderBar.IsVisible = !isPlayerVisible;

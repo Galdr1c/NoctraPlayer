@@ -70,6 +70,16 @@ public class MainActivity : AvaloniaMainActivity
         try
         {
             base.OnCreate(savedInstanceState);
+            var content = Window?.DecorView?
+                .FindViewById(global::Android.Resource.Id.Content) as ViewGroup;
+            if (content is not null)
+            {
+                // Avalonia keeps the activity window transparent so the native
+                // video TextureView can be composed underneath it. The opaque
+                // backdrop prevents Android 15/16's transparent status-bar and
+                // display-cutout area from revealing the launcher wallpaper.
+                content.SetBackgroundColor(Color.Rgb(10, 10, 10));
+            }
 #if DEBUG
             // Some Android vendors do not expose launch extras through Intent
             // until the base Activity has completed creation.
