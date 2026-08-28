@@ -140,10 +140,9 @@ Player active:
 
 `ConfigureAvaloniaOverlaySurface` uses the stored mode on activity creation,
 resume, failed-PiP recovery, and PiP exit instead of always forcing `true`.
-Android 11+ applies the z-order change dynamically. On Android 9/10, the
-implementation recreates the backing surface by briefly detaching and posting
-its restoration after changing z-order; no player state or view-model is
-recreated.
+Android 12+ applies the z-order change dynamically. The current Android support
+floor is API 31 (Android 12), so the pre-API-31 legacy recreation path is not a
+supported runtime target and is intentionally not maintained.
 
 The provider boundary remains usable by NoOp and preview implementations; they
 continue to return no handle and never expose a visible banner.

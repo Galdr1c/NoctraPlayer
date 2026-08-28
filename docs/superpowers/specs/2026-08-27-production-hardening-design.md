@@ -29,8 +29,9 @@ path, add RTDN/Firestore state, or change the product catalog.
      actually produced.
 
 3. **Platform documentation**
-   - Align README prerequisites with the deliberate Android API 28 (Android 9)
-     minimum declared by `Noctra.Android.csproj`.
+   - Align README prerequisites with the Android API 31 (Android 12) minimum
+     declared by `Noctra.Android.csproj`; legacy Android 9-11 devices are
+     intentionally outside the supported matrix.
 
 ## Verification
 

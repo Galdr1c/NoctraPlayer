@@ -33,7 +33,7 @@ WORK="$ROOT/.ffmpeg-build"
 JNI_SRC="media3/libraries/decoder_ffmpeg/src/main/jni"
 NDK="${LOCALAPPDATA}/Android/Sdk/ndk/26.1.10909125"
 TOOLCHAIN="$(cygpath -u "$NDK")/toolchains/llvm/prebuilt/windows-x86_64/bin"
-API=28   # Noctra.Android SupportedOSPlatformVersion
+API=31   # Noctra.Android SupportedOSPlatformVersion
 OUT="$WORK/out"
 JOBS=$(nproc)
 

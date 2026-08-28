@@ -3,6 +3,27 @@ namespace Noctra.Tests;
 public class MobileReleaseGuardTests
 {
     [Fact]
+    public void AndroidMinimumSupportedVersion_IsAndroid12Api31Everywhere()
+    {
+        var project = ReadProjectFile("Noctra.Android", "Noctra.Android.csproj");
+        var readme = ReadProjectFile("README.md");
+        var ffmpegBuild = ReadProjectFile("tools", "android", "build-ffmpeg-16k.sh");
+
+        Assert.Contains(
+            "<SupportedOSPlatformVersion>31</SupportedOSPlatformVersion>",
+            project,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "Android 12+ / API 31 (mobile)",
+            readme,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "API=31   # Noctra.Android SupportedOSPlatformVersion",
+            ffmpegBuild,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void AndroidPlayer_UsesExoPlayerInsteadOfLegacyMediaPlayer()
     {
         var serviceSource = ReadProjectFile("Noctra.Android", "Services", "AndroidVideoPlayerService.cs");

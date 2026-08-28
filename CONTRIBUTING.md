@@ -70,7 +70,7 @@ dotnet run --project .\Noctra.Avalonia\Noctra.Avalonia.csproj
 
 - Windows 10/11, macOS, or Linux
 - .NET 10 SDK
-- Android SDK with build-tools (API 31+)
+- Android SDK/platform API 31+ (Android 12+ is the minimum supported mobile OS)
 - Android emulator or physical device for testing
 
 #### Build and Run

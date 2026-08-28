@@ -159,7 +159,7 @@ permission to copy, modify, distribute, publish, sublicense, or sell Noctra.
 
 ### Prerequisites
 
-- Windows 10 1809 or newer (desktop) or Android 9+ / API 28 (mobile)
+- Windows 10 1809 or newer (desktop) or Android 12+ / API 31 (mobile)
 - .NET 8 SDK (desktop) or .NET 10 SDK (mobile)
 - Visual Studio 2022, Rider, or VS Code
 - Visual Studio MSIX tooling for Store packaging
