@@ -548,6 +548,15 @@
                                     ZIndex="{x:Static controls:MobileZIndex.ShellCardActions}"
                                     IsVisible="False" />
 
+      <!-- Review prompt lives inside the content/banner grid, not at root level.
+           Row 0 ends at the banner's top edge so the native NativeControlHost
+           banner is never covered by Avalonia compositing — same pattern as
+           MobileCardActionsSheet. -->
+      <views:MobileReviewPromptView x:Name="ReviewPromptOverlay"
+                                    Grid.Row="0"
+                                    ZIndex="{x:Static controls:MobileZIndex.ShellReviewPrompt}"
+                                    IsVisible="False" />
+
       <!-- Banner ad pinned to the bottom of the content column (right of the
            navigation rail in landscape, above the bottom nav in portrait) -->
       <controls:MobileBannerAdControl x:Name="BannerAd"
@@ -688,12 +697,7 @@
                                   ZIndex="{x:Static controls:MobileZIndex.ShellLegalConsent}"
                                   IsVisible="False" />
 
-    <!-- Review Prompt Overlay (Avalonia bottom sheet) -->
-    <views:MobileReviewPromptView x:Name="ReviewPromptOverlay"
-                                  Grid.RowSpan="3"
-                                  Grid.ColumnSpan="2"
-                                  ZIndex="{x:Static controls:MobileZIndex.ShellReviewPrompt}"
-                                  IsVisible="False" />
+
 
     <!-- Profiles Overlay -->
     <!--
