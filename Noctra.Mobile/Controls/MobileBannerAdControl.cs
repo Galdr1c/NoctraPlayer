@@ -60,6 +60,13 @@ public sealed class MobileBannerAdControl : ContentControl
             {
                 StopAdRetry(resetAttempt: false);
             }
+            else if (_retryAttempt > 0)
+            {
+                // An ad is still on screen but a no-fill retry was pending
+                // when the player suppressed the banner. Resume the search
+                // for replacement inventory now that the chrome is visible.
+                ScheduleAdRetry();
+            }
             else if (_adisposable is null)
             {
                 // A no-fill result while the shell was suppressed should be
@@ -146,7 +153,7 @@ public sealed class MobileBannerAdControl : ContentControl
         MobileAppLifecycle.Paused += OnAppPaused;
         MobileAppLifecycle.Resumed += OnAppResumed;
 
-        if (_adisposable is null && _retryAttempt > 0)
+        if (_retryAttempt > 0)
         {
             ScheduleAdRetry();
         }
@@ -295,6 +302,14 @@ public sealed class MobileBannerAdControl : ContentControl
             if (!_adState.ApplyLoadState(generation, state))
             {
                 return;
+            }
+
+            if (state == BannerAdLoadState.Loading)
+            {
+                // A native AdView recreate sends Loading for the fresh view.
+                // The old creative is gone; if the new request fails we must
+                // not pretend the previous creative is still on screen.
+                _hasLoadedCreative = false;
             }
 
             if (state == BannerAdLoadState.Failed)
