@@ -24,6 +24,62 @@ public class MobileReleaseGuardTests
     }
 
     [Fact]
+    public void AndroidManifest_RemovesUnusedPackageManagementPermissionsFromMergedArtifact()
+    {
+        var manifest = ReadProjectFile(
+            "Noctra.Android", "Properties", "AndroidManifest.xml");
+
+        Assert.Contains(
+            "xmlns:tools=\"http://schemas.android.com/tools\"",
+            manifest,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "<uses-permission android:name=\"android.permission.QUERY_ALL_PACKAGES\" tools:node=\"remove\" />",
+            manifest,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "<uses-permission android:name=\"android.permission.REQUEST_INSTALL_PACKAGES\" tools:node=\"remove\" />",
+            manifest,
+            StringComparison.Ordinal);
+
+        foreach (var permission in new[]
+                 {
+                     "android.permission.ACCESS_WIFI_STATE", // Required by HMS Ads; keep it.
+                 })
+        {
+            Assert.DoesNotContain(
+                $"<uses-permission android:name=\"{permission}\" tools:node=\"remove\" />",
+                manifest,
+                StringComparison.Ordinal);
+        }
+
+        foreach (var permission in new[]
+                 {
+                     "android.permission.BLUETOOTH",
+                     "android.permission.CAMERA",
+                     "android.permission.READ_CALENDAR",
+                     "android.permission.WRITE_CALENDAR",
+                     "android.permission.GET_TASKS",
+                     "android.permission.REAL_GET_TASKS",
+                     "android.permission.BROADCAST_STICKY",
+                     "android.permission.RECEIVE_BOOT_COMPLETED",
+                     "com.hihonor.permission.MANAGE_FOLD_SCREEN",
+                     "com.hihonor.permission.MANAGE_FOLD_SCREEN_PRIVILEGED",
+                     "com.huawei.permission.sec.MDM.v2",
+                     "com.hihonor.permission.sec.MDM.v2",
+                     "com.huawei.permission.sec.ACCESS_UDID",
+                     "com.hihonor.permission.sec.ACCESS_UDID",
+                     "com.huawei.permission.app.DOWNLOAD"
+                 })
+        {
+            Assert.Contains(
+                $"<uses-permission android:name=\"{permission}\" tools:node=\"remove\" />",
+                manifest,
+                StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
     public void AndroidPlayer_UsesExoPlayerInsteadOfLegacyMediaPlayer()
     {
         var serviceSource = ReadProjectFile("Noctra.Android", "Services", "AndroidVideoPlayerService.cs");
