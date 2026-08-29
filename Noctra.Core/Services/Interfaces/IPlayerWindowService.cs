@@ -30,6 +30,13 @@ public interface IPlayerWindowService
     void SetPlayerOverlayActive(bool active);
 
     /// <summary>
+    /// Applies the current application theme to Android's edge-to-edge system
+    /// bar backdrop and icon appearance. Light shell surfaces use dark icons;
+    /// dark shell/player surfaces use light icons.
+    /// </summary>
+    void SetSystemBarsTheme(bool isDarkTheme);
+
+    /// <summary>
     /// Ekran parlaklığını ayarlar. 0.0–1.0 arası geçerli değer; negatif değer
     /// (ör. -1) sistem varsayılan parlaklığına döner.
     /// </summary>

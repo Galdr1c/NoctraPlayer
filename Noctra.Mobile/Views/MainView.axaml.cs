@@ -10,6 +10,7 @@ using Avalonia.Controls.Platform;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
+using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 #if DEBUG
@@ -155,6 +156,30 @@ public partial class MainView : UserControl
 
         _navigationRailController = new MobileCollapsibleNavigationRail(NavigationRail);
         _overscrollController = new MobileStretchOverscrollController(this);
+    }
+
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+
+        if (!string.Equals(
+                change.Property.Name,
+                nameof(ActualThemeVariant),
+                StringComparison.Ordinal) ||
+            !_isAttachedToVisualTree)
+        {
+            return;
+        }
+
+        Dispatcher.UIThread.Post(
+            () =>
+            {
+                if (_isAttachedToVisualTree)
+                {
+                    ApplyTopLevelComposition(PlayerHost.IsVisible);
+                }
+            },
+            DispatcherPriority.Background);
     }
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
@@ -718,6 +743,9 @@ public partial class MainView : UserControl
             return;
         }
 
+        var isDarkTheme = ActualThemeVariant != ThemeVariant.Light;
+        GetPlayerWindowService()?.SetSystemBarsTheme(isDarkTheme);
+
         var topLevel = TopLevel.GetTopLevel(this);
         if (topLevel is null)
         {
@@ -739,9 +767,23 @@ public partial class MainView : UserControl
         }
 
         // Shell/profile pages do not need transparent composition. Keep the
-        // status-bar/cutout backdrop opaque on Android 15+ edge-to-edge hosts.
+        // status-bar/cutout backdrop opaque and aligned with the current theme.
         topLevel.TransparencyLevelHint = [WindowTransparencyLevel.None];
-        topLevel.Background = Brushes.Black;
+        topLevel.Background = ResolveShellBackgroundBrush(isDarkTheme);
+    }
+
+    private IBrush ResolveShellBackgroundBrush(bool isDarkTheme)
+    {
+        if (Application.Current?.TryGetResource(
+                "Bg0Brush",
+                ActualThemeVariant,
+                out var resource) == true &&
+            resource is IBrush brush)
+        {
+            return brush;
+        }
+
+        return isDarkTheme ? Brushes.Black : Brushes.White;
     }
 
     /// <summary>
@@ -966,6 +1008,7 @@ public partial class MainView : UserControl
         // DeviceMetricsService: cihaz sınıfını güncelle (responsive token'lar için)
         DeviceMetricsService.Instance.ApplySize(e.NewSize.Width, e.NewSize.Height);
         UpdateNavigationMode(e.NewSize.Width);
+        ApplyTopLevelComposition(PlayerHost.IsVisible);
     }
 
     private void UpdateNavigationMode(double width)

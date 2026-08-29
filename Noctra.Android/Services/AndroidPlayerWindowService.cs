@@ -15,6 +15,11 @@ namespace Noctra.Android.Services;
 /// Tam ekranda kullanıcı yönü korunur; portre ve yatay kullanım desteklenir.
 public sealed class AndroidPlayerWindowService : IPlayerWindowService
 {
+    private const int LightStatusBarsAppearance = 8;
+    private const int LightNavigationBarsAppearance = 16;
+    private const int LightSystemBarsAppearanceMask =
+        LightStatusBarsAppearance | LightNavigationBarsAppearance;
+
     private readonly AndroidActivityProvider _activityProvider;
 
     // Parlaklık değeri cache'lenir; thread-güvenli senkron okuma için (swipe başlangıcı).
@@ -22,6 +27,8 @@ public sealed class AndroidPlayerWindowService : IPlayerWindowService
 
     // Immersive mode durumu; focus/resume sonrası yeniden uygulamak için.
     private bool _isImmersiveModeActive;
+    private bool _isPlayerOverlayActive;
+    private bool _isDarkTheme = true;
 
     public AndroidPlayerWindowService(AndroidActivityProvider activityProvider)
     {
@@ -75,18 +82,29 @@ public sealed class AndroidPlayerWindowService : IPlayerWindowService
             {
                 ApplyImmersiveLegacy(window, fullScreen);
             }
+
+            ApplySystemChrome(activity);
         });
     }
 
     public void SetPlayerOverlayActive(bool active)
     {
+        _isPlayerOverlayActive = active;
         RunOnUi(activity =>
         {
             if (activity is global::Noctra.Android.MainActivity mainActivity)
             {
                 mainActivity.SetAvaloniaPlayerOverlayActive(active);
             }
+
+            ApplySystemChrome(activity);
         });
+    }
+
+    public void SetSystemBarsTheme(bool isDarkTheme)
+    {
+        _isDarkTheme = isDarkTheme;
+        RunOnUi(ApplySystemChrome);
     }
 
     public void SetBrightness(double brightness)
@@ -114,11 +132,6 @@ public sealed class AndroidPlayerWindowService : IPlayerWindowService
     /// </summary>
     public void ReapplyImmersiveMode()
     {
-        if (!_isImmersiveModeActive)
-        {
-            return;
-        }
-
         RunOnUi(activity =>
         {
             var window = activity.Window;
@@ -127,15 +140,67 @@ public sealed class AndroidPlayerWindowService : IPlayerWindowService
                 return;
             }
 
-            if (OperatingSystem.IsAndroidVersionAtLeast(30))
+            if (_isImmersiveModeActive && OperatingSystem.IsAndroidVersionAtLeast(30))
             {
                 ApplyImmersiveModern(window, fullScreen: true);
             }
-            else
+            else if (_isImmersiveModeActive)
             {
                 ApplyImmersiveLegacy(window, fullScreen: true);
             }
+
+            ApplySystemChrome(activity);
         });
+    }
+
+    private void ApplySystemChrome(Activity activity)
+    {
+        var window = activity.Window;
+        if (window is null)
+        {
+            return;
+        }
+
+        var playerSurfaceActive = _isPlayerOverlayActive || _isImmersiveModeActive;
+        var useLightShell = !playerSurfaceActive && !_isDarkTheme;
+        var backdropColor = useLightShell
+            ? global::Android.Graphics.Color.Rgb(250, 250, 250)
+            : global::Android.Graphics.Color.Rgb(10, 10, 10);
+
+        var content = window.DecorView?
+            .FindViewById(global::Android.Resource.Id.Content) as ViewGroup;
+        content?.SetBackgroundColor(backdropColor);
+
+        // API 35+ forces transparent edge-to-edge system bars. On API 30-34,
+        // explicitly match the selected Noctra shell backdrop.
+        if (!OperatingSystem.IsAndroidVersionAtLeast(35))
+        {
+            window.SetStatusBarColor(backdropColor);
+            window.SetNavigationBarColor(backdropColor);
+        }
+
+        var useDarkIcons = useLightShell;
+        if (OperatingSystem.IsAndroidVersionAtLeast(30))
+        {
+            window.InsetsController?.SetSystemBarsAppearance(
+                useDarkIcons ? LightSystemBarsAppearanceMask : 0,
+                LightSystemBarsAppearanceMask);
+            return;
+        }
+
+#pragma warning disable CS0618 // API 29 and earlier compatibility path.
+        var decorView = window.DecorView;
+        if (decorView is null)
+        {
+            return;
+        }
+
+        var flags = (SystemUiFlags)decorView.SystemUiVisibility;
+        flags = useDarkIcons
+            ? flags | SystemUiFlags.LightStatusBar | SystemUiFlags.LightNavigationBar
+            : flags & ~SystemUiFlags.LightStatusBar & ~SystemUiFlags.LightNavigationBar;
+        decorView.SystemUiVisibility = (StatusBarVisibility)flags;
+#pragma warning restore CS0618
     }
 
     private void RunOnUi(Action<Activity> action)

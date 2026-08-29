@@ -16,11 +16,14 @@ public sealed class MobileEdgeToEdgeLayoutContractTests
     }
 
     [Fact]
-    public void AndroidActivity_PaintsOpaqueBackdropBehindTransparentAvaloniaSurface()
+    public void AndroidActivity_DoesNotForceHardCodedShellBackdrop()
     {
         var source = ReadProjectFile("Noctra.Android", "MainActivity.cs");
 
-        Assert.Contains("content.SetBackgroundColor(Color.Rgb(10, 10, 10));", source, StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            "content.SetBackgroundColor(Color.Rgb(10, 10, 10));",
+            source,
+            StringComparison.Ordinal);
     }
 
     [Fact]
@@ -30,7 +33,38 @@ public sealed class MobileEdgeToEdgeLayoutContractTests
 
         Assert.Contains("ApplyTopLevelComposition(PlayerHost.IsVisible);", source, StringComparison.Ordinal);
         Assert.Contains("WindowTransparencyLevel.None", source, StringComparison.Ordinal);
-        Assert.Contains("topLevel.Background = Brushes.Black", source, StringComparison.Ordinal);
+        Assert.Contains("ResolveShellBackgroundBrush", source, StringComparison.Ordinal);
+        Assert.Contains("\"Bg0Brush\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("topLevel.Background = Brushes.Black", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void AndroidSystemChrome_FollowsThemeAndPlayerState()
+    {
+        var contract = ReadProjectFile(
+            "Noctra.Core", "Services", "Interfaces", "IPlayerWindowService.cs");
+        var android = ReadProjectFile(
+            "Noctra.Android", "Services", "AndroidPlayerWindowService.cs");
+
+        Assert.Contains("SetSystemBarsTheme(bool isDarkTheme)", contract, StringComparison.Ordinal);
+        Assert.Contains("SetSystemBarsTheme(bool isDarkTheme)", android, StringComparison.Ordinal);
+        Assert.Contains("SetSystemBarsAppearance", android, StringComparison.Ordinal);
+        Assert.Contains("Color.Rgb(250, 250, 250)", android, StringComparison.Ordinal);
+        Assert.Contains("Color.Rgb(10, 10, 10)", android, StringComparison.Ordinal);
+        Assert.Contains("_isPlayerOverlayActive", android, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ThemeOrientationAndPlayerTransitions_ReapplySystemChrome()
+    {
+        var mainView = ReadProjectFile("Noctra.Mobile", "Views", "MainView.axaml.cs");
+        var android = ReadProjectFile(
+            "Noctra.Android", "Services", "AndroidPlayerWindowService.cs");
+
+        Assert.Contains("nameof(ActualThemeVariant)", mainView, StringComparison.Ordinal);
+        Assert.Contains("SetSystemBarsTheme", mainView, StringComparison.Ordinal);
+        Assert.Contains("ApplyTopLevelComposition(PlayerHost.IsVisible);", mainView, StringComparison.Ordinal);
+        Assert.Contains("ApplySystemChrome", android, StringComparison.Ordinal);
     }
 
     private static string ReadProjectFile(params string[] parts)
