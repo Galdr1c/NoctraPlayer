@@ -1,5 +1,3 @@
-using System.Globalization;
-using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
 namespace Noctra.Tests;
@@ -7,7 +5,7 @@ namespace Noctra.Tests;
 public sealed class MobilePlayerTransportResponsiveLayoutTests
 {
     [Fact]
-    public void CompactThreshold_Covers411DpPhoneAndStopsAbove420Dp()
+    public void TimingLayout_DoesNotDependOnOrientationSpecificWidthThreshold()
     {
         var source = LoadProjectFile(
             "Noctra.Mobile",
@@ -15,29 +13,13 @@ public sealed class MobilePlayerTransportResponsiveLayoutTests
             "Player",
             "MobilePlayerTransportBar.axaml.cs");
 
-        var match = Regex.Match(
-            source,
-            @"NarrowLayoutMaxWidth\s*=\s*(?<value>\d+(?:\.\d+)?)d",
-            RegexOptions.CultureInvariant);
-
-        Assert.True(match.Success, "The narrow transport width threshold was not found.");
-
-        var threshold = double.Parse(
-            match.Groups["value"].Value,
-            CultureInfo.InvariantCulture);
-
-        Assert.Equal(420d, threshold);
-        Assert.True(411d <= threshold, "A 411dp-wide phone must use the narrow layout.");
-        Assert.True(420d <= threshold, "The threshold itself must remain narrow.");
-        Assert.True(420.01d > threshold, "Widths above the threshold must keep the wide layout.");
-        Assert.Contains(
-            "width > 0d && width <= NarrowLayoutMaxWidth",
-            source,
-            StringComparison.Ordinal);
+        Assert.DoesNotContain("NarrowLayoutMaxWidth", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("IsNarrowLayout", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("UsesNarrowLayout", source, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void TransportXaml_SeparatesNarrowTimingAndKeepsTuneAccessible()
+    public void TransportXaml_UsesSharedVodTimingRowAcrossOrientations()
     {
         var path = FindProjectFile(
             "Noctra.Mobile",
@@ -47,33 +29,31 @@ public sealed class MobilePlayerTransportResponsiveLayoutTests
         var document = XDocument.Load(path);
         var source = File.ReadAllText(path);
 
-        var root = document.Root!;
-        Assert.Equal("TransportBarRoot", (string?)root.Attribute(XName.Get(
-            "Name",
-            "http://schemas.microsoft.com/winfx/2006/xaml")));
+        var timing = FindNamedElement(document, "VodTimingRow");
+        Assert.Equal("2", (string?)timing.Attribute("Grid.Row"));
+        Assert.DoesNotContain("IsNarrowLayout", timing.ToString(), StringComparison.Ordinal);
+        Assert.Contains("!IsLiveContent", timing.ToString(), StringComparison.Ordinal);
 
-        var narrowTiming = FindNamedElement(document, "NarrowVodTimingRow");
-        Assert.Equal("2", (string?)narrowTiming.Attribute("Grid.Row"));
-        Assert.Contains("IsNarrowLayout", narrowTiming.ToString(), StringComparison.Ordinal);
-        Assert.Contains("!IsLiveContent", narrowTiming.ToString(), StringComparison.Ordinal);
-
-        var narrowBindings = narrowTiming.Descendants()
+        var timingBindings = timing.Descendants()
             .Where(element => element.Name.LocalName == "TextBlock")
             .Select(element => (string?)element.Attribute("Text"))
             .ToArray();
-        Assert.Contains("{Binding DisplayedPositionText}", narrowBindings);
-        Assert.Contains("{Binding DurationText}", narrowBindings);
+        Assert.Contains("{Binding DisplayedPositionText}", timingBindings);
+        Assert.Contains("{Binding DurationText}", timingBindings);
 
-        var wideTiming = FindNamedElement(document, "WideVodTimingRow");
-        Assert.Contains("IsNarrowLayout", wideTiming.ToString(), StringComparison.Ordinal);
-        Assert.Contains("!IsLiveContent", wideTiming.ToString(), StringComparison.Ordinal);
+        Assert.DoesNotContain("NarrowVodTimingRow", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("WideVodTimingRow", source, StringComparison.Ordinal);
 
         var tuneButton = FindNamedElement(document, "TuneActionButton");
-        Assert.Equal("7", (string?)tuneButton.Attribute("Grid.Column"));
+        Assert.Equal("6", (string?)tuneButton.Attribute("Grid.Column"));
         Assert.Contains(
             tuneButton.Descendants(),
             element => element.Name.LocalName == "MaterialIcon"
                        && (string?)element.Attribute("Kind") == "Tune");
+
+        var epgButton = document.Descendants()
+            .Single(element => (string?)element.Attribute("Command") == "{Binding ToggleEpgPanelCommand}");
+        Assert.Equal("5", (string?)epgButton.Attribute("Grid.Column"));
 
         Assert.Contains("<Setter Property=\"Width\" Value=\"48\" />", source, StringComparison.Ordinal);
         Assert.Contains("<Setter Property=\"Height\" Value=\"48\" />", source, StringComparison.Ordinal);

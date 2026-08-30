@@ -5,7 +5,6 @@
              xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              xmlns:player="using:Noctra.Mobile.Views.Player"
              x:Class="Noctra.Mobile.Views.Player.MobilePlayerTransportBar"
-             x:Name="TransportBarRoot"
              x:DataType="vm:PlayerViewModel"
              x:CompileBindings="False">
   <UserControl.Styles>
@@ -66,35 +65,33 @@
 
     <player:MobilePlayerTimeline Grid.Row="1" />
 
-    <!-- Dar portrede zaman bilgisi kendi satırına çıkar. Böylece 48dp
-         dokunma hedefleri küçülmeden sağdaki Tune eylemi görünür kalır. -->
-    <Grid x:Name="NarrowVodTimingRow"
+    <!-- VOD zaman bilgisi tüm yönelimlerde kendi satırında kalır. Böylece
+         48dp dokunma hedefleri küçülmeden sağdaki Tune eylemi görünür kalır. -->
+    <Grid x:Name="VodTimingRow"
           Grid.Row="2"
-          IsVisible="{Binding #TransportBarRoot.IsNarrowLayout}">
-      <Grid Margin="12,0"
-            ColumnDefinitions="*,Auto"
-            IsVisible="{Binding !IsLiveContent}">
-        <TextBlock Text="{Binding DisplayedPositionText}"
-                   FontSize="14"
-                   FontWeight="SemiBold"
-                   Foreground="{DynamicResource PlayerOverlayTextBrush}"
-                   HorizontalAlignment="Left"
-                   VerticalAlignment="Center" />
-        <TextBlock Grid.Column="1"
-                   Text="{Binding DurationText}"
-                   FontSize="14"
-                   FontWeight="Normal"
-                   Foreground="{DynamicResource PlayerOverlaySecondaryTextBrush}"
-                   HorizontalAlignment="Right"
-                   VerticalAlignment="Center"
-                   Opacity="0.70" />
-      </Grid>
+          Margin="12,0"
+          ColumnDefinitions="*,Auto"
+          IsVisible="{Binding !IsLiveContent}">
+      <TextBlock Text="{Binding DisplayedPositionText}"
+                 FontSize="14"
+                 FontWeight="SemiBold"
+                 Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                 HorizontalAlignment="Left"
+                 VerticalAlignment="Center" />
+      <TextBlock Grid.Column="1"
+                 Text="{Binding DurationText}"
+                 FontSize="14"
+                 FontWeight="Normal"
+                 Foreground="{DynamicResource PlayerOverlaySecondaryTextBrush}"
+                 HorizontalAlignment="Right"
+                 VerticalAlignment="Center"
+                 Opacity="0.70" />
     </Grid>
 
     <Grid x:Name="TransportButtonsGrid"
           Grid.Row="3"
           Height="56"
-          ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,*,Auto,Auto"
+          ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto,Auto"
           ColumnSpacing="6">
 
       <Button Classes="playerTransport"
@@ -168,35 +165,7 @@
         </Panel>
       </Button>
 
-      <Grid x:Name="WideVodTimingRow"
-            Grid.Column="4"
-            IsVisible="{Binding !#TransportBarRoot.IsNarrowLayout}">
-        <StackPanel Orientation="Horizontal"
-                    Spacing="6"
-                    VerticalAlignment="Center"
-                    Margin="8,0,0,0"
-                    IsVisible="{Binding !IsLiveContent}">
-          <TextBlock Text="{Binding DisplayedPositionText}"
-                     FontSize="14"
-                     FontWeight="SemiBold"
-                     Foreground="{DynamicResource PlayerOverlayTextBrush}"
-                     VerticalAlignment="Center" />
-          <TextBlock Text="·"
-                     FontSize="14"
-                     FontWeight="Normal"
-                     Foreground="{DynamicResource PlayerOverlaySecondaryTextBrush}"
-                     Opacity="0.50"
-                     VerticalAlignment="Center" />
-          <TextBlock Text="{Binding DurationText}"
-                     FontSize="14"
-                     FontWeight="Normal"
-                     Foreground="{DynamicResource PlayerOverlaySecondaryTextBrush}"
-                     Opacity="0.70"
-                     VerticalAlignment="Center" />
-        </StackPanel>
-      </Grid>
-
-      <Button Grid.Column="6"
+      <Button Grid.Column="5"
               Classes="playerAction"
               IsVisible="{Binding IsLiveContent}"
               Command="{Binding ToggleEpgPanelCommand}"
@@ -208,7 +177,7 @@
       </Button>
 
       <Button x:Name="TuneActionButton"
-              Grid.Column="7"
+              Grid.Column="6"
               Classes="playerAction"
               Command="{Binding OpenActionsPanelCommand}"
               ToolTip.Tip="{loc:Translate Mobile.Nav.More}"
