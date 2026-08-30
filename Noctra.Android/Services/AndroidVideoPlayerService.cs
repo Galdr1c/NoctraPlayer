@@ -835,10 +835,6 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
 
     public void SetVideoLayout(Noctra.Models.VideoScaleMode scaleMode)
     {
-        if (StreamQuality is { Width: > 0, Height: > 0 })
-        {
-            _videoSurfaceService.SetVideoSize(StreamQuality.Width, StreamQuality.Height);
-        }
         _videoSurfaceService.SetVideoLayout(scaleMode);
     }
 
@@ -1503,12 +1499,6 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
         }
 
         StreamQuality = quality;
-
-        if (quality.Width > 0 && quality.Height > 0)
-        {
-            _videoSurfaceService.SetVideoSize(quality.Width, quality.Height);
-        }
-
         QualityDetected?.Invoke(this, quality);
     }
 

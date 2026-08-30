@@ -9,7 +9,7 @@ using Noctra.Services.Interfaces;
 
 namespace Noctra.Android.Services;
 
-public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurfaceService, TextureView.ISurfaceTextureListener
+public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurfaceService, TextureView.ISurfaceTextureListener, View.IOnLayoutChangeListener
 {
     private readonly AndroidActivityProvider _activityProvider;
     private readonly object _surfaceLock = new();
@@ -90,6 +90,7 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurface
             if (_textureView is not null)
             {
                 _textureView.SurfaceTextureListener = null;
+                _textureView.RemoveOnLayoutChangeListener(this);
             }
             _textureView?.Dispose();
             _textureView = null;
@@ -125,8 +126,8 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurface
         }
         else
         {
-            _boundsX = x;
-            _boundsY = y;
+            _boundsX = Math.Max(0, x);
+            _boundsY = Math.Max(0, y);
             _boundsW = width;
             _boundsH = height;
         }
@@ -228,24 +229,23 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurface
             };
         }
 
+        if (_backdropView is not null)
+        {
+            _backdropView.LayoutParameters = new WidgetFrameLayout.LayoutParams(layoutParams);
+            _backdropView.RequestLayout();
+        }
+
         _textureView.LayoutParameters = layoutParams;
         _textureView.RequestLayout();
     }
 
     /// <summary>
     /// Computes and applies a Matrix transform on the TextureView to achieve the
-    /// desired scale mode behaviour.
+    /// desired scale mode behaviour for the specified view dimensions.
     /// </summary>
-    private void ApplyVideoTransform()
+    private void ApplyVideoTransform(int viewW, int viewH)
     {
-        if (_textureView is null)
-        {
-            return;
-        }
-
-        var viewW = _textureView.Width;
-        var viewH = _textureView.Height;
-        if (viewW <= 0 || viewH <= 0 || _videoWidth <= 0 || _videoHeight <= 0)
+        if (_textureView is null || viewW <= 0 || viewH <= 0 || _videoWidth <= 0 || _videoHeight <= 0)
         {
             return;
         }
@@ -258,6 +258,16 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurface
 
         ApplyInteractionTransform(matrix, viewW, viewH);
         _textureView.SetTransform(matrix);
+    }
+
+    private void ApplyVideoTransform()
+    {
+        if (_textureView is null)
+        {
+            return;
+        }
+
+        ApplyVideoTransform(_textureView.Width, _textureView.Height);
     }
 
     private void ApplyInteractionTransform(Matrix matrix, int viewW, int viewH)
@@ -411,13 +421,13 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurface
         SurfaceAvailable?.Invoke(this, surfaceObj);
 
         // İlk boyut bilgisi geldiğinde transform'u uygula.
-        _activityProvider.CurrentActivity?.RunOnUiThread(ApplyVideoTransform);
+        _activityProvider.CurrentActivity?.RunOnUiThread(() => ApplyVideoTransform(width, height));
     }
 
     public void OnSurfaceTextureSizeChanged(SurfaceTexture surface, int width, int height)
     {
         // Boyut değiştiğinde transform'u yeniden hesapla.
-        _activityProvider.CurrentActivity?.RunOnUiThread(ApplyVideoTransform);
+        _activityProvider.CurrentActivity?.RunOnUiThread(() => ApplyVideoTransform(width, height));
     }
 
     public bool OnSurfaceTextureDestroyed(SurfaceTexture surface)
@@ -439,6 +449,27 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurface
     {
         // Video ölçekleme matrisi yalnızca boyut/mode/view geometrisi değiştiğinde
         // güncellenir; her karede hesaplamak gereksiz UI-thread yüküdür.
+    }
+
+    // ── View.IOnLayoutChangeListener ─────────────────────────────────────────
+
+    public void OnLayoutChange(
+        View? v,
+        int left,
+        int top,
+        int right,
+        int bottom,
+        int oldLeft,
+        int oldTop,
+        int oldRight,
+        int oldBottom)
+    {
+        var width = right - left;
+        var height = bottom - top;
+        if (width > 0 && height > 0)
+        {
+            ApplyVideoTransform(width, height);
+        }
     }
 
     private void ReplaceSurface(SurfaceTexture texture)
@@ -466,6 +497,7 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurface
             if (_textureView is not null)
             {
                 _textureView.SurfaceTextureListener = null;
+                _textureView.RemoveOnLayoutChangeListener(this);
                 _textureView?.Dispose();
                 _textureView = null;
             }
@@ -512,6 +544,7 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurface
 
         _textureView = new TextureView(activity);
         _textureView.SurfaceTextureListener = this;
+        _textureView.AddOnLayoutChangeListener(this);
         _textureView.Clickable = false;
         _textureView.Focusable = false;
         _textureView.ImportantForAccessibility = ImportantForAccessibility.No;

@@ -1005,6 +1005,49 @@ public sealed class VideoOverlayInputSurfaceTests
         Assert.True(playIndex > dialogIndex);
     }
 
+    [Fact]
+    public void AndroidVideoPlayer_GeometrySourceOfTruth_IsSolelyOnVideoSizeChanged()
+    {
+        var playerService = LoadProjectFile(
+            "Noctra.Android",
+            "Services",
+            "AndroidVideoPlayerService.cs");
+
+        var updateQualityBody = ExtractMethodBody(
+            playerService,
+            "private void UpdateStreamQuality()");
+        var setLayoutBody = ExtractMethodBody(
+            playerService,
+            "public void SetVideoLayout(Noctra.Models.VideoScaleMode scaleMode)");
+        var onVideoSizeChangedBody = ExtractMethodBody(
+            playerService,
+            "public void OnVideoSizeChanged(AndroidX.Media3.Common.VideoSize? videoSize)");
+
+        Assert.DoesNotContain("SetVideoSize", updateQualityBody, StringComparison.Ordinal);
+        Assert.DoesNotContain("SetVideoSize", setLayoutBody, StringComparison.Ordinal);
+        Assert.Contains("_service._videoSurfaceService.SetVideoSize(", onVideoSizeChangedBody, StringComparison.Ordinal);
+        Assert.Contains("videoSize.PixelWidthHeightRatio", onVideoSizeChangedBody, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void AndroidVideoSurface_SynchronizesTransformsWithNativeLayoutAndTextureCallbacks()
+    {
+        var surfaceService = LoadProjectFile(
+            "Noctra.Android",
+            "Services",
+            "AndroidVideoSurfaceService.cs");
+
+        Assert.Contains("View.IOnLayoutChangeListener", surfaceService, StringComparison.Ordinal);
+        Assert.Contains("_textureView.AddOnLayoutChangeListener(this);", surfaceService, StringComparison.Ordinal);
+        Assert.Contains("_textureView.RemoveOnLayoutChangeListener(this);", surfaceService, StringComparison.Ordinal);
+        Assert.Contains("public void OnLayoutChange(", surfaceService, StringComparison.Ordinal);
+        Assert.Contains("ApplyVideoTransform(width, height);", surfaceService, StringComparison.Ordinal);
+        Assert.Contains("ApplyVideoTransform(int viewW, int viewH)", surfaceService, StringComparison.Ordinal);
+        Assert.Contains("OnSurfaceTextureAvailable(SurfaceTexture surface, int width, int height)", surfaceService, StringComparison.Ordinal);
+        Assert.Contains("ApplyVideoTransform(width, height)", surfaceService, StringComparison.Ordinal);
+        Assert.Contains("OnSurfaceTextureSizeChanged(SurfaceTexture surface, int width, int height)", surfaceService, StringComparison.Ordinal);
+    }
+
     private static string ExtractStartTag(string contents, string marker)
     {
         var markerIndex = contents.IndexOf(marker, StringComparison.Ordinal);
