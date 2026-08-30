@@ -2659,16 +2659,24 @@ public partial class MainView : UserControl
 
     private void UpdatePlayerHostInsets()
     {
-        var shouldConsumeTopInset =
+        var shouldConsumeInsets =
             OperatingSystem.IsAndroidVersionAtLeast(35) &&
             PlayerHost.IsVisible &&
             _playerViewModel?.IsFullScreen == true;
-        var consumedTopInset = shouldConsumeTopInset ? _lastSafeArea.Top : 0;
+        var consumedLeftInset = shouldConsumeInsets ? _lastSafeArea.Left : 0;
+        var consumedTopInset = shouldConsumeInsets ? _lastSafeArea.Top : 0;
+        var consumedRightInset = shouldConsumeInsets ? _lastSafeArea.Right : 0;
+        var consumedBottomInset = shouldConsumeInsets ? _lastSafeArea.Bottom : 0;
 
-        // API 35+ can keep Avalonia's player host below the former status-bar
-        // inset after immersive mode hides the bar. Pull only the player host
-        // into that consumed area; shell pages keep their normal safe area.
-        PlayerHost.Margin = new Thickness(0, -consumedTopInset, 0, 0);
+        // API 35+ can keep Avalonia's player host inside former system/cutout insets
+        // after immersive mode hides the bars. Pull the player host into those
+        // consumed areas so it fills the full screen in both portrait and landscape;
+        // shell pages keep their normal safe area.
+        PlayerHost.Margin = new Thickness(
+            -consumedLeftInset,
+            -consumedTopInset,
+            -consumedRightInset,
+            -consumedBottomInset);
     }
 
     private void OnCardActionsRequested(
