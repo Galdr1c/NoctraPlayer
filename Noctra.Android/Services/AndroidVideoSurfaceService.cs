@@ -126,8 +126,8 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurface
         }
         else
         {
-            _boundsX = Math.Max(0, x);
-            _boundsY = Math.Max(0, y);
+            _boundsX = x;
+            _boundsY = y;
             _boundsW = width;
             _boundsH = height;
         }
@@ -252,9 +252,9 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurface
 
             if (targetW <= 0 || targetH <= 0)
             {
-                layoutParams = new WidgetFrameLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MatchParent,
-                    ViewGroup.LayoutParams.MatchParent);
+                // Geçici geçersiz geometry — son geçerli native layout'u koru.
+                // Bir sonraki LayoutUpdated zaten doğru rectangle'ı gönderecektir.
+                return;
             }
             else
             {
