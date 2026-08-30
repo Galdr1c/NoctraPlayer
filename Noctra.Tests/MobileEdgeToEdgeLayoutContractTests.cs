@@ -67,6 +67,35 @@ public sealed class MobileEdgeToEdgeLayoutContractTests
         Assert.Contains("ApplySystemChrome", android, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void PlayerEntry_AppliesNativeImmersiveBeforeLoadingBegins()
+    {
+        var source = ReadProjectFile("Noctra.Mobile", "Views", "MainView.axaml.cs");
+        var start = source.IndexOf(
+            "private async Task PlaySelectedChannelAsync",
+            StringComparison.Ordinal);
+        var end = source.IndexOf(
+            "private void ShowPlaybackStartupError",
+            start,
+            StringComparison.Ordinal);
+
+        Assert.True(start >= 0 && end > start);
+        var method = source[start..end];
+        var overlay = method.IndexOf("window?.SetPlayerOverlayActive(true);", StringComparison.Ordinal);
+        var hostVisible = method.IndexOf("PlayerHost.IsVisible = true;", StringComparison.Ordinal);
+        var viewModelFullScreen = method.IndexOf("_playerViewModel.IsFullScreen = true;", StringComparison.Ordinal);
+        var nativeFullScreen = method.IndexOf("window?.SetFullScreenMode(true);", StringComparison.Ordinal);
+        var chromeUpdate = method.IndexOf("UpdatePlayerChromeState();", StringComparison.Ordinal);
+        var playbackStart = method.IndexOf("PlayChannelAsync", StringComparison.Ordinal);
+
+        Assert.True(overlay >= 0);
+        Assert.True(hostVisible > overlay);
+        Assert.True(viewModelFullScreen > hostVisible);
+        Assert.True(nativeFullScreen > viewModelFullScreen);
+        Assert.True(chromeUpdate > nativeFullScreen);
+        Assert.True(playbackStart > chromeUpdate);
+    }
+
     private static string ReadProjectFile(params string[] parts)
     {
         var root = FindSolutionRoot();

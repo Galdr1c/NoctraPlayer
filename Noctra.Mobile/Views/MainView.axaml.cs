@@ -2122,12 +2122,19 @@ public partial class MainView : UserControl
         InvalidatePageRestore();
         ReleaseSeriesDetailView();
         ReleaseActiveCorePage(captureState: true);
-        GetPlayerWindowService()?.SetPlayerOverlayActive(true);
+        var window = GetPlayerWindowService();
+        window?.SetPlayerOverlayActive(true);
         PlayerHost.IsVisible = true;
         
         // Mobilde player açıldığında otomatik tam ekran (immersive mode)
         _playerViewModel.IsFullScreen = true;
-        
+
+        // PropertyChanged → SetFullScreenMode zinciri RunOnUi ile ertelenir;
+        // Android 15+ edge-to-edge'te InsetsController state'i platform tarafından
+        // sıfırlanabilir. Oyuncu ekranı görünür olur olmaz immersive'i doğrudan
+        // uygula; SetFullScreenMode idempotent olduğu için tekrar caizdir.
+        window?.SetFullScreenMode(true);
+
         UpdatePlayerChromeState();
 
         // Wire watermark DataContext from Core MainViewModel
@@ -2350,7 +2357,6 @@ public partial class MainView : UserControl
         }
 
         window?.SetKeepScreenOn(false);
-        window?.SetFullScreenMode(false);
         window?.SetBrightness(-1);
 
         UpdatePlayerChromeState();
