@@ -167,6 +167,24 @@ public partial class MobilePlayerView : UserControl
         DetachedFromVisualTree += (_, _) => DetachInputModeService();
     }
 
+    public void ApplyControlInsets(Thickness safeArea, bool isFullScreen, bool isPictureInPicture)
+    {
+        ApplyWatermarkInsets(safeArea, isFullScreen, isPictureInPicture);
+
+        // In fullscreen playback on Android 15+ edge-to-edge displays, interactive
+        // buttons (back, PiP, lock, transport, sheets, EPG) must be padded away
+        // from camera cutouts (punch holes) and system bar edges.
+        var left = safeArea.Left;
+        var top = safeArea.Top;
+        var right = safeArea.Right;
+        var bottom = safeArea.Bottom;
+
+        TopOverlay.Margin = new Thickness(left, top, right, 0);
+        PlayerControls.Margin = new Thickness(left, 0, right, bottom);
+        PlayerSheets.Margin = new Thickness(left, top, right, bottom);
+        EpgPanel.Margin = new Thickness(left, top, right, bottom);
+    }
+
     public void ApplyWatermarkInsets(Thickness safeArea, bool isFullScreen, bool isPictureInPicture)
     {
         const double normalRight = 24;

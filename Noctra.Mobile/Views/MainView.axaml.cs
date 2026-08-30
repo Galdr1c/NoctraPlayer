@@ -2651,7 +2651,7 @@ public partial class MainView : UserControl
 
     private void UpdatePlayerWatermarkInsets()
     {
-        MobilePlayerContent.ApplyWatermarkInsets(
+        MobilePlayerContent.ApplyControlInsets(
             _lastSafeArea,
             PlayerHost.IsVisible && _playerViewModel?.IsFullScreen == true,
             _playerViewModel?.IsPiPMode == true);

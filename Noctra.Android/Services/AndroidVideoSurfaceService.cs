@@ -221,12 +221,50 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurface
         }
         else
         {
-            // Üst bölgeye küçültülmüş video (EPG split)
-            layoutParams = new WidgetFrameLayout.LayoutParams(_boundsW, _boundsH)
+            // Native content root sınırlarına göre kırp (clipping)
+            var targetX = _boundsX;
+            var targetY = _boundsY;
+            var targetW = _boundsW;
+            var targetH = _boundsH;
+
+            var activity = _activityProvider.CurrentActivity;
+            var content = activity?.Window?.DecorView?.FindViewById(global::Android.Resource.Id.Content) as ViewGroup;
+            var rootW = content?.Width ?? 0;
+            var rootH = content?.Height ?? 0;
+
+            if (rootW > 0 && rootH > 0)
             {
-                LeftMargin = _boundsX,
-                TopMargin = _boundsY,
-            };
+                var left = Math.Clamp(targetX, 0, rootW);
+                var top = Math.Clamp(targetY, 0, rootH);
+                var right = Math.Clamp(targetX + targetW, 0, rootW);
+                var bottom = Math.Clamp(targetY + targetH, 0, rootH);
+
+                targetX = left;
+                targetY = top;
+                targetW = Math.Max(0, right - left);
+                targetH = Math.Max(0, bottom - top);
+            }
+            else
+            {
+                targetX = Math.Max(0, targetX);
+                targetY = Math.Max(0, targetY);
+            }
+
+            if (targetW <= 0 || targetH <= 0)
+            {
+                layoutParams = new WidgetFrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MatchParent,
+                    ViewGroup.LayoutParams.MatchParent);
+            }
+            else
+            {
+                // Üst bölgeye küçültülmüş video (EPG split)
+                layoutParams = new WidgetFrameLayout.LayoutParams(targetW, targetH)
+                {
+                    LeftMargin = targetX,
+                    TopMargin = targetY,
+                };
+            }
         }
 
         if (_backdropView is not null)
