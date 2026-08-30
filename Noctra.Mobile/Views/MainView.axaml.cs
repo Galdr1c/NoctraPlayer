@@ -846,6 +846,7 @@ public partial class MainView : UserControl
         CategorySelectionOverlay.ApplySafeArea(contentSafe);
         CardActionsSheet.ApplySafeArea(contentSafe);
         _lastSafeArea = safe;
+        UpdatePlayerHostInsets();
         if (_playerViewModel is not null)
         {
             _playerViewModel.SubtitleTopSafeArea = safe.Top;
@@ -2629,6 +2630,7 @@ public partial class MainView : UserControl
         var isPlayerVisible = PlayerHost.IsVisible;
         _isPlayerFullScreen = isPlayerVisible && _playerViewModel?.IsFullScreen == true;
 
+        UpdatePlayerHostInsets();
         ApplyTopLevelComposition(isPlayerVisible);
 
         ShellLayer.IsVisible = !isPlayerVisible;
@@ -2653,6 +2655,20 @@ public partial class MainView : UserControl
             _lastSafeArea,
             PlayerHost.IsVisible && _playerViewModel?.IsFullScreen == true,
             _playerViewModel?.IsPiPMode == true);
+    }
+
+    private void UpdatePlayerHostInsets()
+    {
+        var shouldConsumeTopInset =
+            OperatingSystem.IsAndroidVersionAtLeast(35) &&
+            PlayerHost.IsVisible &&
+            _playerViewModel?.IsFullScreen == true;
+        var consumedTopInset = shouldConsumeTopInset ? _lastSafeArea.Top : 0;
+
+        // API 35+ can keep Avalonia's player host below the former status-bar
+        // inset after immersive mode hides the bar. Pull only the player host
+        // into that consumed area; shell pages keep their normal safe area.
+        PlayerHost.Margin = new Thickness(0, -consumedTopInset, 0, 0);
     }
 
     private void OnCardActionsRequested(

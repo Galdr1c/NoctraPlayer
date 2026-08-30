@@ -96,6 +96,17 @@ public sealed class MobileEdgeToEdgeLayoutContractTests
         Assert.True(playbackStart > chromeUpdate);
     }
 
+    [Fact]
+    public void PlayerLayout_RemovesConsumedTopInsetDuringImmersivePlayback()
+    {
+        var source = ReadProjectFile("Noctra.Mobile", "Views", "MainView.axaml.cs");
+
+        Assert.Contains("UpdatePlayerHostInsets", source, StringComparison.Ordinal);
+        Assert.Contains("PlayerHost.Margin = new Thickness(", source, StringComparison.Ordinal);
+        Assert.Contains("_lastSafeArea.Top", source, StringComparison.Ordinal);
+        Assert.Contains("OperatingSystem.IsAndroidVersionAtLeast(35)", source, StringComparison.Ordinal);
+    }
+
     private static string ReadProjectFile(params string[] parts)
     {
         var root = FindSolutionRoot();

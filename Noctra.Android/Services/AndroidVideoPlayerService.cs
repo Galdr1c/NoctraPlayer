@@ -1587,7 +1587,8 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
         {
             var classPtr = JNIEnv.FindClass("androidx/media3/common/Tracks");
             var methodId = JNIEnv.GetMethodID(classPtr, "getGroups", "()Lcom/google/common/collect/ImmutableList;");
-            JNIEnv.DeleteLocalRef(classPtr);
+            // JNIEnv.FindClass returns a global reference in .NET for Android.
+            JNIEnv.DeleteGlobalRef(classPtr);
 
             var listPtr = JNIEnv.CallObjectMethod(tracks.Handle, methodId);
             if (listPtr == IntPtr.Zero) return [];
@@ -1597,7 +1598,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
                 var listClassPtr = JNIEnv.FindClass("java/util/List");
                 var sizeId = JNIEnv.GetMethodID(listClassPtr, "size", "()I");
                 var getId  = JNIEnv.GetMethodID(listClassPtr, "get", "(I)Ljava/lang/Object;");
-                JNIEnv.DeleteLocalRef(listClassPtr);
+                JNIEnv.DeleteGlobalRef(listClassPtr);
 
                 int count = JNIEnv.CallIntMethod(listPtr, sizeId);
                 var result = new Tracks.Group[count];
@@ -1632,7 +1633,8 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
         {
             var classPtr = JNIEnv.FindClass("androidx/media3/common/text/CueGroup");
             var fieldId  = JNIEnv.GetFieldID(classPtr, "cues", "Lcom/google/common/collect/ImmutableList;");
-            JNIEnv.DeleteLocalRef(classPtr);
+            // JNIEnv.FindClass returns a global reference in .NET for Android.
+            JNIEnv.DeleteGlobalRef(classPtr);
 
             var listPtr = JNIEnv.GetObjectField(cueGroup.Handle, fieldId);
             if (listPtr == IntPtr.Zero) return [];
@@ -1642,7 +1644,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
                 var listClassPtr = JNIEnv.FindClass("java/util/List");
                 var sizeId = JNIEnv.GetMethodID(listClassPtr, "size", "()I");
                 var getId  = JNIEnv.GetMethodID(listClassPtr, "get", "(I)Ljava/lang/Object;");
-                JNIEnv.DeleteLocalRef(listClassPtr);
+                JNIEnv.DeleteGlobalRef(listClassPtr);
 
                 int count = JNIEnv.CallIntMethod(listPtr, sizeId);
                 var result = new Cue[count];
