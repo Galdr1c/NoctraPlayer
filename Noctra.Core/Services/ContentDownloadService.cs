@@ -58,7 +58,7 @@ public class ContentDownloadService : IContentDownloadService
     private readonly ConcurrentDictionary<int, DateTime> _lastCleanupUtcByProfile = new();
     private int _isQueueWorkerStarted;
 
-    public event EventHandler? DownloadsChanged;
+    public event EventHandler<DownloadsChangedEventArgs>? DownloadsChanged;
     public event EventHandler<DownloadItem>? DownloadCompleted;
 
     public ContentDownloadService(
@@ -183,7 +183,7 @@ public class ContentDownloadService : IContentDownloadService
         }
 
         EnsureQueueWorkerStarted();
-        DownloadsChanged?.Invoke(this, EventArgs.Empty);
+        DownloadsChanged?.Invoke(this, new DownloadsChangedEventArgs(DownloadChangeKind.Structural));
         return new DownloadContentResult(true, false, _localizationService.GetString("Download.Status.AddedToQueue"), item.Id);
     }
 
@@ -353,7 +353,7 @@ public class ContentDownloadService : IContentDownloadService
         await RestoreMappedEntitiesToSourceUrlAsync(db, item);
         db.DownloadItems.Remove(item);
         await db.SaveChangesAsync(cancellationToken);
-        DownloadsChanged?.Invoke(this, EventArgs.Empty);
+        DownloadsChanged?.Invoke(this, new DownloadsChangedEventArgs(DownloadChangeKind.Structural));
         return item.SourceUrl;
     }
 
@@ -537,7 +537,7 @@ public class ContentDownloadService : IContentDownloadService
 
         if (persisted)
         {
-            DownloadsChanged?.Invoke(this, EventArgs.Empty);
+            DownloadsChanged?.Invoke(this, new DownloadsChangedEventArgs(DownloadChangeKind.Structural));
         }
     }
 
@@ -598,7 +598,7 @@ public class ContentDownloadService : IContentDownloadService
         }
 
         CleanupEmptyDownloadDirectories();
-        DownloadsChanged?.Invoke(this, EventArgs.Empty);
+        DownloadsChanged?.Invoke(this, new DownloadsChangedEventArgs(DownloadChangeKind.Structural));
     }
 
     public async Task DeleteDownloadAsync(
@@ -628,7 +628,7 @@ public class ContentDownloadService : IContentDownloadService
         }
 
         await RemoveDownloadArtifactsAndRecordWithRetryAsync(downloadId, cancellationToken);
-        DownloadsChanged?.Invoke(this, EventArgs.Empty);
+        DownloadsChanged?.Invoke(this, new DownloadsChangedEventArgs(DownloadChangeKind.Structural));
     }
 
     public Task CancelDownloadAsync(
@@ -674,7 +674,7 @@ public class ContentDownloadService : IContentDownloadService
                 item.Status = DownloadStatus.Paused;
                 item.UpdatedAt = DateTime.UtcNow;
                 await db.SaveChangesAsync(cancellationToken);
-                DownloadsChanged?.Invoke(this, EventArgs.Empty);
+                DownloadsChanged?.Invoke(this, new DownloadsChangedEventArgs(DownloadChangeKind.Structural));
             }
         }
         finally
@@ -737,7 +737,7 @@ public class ContentDownloadService : IContentDownloadService
             {
                 db.DownloadItems.Remove(item);
                 await db.SaveChangesAsync(cancellationToken);
-                DownloadsChanged?.Invoke(this, EventArgs.Empty);
+                DownloadsChanged?.Invoke(this, new DownloadsChangedEventArgs(DownloadChangeKind.Structural));
                 return;
             }
         }
@@ -758,7 +758,7 @@ public class ContentDownloadService : IContentDownloadService
             item.EstimatedSecondsRemaining = null;
             item.UpdatedAt = DateTime.UtcNow;
             await db.SaveChangesAsync(cancellationToken);
-            DownloadsChanged?.Invoke(this, EventArgs.Empty);
+            DownloadsChanged?.Invoke(this, new DownloadsChangedEventArgs(DownloadChangeKind.Structural));
             return;
         }
 
@@ -774,7 +774,7 @@ public class ContentDownloadService : IContentDownloadService
         }
 
             EnsureQueueWorkerStarted();
-            DownloadsChanged?.Invoke(this, EventArgs.Empty);
+            DownloadsChanged?.Invoke(this, new DownloadsChangedEventArgs(DownloadChangeKind.Structural));
         }
         finally
         {
@@ -916,7 +916,7 @@ public class ContentDownloadService : IContentDownloadService
                 _downloadStateGate.Release();
             }
 
-            DownloadsChanged?.Invoke(this, EventArgs.Empty);
+            DownloadsChanged?.Invoke(this, new DownloadsChangedEventArgs(DownloadChangeKind.Structural));
         }
         catch (Exception ex)
         {
@@ -1057,7 +1057,7 @@ public class ContentDownloadService : IContentDownloadService
             }
         }
 
-        DownloadsChanged?.Invoke(this, EventArgs.Empty);
+        DownloadsChanged?.Invoke(this, new DownloadsChangedEventArgs(DownloadChangeKind.Structural));
 
         // A DeleteAllDownloadsAsync that raced this CTS registration (the item
         // was not yet visible as active, so DeleteAll removed the record and
@@ -1216,7 +1216,7 @@ public class ContentDownloadService : IContentDownloadService
                                     _downloadStateGate.Release();
                                 }
 
-                                DownloadsChanged?.Invoke(this, EventArgs.Empty);
+                                DownloadsChanged?.Invoke(this, new DownloadsChangedEventArgs(DownloadChangeKind.Progress));
                                 lastPersistTick = now;
                                 lastPersistedBytes = downloaded;
                             }
@@ -1353,7 +1353,7 @@ public class ContentDownloadService : IContentDownloadService
 
             if (ownsCancellationCleanup)
             {
-                DownloadsChanged?.Invoke(this, EventArgs.Empty);
+                DownloadsChanged?.Invoke(this, new DownloadsChangedEventArgs(DownloadChangeKind.Structural));
             }
         }
     }
@@ -1861,7 +1861,7 @@ public class ContentDownloadService : IContentDownloadService
         if (changed)
         {
             await db.SaveChangesAsync(cancellationToken);
-            DownloadsChanged?.Invoke(this, EventArgs.Empty);
+            DownloadsChanged?.Invoke(this, new DownloadsChangedEventArgs(DownloadChangeKind.Structural));
         }
     }
 
@@ -1975,7 +1975,7 @@ public class ContentDownloadService : IContentDownloadService
         }
 
         DownloadCompleted?.Invoke(this, item);
-        DownloadsChanged?.Invoke(this, EventArgs.Empty);
+        DownloadsChanged?.Invoke(this, new DownloadsChangedEventArgs(DownloadChangeKind.Structural));
     }
 
     private async Task MarkPausedAsync(int downloadId)
@@ -2013,7 +2013,7 @@ public class ContentDownloadService : IContentDownloadService
                     item.EstimatedSecondsRemaining = null;
                     item.UpdatedAt = DateTime.UtcNow;
                     await db.SaveChangesAsync(cancellationToken);
-                    DownloadsChanged?.Invoke(this, EventArgs.Empty);
+                    DownloadsChanged?.Invoke(this, new DownloadsChangedEventArgs(DownloadChangeKind.Structural));
                 }
 
                 return;
@@ -2168,7 +2168,7 @@ public class ContentDownloadService : IContentDownloadService
             item.EstimatedSecondsRemaining = null;
             item.UpdatedAt = DateTime.UtcNow;
             await db.SaveChangesAsync();
-            DownloadsChanged?.Invoke(this, EventArgs.Empty);
+            DownloadsChanged?.Invoke(this, new DownloadsChangedEventArgs(DownloadChangeKind.Structural));
         }
         finally
         {
@@ -2537,7 +2537,7 @@ public class ContentDownloadService : IContentDownloadService
             item.EstimatedSecondsRemaining = null;
             item.UpdatedAt = DateTime.UtcNow;
             await db.SaveChangesAsync();
-            DownloadsChanged?.Invoke(this, EventArgs.Empty);
+            DownloadsChanged?.Invoke(this, new DownloadsChangedEventArgs(DownloadChangeKind.Structural));
         }
         finally
         {
@@ -2734,7 +2734,7 @@ public class ContentDownloadService : IContentDownloadService
             if (changed)
             {
                 await db.SaveChangesAsync();
-                DownloadsChanged?.Invoke(this, EventArgs.Empty);
+                DownloadsChanged?.Invoke(this, new DownloadsChangedEventArgs(DownloadChangeKind.Structural));
             }
         }
         catch (Exception ex)

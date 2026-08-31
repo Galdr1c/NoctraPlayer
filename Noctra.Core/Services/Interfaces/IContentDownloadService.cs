@@ -8,6 +8,22 @@ public enum DownloadItemType
     SeriesEpisode
 }
 
+public enum DownloadChangeKind
+{
+    Structural,
+    Progress
+}
+
+public sealed class DownloadsChangedEventArgs : EventArgs
+{
+    public DownloadChangeKind Kind { get; }
+
+    public DownloadsChangedEventArgs(DownloadChangeKind kind)
+    {
+        Kind = kind;
+    }
+}
+
 public sealed record DownloadTrackOption(int Id, string Name);
 
 public sealed record DownloadContentRequest(
@@ -35,7 +51,7 @@ public sealed record DownloadContentResult(
 
 public interface IContentDownloadService
 {
-    event EventHandler? DownloadsChanged;
+    event EventHandler<DownloadsChangedEventArgs>? DownloadsChanged;
     event EventHandler<DownloadItem>? DownloadCompleted;
 
     Task<DownloadContentResult> QueueDownloadAsync(

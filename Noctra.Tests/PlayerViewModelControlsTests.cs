@@ -215,7 +215,7 @@ namespace Noctra.Tests
     {
         public List<DownloadItem> MockItems { get; } = new();
 
-        public event EventHandler? DownloadsChanged;
+        public event EventHandler<DownloadsChangedEventArgs>? DownloadsChanged;
         public event EventHandler<DownloadItem>? DownloadCompleted;
 
         public Task<DownloadContentResult> QueueDownloadAsync(DownloadContentRequest request, CancellationToken cancellationToken = default)
@@ -238,7 +238,7 @@ namespace Noctra.Tests
                 ProfileId = request.ProfileId
             };
             MockItems.Add(item);
-            DownloadsChanged?.Invoke(this, EventArgs.Empty);
+            DownloadsChanged?.Invoke(this, new DownloadsChangedEventArgs(DownloadChangeKind.Structural));
             return Task.FromResult(new DownloadContentResult(true, false, "Queued", item.Id));
         }
 

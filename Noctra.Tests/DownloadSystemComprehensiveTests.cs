@@ -32,7 +32,7 @@ namespace Noctra.Tests
     internal class StatefulFakeDownloadService : IContentDownloadService
     {
         public List<DownloadItem> MockItems = new();
-        public event EventHandler? DownloadsChanged;
+        public event EventHandler<DownloadsChangedEventArgs>? DownloadsChanged;
         public event EventHandler<DownloadItem>? DownloadCompleted;
 
         public virtual Task<DownloadContentResult> QueueDownloadAsync(DownloadContentRequest request, CancellationToken ct = default)
@@ -55,7 +55,7 @@ namespace Noctra.Tests
                 EpisodeTitle = request.EpisodeTitle
             };
             MockItems.Add(item);
-            DownloadsChanged?.Invoke(this, EventArgs.Empty);
+            DownloadsChanged?.Invoke(this, new DownloadsChangedEventArgs(DownloadChangeKind.Structural));
             return Task.FromResult(new DownloadContentResult(true, false, "Eklendi", item.Id));
         }
 
@@ -76,7 +76,7 @@ namespace Noctra.Tests
         {
             var item = MockItems.FirstOrDefault(i => i.Id == id);
             if (item != null) MockItems.Remove(item);
-            DownloadsChanged?.Invoke(this, EventArgs.Empty);
+            DownloadsChanged?.Invoke(this, new DownloadsChangedEventArgs(DownloadChangeKind.Structural));
             return Task.CompletedTask;
         }
 
@@ -84,14 +84,14 @@ namespace Noctra.Tests
         {
             var item = MockItems.FirstOrDefault(i => i.Id == downloadId);
             if (item != null) MockItems.Remove(item);
-            DownloadsChanged?.Invoke(this, EventArgs.Empty);
+            DownloadsChanged?.Invoke(this, new DownloadsChangedEventArgs(DownloadChangeKind.Structural));
             return Task.CompletedTask;
         }
 
         public Task DeleteAllDownloadsAsync(int profileId, CancellationToken ct = default)
         {
             MockItems.RemoveAll(i => profileId <= 0 || i.ProfileId == profileId);
-            DownloadsChanged?.Invoke(this, EventArgs.Empty);
+            DownloadsChanged?.Invoke(this, new DownloadsChangedEventArgs(DownloadChangeKind.Structural));
             return Task.CompletedTask;
         }
 

@@ -541,7 +541,7 @@ public partial class MainViewModel : ObservableObject
         };
         _settingsService.SettingsChanged += OnSettingsService_Changed;
         InitializeAsync();
-        _contentDownloadService.DownloadsChanged += (_, _) =>
+        _contentDownloadService.DownloadsChanged += (_, e) =>
         {
             _dispatcherService.BeginInvoke(() =>
             {
@@ -551,7 +551,7 @@ public partial class MainViewModel : ObservableObject
                     {
                         ScheduleDownloadCenterRefresh(CurrentProfileId.Value);
                     }
-                    else
+                    else if (e.Kind == DownloadChangeKind.Structural)
                     {
                         ScheduleDownloadsLandingRefresh(CurrentProfileId.Value);
                     }
