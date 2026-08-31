@@ -547,11 +547,21 @@ public partial class MainViewModel : ObservableObject
             {
                 if (CurrentProfileId.HasValue && ActiveView == AppView.Downloads)
                 {
+                    if (e.Kind == DownloadChangeKind.Progress)
+                    {
+                        if (IsDownloadCenterVisible)
+                        {
+                            RefreshDownloadCenterProgressOnly(CurrentProfileId.Value);
+                        }
+
+                        return;
+                    }
+
                     if (IsDownloadCenterVisible)
                     {
                         ScheduleDownloadCenterRefresh(CurrentProfileId.Value);
                     }
-                    else if (e.Kind == DownloadChangeKind.Structural)
+                    else
                     {
                         ScheduleDownloadsLandingRefresh(CurrentProfileId.Value);
                     }
@@ -8314,6 +8324,40 @@ public partial class MainViewModel : ObservableObject
         CompletedDownloadItems.Clear();
         FailedDownloadItems.Clear();
         OnPropertyChanged(nameof(HasAnyDownloadState));
+    }
+
+    private void RefreshDownloadCenterProgressOnly(int profileId)
+    {
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                var downloads = await _contentDownloadService.GetDownloadsAsync(profileId);
+                var allActive = downloads
+                    .Where(d => d.IsActive)
+                    .OrderByDescending(d => d.CreatedAt)
+                    .ToList();
+
+                SetDownloadItemsIfChanged(ActiveDownloadItems, allActive, includeProgress: true);
+                SetDownloadItemsIfChanged(ActiveDownloadingItems, allActive
+                    .Where(d => d.Status == DownloadStatus.Downloading || d.Status == DownloadStatus.Paused)
+                    .OrderBy(d => d.Status == DownloadStatus.Paused ? 1 : 0)
+                    .ThenBy(d => d.CreatedAt), includeProgress: true);
+
+                ActiveDownloadCount = ActiveDownloadingItems.Count;
+                var totalSpeed = ActiveDownloadItems
+                    .Where(d => d.Status == DownloadStatus.Downloading)
+                    .Sum(d => Math.Max(0, d.SpeedBytesPerSecond));
+                ActiveDownloadsTotalSpeedText = string.Format(CultureInfo.CurrentCulture,
+                    _localizationService.GetString("Downloads.Speed.PerSecondFormat"),
+                    FormatDownloadBytes((long)totalSpeed));
+                DownloadFreeDiskSpaceText = ResolveDownloadFreeSpaceText(profileId);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogDebug(ex, "Lightweight progress refresh failed.");
+            }
+        });
     }
 
     private void UpdateDownloadCenterSummary(int profileId)
