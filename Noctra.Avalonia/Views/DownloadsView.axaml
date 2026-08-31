@@ -192,6 +192,11 @@
                   <TextBlock Text="{loc:Translate Downloads.Storage.Free}" Foreground="{DynamicResource TextMutedBrush}" FontSize="11"/>
                 </StackPanel>
               </WrapPanel>
+
+              <!-- Fun Fact -->
+              <TextBlock Text="{Binding StorageFunFactText}" FontSize="11" FontWeight="SemiBold"
+                         Foreground="{DynamicResource AccentBrush}" Margin="0,2,0,0"
+                         IsVisible="{Binding StorageFunFactText, Converter={x:Static avaloniaConverters:StringConverters.IsNotNullOrEmpty}}"/>
             </StackPanel>
 
             <!-- Actions: Delete all (only when there is something) + Open folder -->

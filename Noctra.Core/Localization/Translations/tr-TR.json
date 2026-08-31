@@ -431,6 +431,7 @@
   "Downloads.Storage.Pending": "İndirilmesi Devam Edenler",
   "Downloads.Storage.Free": "Boş Alan",
   "Downloads.Storage.Warning": "Cihaz depolama alanı düşük. Yeni indirmeler başarısız olabilir.",
+  "Downloads.Storage.FunFact": "Noctra, cihazınızın {0}'ını kaplıyor",
   "Downloads.Action.DeleteAll": "Tümünü Sil",
   "Downloads.Action.OpenFolder": "Klasörü Aç",
   "Downloads.Action.StopAll": "Tümünü Durdur",

@@ -431,6 +431,7 @@
   "Downloads.Storage.Pending": "Éléments en téléchargement",
   "Downloads.Storage.Free": "Espace libre",
   "Downloads.Storage.Warning": "Espace de stockage faible. Les nouveaux téléchargements peuvent échouer.",
+  "Downloads.Storage.FunFact": "Noctra utilise {0} de l'espace de votre appareil",
   "Downloads.Action.DeleteAll": "Supprimer tout",
   "Downloads.Action.OpenFolder": "Ouvrir le dossier",
   "Downloads.Action.StopAll": "Arrêter tout",

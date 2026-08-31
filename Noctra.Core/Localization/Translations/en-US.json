@@ -431,6 +431,7 @@
   "Downloads.Storage.Pending": "Downloading Items",
   "Downloads.Storage.Free": "Free Space",
   "Downloads.Storage.Warning": "Device storage is low. New downloads may fail.",
+  "Downloads.Storage.FunFact": "Noctra is using {0} of your device storage",
   "Downloads.Action.DeleteAll": "Delete All",
   "Downloads.Action.OpenFolder": "Open Folder",
   "Downloads.Action.StopAll": "Stop All",

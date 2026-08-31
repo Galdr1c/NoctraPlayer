@@ -6938,6 +6938,9 @@ public partial class MainViewModel : ObservableObject
     private string _storageUsageDetailText = "0 B / 0 B";
 
     [ObservableProperty]
+    private string _storageFunFactText = "";
+
+    [ObservableProperty]
     private string _activeDownloadsTotalSpeedText = "0 B/s";
 
     [ObservableProperty]
@@ -7777,6 +7780,14 @@ public partial class MainViewModel : ObservableObject
                 var detailFmt = _localizationService.GetString("Downloads.Storage.DetailFormat");
                 if (string.IsNullOrWhiteSpace(detailFmt)) detailFmt = "Noctra: {0} used · Free: {1}";
                 StorageUsageDetailText = string.Format(CultureInfo.CurrentCulture, detailFmt, FormatDownloadBytes(totalSizeBytes), FormatDownloadBytes(freeSpace));
+
+                var funFactFmt = _localizationService.GetString("Downloads.Storage.FunFact");
+                if (!string.IsNullOrWhiteSpace(funFactFmt))
+                {
+                    var displayPercent = noctraPercent < 0.1 && totalSizeBytes > 0 ? 0.1 : noctraPercent;
+                    StorageFunFactText = string.Format(CultureInfo.CurrentCulture, funFactFmt, displayPercent.ToString("0.#", CultureInfo.CurrentCulture) + "%");
+                }
+
                 ShowStorageWarning = (totalUsedPercent + pendingPercent) > 90.0 && totalSizeBytes > 0;
             }
         }
