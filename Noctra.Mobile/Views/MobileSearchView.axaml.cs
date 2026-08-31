@@ -89,7 +89,10 @@ public partial class MobileSearchView : UserControl, IMobileNavigationStateParti
             return;
         }
 
-        viewModel.CommitSearchCommand.Execute(null);
+        if (viewModel.CommitSearchCommand.CanExecute(null))
+        {
+            viewModel.CommitSearchCommand.Execute(null);
+        }
         e.Handled = true;
     }
 

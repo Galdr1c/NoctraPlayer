@@ -409,6 +409,7 @@
   "Search.DidYouMean": "Bunu mu demek istediniz?",
   "Search.SimilarResults": "Benzer Sonuçlar",
   "Search.Searching": "Aranıyor...",
+  "Search.MinimumLengthHint": "Aramak için en az 2 karakter girin",
   "Search.Idle.Title": "İçerik ara",
   "Search.Idle.Description": "Favori kanallarınızı, filmlerinizi ve dizilerinizi bulun",
   "Search.Empty.Title": "Sonuç bulunamadı",

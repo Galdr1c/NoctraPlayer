@@ -309,6 +309,10 @@ public partial class MainViewModel : ObservableObject
 
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanCommitSearch))]
+    [NotifyPropertyChangedFor(nameof(ShowSearchMinimumLengthHint))]
+    [NotifyPropertyChangedFor(nameof(ShowSearchIdleState))]
+    [NotifyCanExecuteChangedFor(nameof(CommitSearchCommand))]
     private string _searchQuery = string.Empty;
 
     [ObservableProperty]
@@ -6967,6 +6971,22 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private bool _showSearchEmptyState;
 
+    /// <summary>
+    /// Indicates whether the current input can be committed as a search.
+    /// Normalization is shared with the ranking pipeline so punctuation and
+    /// whitespace cannot bypass the minimum-length rule.
+    /// </summary>
+    public bool CanCommitSearch
+        => SearchDocumentCache.Normalize(SearchQuery).Length >= MinSearchQueryLength;
+
+    /// <summary>
+    /// Shows a validation hint for non-empty input that is too short to search.
+    /// The hint is derived from the uncommitted query and does not start any
+    /// database or ranking work.
+    /// </summary>
+    public bool ShowSearchMinimumLengthHint
+        => !string.IsNullOrWhiteSpace(SearchQuery) && !CanCommitSearch;
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowSearchIdleState))]
     private bool _isSearching;
@@ -6975,7 +6995,7 @@ public partial class MainViewModel : ObservableObject
     /// Shows the idle state when the user hasn't started searching yet
     /// (no SearchText committed, no results, not currently searching).
     /// </summary>
-    public bool ShowSearchIdleState => !IsSearching && !ShowSearchEmptyState && string.IsNullOrWhiteSpace(SearchText)
+    public bool ShowSearchIdleState => !IsSearching && !ShowSearchEmptyState && !ShowSearchMinimumLengthHint && string.IsNullOrWhiteSpace(SearchText)
         && SearchLiveChannels.Count == 0 && SearchSeriesChannels.Count == 0 && SearchVodChannels.Count == 0;
 
     [ObservableProperty]
@@ -9735,7 +9755,7 @@ public partial class MainViewModel : ObservableObject
     }
 
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanCommitSearch))]
     private void CommitSearch()
     {
         CommitSearchText(SearchQuery);
@@ -9758,7 +9778,7 @@ public partial class MainViewModel : ObservableObject
     private void CommitSearchText(string? value)
     {
         var nextQuery = value?.Trim() ?? string.Empty;
-        if (nextQuery.Length == 0)
+        if (SearchDocumentCache.Normalize(nextQuery).Length < MinSearchQueryLength)
         {
             return;
         }

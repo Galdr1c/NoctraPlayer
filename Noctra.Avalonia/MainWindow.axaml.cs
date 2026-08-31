@@ -429,7 +429,10 @@ public partial class MainWindow : Window
         if (e.Key == Key.Enter)
         {
             _mainViewModel.CloseSeriesDetailCommand.Execute(null);
-            _mainViewModel.CommitSearchCommand.Execute(null);
+            if (_mainViewModel.CommitSearchCommand.CanExecute(null))
+            {
+                _mainViewModel.CommitSearchCommand.Execute(null);
+            }
         }
         else if (e.Key == Key.Escape)
         {

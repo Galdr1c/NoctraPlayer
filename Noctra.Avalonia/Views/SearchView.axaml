@@ -9,15 +9,24 @@
   <Grid IsVisible="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.Search}}">
     <Grid Margin="24,24,24,0" RowDefinitions="Auto,Auto,*" RowSpacing="{DynamicResource DesktopHeaderGap}">
       <TextBlock Text="{loc:Translate Search.Results}" Classes="DesktopPageTitle" />
-      <Border Grid.Row="1" Padding="14,10" Background="{DynamicResource Surface0Brush}"
-              BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="10"
-              IsVisible="{Binding SearchSuggestion, Converter={StaticResource StringNotEmptyToVisibilityConverter}}">
-        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-          <TextBlock Text="{loc:Translate Search.DidYouMean}" Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center" />
-          <Button Content="{Binding SearchSuggestion}" Margin="10,0,0,0" Padding="10,5"
-                  Command="{Binding ApplySearchSuggestionCommand}" Classes="DesktopFilterButton" />
-        </StackPanel>
-      </Border>
+      <StackPanel Grid.Row="1" Spacing="8">
+        <Border Padding="14,10" Background="{DynamicResource Surface0Brush}"
+                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="10"
+                IsVisible="{Binding SearchSuggestion, Converter={StaticResource StringNotEmptyToVisibilityConverter}}">
+          <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+            <TextBlock Text="{loc:Translate Search.DidYouMean}" Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center" />
+            <Button Content="{Binding SearchSuggestion}" Margin="10,0,0,0" Padding="10,5"
+                    Command="{Binding ApplySearchSuggestionCommand}" Classes="DesktopFilterButton" />
+          </StackPanel>
+        </Border>
+        <Border Padding="14,8" Background="{DynamicResource Surface0Brush}"
+                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="10"
+                IsVisible="{Binding ShowSearchMinimumLengthHint}">
+          <TextBlock Text="{loc:Translate Search.MinimumLengthHint}"
+                     Foreground="{DynamicResource TextMutedBrush}"
+                     HorizontalAlignment="Center" />
+        </Border>
+      </StackPanel>
       <controls:DesktopSectionedCardFeed Grid.Row="2"
                                          x:Name="SearchResultsFeed"
                                          IsHitTestVisible="{Binding IsSearching, Converter={StaticResource InverseBoolConverter}}"

@@ -11,6 +11,52 @@ namespace Noctra.Tests;
 
 public sealed class MainViewModelIncrementalCancellationTests
 {
+    [Theory]
+    [InlineData("A")]
+    [InlineData("Ç")]
+    [InlineData("!!")]
+    public void ShortSearchQuery_DisablesCommitAndShowsMinimumLengthHint(string query)
+    {
+        var viewModel = CreateViewModel(new Mock<IContentQueryService>().Object);
+        viewModel.ActiveView = AppView.Search;
+        viewModel.SearchQuery = query;
+
+        var hintProperty = typeof(MainViewModel).GetProperty("ShowSearchMinimumLengthHint");
+        Assert.NotNull(hintProperty);
+        Assert.True((bool)hintProperty!.GetValue(viewModel)!);
+        Assert.False(viewModel.ShowSearchIdleState);
+        Assert.False(viewModel.CommitSearchCommand.CanExecute(null));
+
+        viewModel.SearchQuery = "ab";
+
+        Assert.False((bool)hintProperty.GetValue(viewModel)!);
+        Assert.True(viewModel.CommitSearchCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void InvalidSearchCommit_PreservesCommittedQueryAndResults()
+    {
+        var viewModel = CreateViewModel(new Mock<IContentQueryService>().Object);
+        viewModel.ActiveView = AppView.Home;
+        SetPrivateField(viewModel, "_suppressNavigationFilterRefresh", true);
+        viewModel.SearchText = "dark";
+        SetPrivateField(viewModel, "_suppressNavigationFilterRefresh", false);
+        viewModel.SearchVodChannels.Add(new Channel
+        {
+            Id = 1,
+            PlaylistId = 7,
+            Name = "Dark Movie",
+            Type = ChannelType.VOD
+        });
+        viewModel.SearchQuery = "A";
+
+        viewModel.CommitSearchCommand.Execute(null);
+
+        Assert.Equal("dark", viewModel.SearchText);
+        Assert.Equal(AppView.Home, viewModel.ActiveView);
+        Assert.Single(viewModel.SearchVodChannels);
+    }
+
     [Fact]
     public void SearchText_PunctuationOnly_TerminatesInIdleState()
     {

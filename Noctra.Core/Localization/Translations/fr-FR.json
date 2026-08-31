@@ -409,6 +409,7 @@
   "Search.DidYouMean": "Vouliez-vous dire ?",
   "Search.SimilarResults": "Résultats similaires",
   "Search.Searching": "Recherche...",
+  "Search.MinimumLengthHint": "Saisissez au moins 2 caractères pour rechercher",
   "Search.Idle.Title": "Rechercher du contenu",
   "Search.Idle.Description": "Trouvez vos chaînes, films et séries préférés",
   "Search.Empty.Title": "Aucun résultat trouvé",
