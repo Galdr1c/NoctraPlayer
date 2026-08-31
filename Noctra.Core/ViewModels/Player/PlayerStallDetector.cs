@@ -35,7 +35,7 @@ public class PlayerStallDetector
         await _vm.PlaybackController.ResumePlaybackAsync(_vm.CurrentChannel.StreamUrl, false);
     }
 
-    public async Task EnsurePlaybackHealthAsync(Channel channel, int requestVersion)
+    public async Task EnsurePlaybackHealthAsync(Channel channel, int requestVersion, double? startPosition = null)
     {
         const int retryCountdownSeconds = 5;
 
@@ -100,6 +100,7 @@ public class PlayerStallDetector
             {
                 await _vm.PlaybackController.PlayChannelAsync(
                     channel,
+                    startPosition,
                     existingRequestVersion: requestVersion);
             }
             catch (Exception ex)
@@ -107,7 +108,7 @@ public class PlayerStallDetector
                 _vm.LogDebug($"Startup recovery attempt failed: {ex.Message}");
                 if (!IsHealthCheckCancelled(channel, requestVersion))
                 {
-                    await EnsurePlaybackHealthAsync(channel, requestVersion);
+                    await EnsurePlaybackHealthAsync(channel, requestVersion, startPosition);
                 }
             }
             return;

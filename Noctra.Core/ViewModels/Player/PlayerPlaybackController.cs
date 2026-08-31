@@ -396,7 +396,7 @@ public class PlayerPlaybackController
             }
         }
 
-        _ = _vm.EnsurePlaybackHealthAsync(channel, requestVersion);
+        _ = _vm.EnsurePlaybackHealthAsync(channel, requestVersion, startPosition);
     }
 
     public async Task PlayPause()
@@ -576,7 +576,7 @@ public class PlayerPlaybackController
                 {
                     _vm._pendingResumeSeekPosition = 0;
                     _vm._pendingResumeSeekAttempts = 0;
-                    await EnsurePlaybackStartedAsync(streamUrl);
+                    await EnsurePlaybackStartedAsync(streamUrl, targetPosition);
                     return;
                 }
             }
@@ -584,7 +584,7 @@ public class PlayerPlaybackController
             {
                 _vm._pendingResumeSeekPosition = 0;
                 _vm._pendingResumeSeekAttempts = 0;
-                await EnsurePlaybackStartedAsync(streamUrl);
+                await EnsurePlaybackStartedAsync(streamUrl, targetPosition);
                 return;
             }
 
@@ -599,7 +599,7 @@ public class PlayerPlaybackController
                 _vm._pendingResumeSeekPosition = targetPosition;
                 _vm._pendingResumeSeekAttempts = 0;
                 await _vm.VideoPlayerService.HardSeekAsync(targetPosition);
-                await EnsurePlaybackStartedAsync(streamUrl);
+                await EnsurePlaybackStartedAsync(streamUrl, targetPosition);
                 return;
             }
             else
@@ -621,7 +621,7 @@ public class PlayerPlaybackController
                 _vm._pendingResumeSeekPosition = targetPosition;
                 _vm._pendingResumeSeekAttempts = 0;
                 await _vm.VideoPlayerService.PlayAsync(streamUrl, targetPosition);
-                await EnsurePlaybackStartedAsync(streamUrl);
+                await EnsurePlaybackStartedAsync(streamUrl, targetPosition);
                 return;
             }
             else
@@ -657,7 +657,7 @@ public class PlayerPlaybackController
             {
                 _vm._pendingResumeSeekPosition = 0;
                 _vm._pendingResumeSeekAttempts = 0;
-                await EnsurePlaybackStartedAsync(streamUrl);
+                await EnsurePlaybackStartedAsync(streamUrl, targetPosition);
                 return;
             }
 
@@ -665,12 +665,12 @@ public class PlayerPlaybackController
             {
                 _vm._pendingResumeSeekPosition = 0;
                 _vm._pendingResumeSeekAttempts = 0;
-                await EnsurePlaybackStartedAsync(streamUrl);
+                await EnsurePlaybackStartedAsync(streamUrl, targetPosition);
                 return;
             }
         }
 
-        await EnsurePlaybackStartedAsync(streamUrl);
+        await EnsurePlaybackStartedAsync(streamUrl, targetPosition);
     }
 
     private async Task<bool> ResumeLoadedPlaybackWithRecoveryAsync(
@@ -753,7 +753,7 @@ public class PlayerPlaybackController
         return double.IsFinite(best) && best > 0 ? best : 0;
     }
 
-    public async Task EnsurePlaybackStartedAsync(string streamUrl)
+    public async Task EnsurePlaybackStartedAsync(string streamUrl, double startPosition = 0)
     {
         var requestVersion = Volatile.Read(ref _vm._playRequestVersion);
         var channelId = _vm.CurrentChannel?.Id;
@@ -774,7 +774,7 @@ public class PlayerPlaybackController
             return;
         }
 
-        await _vm.VideoPlayerService.PlayAsync(streamUrl);
+        await _vm.VideoPlayerService.PlayAsync(streamUrl, startPosition);
     }
 
     public bool LooksLikeLiveStreamUrl(string? url)

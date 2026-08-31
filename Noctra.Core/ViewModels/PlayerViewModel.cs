@@ -1652,8 +1652,8 @@ public bool CanShowDownloadButton => CurrentChannel != null && !IsLiveContent &&
         }
     }
 
-    internal Task EnsurePlaybackHealthAsync(Channel channel, int requestVersion)
-        => StallDetector.EnsurePlaybackHealthAsync(channel, requestVersion);
+    internal Task EnsurePlaybackHealthAsync(Channel channel, int requestVersion, double? startPosition = null)
+        => StallDetector.EnsurePlaybackHealthAsync(channel, requestVersion, startPosition);
 
     internal Task TrackWatchHistoryAsync()
         => EpisodeNavigator.TrackWatchHistoryAsync();

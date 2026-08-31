@@ -438,7 +438,15 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
                 try
                 {
                     var mediaSource = mediaSourceFactory.CreateMediaSource(mediaItem);
-                    _exoPlayer.SetMediaSource(mediaSource);
+                    var startPositionMs = (long)(startTimeSeconds * 1000);
+                    if (startPositionMs > 0)
+                    {
+                        _exoPlayer.SetMediaSource(mediaSource, startPositionMs);
+                    }
+                    else
+                    {
+                        _exoPlayer.SetMediaSource(mediaSource);
+                    }
                     _fpsListener?.Reset();
                 }
                 catch (Exception ex) when (IsMissingMedia3SourceModuleException(ex))
@@ -470,11 +478,6 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
                         _localizationService.GetString("Player.Error.SurfaceTimeout"));
                 }
                 _exoPlayer.SetVideoSurface(surface);
-                
-                if (startTimeSeconds > 0)
-                {
-                    _exoPlayer.SeekTo((long)(startTimeSeconds * 1000));
-                }
 
                 _exoPlayer.Prepare();
                 _exoPlayer.PlayWhenReady = true;
