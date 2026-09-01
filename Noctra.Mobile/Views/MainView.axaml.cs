@@ -2479,6 +2479,7 @@ public partial class MainView : UserControl
             _playerViewModel.IsPiPMode = e.IsInPictureInPictureMode;
         }
 
+        MobilePlayerContent.QueueVideoSurfaceLayoutUpdate(force: true);
         UpdatePlayerChromeState();
         UpdatePictureInPictureState();
     }

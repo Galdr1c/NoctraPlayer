@@ -179,7 +179,7 @@ public class MainActivity : AvaloniaMainActivity
         var decorView = Window?.DecorView;
         var content = decorView?
             .FindViewById(global::Android.Resource.Id.Content) as ViewGroup;
-        var surfaceView = FindSurfaceView(content);
+        var surfaceView = FindAvaloniaSurfaceView(content);
         if (surfaceView is null)
         {
             if (remainingAttempts > 0 && decorView is not null)
@@ -194,7 +194,7 @@ public class MainActivity : AvaloniaMainActivity
 
         // Shell mode keeps Avalonia behind normal Android window content so the
         // native AdView can be visible. Player mode moves Avalonia above the
-        // native video TextureView so controls remain visible over playback.
+        // native video SurfaceView so controls remain visible over playback.
         surfaceView.SetZOrderOnTop(_playerOverlaySurfaceActive);
         var surfaceHolder = surfaceView.Holder;
         if (surfaceHolder is null)
@@ -248,11 +248,13 @@ public class MainActivity : AvaloniaMainActivity
         }
     }
 
-    private static SurfaceView? FindSurfaceView(View? view)
+    private static SurfaceView? FindAvaloniaSurfaceView(View? view)
     {
         if (view is SurfaceView surfaceView)
         {
-            return surfaceView;
+            return AndroidVideoSurfaceService.IsNativeSurfaceView(surfaceView)
+                ? null
+                : surfaceView;
         }
 
         if (view is not ViewGroup group)
@@ -262,7 +264,7 @@ public class MainActivity : AvaloniaMainActivity
 
         for (var index = 0; index < group.ChildCount; index++)
         {
-            if (FindSurfaceView(group.GetChildAt(index)) is { } childSurface)
+            if (FindAvaloniaSurfaceView(group.GetChildAt(index)) is { } childSurface)
             {
                 return childSurface;
             }
@@ -276,7 +278,7 @@ public class MainActivity : AvaloniaMainActivity
     {
         var content = Window?.DecorView?
             .FindViewById(global::Android.Resource.Id.Content) as ViewGroup;
-        var surfaceView = FindSurfaceView(content);
+        var surfaceView = FindAvaloniaSurfaceView(content);
         if (surfaceView is null)
         {
             return;
@@ -284,7 +286,7 @@ public class MainActivity : AvaloniaMainActivity
 
         // Android PiP captures the activity window. Avalonia's translucent
         // SurfaceView is useful for full-screen controls, but in PiP it can
-        // contribute a stale UI buffer above the native video TextureView.
+        // contribute a stale UI buffer above the native video SurfaceView.
         // PiP uses Android's own controls, so expose the video window directly.
         surfaceView.Visibility = isInPictureInPictureMode
             ? ViewStates.Gone
@@ -442,6 +444,18 @@ public class MainActivity : AvaloniaMainActivity
         }
 
         QueueVisualTreeRecovery(resumeGeneration);
+    }
+
+    public override void OnConfigurationChanged(Configuration newConfig)
+    {
+        base.OnConfigurationChanged(newConfig);
+
+        if (Avalonia.Application.Current is Noctra.Mobile.App app)
+        {
+            app.Services?
+                .GetService<AndroidVideoSurfaceService>()?
+                .NotifyHostConfigurationChanged();
+        }
     }
 
     protected override void OnPause()
@@ -687,12 +701,9 @@ public class MainActivity : AvaloniaMainActivity
 
         if (Avalonia.Application.Current is Noctra.Mobile.App app)
         {
-            if (isInPictureInPictureMode)
-            {
-                app.Services?
-                    .GetService<AndroidVideoSurfaceService>()?
-                    .SetBounds(0, 0, -1, -1);
-            }
+            app.Services?
+                .GetService<AndroidVideoSurfaceService>()?
+                .SetPictureInPictureMode(isInPictureInPictureMode);
 
             app.Services?
                 .GetService<AndroidPictureInPictureService>()?

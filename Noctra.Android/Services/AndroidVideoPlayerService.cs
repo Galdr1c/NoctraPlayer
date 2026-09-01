@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Android.Content;
 using Android.OS;
 using Android.Runtime;
+using Android.Util;
 using Android.Views;
 using AndroidX.Media3.Common;
 using AndroidX.Media3.Common.Text;
@@ -45,6 +46,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
     private int _volume = 100;
     private bool _isMuted;
     private float _playbackRate = 1f;
+    private Noctra.Models.VideoScaleMode _videoScaleMode = Noctra.Models.VideoScaleMode.Fit;
     private int _selectedAudioTrack = -1;
     private int _selectedSubtitleTrack = -1;
     private string _lastUserAgent = string.Empty;
@@ -231,6 +233,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
         
         _exoPlayer = configuredPlayerBuilder.Build();
         var player = _exoPlayer ?? throw new InvalidOperationException("ExoPlayer could not be built.");
+        player.VideoScalingMode = GetVideoScalingMode(_videoScaleMode);
         _fpsListener = new FrameFpsListener(this);
         player.SetVideoFrameMetadataListener(_fpsListener);
         _playerListener = new PlayerListener(this);
@@ -604,6 +607,18 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
         _reinitializeCts?.Cancel();
         Interlocked.Increment(ref _playbackGeneration);
 
+        // SurfaceView son decoder buffer'ını kendi surface'inde tutar. Native
+        // teardown sürerken bu kareyi göstermemek için yalnız video katmanını
+        // önceden gizle; siyah backdrop shell geri gelene kadar yerinde kalır.
+        try
+        {
+            await _videoSurfaceService.ConcealVideoAsync().ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            LogDebug($"Failed to conceal video surface before exit: {ex.Message}");
+        }
+
         var completion = new TaskCompletionSource(
             TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -678,7 +693,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
     finally
     {
         _videoSurfaceService.ResetInteractionTransform();
-        _videoSurfaceService.Hide();
+        await _videoSurfaceService.HideAsync().ConfigureAwait(false);
     }
 }
 
@@ -838,8 +853,22 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
 
     public void SetVideoLayout(Noctra.Models.VideoScaleMode scaleMode)
     {
+        _videoScaleMode = scaleMode;
         _videoSurfaceService.SetVideoLayout(scaleMode);
+
+        RunOnMainThread(() =>
+        {
+            if (_exoPlayer is { } player)
+            {
+                player.VideoScalingMode = GetVideoScalingMode(scaleMode);
+            }
+        });
     }
+
+    private static int GetVideoScalingMode(Noctra.Models.VideoScaleMode scaleMode)
+        => scaleMode == Noctra.Models.VideoScaleMode.Fill
+            ? C.VideoScalingModeScaleToFitWithCropping
+            : C.VideoScalingModeScaleToFit;
 
     protected override void Dispose(bool disposing)
     {
@@ -1934,6 +1963,40 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
     }
 
     // ── Runtime FPS Measurement ─────────────────────────────────────────────
+    private void LogVideoSurfaceDiagnostics(
+        AndroidX.Media3.Common.Format format,
+        global::Android.Media.MediaFormat? codecFormat)
+    {
+        var colorInfo = format.ColorInfo;
+        var codecTransfer = codecFormat?.GetInteger(
+            global::Android.Media.MediaFormat.KeyColorTransfer,
+            Format.NoValue) ?? Format.NoValue;
+        var codecColorSpace = codecFormat?.GetInteger(
+            global::Android.Media.MediaFormat.KeyColorStandard,
+            Format.NoValue) ?? Format.NoValue;
+        var transfer = colorInfo is { ColorTransfer: not Format.NoValue }
+            ? colorInfo.ColorTransfer
+            : codecTransfer;
+        var colorSpace = colorInfo is { ColorSpace: not Format.NoValue }
+            ? colorInfo.ColorSpace
+            : codecColorSpace;
+        var isHdr = transfer is C.ColorTransferSt2084 or C.ColorTransferHlg ||
+                    string.Equals(
+                        format.SampleMimeType,
+                        "video/dolby-vision",
+                        StringComparison.OrdinalIgnoreCase);
+
+        Log.Info(
+            "NoctraVideoSurface",
+            $"Renderer={_videoSurfaceService.RendererName} " +
+            $"Mime={format.SampleMimeType ?? "Unknown"} " +
+            $"Codecs={format.Codecs ?? "Unknown"} " +
+            $"Size={format.Width}x{format.Height} " +
+            $"HDR={isHdr} Transfer={transfer} ColorSpace={colorSpace} " +
+            $"HdrStaticBytes={colorInfo?.HdrStaticInfo?.Count ?? 0} " +
+            $"CodecFormat={codecFormat?.ToString() ?? "Unknown"}");
+    }
+
     /// <summary>
     /// ExoPlayer metadata'da kare hızı bildirmediğinde (HLS/TS akışlarında yaygın)
     /// gerçek kare hızını ölçmek için her işlenen karede sayaç tutar ve saniyelik
@@ -1949,6 +2012,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
         private int _lastWindowFps;
         private int _stableWindowCount;
         private bool _isMeasured;
+        private bool _videoFormatLogged;
 
         public int MeasuredFps => _measuredFps;
 
@@ -1960,6 +2024,12 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
 
         public void OnVideoFrameAboutToBeRendered(long presentationTimeUs, long releaseTimeNs, AndroidX.Media3.Common.Format? format, global::Android.Media.MediaFormat? mediaFormat)
         {
+            if (!_videoFormatLogged && format is not null)
+            {
+                _videoFormatLogged = true;
+                _service.LogVideoSurfaceDiagnostics(format, mediaFormat);
+            }
+
             if (_isMeasured)
             {
                 return;
@@ -2042,6 +2112,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
             _lastWindowFps = 0;
             _stableWindowCount = 0;
             _isMeasured = false;
+            _videoFormatLogged = false;
         }
     }
 }

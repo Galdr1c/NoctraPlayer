@@ -486,8 +486,13 @@ public partial class MobilePlayerView : UserControl
         }
     }
 
-    public void QueueVideoSurfaceLayoutUpdate()
+    public void QueueVideoSurfaceLayoutUpdate(bool force = false)
     {
+        if (force)
+        {
+            _lastSurfaceRect = default;
+        }
+
         Dispatcher.UIThread.Post(UpdateVideoSurfaceLayout, DispatcherPriority.Loaded);
         Dispatcher.UIThread.Post(UpdateVideoSurfaceLayout, DispatcherPriority.Background);
     }

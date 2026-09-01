@@ -3,19 +3,34 @@ using System.Threading;
 using System.Threading.Tasks;
 using Android.App;
 using Android.Graphics;
+using Android.OS;
+using Android.Util;
 using Android.Views;
 using WidgetFrameLayout = Android.Widget.FrameLayout;
+using Noctra.Services;
 using Noctra.Services.Interfaces;
 
 namespace Noctra.Android.Services;
 
-public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurfaceService, TextureView.ISurfaceTextureListener, View.IOnLayoutChangeListener
+public sealed class AndroidVideoSurfaceService : Java.Lang.Object,
+    IVideoSurfaceService,
+    ISurfaceHolderCallback,
+    TextureView.ISurfaceTextureListener,
+    View.IOnLayoutChangeListener
 {
+    internal static int NativeBackdropSurfaceViewId { get; } = View.GenerateViewId();
+    internal static int NativeVideoSurfaceViewId { get; } = View.GenerateViewId();
+
     private readonly AndroidActivityProvider _activityProvider;
+    private readonly AndroidVideoSurfaceRendererSelection _rendererSelection;
     private readonly object _surfaceLock = new();
-    private View? _backdropView;
-    private TextureView? _textureView;
+    private SurfaceView? _backdropSurfaceView;
+    private SurfaceView? _videoSurfaceView;
+    private BackdropSurfaceCallback? _backdropSurfaceCallback;
+    private View? _textureFallbackBackdropView;
+    private TextureView? _textureFallbackView;
     private Surface? _currentSurface;
+    private bool _ownsCurrentSurface;
     private TaskCompletionSource<Surface>? _surfaceReady;
 
     // EPG split görünümü için video yüzeyi konum/boyutu (piksel).
@@ -33,14 +48,31 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurface
     private float _userZoom = 1f;
     private float _userPanX;
     private float _userPanY;
+    private bool _isApplyingBounds;
+    private bool _isPictureInPictureMode;
+    private int _configurationGeneration;
 
     internal event EventHandler<Surface>? SurfaceAvailable;
     internal event EventHandler? SurfaceDestroyed;
+    internal string RendererName => _rendererSelection.Renderer.ToString();
 
     public AndroidVideoSurfaceService(AndroidActivityProvider activityProvider)
     {
         _activityProvider = activityProvider;
+        _rendererSelection = AndroidVideoSurfaceRendererPolicy.Select();
+
+        Log.Info(
+            "NoctraVideoSurface",
+            $"Renderer={_rendererSelection.Renderer} " +
+            $"Fallback={_rendererSelection.Fallback} " +
+            $"Rule={_rendererSelection.Rule ?? "None"} " +
+            $"Manufacturer={Build.Manufacturer ?? "Unknown"} " +
+            $"Model={Build.Model ?? "Unknown"} Api={(int)Build.VERSION.SdkInt}");
     }
+
+    internal static bool IsNativeSurfaceView(SurfaceView surfaceView)
+        => surfaceView.Id is var id &&
+           (id == NativeBackdropSurfaceViewId || id == NativeVideoSurfaceViewId);
 
     public Task ShowAsync()
     {
@@ -55,7 +87,15 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurface
         {
             try
             {
-                EnsureTextureView(activity);
+                if (_rendererSelection.Renderer == AndroidVideoSurfaceRenderer.SurfaceView)
+                {
+                    EnsureSurfaceViews(activity);
+                }
+                else
+                {
+                    EnsureTextureFallbackView(activity);
+                }
+
                 completion.TrySetResult();
             }
             catch (Exception ex)
@@ -67,54 +107,60 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurface
         return completion.Task;
     }
 
-    public void Hide()
+    public void Hide() => _ = HideAsync();
+
+    internal Task ConcealVideoAsync()
+        => RunOnUiThreadAsync(ConcealVideoViews);
+
+    internal Task HideAsync()
+        => RunOnUiThreadAsync(() =>
+        {
+            DetachRendererViews(notifySurfaceDestroyed: true);
+
+            // Sonraki gösterimde tam ekran başlasın.
+            _boundsX = 0;
+            _boundsY = 0;
+            _boundsW = -1;
+            _boundsH = -1;
+            _isPictureInPictureMode = false;
+            ResetInteractionTransformState();
+        });
+
+    private Task RunOnUiThreadAsync(Action action)
     {
         var activity = _activityProvider.CurrentActivity;
         if (activity is null)
         {
-            return;
+            return Task.CompletedTask;
         }
 
+        if (Looper.MyLooper() == Looper.MainLooper)
+        {
+            action();
+            return Task.CompletedTask;
+        }
+
+        var completion = new TaskCompletionSource(
+            TaskCreationOptions.RunContinuationsAsynchronously);
         activity.RunOnUiThread(() =>
         {
-            if (_textureView?.Parent is ViewGroup parent)
+            try
             {
-                parent.RemoveView(_textureView);
+                action();
+                completion.TrySetResult();
             }
-
-            if (_backdropView?.Parent is ViewGroup backdropParent)
+            catch (Exception ex)
             {
-                backdropParent.RemoveView(_backdropView);
+                completion.TrySetException(ex);
             }
-
-            if (_textureView is not null)
-            {
-                _textureView.SurfaceTextureListener = null;
-                _textureView.RemoveOnLayoutChangeListener(this);
-            }
-            _textureView?.Dispose();
-            _textureView = null;
-            _backdropView?.Dispose();
-            _backdropView = null;
-
-            lock (_surfaceLock)
-            {
-                ReleaseSurface();
-                _surfaceReady = null;
-            }
-
-            // Sonraki gösterimde tam ekran başlasın.
-            SurfaceDestroyed?.Invoke(this, EventArgs.Empty);
-            _boundsW = -1;
-            _boundsH = -1;
-            ResetInteractionTransformState();
         });
+        return completion.Task;
     }
 
     public void SetBounds(int x, int y, int width, int height)
     {
         var activity = _activityProvider.CurrentActivity;
-        if (activity?.IsInPictureInPictureMode == true)
+        if (_isPictureInPictureMode || activity?.IsInPictureInPictureMode == true)
         {
             // PiP resizes the Avalonia tree through transient 1x1 measurements.
             // The native video surface must fill the PiP activity window instead
@@ -137,7 +183,71 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurface
             return;
         }
 
+        QueueBoundsReapply();
+    }
+
+    internal void SetPictureInPictureMode(bool isInPictureInPictureMode)
+    {
+        _isPictureInPictureMode = isInPictureInPictureMode;
+
+        // PiP giriş/çıkışında eski EPG veya geçiş geometrisi taşınmamalı.
+        _boundsX = 0;
+        _boundsY = 0;
+        _boundsW = -1;
+        _boundsH = -1;
+        QueueBoundsReapply();
+    }
+
+    internal void NotifyHostConfigurationChanged()
+    {
+        // Activity rotation is handled in-place (ConfigChanges). Keep the black
+        // backdrop visible while Android and Avalonia settle on the new EPG slot;
+        // otherwise the previous orientation's native crop is briefly exposed.
+        BeginConfigurationTransition();
+    }
+
+    private void QueueBoundsReapply()
+    {
+        var activity = _activityProvider.CurrentActivity;
+        if (activity is null)
+        {
+            return;
+        }
+
         activity.RunOnUiThread(ApplyBounds);
+    }
+
+    private void BeginConfigurationTransition()
+    {
+        var activity = _activityProvider.CurrentActivity;
+        if (activity is null)
+        {
+            return;
+        }
+
+        var generation = Interlocked.Increment(ref _configurationGeneration);
+        activity.RunOnUiThread(() =>
+        {
+            ConcealVideoViews();
+            ApplyBounds();
+
+            var decorView = activity.Window?.DecorView;
+            if (decorView is null)
+            {
+                return;
+            }
+
+            decorView.PostDelayed(() =>
+            {
+                if (generation != Volatile.Read(ref _configurationGeneration))
+                {
+                    return;
+                }
+
+                ApplyBounds();
+                RevealVideoViews();
+            }, 250);
+        });
     }
 
     public void SetVideoLayout(Noctra.Models.VideoScaleMode scaleMode)
@@ -151,7 +261,11 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurface
             return;
         }
 
-        activity.RunOnUiThread(ApplyVideoTransform);
+        activity.RunOnUiThread(() =>
+        {
+            ApplyBounds();
+            ApplyVideoTransform();
+        });
     }
 
     public void SetInteractionTransform(float zoom, float panX, float panY)
@@ -184,7 +298,7 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurface
 
     /// <summary>
     /// Sets the native video dimensions (from stream metadata) so the transform
-    /// matrix can be calculated before the first frame arrives on the TextureView.
+    /// matrix/buffer scaling can be calculated before the first frame arrives.
     /// <paramref name="pixelWidthHeightRatio"/> accounts for anamorphic content
     /// (non-square pixels); the display aspect ratio is
     /// (width × ratio) / height.
@@ -201,23 +315,64 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurface
             return;
         }
 
-        activity.RunOnUiThread(ApplyVideoTransform);
+        activity.RunOnUiThread(() =>
+        {
+            ApplyBounds();
+            ApplyVideoTransform();
+        });
     }
 
     private void ApplyBounds()
     {
-        if (_textureView is null)
+        if (_isApplyingBounds)
         {
             return;
         }
 
+        _isApplyingBounds = true;
+        try
+        {
+            ApplyBoundsCore();
+        }
+        finally
+        {
+            _isApplyingBounds = false;
+        }
+    }
+
+    private void ApplyBoundsCore()
+    {
+        ApplyBackdropBounds();
+
+        View? videoView = _rendererSelection.Renderer == AndroidVideoSurfaceRenderer.SurfaceView
+            ? _videoSurfaceView
+            : _textureFallbackView;
+        if (videoView is null)
+        {
+            return;
+        }
+
+        var activity = _activityProvider.CurrentActivity;
+        var content = activity?.Window?.DecorView?
+            .FindViewById(global::Android.Resource.Id.Content) as ViewGroup;
+        var windowBounds = activity?.WindowManager?.CurrentWindowMetrics.Bounds;
+        var rootW = windowBounds?.Width() ?? content?.Width ?? 0;
+        var rootH = windowBounds?.Height() ?? content?.Height ?? 0;
+
         WidgetFrameLayout.LayoutParams layoutParams;
         if (_boundsW <= 0 || _boundsH <= 0)
         {
-            // Tam ekran
-            layoutParams = new WidgetFrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MatchParent,
-                ViewGroup.LayoutParams.MatchParent);
+            if (rootW <= 0 || rootH <= 0)
+            {
+                // Root henüz ölçülmediyse ilk layout turunu MatchParent ile geçir.
+                layoutParams = new WidgetFrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MatchParent,
+                    ViewGroup.LayoutParams.MatchParent);
+            }
+            else
+            {
+                layoutParams = CreateVideoLayoutParams(0, 0, rootW, rootH);
+            }
         }
         else
         {
@@ -226,11 +381,6 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurface
             var targetY = _boundsY;
             var targetW = _boundsW;
             var targetH = _boundsH;
-
-            var activity = _activityProvider.CurrentActivity;
-            var content = activity?.Window?.DecorView?.FindViewById(global::Android.Resource.Id.Content) as ViewGroup;
-            var rootW = content?.Width ?? 0;
-            var rootH = content?.Height ?? 0;
 
             if (rootW > 0 && rootH > 0)
             {
@@ -259,22 +409,84 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurface
             else
             {
                 // Üst bölgeye küçültülmüş video (EPG split)
-                layoutParams = new WidgetFrameLayout.LayoutParams(targetW, targetH)
-                {
-                    LeftMargin = targetX,
-                    TopMargin = targetY,
-                };
+                layoutParams = CreateVideoLayoutParams(
+                    targetX,
+                    targetY,
+                    targetW,
+                    targetH);
             }
         }
 
-        if (_backdropView is not null)
+        var videoLayoutChanged = ApplyLayoutParameters(videoView, layoutParams);
+        if (videoLayoutChanged &&
+            _videoSurfaceView?.Holder is { } videoHolder)
         {
-            _backdropView.LayoutParameters = new WidgetFrameLayout.LayoutParams(layoutParams);
-            _backdropView.RequestLayout();
+            // SurfaceView's producer buffer may retain the previous EPG/rotation
+            // size on Huawei. Match it to the new view bounds only after a real
+            // layout change; repeated calls would recreate the surface needlessly.
+            videoHolder.SetSizeFromLayout();
+        }
+        ApplyVideoTransform();
+    }
+
+    private WidgetFrameLayout.LayoutParams CreateVideoLayoutParams(
+        int targetX,
+        int targetY,
+        int targetWidth,
+        int targetHeight)
+    {
+        var rect = _rendererSelection.Renderer == AndroidVideoSurfaceRenderer.SurfaceView
+            ? VideoSurfaceLayoutCalculator.Calculate(
+                targetX,
+                targetY,
+                targetWidth,
+                targetHeight,
+                _videoWidth,
+                _videoHeight,
+                _pixelWidthHeightRatio,
+                _scaleMode)
+            : new VideoSurfaceRect(targetX, targetY, targetWidth, targetHeight);
+
+        return new WidgetFrameLayout.LayoutParams(rect.Width, rect.Height)
+        {
+            LeftMargin = rect.X,
+            TopMargin = rect.Y,
+        };
+    }
+
+    private void ApplyBackdropBounds()
+    {
+        View? backdrop = _rendererSelection.Renderer == AndroidVideoSurfaceRenderer.SurfaceView
+            ? _backdropSurfaceView
+            : _textureFallbackBackdropView;
+        if (backdrop is null)
+        {
+            return;
         }
 
-        _textureView.LayoutParameters = layoutParams;
-        _textureView.RequestLayout();
+        ApplyLayoutParameters(
+            backdrop,
+            new WidgetFrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MatchParent,
+                ViewGroup.LayoutParams.MatchParent));
+    }
+
+    private static bool ApplyLayoutParameters(
+        View view,
+        WidgetFrameLayout.LayoutParams requested)
+    {
+        if (view.LayoutParameters is WidgetFrameLayout.LayoutParams current &&
+            current.Width == requested.Width &&
+            current.Height == requested.Height &&
+            current.LeftMargin == requested.LeftMargin &&
+            current.TopMargin == requested.TopMargin)
+        {
+            return false;
+        }
+
+        view.LayoutParameters = requested;
+        view.RequestLayout();
+        return true;
     }
 
     /// <summary>
@@ -283,7 +495,18 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurface
     /// </summary>
     private void ApplyVideoTransform(int viewW, int viewH)
     {
-        if (_textureView is null || viewW <= 0 || viewH <= 0 || _videoWidth <= 0 || _videoHeight <= 0)
+        if (viewW <= 0 || viewH <= 0)
+        {
+            return;
+        }
+
+        if (_rendererSelection.Renderer == AndroidVideoSurfaceRenderer.SurfaceView)
+        {
+            ApplySurfaceViewInteractionTransform(viewW, viewH);
+            return;
+        }
+
+        if (_textureFallbackView is null || _videoWidth <= 0 || _videoHeight <= 0)
         {
             return;
         }
@@ -295,18 +518,42 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurface
             _scaleMode);
 
         ApplyInteractionTransform(matrix, viewW, viewH);
-        _textureView.SetTransform(matrix);
+        _textureFallbackView.SetTransform(matrix);
     }
 
     private void ApplyVideoTransform()
     {
-        if (_textureView is null)
+        View? videoView = _rendererSelection.Renderer == AndroidVideoSurfaceRenderer.SurfaceView
+            ? _videoSurfaceView
+            : _textureFallbackView;
+        if (videoView is null)
         {
             return;
         }
 
-        ApplyVideoTransform(_textureView.Width, _textureView.Height);
+        ApplyVideoTransform(videoView.Width, videoView.Height);
     }
+
+    private void ApplySurfaceViewInteractionTransform(int viewW, int viewH)
+    {
+        if (_videoSurfaceView is null)
+        {
+            return;
+        }
+
+        var maxPanX = viewW * (_userZoom - 1f) / 2f;
+        var maxPanY = viewH * (_userZoom - 1f) / 2f;
+        _userPanX = Math.Clamp(_userPanX, -maxPanX, maxPanX);
+        _userPanY = Math.Clamp(_userPanY, -maxPanY, maxPanY);
+
+        _videoSurfaceView.PivotX = viewW / 2f;
+        _videoSurfaceView.PivotY = viewH / 2f;
+        _videoSurfaceView.ScaleX = _userZoom;
+        _videoSurfaceView.ScaleY = _userZoom;
+        _videoSurfaceView.TranslationX = _userPanX;
+        _videoSurfaceView.TranslationY = _userPanY;
+    }
+
 
     private void ApplyInteractionTransform(Matrix matrix, int viewW, int viewH)
     {
@@ -419,16 +666,29 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurface
 
         lock (_surfaceLock)
         {
-            if (_currentSurface is not null)
+            if (IsSurfaceUsable(_currentSurface))
             {
                 return _currentSurface;
             }
 
-            if (_textureView?.IsAttachedToWindow == true &&
-                _textureView?.SurfaceTexture is { } st &&
-                st.IsReleased == false)
+            ReleaseSurfaceLocked();
+
+            if (_rendererSelection.Renderer == AndroidVideoSurfaceRenderer.SurfaceView &&
+                _videoSurfaceView?.IsAttachedToWindow == true &&
+                _videoSurfaceView.Holder?.Surface is { } holderSurface &&
+                IsSurfaceUsable(holderSurface))
             {
-                ReplaceSurface(st);
+                _currentSurface = holderSurface;
+                _ownsCurrentSurface = false;
+                return _currentSurface;
+            }
+
+            if (_textureFallbackView?.IsAttachedToWindow == true &&
+                _textureFallbackView.SurfaceTexture is { } texture &&
+                texture.IsReleased == false)
+            {
+                _currentSurface = new Surface(texture);
+                _ownsCurrentSurface = true;
                 return _currentSurface;
             }
 
@@ -436,27 +696,43 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurface
         }
 
         var tcs = _surfaceReady!;
-        using var cts = new CancellationTokenSource(timeout);
-        var completed = await Task.WhenAny(tcs.Task, Task.Delay(timeout, cts.Token)).ConfigureAwait(false);
+        var completed = await Task.WhenAny(tcs.Task, Task.Delay(timeout)).ConfigureAwait(false);
         return completed == tcs.Task ? await tcs.Task.ConfigureAwait(false) : null;
     }
+
+    // ── SurfaceView / SurfaceHolder lifecycle ────────────────────────────────
+
+    public void SurfaceCreated(ISurfaceHolder holder)
+    {
+        if (holder.Surface is not { } surface || !IsSurfaceUsable(surface))
+        {
+            return;
+        }
+
+        PublishSurface(surface, ownsSurface: false);
+        ApplyBounds();
+        ApplyVideoTransform();
+    }
+
+    public void SurfaceChanged(ISurfaceHolder holder, Format format, int width, int height)
+    {
+        if (!IsSurfaceUsable(_currentSurface) && holder.Surface is { } surface && IsSurfaceUsable(surface))
+        {
+            PublishSurface(surface, ownsSurface: false);
+        }
+
+        ApplyBounds();
+        ApplyVideoTransform(width, height);
+    }
+
+    void ISurfaceHolderCallback.SurfaceDestroyed(ISurfaceHolder holder)
+        => ClearCurrentSurface(notifySurfaceDestroyed: true, prepareNextSurface: true);
 
     // ── TextureView.ISurfaceTextureListener ──────────────────────────────────
 
     public void OnSurfaceTextureAvailable(SurfaceTexture surface, int width, int height)
     {
-        TaskCompletionSource<Surface>? tcs;
-        Surface surfaceObj;
-        lock (_surfaceLock)
-        {
-            ReplaceSurface(surface);
-            _surfaceReady ??= new TaskCompletionSource<Surface>(TaskCreationOptions.RunContinuationsAsynchronously);
-            tcs = _surfaceReady;
-            surfaceObj = _currentSurface!;
-        }
-
-        tcs.TrySetResult(surfaceObj);
-        SurfaceAvailable?.Invoke(this, surfaceObj);
+        PublishSurface(new Surface(surface), ownsSurface: true);
 
         // İlk boyut bilgisi geldiğinde transform'u uygula.
         _activityProvider.CurrentActivity?.RunOnUiThread(() => ApplyVideoTransform(width, height));
@@ -470,13 +746,7 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurface
 
     public bool OnSurfaceTextureDestroyed(SurfaceTexture surface)
     {
-        lock (_surfaceLock)
-        {
-            ReleaseSurface();
-            _surfaceReady = new TaskCompletionSource<Surface>(TaskCreationOptions.RunContinuationsAsynchronously);
-        }
-
-        NotifySurfaceDestroyed();
+        ClearCurrentSurface(notifySurfaceDestroyed: true, prepareNextSurface: true);
         return true; // Uygulamanın SurfaceTexture'ı serbest bırakmasına izin ver.
     }
 
@@ -502,6 +772,14 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurface
         int oldRight,
         int oldBottom)
     {
+        if (v?.Id == NativeBackdropSurfaceViewId)
+        {
+            // Backdrop MatchParent olduğu için Activity, rotation ve PiP'in
+            // kesinleşmiş host boyutunu güvenilir biçimde bildirir.
+            ApplyBounds();
+            return;
+        }
+
         var width = right - left;
         var height = bottom - top;
         if (width > 0 && height > 0)
@@ -510,94 +788,341 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object, IVideoSurface
         }
     }
 
-    private void ReplaceSurface(SurfaceTexture texture)
+    private void PublishSurface(Surface surface, bool ownsSurface)
     {
-        _currentSurface?.Dispose();
-        _currentSurface = new Surface(texture);
+        TaskCompletionSource<Surface> ready;
+        lock (_surfaceLock)
+        {
+            ReleaseSurfaceLocked();
+            _currentSurface = surface;
+            _ownsCurrentSurface = ownsSurface;
+            _surfaceReady ??= new TaskCompletionSource<Surface>(TaskCreationOptions.RunContinuationsAsynchronously);
+            ready = _surfaceReady;
+        }
+
+        ready.TrySetResult(surface);
+        SurfaceAvailable?.Invoke(this, surface);
     }
 
-    private void ReleaseSurface()
+    private void ClearCurrentSurface(bool notifySurfaceDestroyed, bool prepareNextSurface)
     {
-        _currentSurface?.Dispose();
+        bool hadSurface;
+        lock (_surfaceLock)
+        {
+            hadSurface = _currentSurface is not null;
+            ReleaseSurfaceLocked();
+            _surfaceReady = prepareNextSurface
+                ? new TaskCompletionSource<Surface>(TaskCreationOptions.RunContinuationsAsynchronously)
+                : null;
+        }
+
+        if (notifySurfaceDestroyed && hadSurface)
+        {
+            NotifySurfaceDestroyed();
+        }
+    }
+
+    private void ReleaseSurfaceLocked()
+    {
+        if (_ownsCurrentSurface)
+        {
+            _currentSurface?.Dispose();
+        }
+
+        // A SurfaceHolder owns SurfaceView surfaces. Disposing that wrapper here
+        // would invalidate the producer/consumer queue behind the live view.
         _currentSurface = null;
+        _ownsCurrentSurface = false;
+    }
+
+    private static bool IsSurfaceUsable(Surface? surface)
+    {
+        try
+        {
+            return surface?.IsValid == true;
+        }
+        catch (ObjectDisposedException)
+        {
+            return false;
+        }
     }
 
     protected override void Dispose(bool disposing)
     {
         if (disposing)
         {
-            lock (_surfaceLock)
-            {
-                ReleaseSurface();
-                _surfaceReady = null;
-            }
-
-            if (_textureView is not null)
-            {
-                _textureView.SurfaceTextureListener = null;
-                _textureView.RemoveOnLayoutChangeListener(this);
-                _textureView?.Dispose();
-                _textureView = null;
-            }
-
-            _backdropView?.Dispose();
-            _backdropView = null;
+            DetachRendererViews(notifySurfaceDestroyed: false);
         }
 
         base.Dispose(disposing);
     }
 
-    private void EnsureTextureView(Activity activity)
+    private void EnsureSurfaceViews(Activity activity)
     {
-        if (_textureView is not null)
+        if (_backdropSurfaceView?.Parent is not null && _videoSurfaceView?.Parent is not null)
         {
             return;
         }
 
-        var content = activity.Window?.DecorView?.FindViewById(global::Android.Resource.Id.Content) as ViewGroup;
-        if (content is null)
-        {
-            throw new InvalidOperationException("Android content root is unavailable.");
-        }
+        DetachRendererViews(notifySurfaceDestroyed: true);
+        var content = GetContentRoot(activity);
 
         lock (_surfaceLock)
         {
             _surfaceReady = new TaskCompletionSource<Surface>(TaskCreationOptions.RunContinuationsAsynchronously);
         }
 
-        // TextureView does not support background drawables. A separate black
-        // regular view supplies the letterbox/pillarbox colour without touching
-        // the decoded-video surface.
-        _backdropView = new View(activity);
-        _backdropView.SetBackgroundColor(Color.Black);
-        _backdropView.Clickable = false;
-        _backdropView.Focusable = false;
-        _backdropView.ImportantForAccessibility = ImportantForAccessibility.No;
+        _backdropSurfaceView = CreateNativeSurfaceView(
+            activity,
+            NativeBackdropSurfaceViewId,
+            isMediaOverlay: false);
+        _backdropSurfaceView.AddOnLayoutChangeListener(this);
+        _backdropSurfaceCallback = new BackdropSurfaceCallback(this);
+        var backdropHolder = _backdropSurfaceView.Holder
+            ?? throw new InvalidOperationException("Android backdrop SurfaceHolder is unavailable.");
+        backdropHolder.AddCallback(_backdropSurfaceCallback);
+
+        _videoSurfaceView = CreateNativeSurfaceView(
+            activity,
+            NativeVideoSurfaceViewId,
+            isMediaOverlay: true);
+        _videoSurfaceView.AddOnLayoutChangeListener(this);
+        var videoHolder = _videoSurfaceView.Holder
+            ?? throw new InvalidOperationException("Android video SurfaceHolder is unavailable.");
+        videoHolder.AddCallback(this);
+
+        // Surface z-order is determined before attachment: black media surface,
+        // then video media-overlay surface, then Avalonia's translucent controls.
         content.AddView(
-            _backdropView,
+            _backdropSurfaceView,
+            content.ChildCount,
+            new WidgetFrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MatchParent,
+                ViewGroup.LayoutParams.MatchParent));
+        content.AddView(
+            _videoSurfaceView,
             content.ChildCount,
             new WidgetFrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MatchParent,
                 ViewGroup.LayoutParams.MatchParent));
 
-        _textureView = new TextureView(activity);
-        _textureView.SurfaceTextureListener = this;
-        _textureView.AddOnLayoutChangeListener(this);
-        _textureView.Clickable = false;
-        _textureView.Focusable = false;
-        _textureView.ImportantForAccessibility = ImportantForAccessibility.No;
-
-        // TextureView is the last regular Android view so its decoded pixels are
-        // preserved in the window buffer. Avalonia's translucent SurfaceView is
-        // composed above that window and keeps the player controls on top.
-        content.AddView(
-            _textureView,
-            content.ChildCount,
-            new WidgetFrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MatchParent,
-                ViewGroup.LayoutParams.MatchParent));
-
-        // Daha önce EPG split için küçültülmüş bir konum ayarlandıysa onu yeniden uygula.
+        ApplyBackdropBounds();
         ApplyBounds();
+
+        Log.Info(
+            "NoctraVideoSurface",
+            "Renderer=SurfaceView Fallback=None Surface=Opaque " +
+            "Layering=Backdrop<VideoMediaOverlay<AvaloniaControls");
+    }
+
+    private void EnsureTextureFallbackView(Activity activity)
+    {
+        if (_textureFallbackView?.Parent is not null)
+        {
+            return;
+        }
+
+        DetachRendererViews(notifySurfaceDestroyed: true);
+        var content = GetContentRoot(activity);
+
+        lock (_surfaceLock)
+        {
+            _surfaceReady = new TaskCompletionSource<Surface>(TaskCreationOptions.RunContinuationsAsynchronously);
+        }
+
+        _textureFallbackBackdropView = new View(activity);
+        ConfigurePassiveView(_textureFallbackBackdropView);
+        _textureFallbackBackdropView.SetBackgroundColor(Color.Black);
+        content.AddView(
+            _textureFallbackBackdropView,
+            content.ChildCount,
+            new WidgetFrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MatchParent,
+                ViewGroup.LayoutParams.MatchParent));
+
+        _textureFallbackView = new TextureView(activity);
+        ConfigurePassiveView(_textureFallbackView);
+        _textureFallbackView.SurfaceTextureListener = this;
+        _textureFallbackView.AddOnLayoutChangeListener(this);
+        content.AddView(
+            _textureFallbackView,
+            content.ChildCount,
+            new WidgetFrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MatchParent,
+                ViewGroup.LayoutParams.MatchParent));
+
+        ApplyBackdropBounds();
+        ApplyBounds();
+
+        Log.Info(
+            "NoctraVideoSurface",
+            $"Renderer=TextureView Fallback={_rendererSelection.Fallback} " +
+            $"Rule={_rendererSelection.Rule ?? "Unknown"}");
+    }
+
+    private static SurfaceView CreateNativeSurfaceView(
+        Activity activity,
+        int id,
+        bool isMediaOverlay)
+    {
+        var surfaceView = new SurfaceView(activity)
+        {
+            Id = id,
+        };
+        ConfigurePassiveView(surfaceView);
+        surfaceView.SetZOrderMediaOverlay(isMediaOverlay);
+
+        var holder = surfaceView.Holder
+            ?? throw new InvalidOperationException("Android native SurfaceHolder is unavailable.");
+        holder.SetFormat(Format.Opaque);
+        return surfaceView;
+    }
+
+    private static void ConfigurePassiveView(View view)
+    {
+        view.Clickable = false;
+        view.Focusable = false;
+        view.ImportantForAccessibility = ImportantForAccessibility.No;
+    }
+
+    private static ViewGroup GetContentRoot(Activity activity)
+        => activity.Window?.DecorView?
+               .FindViewById(global::Android.Resource.Id.Content) as ViewGroup
+           ?? throw new InvalidOperationException("Android content root is unavailable.");
+
+    private void DetachRendererViews(bool notifySurfaceDestroyed)
+    {
+        ConcealVideoViews();
+
+        // Decoder eski Surface'e yazmayı views kaldırılmadan önce bırakır.
+        ClearCurrentSurface(
+            notifySurfaceDestroyed,
+            prepareNextSurface: false);
+
+        if (_videoSurfaceView is not null)
+        {
+            _videoSurfaceView.RemoveOnLayoutChangeListener(this);
+        }
+
+        if (_backdropSurfaceView is not null)
+        {
+            _backdropSurfaceView.RemoveOnLayoutChangeListener(this);
+        }
+
+        if (_videoSurfaceView?.Holder is { } videoHolder)
+        {
+            videoHolder.RemoveCallback(this);
+        }
+
+        if (_backdropSurfaceView?.Holder is { } backdropHolder &&
+            _backdropSurfaceCallback is not null)
+        {
+            backdropHolder.RemoveCallback(_backdropSurfaceCallback);
+        }
+
+        if (_textureFallbackView is not null)
+        {
+            _textureFallbackView.SurfaceTextureListener = null;
+            _textureFallbackView.RemoveOnLayoutChangeListener(this);
+        }
+
+        if (_videoSurfaceView?.Parent is ViewGroup videoParent)
+        {
+            videoParent.RemoveView(_videoSurfaceView);
+        }
+
+        if (_backdropSurfaceView?.Parent is ViewGroup backdropParent)
+        {
+            backdropParent.RemoveView(_backdropSurfaceView);
+        }
+
+        if (_textureFallbackView?.Parent is ViewGroup textureParent)
+        {
+            textureParent.RemoveView(_textureFallbackView);
+        }
+
+        if (_textureFallbackBackdropView?.Parent is ViewGroup textureBackdropParent)
+        {
+            textureBackdropParent.RemoveView(_textureFallbackBackdropView);
+        }
+
+        _videoSurfaceView?.Dispose();
+        _videoSurfaceView = null;
+        _backdropSurfaceView?.Dispose();
+        _backdropSurfaceView = null;
+        _backdropSurfaceCallback?.Dispose();
+        _backdropSurfaceCallback = null;
+        _textureFallbackView?.Dispose();
+        _textureFallbackView = null;
+        _textureFallbackBackdropView?.Dispose();
+        _textureFallbackBackdropView = null;
+
+    }
+
+    private void ConcealVideoViews()
+    {
+        if (_videoSurfaceView is not null)
+        {
+            _videoSurfaceView.Visibility = ViewStates.Invisible;
+        }
+
+        if (_textureFallbackView is not null)
+        {
+            _textureFallbackView.Visibility = ViewStates.Invisible;
+        }
+    }
+
+    private void RevealVideoViews()
+    {
+        if (_videoSurfaceView is not null)
+        {
+            _videoSurfaceView.Visibility = ViewStates.Visible;
+        }
+
+        if (_textureFallbackView is not null)
+        {
+            _textureFallbackView.Visibility = ViewStates.Visible;
+        }
+    }
+
+    private void DrawBackdropBlack(ISurfaceHolder holder)
+    {
+        Canvas? canvas = null;
+        try
+        {
+            canvas = holder.LockCanvas();
+            canvas?.DrawColor(Color.Black);
+        }
+        catch (Exception ex)
+        {
+            Log.Warn("NoctraVideoSurface", $"Native black backdrop draw failed: {ex.Message}");
+        }
+        finally
+        {
+            if (canvas is not null)
+            {
+                holder.UnlockCanvasAndPost(canvas);
+            }
+        }
+    }
+
+    private sealed class BackdropSurfaceCallback : Java.Lang.Object, ISurfaceHolderCallback
+    {
+        private readonly AndroidVideoSurfaceService _owner;
+
+        internal BackdropSurfaceCallback(AndroidVideoSurfaceService owner)
+        {
+            _owner = owner;
+        }
+
+        public void SurfaceCreated(ISurfaceHolder holder)
+            => _owner.DrawBackdropBlack(holder);
+
+        public void SurfaceChanged(ISurfaceHolder holder, Format format, int width, int height)
+            => _owner.DrawBackdropBlack(holder);
+
+        public void SurfaceDestroyed(ISurfaceHolder holder)
+        {
+        }
     }
 }

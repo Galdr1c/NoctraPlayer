@@ -129,23 +129,55 @@ public sealed class VideoOverlayInputSurfaceTests
             "SetAvaloniaSurfaceVisibilityForPictureInPicture(isInPictureInPictureMode);",
             mainActivity,
             StringComparison.Ordinal);
+        Assert.Contains(
+            "SetPictureInPictureMode(isInPictureInPictureMode);",
+            mainActivity,
+            StringComparison.Ordinal);
+        Assert.Contains("OnConfigurationChanged(Configuration newConfig)",
+            mainActivity, StringComparison.Ordinal);
+        Assert.Contains("NotifyHostConfigurationChanged()",
+            mainActivity, StringComparison.Ordinal);
         Assert.Contains("surfaceView.Visibility = isInPictureInPictureMode",
             mainActivity, StringComparison.Ordinal);
         Assert.Contains("? ViewStates.Gone", mainActivity, StringComparison.Ordinal);
         Assert.Contains(": ViewStates.Visible", mainActivity, StringComparison.Ordinal);
-        Assert.Contains("content.AddView(\n            _textureView,\n            content.ChildCount,",
-            videoSurfaceService.ReplaceLineEndings("\n"), StringComparison.Ordinal);
-        Assert.DoesNotContain("content.AddView(\n            _textureView,\n            0,",
-            videoSurfaceService.ReplaceLineEndings("\n"), StringComparison.Ordinal);
-        Assert.DoesNotContain("_textureView.SetBackgroundColor(",
+        Assert.Contains("FindAvaloniaSurfaceView", mainActivity, StringComparison.Ordinal);
+        Assert.Contains("AndroidVideoSurfaceService.IsNativeSurfaceView(surfaceView)",
+            mainActivity, StringComparison.Ordinal);
+        Assert.DoesNotContain("var surfaceView = FindSurfaceView(content);",
+            mainActivity, StringComparison.Ordinal);
+
+        Assert.Contains("AndroidVideoSurfaceRenderer.SurfaceView",
             videoSurfaceService, StringComparison.Ordinal);
-        Assert.Contains("_backdropView = new View(activity);",
+        Assert.Contains("_backdropSurfaceView", videoSurfaceService, StringComparison.Ordinal);
+        Assert.Contains("_videoSurfaceView", videoSurfaceService, StringComparison.Ordinal);
+        Assert.Contains("isMediaOverlay: false",
             videoSurfaceService, StringComparison.Ordinal);
-        Assert.Contains("_backdropView.SetBackgroundColor(Color.Black);",
+        Assert.Contains("isMediaOverlay: true",
             videoSurfaceService, StringComparison.Ordinal);
-        Assert.Contains("content.AddView(\n            _backdropView,\n            content.ChildCount,",
-            videoSurfaceService.ReplaceLineEndings("\n"), StringComparison.Ordinal);
-        Assert.Contains("RemoveView(_backdropView);",
+        Assert.Contains("SetZOrderMediaOverlay(isMediaOverlay)",
+            videoSurfaceService, StringComparison.Ordinal);
+        Assert.Contains("SetFormat(Format.Opaque)",
+            videoSurfaceService, StringComparison.Ordinal);
+        Assert.Contains("DrawBackdropBlack", videoSurfaceService, StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            "SetBackgroundColor",
+            ExtractMethodBody(videoSurfaceService, "private static SurfaceView CreateNativeSurfaceView("),
+            StringComparison.Ordinal);
+        Assert.DoesNotContain("_videoSurfaceView.SetZOrderOnTop(true)",
+            videoSurfaceService, StringComparison.Ordinal);
+        Assert.Contains("ApplyBackdropBounds()", videoSurfaceService, StringComparison.Ordinal);
+        Assert.Contains("VideoSurfaceLayoutCalculator.Calculate(",
+            videoSurfaceService, StringComparison.Ordinal);
+        Assert.Contains("videoHolder.SetSizeFromLayout();",
+            videoSurfaceService, StringComparison.Ordinal);
+        Assert.Contains("ViewGroup.LayoutParams.MatchParent",
+            ExtractMethodBody(videoSurfaceService, "private void ApplyBackdropBounds()"),
+            StringComparison.Ordinal);
+        Assert.DoesNotContain("_boundsW",
+            ExtractMethodBody(videoSurfaceService, "private void ApplyBackdropBounds()"),
+            StringComparison.Ordinal);
+        Assert.Contains("RemoveView(_backdropSurfaceView);",
             videoSurfaceService, StringComparison.Ordinal);
         Assert.Contains("activity?.IsInPictureInPictureMode == true",
             videoSurfaceService, StringComparison.Ordinal);
@@ -448,6 +480,9 @@ public sealed class VideoOverlayInputSurfaceTests
             playerService,
             "public async Task EndSessionAsync(CancellationToken cancellationToken = default)");
 
+        var concealIndex = endSessionMethod.IndexOf(
+            "await _videoSurfaceService.ConcealVideoAsync()",
+            StringComparison.Ordinal);
         var detachIndex = endSessionMethod.IndexOf(
             "_exoPlayer.RemoveListener(_playerListener);",
             StringComparison.Ordinal);
@@ -461,10 +496,12 @@ public sealed class VideoOverlayInputSurfaceTests
             "_exoPlayer.AddListener(_playerListener);",
             StringComparison.Ordinal);
 
-        Assert.True(detachIndex >= 0, "EndSessionAsync must detach the managed listener before native reset.");
+        Assert.True(concealIndex >= 0, "EndSessionAsync must conceal the retained SurfaceView frame first.");
+        Assert.True(detachIndex > concealIndex, "The retained frame must be concealed before native reset.");
         Assert.True(stopIndex > detachIndex, "The listener must be detached before Stop().");
         Assert.True(clearIndex > stopIndex, "The native reset must stop before clearing media items.");
         Assert.True(attachIndex > clearIndex, "The managed listener must be restored after the native reset.");
+        Assert.Contains("await _videoSurfaceService.HideAsync()", endSessionMethod, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -1030,22 +1067,73 @@ public sealed class VideoOverlayInputSurfaceTests
     }
 
     [Fact]
-    public void AndroidVideoSurface_SynchronizesTransformsWithNativeLayoutAndTextureCallbacks()
+    public void AndroidVideoSurface_UsesSurfaceHolderLifecycleWithTextureViewOnlyAsFallback()
     {
         var surfaceService = LoadProjectFile(
             "Noctra.Android",
             "Services",
             "AndroidVideoSurfaceService.cs");
+        var rendererPolicy = LoadProjectFile(
+            "Noctra.Android",
+            "Services",
+            "AndroidVideoSurfaceRendererPolicy.cs");
+        var playerService = LoadProjectFile(
+            "Noctra.Android",
+            "Services",
+            "AndroidVideoPlayerService.cs");
 
-        Assert.Contains("View.IOnLayoutChangeListener", surfaceService, StringComparison.Ordinal);
-        Assert.Contains("_textureView.AddOnLayoutChangeListener(this);", surfaceService, StringComparison.Ordinal);
-        Assert.Contains("_textureView.RemoveOnLayoutChangeListener(this);", surfaceService, StringComparison.Ordinal);
-        Assert.Contains("public void OnLayoutChange(", surfaceService, StringComparison.Ordinal);
-        Assert.Contains("ApplyVideoTransform(width, height);", surfaceService, StringComparison.Ordinal);
-        Assert.Contains("ApplyVideoTransform(int viewW, int viewH)", surfaceService, StringComparison.Ordinal);
-        Assert.Contains("OnSurfaceTextureAvailable(SurfaceTexture surface, int width, int height)", surfaceService, StringComparison.Ordinal);
-        Assert.Contains("ApplyVideoTransform(width, height)", surfaceService, StringComparison.Ordinal);
-        Assert.Contains("OnSurfaceTextureSizeChanged(SurfaceTexture surface, int width, int height)", surfaceService, StringComparison.Ordinal);
+        Assert.Contains("DefaultRenderer", rendererPolicy, StringComparison.Ordinal);
+        Assert.Contains("AndroidVideoSurfaceRenderer.SurfaceView",
+            rendererPolicy, StringComparison.Ordinal);
+        Assert.Contains("KnownSurfaceViewCompatibilityRules",
+            rendererPolicy, StringComparison.Ordinal);
+        Assert.DoesNotContain("DBY-W09", rendererPolicy, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("HUAWEI", rendererPolicy, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("TextureView", rendererPolicy, StringComparison.Ordinal);
+
+        Assert.Contains("ISurfaceHolderCallback", surfaceService, StringComparison.Ordinal);
+        Assert.Contains(".AddCallback", surfaceService, StringComparison.Ordinal);
+        Assert.Contains(".RemoveCallback", surfaceService, StringComparison.Ordinal);
+        Assert.Contains("SurfaceCreated(ISurfaceHolder holder)",
+            surfaceService, StringComparison.Ordinal);
+        Assert.Contains("SurfaceDestroyed(ISurfaceHolder holder)",
+            surfaceService, StringComparison.Ordinal);
+        Assert.Contains("_backdropSurfaceView.AddOnLayoutChangeListener(this);",
+            surfaceService, StringComparison.Ordinal);
+        Assert.Contains("_backdropSurfaceView.RemoveOnLayoutChangeListener(this);",
+            surfaceService, StringComparison.Ordinal);
+        Assert.Contains("v?.Id == NativeBackdropSurfaceViewId",
+            surfaceService, StringComparison.Ordinal);
+        Assert.Contains("ApplyBounds();", ExtractMethodBody(surfaceService, "public void OnLayoutChange("),
+            StringComparison.Ordinal);
+        Assert.Contains("_isApplyingBounds", surfaceService, StringComparison.Ordinal);
+        Assert.Contains("_textureFallbackView", surfaceService, StringComparison.Ordinal);
+        Assert.Contains("SetPictureInPictureMode(bool isInPictureInPictureMode)",
+            surfaceService, StringComparison.Ordinal);
+        Assert.Contains("NotifyHostConfigurationChanged()", surfaceService, StringComparison.Ordinal);
+        Assert.Contains("BeginConfigurationTransition", surfaceService, StringComparison.Ordinal);
+        Assert.Contains("ViewStates.Invisible", surfaceService, StringComparison.Ordinal);
+        Assert.Contains("PostDelayed", surfaceService, StringComparison.Ordinal);
+        Assert.Contains("_isPictureInPictureMode", surfaceService, StringComparison.Ordinal);
+        Assert.Contains("QueueBoundsReapply", surfaceService, StringComparison.Ordinal);
+        Assert.Contains("CurrentWindowMetrics.Bounds", surfaceService, StringComparison.Ordinal);
+        Assert.Contains("ConcealVideoAsync", surfaceService, StringComparison.Ordinal);
+        Assert.Contains("HideAsync", surfaceService, StringComparison.Ordinal);
+        Assert.Contains("Renderer=", surfaceService, StringComparison.Ordinal);
+        Assert.Contains("Fallback=", surfaceService, StringComparison.Ordinal);
+
+        Assert.Contains("player.VideoScalingMode = GetVideoScalingMode(scaleMode);",
+            playerService, StringComparison.Ordinal);
+        Assert.Contains("C.VideoScalingModeScaleToFitWithCropping",
+            playerService, StringComparison.Ordinal);
+        Assert.Contains("C.VideoScalingModeScaleToFit",
+            playerService, StringComparison.Ordinal);
+        Assert.Contains("codecFormat?.GetInteger", playerService, StringComparison.Ordinal);
+        Assert.Contains("global::Android.Media.MediaFormat.KeyColorTransfer",
+            playerService, StringComparison.Ordinal);
+
+        Assert.DoesNotContain("color-transfer-request", playerService, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("COLOR_TRANSFER_SDR_VIDEO", playerService, StringComparison.OrdinalIgnoreCase);
     }
 
     private static string ExtractStartTag(string contents, string marker)
