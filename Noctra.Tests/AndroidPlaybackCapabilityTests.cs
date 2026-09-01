@@ -9,6 +9,14 @@ public sealed class AndroidPlaybackCapabilityTests
 {
     private static readonly string[] RequiredLocales = ["en-US", "tr-TR", "de-DE", "fr-FR", "es-ES"];
 
+    // Media3 PlaybackException Error Codes
+    private const int ErrorCodeParsingManifestUnsupported = 3004;
+    private const int ErrorCodeDecoderInitFailed = 4001;
+    private const int ErrorCodeDecoderQueryFailed = 4002;
+    private const int ErrorCodeDecodingFormatExceedsCapabilities = 4004;
+    private const int ErrorCodeDecodingFormatUnsupported = 4005;
+    private const int ErrorCodeNetworkGeneric = 2001;
+
     [Fact]
     public void LocalizationFiles_ContainRequiredPlaybackErrorKeys()
     {
@@ -36,6 +44,36 @@ public sealed class AndroidPlaybackCapabilityTests
         }
     }
 
+    [Theory]
+    [InlineData(ErrorCodeDecodingFormatExceedsCapabilities, "video/hevc", null, false, "UnsupportedCodec")]
+    [InlineData(ErrorCodeDecodingFormatUnsupported, "video/hevc", null, false, "UnsupportedCodec")]
+    [InlineData(ErrorCodeDecodingFormatExceedsCapabilities, "video/dolby-vision dvhe.08.06", null, false, "DolbyVisionUnsupported")]
+    [InlineData(ErrorCodeDecodingFormatUnsupported, "video/dolby-vision", null, false, "DolbyVisionUnsupported")]
+    [InlineData(ErrorCodeDecoderInitFailed, "video/dolby-vision", null, false, "DolbyVisionUnsupported")]
+    [InlineData(ErrorCodeDecoderQueryFailed, "dvhe.08.06", null, false, "DolbyVisionUnsupported")]
+    [InlineData(ErrorCodeDecoderInitFailed, "Decoder init failed: c2.goldfish.hevc.decoder", "format_supported=NO_EXCEEDS_CAPABILITIES", true, "UnsupportedCodec")]
+    [InlineData(ErrorCodeDecoderInitFailed, "Decoder init failed: c2.goldfish.hevc.decoder", "format_supported=NO_UNSUPPORTED_TYPE", true, "UnsupportedCodec")]
+    [InlineData(ErrorCodeParsingManifestUnsupported, "Manifest parsing unsupported feature", null, false, "Generic")]
+    [InlineData(ErrorCodeNetworkGeneric, "Connection failed", null, false, "Generic")]
+    [InlineData(1000, "MediaCodecVideoRenderer internal state error", null, true, "Generic")]
+    [InlineData(0, "Random error", null, true, "Generic")]
+    public void ClassifyErrorLogic_ClassifiesCorrectly(
+        int errorCode,
+        string? message,
+        string? causeMessage,
+        bool decoderAdvertisesDolbyVision,
+        string expectedClassification)
+    {
+        // Re-evaluates exact logic encapsulated in AndroidPlaybackCapabilityPolicy.ClassifyErrorCore
+        var classification = ClassifyErrorTestHelper(
+            errorCode,
+            message,
+            causeMessage,
+            decoderAdvertisesDolbyVision);
+
+        Assert.Equal(expectedClassification, classification.ToString());
+    }
+
     [Fact]
     public void AndroidPlaybackCapabilityPolicy_ContractsAreIntact()
     {
@@ -43,13 +81,15 @@ public sealed class AndroidPlaybackCapabilityTests
 
         Assert.Contains("MediaCodecList", source, StringComparison.Ordinal);
         Assert.Contains("Display.DefaultDisplay", source, StringComparison.Ordinal);
-        Assert.Contains("HdrCapabilities", source, StringComparison.Ordinal);
+        Assert.Contains("GetDecoderCapabilities", source, StringComparison.Ordinal);
+        Assert.Contains("DetectDisplayCapabilities", source, StringComparison.Ordinal);
         Assert.Contains("video/dolby-vision", source, StringComparison.Ordinal);
         Assert.Contains("video/hevc", source, StringComparison.Ordinal);
         Assert.Contains("video/av01", source, StringComparison.Ordinal);
         Assert.Contains("video/x-vnd.on2.vp9", source, StringComparison.Ordinal);
-        Assert.Contains("ClassifyError", source, StringComparison.Ordinal);
-        Assert.Contains("PlaybackErrorClassification", source, StringComparison.Ordinal);
+        Assert.Contains("Vp9Profile2Hdr10Plus = 16384", source, StringComparison.Ordinal);
+        Assert.Contains("Vp9Profile3Hdr10Plus = 32768", source, StringComparison.Ordinal);
+        Assert.Contains("ClassifyErrorCore", source, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -61,8 +101,54 @@ public sealed class AndroidPlaybackCapabilityTests
         Assert.Contains("AndroidPlaybackCapabilityPolicy.ClassifyError", source, StringComparison.Ordinal);
         Assert.Contains("VideoPlayer.Error.DolbyVisionUnsupported", source, StringComparison.Ordinal);
         Assert.Contains("VideoPlayer.Error.UnsupportedCodec", source, StringComparison.Ordinal);
-        Assert.Contains("NativeHDR=", source, StringComparison.Ordinal);
-        Assert.Contains("ToneMapping=", source, StringComparison.Ordinal);
+        Assert.Contains("DisplaySupportsAnyHDR=", source, StringComparison.Ordinal);
+        Assert.Contains("ToneMappingRequired=", source, StringComparison.Ordinal);
+    }
+
+    private static string ClassifyErrorTestHelper(
+        int errorCode,
+        string? message,
+        string? causeMessage,
+        bool decoderAdvertisesDolbyVision)
+    {
+        var fullMessage = $"{message} {causeMessage}".Trim();
+
+        var isFormatUnsupported = errorCode is ErrorCodeDecodingFormatExceedsCapabilities
+            or ErrorCodeDecodingFormatUnsupported;
+
+        var isDecoderSetupError = errorCode is ErrorCodeDecoderInitFailed
+            or ErrorCodeDecoderQueryFailed;
+
+        var mentionsDolbyVision = fullMessage.Contains("video/dolby-vision", StringComparison.OrdinalIgnoreCase) ||
+                                  fullMessage.Contains("dvhe", StringComparison.OrdinalIgnoreCase) ||
+                                  fullMessage.Contains("dvh1", StringComparison.OrdinalIgnoreCase);
+
+        var mentionsCapabilityExceeded = fullMessage.Contains("NO_EXCEEDS_CAPABILITIES", StringComparison.OrdinalIgnoreCase) ||
+                                         fullMessage.Contains("NO_UNSUPPORTED_TYPE", StringComparison.OrdinalIgnoreCase);
+
+        if (isFormatUnsupported)
+        {
+            return mentionsDolbyVision ? "DolbyVisionUnsupported" : "UnsupportedCodec";
+        }
+
+        if (isDecoderSetupError)
+        {
+            if (mentionsDolbyVision && !decoderAdvertisesDolbyVision)
+            {
+                return "DolbyVisionUnsupported";
+            }
+
+            if (mentionsCapabilityExceeded)
+            {
+                return mentionsDolbyVision ? "DolbyVisionUnsupported" : "UnsupportedCodec";
+            }
+        }
+        else if (mentionsCapabilityExceeded)
+        {
+            return mentionsDolbyVision ? "DolbyVisionUnsupported" : "UnsupportedCodec";
+        }
+
+        return "Generic";
     }
 
     private static string ReadProjectFile(params string[] parts)

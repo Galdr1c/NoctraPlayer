@@ -2025,8 +2025,8 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
                         "video/dolby-vision",
                         StringComparison.OrdinalIgnoreCase);
 
-        var isNativeHdr = isHdr && _playbackCapabilities.IsDisplayHdrCapable;
-        var isToneMapped = isHdr && !_playbackCapabilities.IsDisplayHdrCapable;
+        var isDisplayHdr = _playbackCapabilities.IsDisplayHdrCapable;
+        var isToneMappingRequired = isHdr && !isDisplayHdr;
 
         Log.Info(
             "NoctraVideoSurface",
@@ -2035,7 +2035,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
             $"Codecs={format.Codecs ?? "Unknown"} " +
             $"Size={format.Width}x{format.Height} " +
             $"HDR={isHdr} Transfer={transfer} ColorSpace={colorSpace} " +
-            $"DisplayHDR={_playbackCapabilities.IsDisplayHdrCapable} NativeHDR={isNativeHdr} ToneMapping={isToneMapped} " +
+            $"DisplaySupportsAnyHDR={isDisplayHdr} ToneMappingRequired={isToneMappingRequired} " +
             $"HdrStaticBytes={colorInfo?.HdrStaticInfo?.Count ?? 0} " +
             $"CodecFormat={codecFormat?.ToString() ?? "Unknown"}");
     }

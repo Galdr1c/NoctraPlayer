@@ -799,7 +799,7 @@
   "VideoPlayer.Error.InvalidUrl": "URL de flux invalide.",
   "VideoPlayer.Error.PlaybackStartFailed": "La lecture n'a pas pu être démarrée",
   "VideoPlayer.Error.UnsupportedCodec": "Le matériel de votre appareil ne prend pas en charge ce format ou profil vidéo.",
-  "VideoPlayer.Error.DolbyVisionUnsupported": "Votre appareil ne prend pas en charge la lecture Dolby Vision.",
+  "VideoPlayer.Error.DolbyVisionUnsupported": "Ce format ou profil vidéo Dolby Vision n'est pas pris en charge sur votre appareil.",
   "Stalker.Error.InvalidUrl": "Adresse du portail Stalker invalide ou vide.",
   "Stalker.Error.MacRequired": "L'adresse MAC ne peut pas être vide.",
   "Stalker.Error.EndpointNotFound": "Connexion au serveur Stalker impossible. Vérifiez l'adresse du portail ou la MAC.",
