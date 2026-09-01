@@ -1113,7 +1113,8 @@ public sealed class VideoOverlayInputSurfaceTests
         Assert.Contains("NotifyHostConfigurationChanged()", surfaceService, StringComparison.Ordinal);
         Assert.Contains("BeginConfigurationTransition", surfaceService, StringComparison.Ordinal);
         Assert.Contains("ViewStates.Invisible", surfaceService, StringComparison.Ordinal);
-        Assert.Contains("PostDelayed", surfaceService, StringComparison.Ordinal);
+        Assert.Contains("PostOnAnimation", surfaceService, StringComparison.Ordinal);
+        Assert.Contains("SetSurfaceLifecycle(SurfaceViewLifecycle.FollowsAttachment)", surfaceService, StringComparison.Ordinal);
         Assert.Contains("_isPictureInPictureMode", surfaceService, StringComparison.Ordinal);
         Assert.Contains("QueueBoundsReapply", surfaceService, StringComparison.Ordinal);
         Assert.Contains("CurrentWindowMetrics.Bounds", surfaceService, StringComparison.Ordinal);
@@ -1127,6 +1128,8 @@ public sealed class VideoOverlayInputSurfaceTests
         Assert.Contains("C.VideoScalingModeScaleToFitWithCropping",
             playerService, StringComparison.Ordinal);
         Assert.Contains("C.VideoScalingModeScaleToFit",
+            playerService, StringComparison.Ordinal);
+        Assert.Contains("Math.Abs(_pixelWidthHeightRatio - 1f) > 0.01f",
             playerService, StringComparison.Ordinal);
         Assert.Contains("codecFormat?.GetInteger", playerService, StringComparison.Ordinal);
         Assert.Contains("global::Android.Media.MediaFormat.KeyColorTransfer",

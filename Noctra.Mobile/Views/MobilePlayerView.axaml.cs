@@ -521,7 +521,7 @@ public partial class MobilePlayerView : UserControl
     private void UpdateNormalVideoLayout()
     {
         // The normal player always fills Android's content root. Keeping the
-        // native TextureView on MatchParent lets Android resize it atomically
+        // native video surface on MatchParent lets Android resize it atomically
         // during orientation changes, instead of copying a transient/stale
         // Avalonia pixel rectangle into its LayoutParams.
         var fullScreenRect = new Rect(0, 0, -1, -1);

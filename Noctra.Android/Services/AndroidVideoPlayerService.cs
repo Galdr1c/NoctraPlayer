@@ -47,6 +47,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
     private bool _isMuted;
     private float _playbackRate = 1f;
     private Noctra.Models.VideoScaleMode _videoScaleMode = Noctra.Models.VideoScaleMode.Fit;
+    private float _pixelWidthHeightRatio = 1f;
     private int _selectedAudioTrack = -1;
     private int _selectedSubtitleTrack = -1;
     private string _lastUserAgent = string.Empty;
@@ -865,10 +866,22 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
         });
     }
 
-    private static int GetVideoScalingMode(Noctra.Models.VideoScaleMode scaleMode)
-        => scaleMode == Noctra.Models.VideoScaleMode.Fill
-            ? C.VideoScalingModeScaleToFitWithCropping
-            : C.VideoScalingModeScaleToFit;
+    private int GetVideoScalingMode(Noctra.Models.VideoScaleMode scaleMode)
+    {
+        if (scaleMode == Noctra.Models.VideoScaleMode.Fill)
+        {
+            // MediaCodec cropping mode does not account for non-square pixel aspect ratios (PAR != 1).
+            // For anamorphic content (e.g. 720x576 16:9 DVB streams), fall back to ScaleToFit to prevent distortion.
+            if (Math.Abs(_pixelWidthHeightRatio - 1f) > 0.01f)
+            {
+                return C.VideoScalingModeScaleToFit;
+            }
+
+            return C.VideoScalingModeScaleToFitWithCropping;
+        }
+
+        return C.VideoScalingModeScaleToFit;
+    }
 
     protected override void Dispose(bool disposing)
     {
@@ -1952,12 +1965,22 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
         {
             if (videoSize is not null && videoSize.Width > 0 && videoSize.Height > 0)
             {
+                _service._pixelWidthHeightRatio = videoSize.PixelWidthHeightRatio > 0
+                    ? videoSize.PixelWidthHeightRatio
+                    : 1f;
+
                 // Anamorphic içerikte piksel oranı 1'den farklıdır; display aspect
                 // ratio = (width × ratio) / height olarak hesaplanır.
                 _service._videoSurfaceService.SetVideoSize(
                     videoSize.Width,
                     videoSize.Height,
-                    videoSize.PixelWidthHeightRatio);
+                    _service._pixelWidthHeightRatio);
+
+                if (_service._videoScaleMode == Noctra.Models.VideoScaleMode.Fill &&
+                    _service._exoPlayer is { } player)
+                {
+                    player.VideoScalingMode = _service.GetVideoScalingMode(_service._videoScaleMode);
+                }
             }
         }
     }

@@ -237,16 +237,24 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object,
                 return;
             }
 
-            decorView.PostDelayed(() =>
+            decorView.PostOnAnimation(new Java.Lang.Runnable(() =>
             {
                 if (generation != Volatile.Read(ref _configurationGeneration))
                 {
                     return;
                 }
 
-                ApplyBounds();
-                RevealVideoViews();
-            }, 250);
+                decorView.PostOnAnimation(new Java.Lang.Runnable(() =>
+                {
+                    if (generation != Volatile.Read(ref _configurationGeneration))
+                    {
+                        return;
+                    }
+
+                    ApplyBounds();
+                    RevealVideoViews();
+                }));
+            }));
         });
     }
 
@@ -356,8 +364,8 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object,
         var content = activity?.Window?.DecorView?
             .FindViewById(global::Android.Resource.Id.Content) as ViewGroup;
         var windowBounds = activity?.WindowManager?.CurrentWindowMetrics.Bounds;
-        var rootW = windowBounds?.Width() ?? content?.Width ?? 0;
-        var rootH = windowBounds?.Height() ?? content?.Height ?? 0;
+        var rootW = (content?.Width > 0 ? content.Width : windowBounds?.Width()) ?? 0;
+        var rootH = (content?.Height > 0 ? content.Height : windowBounds?.Height()) ?? 0;
 
         WidgetFrameLayout.LayoutParams layoutParams;
         if (_boundsW <= 0 || _boundsH <= 0)
@@ -971,6 +979,11 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object,
         };
         ConfigurePassiveView(surfaceView);
         surfaceView.SetZOrderMediaOverlay(isMediaOverlay);
+
+        if (OperatingSystem.IsAndroidVersionAtLeast(34))
+        {
+            surfaceView.SetSurfaceLifecycle(SurfaceViewLifecycle.FollowsAttachment);
+        }
 
         var holder = surfaceView.Holder
             ?? throw new InvalidOperationException("Android native SurfaceHolder is unavailable.");

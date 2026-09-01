@@ -58,4 +58,18 @@ public sealed class VideoSurfaceLayoutCalculatorTests
 
         Assert.Equal(new VideoSurfaceRect(0, 0, 1920, 1080), result);
     }
+
+    [Theory]
+    [InlineData(VideoScaleMode.Fill)]
+    [InlineData(VideoScaleMode.Stretch)]
+    public void NonFitModes_WithAnamorphicVideo_KeepTheRequestedSurfaceBounds(VideoScaleMode scaleMode)
+    {
+        var result = VideoSurfaceLayoutCalculator.Calculate(
+            0, 0, 1920, 1080,
+            720, 576,
+            64f / 45f,
+            scaleMode);
+
+        Assert.Equal(new VideoSurfaceRect(0, 0, 1920, 1080), result);
+    }
 }
