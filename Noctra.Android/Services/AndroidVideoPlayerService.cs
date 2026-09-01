@@ -301,6 +301,8 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
     {
         ThrowIfDisposed();
         var playbackGeneration = Interlocked.Increment(ref _playbackGeneration);
+        _pixelWidthHeightRatio = 1f;
+        _videoSurfaceService.ResetVideoSize();
 
         await NoctraPlaybackService.EnsureStartedAsync(_applicationContext).ConfigureAwait(false);
         if (!IsPlaybackGenerationCurrent(playbackGeneration))

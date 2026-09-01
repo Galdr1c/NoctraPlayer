@@ -505,6 +505,63 @@ public sealed class VideoOverlayInputSurfaceTests
     }
 
     [Fact]
+    public void AndroidVideoSurface_CancelsPendingConfigurationRevealWhenTeardownStarts()
+    {
+        var surfaceService = LoadProjectFile(
+            "Noctra.Android",
+            "Services",
+            "AndroidVideoSurfaceService.cs");
+        var concealMethod = ExtractMethodBody(
+            surfaceService,
+            "internal Task ConcealVideoAsync()");
+        var hideMethod = ExtractMethodBody(
+            surfaceService,
+            "internal Task HideAsync()");
+        var detachMethod = ExtractMethodBody(
+            surfaceService,
+            "private void DetachRendererViews(bool notifySurfaceDestroyed)");
+
+        Assert.Contains("private void CancelConfigurationTransition()",
+            surfaceService, StringComparison.Ordinal);
+        Assert.Contains("CancelConfigurationTransition();",
+            concealMethod, StringComparison.Ordinal);
+        Assert.Contains("CancelConfigurationTransition();",
+            hideMethod, StringComparison.Ordinal);
+        Assert.Contains("CancelConfigurationTransition();",
+            detachMethod, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void AndroidPlayer_ResetsVideoMetricsBeforeStartingNewMedia()
+    {
+        var playerService = LoadProjectFile(
+            "Noctra.Android",
+            "Services",
+            "AndroidVideoPlayerService.cs");
+        var surfaceService = LoadProjectFile(
+            "Noctra.Android",
+            "Services",
+            "AndroidVideoSurfaceService.cs");
+        var playMethod = ExtractMethodBody(
+            playerService,
+            "public async Task PlayAsync(string url, double startTimeSeconds = 0)");
+
+        var resetIndex = playMethod.IndexOf(
+            "_videoSurfaceService.ResetVideoSize();",
+            StringComparison.Ordinal);
+        var currentUrlIndex = playMethod.IndexOf(
+            "_currentUrl = url;",
+            StringComparison.Ordinal);
+
+        Assert.True(resetIndex >= 0 && resetIndex < currentUrlIndex,
+            "PlayAsync must reset native video metrics before publishing the new media URL.");
+        Assert.Contains("_pixelWidthHeightRatio = 1f;",
+            playMethod, StringComparison.Ordinal);
+        Assert.Contains("internal void ResetVideoSize()",
+            surfaceService, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void AndroidPlayer_DetachesManagedListenerBeforeReplacingMedia()
     {
         var playerService = LoadProjectFile(

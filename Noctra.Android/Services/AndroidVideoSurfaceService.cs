@@ -110,11 +110,16 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object,
     public void Hide() => _ = HideAsync();
 
     internal Task ConcealVideoAsync()
-        => RunOnUiThreadAsync(ConcealVideoViews);
+        => RunOnUiThreadAsync(() =>
+        {
+            CancelConfigurationTransition();
+            ConcealVideoViews();
+        });
 
     internal Task HideAsync()
         => RunOnUiThreadAsync(() =>
         {
+            CancelConfigurationTransition();
             DetachRendererViews(notifySurfaceDestroyed: true);
 
             // Sonraki gösterimde tam ekran başlasın.
@@ -258,6 +263,9 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object,
         });
     }
 
+    private void CancelConfigurationTransition()
+        => Interlocked.Increment(ref _configurationGeneration);
+
     public void SetVideoLayout(Noctra.Models.VideoScaleMode scaleMode)
     {
         _scaleMode = scaleMode;
@@ -328,6 +336,13 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object,
             ApplyBounds();
             ApplyVideoTransform();
         });
+    }
+
+    internal void ResetVideoSize()
+    {
+        _videoWidth = 0;
+        _videoHeight = 0;
+        _pixelWidthHeightRatio = 1f;
     }
 
     private void ApplyBounds(int measuredHostWidth = 0, int measuredHostHeight = 0)
@@ -1033,6 +1048,7 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object,
 
     private void DetachRendererViews(bool notifySurfaceDestroyed)
     {
+        CancelConfigurationTransition();
         ConcealVideoViews();
 
         // Decoder eski Surface'e yazmayı views kaldırılmadan önce bırakır.
