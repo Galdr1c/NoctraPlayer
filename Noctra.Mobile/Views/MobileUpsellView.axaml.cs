@@ -23,7 +23,6 @@ public partial class MobileUpsellView : UserControl
     private ILicenseService? _licenseService;
     private bool _licenseSubscribed;
     private CancellationTokenSource? _purchaseCompletionCts;
-    private bool _purchaseFlowActive;
 
     // Play Billing may deliver the purchase callback a little after the
     // billing Activity closes. Keep the fallback bounded so a missed callback
@@ -56,7 +55,6 @@ public partial class MobileUpsellView : UserControl
         // user navigated back after cancelling), stop the background watcher
         // and allow the sheet to reopen.
         StopPurchaseCompletionWatch();
-        _purchaseFlowActive = false;
 
         IsVisible = true;
         HideStatusMessages();
@@ -87,7 +85,6 @@ public partial class MobileUpsellView : UserControl
     {
         var wasVisible = IsVisible;
         StopPurchaseCompletionWatch();
-        _purchaseFlowActive = false;
         IsVisible = false;
         UnsubscribeLicense();
         return wasVisible;
@@ -102,7 +99,6 @@ public partial class MobileUpsellView : UserControl
     private void HideForPurchaseFlow()
     {
         StopPurchaseCompletionWatch();
-        _purchaseFlowActive = true;
         IsVisible = false;
     }
 
@@ -195,7 +191,6 @@ public partial class MobileUpsellView : UserControl
             if (ReferenceEquals(_purchaseCompletionCts, cts))
             {
                 _purchaseCompletionCts = null;
-                _purchaseFlowActive = false;
             }
 
             cts.Dispose();
