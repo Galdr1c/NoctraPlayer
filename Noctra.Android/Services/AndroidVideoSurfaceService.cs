@@ -214,7 +214,7 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object,
             return;
         }
 
-        activity.RunOnUiThread(ApplyBounds);
+        activity.RunOnUiThread(() => ApplyBounds());
     }
 
     private void BeginConfigurationTransition()
@@ -330,7 +330,7 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object,
         });
     }
 
-    private void ApplyBounds()
+    private void ApplyBounds(int measuredHostWidth = 0, int measuredHostHeight = 0)
     {
         if (_isApplyingBounds)
         {
@@ -340,7 +340,7 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object,
         _isApplyingBounds = true;
         try
         {
-            ApplyBoundsCore();
+            ApplyBoundsCore(measuredHostWidth, measuredHostHeight);
         }
         finally
         {
@@ -348,7 +348,7 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object,
         }
     }
 
-    private void ApplyBoundsCore()
+    private void ApplyBoundsCore(int measuredHostWidth, int measuredHostHeight)
     {
         ApplyBackdropBounds();
 
@@ -361,11 +361,17 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object,
         }
 
         var activity = _activityProvider.CurrentActivity;
+        var forceImmediatePipLayout =
+            _isPictureInPictureMode || activity?.IsInPictureInPictureMode == true;
         var content = activity?.Window?.DecorView?
             .FindViewById(global::Android.Resource.Id.Content) as ViewGroup;
         var windowBounds = activity?.WindowManager?.CurrentWindowMetrics.Bounds;
-        var rootW = (content?.Width > 0 ? content.Width : windowBounds?.Width()) ?? 0;
-        var rootH = (content?.Height > 0 ? content.Height : windowBounds?.Height()) ?? 0;
+        var rootW = measuredHostWidth > 0
+            ? measuredHostWidth
+            : (content?.Width > 0 ? content.Width : windowBounds?.Width()) ?? 0;
+        var rootH = measuredHostHeight > 0
+            ? measuredHostHeight
+            : (content?.Height > 0 ? content.Height : windowBounds?.Height()) ?? 0;
 
         WidgetFrameLayout.LayoutParams layoutParams;
         if (_boundsW <= 0 || _boundsH <= 0)
@@ -426,11 +432,27 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object,
         }
 
         var videoLayoutChanged = ApplyLayoutParameters(videoView, layoutParams);
+        if (forceImmediatePipLayout &&
+            (videoView.Left != layoutParams.LeftMargin ||
+             videoView.Top != layoutParams.TopMargin ||
+             videoView.Width != layoutParams.Width ||
+             videoView.Height != layoutParams.Height))
+        {
+            // Some Android OEMs can pause the PiP Activity's normal traversal while its
+            // outer SurfaceView is resized. Apply the already calculated child
+            // frame immediately so the media surface cannot lag behind the PiP.
+            videoView.Layout(
+                layoutParams.LeftMargin,
+                layoutParams.TopMargin,
+                layoutParams.LeftMargin + layoutParams.Width,
+                layoutParams.TopMargin + layoutParams.Height);
+        }
+
         if (videoLayoutChanged &&
             _videoSurfaceView?.Holder is { } videoHolder)
         {
             // SurfaceView's producer buffer may retain the previous EPG/rotation
-            // size on Huawei. Match it to the new view bounds only after a real
+            // size on some Android OEMs. Match it to the new view bounds only after a real
             // layout change; repeated calls would recreate the surface needlessly.
             videoHolder.SetSizeFromLayout();
         }
@@ -780,16 +802,22 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object,
         int oldRight,
         int oldBottom)
     {
+        var width = right - left;
+        var height = bottom - top;
+
         if (v?.Id == NativeBackdropSurfaceViewId)
         {
-            // Backdrop MatchParent olduğu için Activity, rotation ve PiP'in
-            // kesinleşmiş host boyutunu güvenilir biçimde bildirir.
-            ApplyBounds();
+            // PiP free-resize sırasında WindowMetrics OEM'e göre bir frame geriden
+            // gelebilir. MatchParent backdrop'un callback ölçüsü, dış PiP kabının
+            // gerçekten uygulanmış boyutudur; video rect'ini doğrudan bundan üret.
+            if (width > 0 && height > 0)
+            {
+                ApplyBounds(width, height);
+            }
+
             return;
         }
 
-        var width = right - left;
-        var height = bottom - top;
         if (width > 0 && height > 0)
         {
             ApplyVideoTransform(width, height);
@@ -1119,6 +1147,23 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object,
         }
     }
 
+    private void OnBackdropSurfaceChanged(int width, int height)
+    {
+        if (width <= 0 || height <= 0)
+        {
+            return;
+        }
+
+        var backdrop = _backdropSurfaceView;
+        _backdropSurfaceView?.Post(() =>
+        {
+            if (ReferenceEquals(backdrop, _backdropSurfaceView))
+            {
+                ApplyBounds(width, height);
+            }
+        });
+    }
+
     private sealed class BackdropSurfaceCallback : Java.Lang.Object, ISurfaceHolderCallback
     {
         private readonly AndroidVideoSurfaceService _owner;
@@ -1132,7 +1177,10 @@ public sealed class AndroidVideoSurfaceService : Java.Lang.Object,
             => _owner.DrawBackdropBlack(holder);
 
         public void SurfaceChanged(ISurfaceHolder holder, Format format, int width, int height)
-            => _owner.DrawBackdropBlack(holder);
+        {
+            _owner.DrawBackdropBlack(holder);
+            _owner.OnBackdropSurfaceChanged(width, height);
+        }
 
         public void SurfaceDestroyed(ISurfaceHolder holder)
         {

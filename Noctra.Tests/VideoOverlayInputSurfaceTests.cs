@@ -1104,7 +1104,23 @@ public sealed class VideoOverlayInputSurfaceTests
             surfaceService, StringComparison.Ordinal);
         Assert.Contains("v?.Id == NativeBackdropSurfaceViewId",
             surfaceService, StringComparison.Ordinal);
-        Assert.Contains("ApplyBounds();", ExtractMethodBody(surfaceService, "public void OnLayoutChange("),
+        var onLayoutChangeBody = ExtractMethodBody(
+            surfaceService,
+            "public void OnLayoutChange(");
+        Assert.Contains("ApplyBounds(width, height);", onLayoutChangeBody, StringComparison.Ordinal);
+        Assert.Contains("measuredHostWidth", surfaceService, StringComparison.Ordinal);
+        Assert.Contains("var rootW = measuredHostWidth > 0", surfaceService, StringComparison.Ordinal);
+        Assert.Contains("? measuredHostWidth", surfaceService, StringComparison.Ordinal);
+        Assert.Contains("forceImmediatePipLayout", surfaceService, StringComparison.Ordinal);
+        Assert.Contains("videoView.Layout(", surfaceService, StringComparison.Ordinal);
+        Assert.Contains("_owner.OnBackdropSurfaceChanged(width, height);",
+            surfaceService, StringComparison.Ordinal);
+        var onBackdropSurfaceChangedBody = ExtractMethodBody(
+            surfaceService,
+            "private void OnBackdropSurfaceChanged(int width, int height)");
+        Assert.Contains("_backdropSurfaceView?.Post", onBackdropSurfaceChangedBody,
+            StringComparison.Ordinal);
+        Assert.Contains("ApplyBounds(width, height);", onBackdropSurfaceChangedBody,
             StringComparison.Ordinal);
         Assert.Contains("_isApplyingBounds", surfaceService, StringComparison.Ordinal);
         Assert.Contains("_textureFallbackView", surfaceService, StringComparison.Ordinal);
