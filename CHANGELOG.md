@@ -9,6 +9,20 @@ Detailed historical engineering notes are archived in [`docs/history/legacy-chan
 
 ## [Unreleased]
 
+### Added
+
+- **3 katmanlı HDR ve Codec Playback Yetenek Mimarisi (Decoder + Display HDR + Fallback/Teşhis)**:
+  1. **Semptom**: Dolby Vision veya HEVC Main10 (10-bit HDR) yayınlar donanımsal decoder desteği bulunmayan cihazlarda (veya 10-bit profilleri desteklemeyen Android emülatörlerindeki `c2.goldfish.hevc.decoder` ortamında) açılmaya çalışıldığında `ExoPlayer playback error` / `NO_EXCEEDS_CAPABILITIES` / `NO_UNSUPPORTED_TYPE` kaynaklı genel oynatma hatası veriyor; kullanıcılara ekran HDR olmadığı için mi yoksa cihazın video codec/profilini çözemediği için mi açılamadığına dair açıklayıcı bir bilgi sunulmuyordu.
+  2. **Kök neden**: Android video oynatma mimarisinde "Ekran HDR desteği" ile "Decoder profile desteği" ve "Platform ton eşleme (tone-mapping)" birbirinden bağımsız katmanlardır. Yalnızca ekranın HDR olup olmadığına bakmak yetersizdir; ekran SDR olsa bile cihazda HEVC Main10 decoder varsa video ton eşleme ile gösterilebilir. Ancak cihazda donanımsal Dolby Vision decoder yoksa veya decoder yetenekleri aşılıyorsa ExoPlayer `MediaCodecRenderer` aşamasında hata verir. Bu ayrım yapılmadığı için hatalar genel `VideoPlayer.Error.PlaybackGeneric` olarak fırlatılıyordu.
+  3. **Düzeltme**:
+     - `AndroidPlaybackCapabilityPolicy`: Cihazın donanımsal MediaCodec yeteneklerini (`video/hevc` Main10, `video/av01` Main10, `video/dolby-vision`, `video/x-vnd.on2.vp9` Profile 2/3) ve ekran HDR yeteneklerini (`Display.HdrCapabilities`: HDR10, HDR10+, HLG, Dolby Vision) tespit eden merkezi bir yetenek politikası oluşturuldu.
+     - `AndroidVideoPlayerService.OnPlayerError`: `PlaybackException` ve `MediaCodecRenderer` hata kodları/mesajları (`NO_EXCEEDS_CAPABILITIES`, `NO_UNSUPPORTED_TYPE`, Dolby Vision) sınıflandırılarak kullanıcıya donanımsal codec veya Dolby Vision yetersizliğini belirten nokta atışı yerelleştirilmiş hata mesajları (`VideoPlayer.Error.UnsupportedCodec` ve `VideoPlayer.Error.DolbyVisionUnsupported`) iletiliyor.
+     - `LogVideoSurfaceDiagnostics`: Video yüzey tanı loglarına `DisplayHDR`, `NativeHDR` ve `ToneMapping` durumları eklenerek hata ayıklama ve doğrulama kolaylaştırıldı.
+     - 5 dilde (`en-US`, `tr-TR`, `de-DE`, `fr-FR`, `es-ES`) yeni hata çevirileri eklendi.
+     - `AndroidPlaybackCapabilityTests`: Yerelleştirme dosyaları ve kaynak sözleşmelerini doğrulayan birim testleri eklendi.
+  4. **Bilinçli olarak değiştirilmedi**: HDR10 ve HLG içeriklerin SDR ekranlarda HEVC Main10 decoder ve platform ton eşleme üzerinden oynatılabilme kabiliyeti engellenmedi; SurfaceView varsayılan renderer politikası ve ses/altyazı sözleşmeleri korundu.
+  5. **Doğrulama**: `Noctra.Tests` ve `Noctra.Billing.Api.Tests` paketleri çalıştırıldı; tüm yerelleştirme ve sözleşme testleri yeşil geçti.
+
 ### Fixed
 
 - **Nadir PiP serbest yeniden-boyutlandırmada videonun eski child ölçüsünde kalması**:

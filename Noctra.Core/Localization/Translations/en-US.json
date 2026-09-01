@@ -798,6 +798,8 @@
   "VideoPlayer.Error.ConnectionFailed": "Stream connection failed. Please check the URL.",
   "VideoPlayer.Error.InvalidUrl": "Invalid stream URL.",
   "VideoPlayer.Error.PlaybackStartFailed": "Playback could not be started",
+  "VideoPlayer.Error.UnsupportedCodec": "Your device hardware does not support this video format or profile.",
+  "VideoPlayer.Error.DolbyVisionUnsupported": "Your device does not support Dolby Vision playback.",
   "Stalker.Error.InvalidUrl": "Invalid or empty Stalker Portal address.",
   "Stalker.Error.MacRequired": "MAC address cannot be empty.",
   "Stalker.Error.EndpointNotFound": "Could not connect to the Stalker server. Check the portal address or MAC.",

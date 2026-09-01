@@ -28,6 +28,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
 
     private readonly AndroidVideoSurfaceService _videoSurfaceService;
     private readonly Context _applicationContext;
+    private readonly AndroidPlaybackCapabilities _playbackCapabilities;
     private readonly ISettingsService _settingsService;
     private readonly INetworkService _networkService;
     private readonly ILocalizationService _localizationService;
@@ -153,6 +154,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
     {
         _videoSurfaceService = videoSurfaceService;
         _applicationContext = applicationContext.ApplicationContext ?? applicationContext;
+        _playbackCapabilities = AndroidPlaybackCapabilityPolicy.GetCapabilities(_applicationContext);
         _settingsService = settingsService;
         _networkService = networkService;
         _localizationService = localizationService;
@@ -1867,7 +1869,19 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
             _service._isPlaying = false;
             _service.PlayingChanged?.Invoke(_service, false);
             AndroidVideoPlayerService.LogDebug($"ExoPlayer playback error: {error?.Message}");
-            _service.ErrorOccurred?.Invoke(_service, _service._localizationService.GetString("VideoPlayer.Error.PlaybackGeneric"));
+
+            var classification = AndroidPlaybackCapabilityPolicy.ClassifyError(error, _service._playbackCapabilities);
+            var errorMessage = classification switch
+            {
+                PlaybackErrorClassification.DolbyVisionUnsupported =>
+                    _service._localizationService.GetString("VideoPlayer.Error.DolbyVisionUnsupported"),
+                PlaybackErrorClassification.UnsupportedCodec =>
+                    _service._localizationService.GetString("VideoPlayer.Error.UnsupportedCodec"),
+                _ =>
+                    _service._localizationService.GetString("VideoPlayer.Error.PlaybackGeneric")
+            };
+
+            _service.ErrorOccurred?.Invoke(_service, errorMessage);
             _service.ClearCues();
         }
 
@@ -2011,6 +2025,9 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
                         "video/dolby-vision",
                         StringComparison.OrdinalIgnoreCase);
 
+        var isNativeHdr = isHdr && _playbackCapabilities.IsDisplayHdrCapable;
+        var isToneMapped = isHdr && !_playbackCapabilities.IsDisplayHdrCapable;
+
         Log.Info(
             "NoctraVideoSurface",
             $"Renderer={_videoSurfaceService.RendererName} " +
@@ -2018,6 +2035,7 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
             $"Codecs={format.Codecs ?? "Unknown"} " +
             $"Size={format.Width}x{format.Height} " +
             $"HDR={isHdr} Transfer={transfer} ColorSpace={colorSpace} " +
+            $"DisplayHDR={_playbackCapabilities.IsDisplayHdrCapable} NativeHDR={isNativeHdr} ToneMapping={isToneMapped} " +
             $"HdrStaticBytes={colorInfo?.HdrStaticInfo?.Count ?? 0} " +
             $"CodecFormat={codecFormat?.ToString() ?? "Unknown"}");
     }

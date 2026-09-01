@@ -798,6 +798,8 @@
   "VideoPlayer.Error.ConnectionFailed": "Stream bağlantısı kurulamadı. URL'yi kontrol edin.",
   "VideoPlayer.Error.InvalidUrl": "Geçersiz stream URL'si.",
   "VideoPlayer.Error.PlaybackStartFailed": "Oynatma başlatılamadı",
+  "VideoPlayer.Error.UnsupportedCodec": "Cihazınızın donanımı bu video formatını veya profilini desteklemiyor.",
+  "VideoPlayer.Error.DolbyVisionUnsupported": "Cihazınız Dolby Vision formatını donanımsal olarak desteklemiyor.",
   "Stalker.Error.InvalidUrl": "Geçersiz veya boş bir Stalker Portal adresi girdiniz.",
   "Stalker.Error.MacRequired": "MAC adresi boş olamaz.",
   "Stalker.Error.EndpointNotFound": "Stalker sunucusuna bağlanılamadı. Portal adresini veya MAC bilgisini kontrol edin.",
