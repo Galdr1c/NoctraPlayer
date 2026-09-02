@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Text.Json;
+using Noctra.Services;
 using Xunit;
 
 namespace Noctra.Tests;
@@ -37,11 +38,40 @@ public sealed class AndroidPlaybackCapabilityTests
                 !string.IsNullOrWhiteSpace(unsuppProp.GetString()),
                 $"Missing or empty 'VideoPlayer.Error.UnsupportedCodec' in {locale}.json");
 
+            var unsupportedCodecText = unsuppProp.GetString() ?? string.Empty;
+            Assert.DoesNotContain("hardware", unsupportedCodecText, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("donanım", unsupportedCodecText, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("matériel", unsupportedCodecText, StringComparison.OrdinalIgnoreCase);
+
             Assert.True(
                 rootElement.TryGetProperty("VideoPlayer.Error.DolbyVisionUnsupported", out var dvProp) &&
                 !string.IsNullOrWhiteSpace(dvProp.GetString()),
                 $"Missing or empty 'VideoPlayer.Error.DolbyVisionUnsupported' in {locale}.json");
         }
+    }
+
+    [Theory]
+    [InlineData("Hlg", false, true, false, false, false)]
+    [InlineData("Hdr10", true, false, false, false, true)]
+    [InlineData("Hdr10", false, true, false, false, true)]
+    [InlineData("DolbyVision", true, false, false, false, false)]
+    [InlineData("Unknown", false, false, false, false, true)]
+    public void HdrDisplayCompatibility_RequiresMatchingNativeFormat(
+        string transfer,
+        bool supportsHdr10,
+        bool supportsHdr10Plus,
+        bool supportsHlg,
+        bool supportsDolbyVision,
+        bool expected)
+    {
+        var actual = HdrDisplayCompatibility.IsNativeDisplaySupported(
+            Enum.Parse<HdrTransferKind>(transfer),
+            supportsHdr10,
+            supportsHdr10Plus,
+            supportsHlg,
+            supportsDolbyVision);
+
+        Assert.Equal(expected, actual);
     }
 
     [Theory]
@@ -102,7 +132,9 @@ public sealed class AndroidPlaybackCapabilityTests
         Assert.Contains("VideoPlayer.Error.DolbyVisionUnsupported", source, StringComparison.Ordinal);
         Assert.Contains("VideoPlayer.Error.UnsupportedCodec", source, StringComparison.Ordinal);
         Assert.Contains("DisplaySupportsAnyHDR=", source, StringComparison.Ordinal);
-        Assert.Contains("ToneMappingRequired=", source, StringComparison.Ordinal);
+        Assert.Contains("HdrDisplayCompatibility.IsNativeDisplaySupported", source, StringComparison.Ordinal);
+        Assert.Contains("NativeHdrDisplaySupported=", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("ToneMappingRequired=", source, StringComparison.Ordinal);
     }
 
     private static string ClassifyErrorTestHelper(

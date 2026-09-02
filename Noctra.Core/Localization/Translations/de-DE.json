@@ -798,7 +798,7 @@
   "VideoPlayer.Error.ConnectionFailed": "Stream-Verbindung fehlgeschlagen. Bitte überprüfen Sie die URL.",
   "VideoPlayer.Error.InvalidUrl": "Ungültige Stream-URL.",
   "VideoPlayer.Error.PlaybackStartFailed": "Wiedergabe konnte nicht gestartet werden",
-  "VideoPlayer.Error.UnsupportedCodec": "Die Hardware Ihres Geräts unterstützt dieses Videoformat oder -profil nicht.",
+  "VideoPlayer.Error.UnsupportedCodec": "Ihr Gerät unterstützt dieses Videoformat oder -profil nicht.",
   "VideoPlayer.Error.DolbyVisionUnsupported": "Dieses Dolby Vision-Videoformat oder -Profil wird auf Ihrem Gerät nicht unterstützt.",
   "Stalker.Error.InvalidUrl": "Ungültige oder leere Stalker-Portal-Adresse.",
   "Stalker.Error.MacRequired": "MAC-Adresse darf nicht leer sein.",

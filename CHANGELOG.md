@@ -18,13 +18,15 @@ Detailed historical engineering notes are archived in [`docs/history/legacy-chan
      - `AndroidPlaybackCapabilityPolicy`: Cihazın donanımsal MediaCodec yeteneklerini (`video/hevc` Main10/HDR10/HDR10+, `video/av01` Main10/HDR10/HDR10+, `video/dolby-vision`, `video/x-vnd.on2.vp9` Profile 2/3 / HDR / HDR10+) statik olarak önbelleğe alan ve ekran HDR yeteneklerini (`Display.GetHdrCapabilities()`: HDR10, HDR10+, HLG, Dolby Vision) geçerli ekrandan dinamik okuyan merkezi yetenek politikası oluşturuldu.
      - `AndroidPlaybackCapabilityPolicy.ClassifyErrorCore`: Media3 resmi hata kodları (`ErrorCodeDecodingFormatExceedsCapabilities` 4004, `ErrorCodeDecodingFormatUnsupported` 4005, `ErrorCodeDecoderInitFailed` 4001, `ErrorCodeDecoderQueryFailed` 4002) ve vendor fallback tanıları üzerinden hatayı hassas sınıflandıran mekanizma eklendi; manifest parsing hataları (3004) veya genel renderer çökmelerinin yanlışlıkla codec hatası sayılması engellendi.
      - `AndroidVideoPlayerService.OnPlayerError`: Hata sınıfına göre kullanıcıya donanımsal codec veya Dolby Vision format/profil yetersizliğini belirten nokta atışı yerelleştirilmiş hata mesajları (`VideoPlayer.Error.UnsupportedCodec` ve `VideoPlayer.Error.DolbyVisionUnsupported`) iletiliyor.
-     - `LogVideoSurfaceDiagnostics`: Video yüzey tanı loglarına dürüst ve çıkarımsız `DisplaySupportsAnyHDR` ve `ToneMappingRequired` durumları eklendi.
+    - `LogVideoSurfaceDiagnostics`: Video yüzey tanı loglarına `DisplaySupportsAnyHDR` ve içeriğin gerçek HDR türüyle eşleşen `NativeHdrDisplaySupported` durumu eklendi.
      - 5 dilde (`en-US`, `tr-TR`, `de-DE`, `fr-FR`, `es-ES`) hata çevirileri hassaslaştırıldı.
      - `AndroidPlaybackCapabilityTests`: Yerelleştirme dosyalarını, Media3 hata kodu sınıflandırma mantığını ve kaynak sözleşmelerini doğrulayan kapsamlı birim ve davranış testleri eklendi.
   4. **Bilinçli olarak değiştirilmedi**: HDR10 ve HLG içeriklerin SDR ekranlarda HEVC Main10 decoder üzerinden oynatılabilme kabiliyeti engellenmedi; SurfaceView varsayılan renderer politikası ve ses/altyazı sözleşmeleri korundu.
   5. **Doğrulama**: `Noctra.Tests` ve `Noctra.Billing.Api.Tests` paketleri çalıştırıldı; tüm yerelleştirme, sözleşme ve davranış testleri (2.440 test) yeşil geçti. Gerçek Huawei DBY-W09 cihazında HEVC 10-bit/AV1 10-bit/HDR10/HDR10+ yetenek tespiti ve Dolby Vision Profile 8 akışının base layer üzerinden Native HDR oynatımı logcat ile doğrulandı.
 
 ### Fixed
+
+- **HDR tanı loglarında format-bazlı ekran uyumluluğu**: `ToneMappingRequired` alanı ekranın herhangi bir HDR türünü desteklemesine göre değil, Dolby Vision/HLG/HDR10 (HDR10+ dahil) içeriğin karşılık gelen native display capability'sine göre hesaplanıyor. Log yalnızca doğrulanabilir `NativeHdrDisplaySupported` durumunu bildiriyor; Dolby Vision codec işaretleri mime dışında `dvhe`/`dvh1` değerleriyle de tanınıyor. Codec hata mesajlarının beş yerelleştirmesinde doğrulanamayan “donanım/hardware” iddiası kaldırıldı.
 
 - **Nadir PiP serbest yeniden-boyutlandırmada videonun eski child ölçüsünde kalması**:
   1. **Semptom**: PiP penceresi sürüklenerek büyütülüp küçültüldüğünde dış PiP kabı yeni boyuta geçmesine rağmen video nadiren önceki yaklaşık `510×287` rect’inde kalabiliyor; PiP kapatılıp yeniden açılınca düzeliyordu.

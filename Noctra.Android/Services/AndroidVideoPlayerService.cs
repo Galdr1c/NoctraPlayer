@@ -2019,14 +2019,22 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
         var colorSpace = colorInfo is { ColorSpace: not Format.NoValue }
             ? colorInfo.ColorSpace
             : codecColorSpace;
-        var isHdr = transfer is C.ColorTransferSt2084 or C.ColorTransferHlg ||
-                    string.Equals(
-                        format.SampleMimeType,
-                        "video/dolby-vision",
-                        StringComparison.OrdinalIgnoreCase);
-
-        var isDisplayHdr = _playbackCapabilities.IsDisplayHdrCapable;
-        var isToneMappingRequired = isHdr && !isDisplayHdr;
+        var isDolbyVision = IsDolbyVisionFormat(format);
+        var isHdr = transfer is C.ColorTransferSt2084 or C.ColorTransferHlg || isDolbyVision;
+        var hdrTransfer = isDolbyVision
+            ? HdrTransferKind.DolbyVision
+            : transfer == C.ColorTransferHlg
+                ? HdrTransferKind.Hlg
+                : transfer == C.ColorTransferSt2084
+                    ? HdrTransferKind.Hdr10
+                    : HdrTransferKind.Unknown;
+        var nativeHdrDisplaySupported = !isHdr ||
+            HdrDisplayCompatibility.IsNativeDisplaySupported(
+                hdrTransfer,
+                _playbackCapabilities.DisplaySupportsHdr10,
+                _playbackCapabilities.DisplaySupportsHdr10Plus,
+                _playbackCapabilities.DisplaySupportsHlg,
+                _playbackCapabilities.DisplaySupportsDolbyVision);
 
         Log.Info(
             "NoctraVideoSurface",
@@ -2035,9 +2043,25 @@ public sealed class AndroidVideoPlayerService : Java.Lang.Object, IVideoPlayerSe
             $"Codecs={format.Codecs ?? "Unknown"} " +
             $"Size={format.Width}x{format.Height} " +
             $"HDR={isHdr} Transfer={transfer} ColorSpace={colorSpace} " +
-            $"DisplaySupportsAnyHDR={isDisplayHdr} ToneMappingRequired={isToneMappingRequired} " +
+            $"DisplaySupportsAnyHDR={_playbackCapabilities.IsDisplayHdrCapable} " +
+            $"NativeHdrDisplaySupported={nativeHdrDisplaySupported} " +
             $"HdrStaticBytes={colorInfo?.HdrStaticInfo?.Count ?? 0} " +
             $"CodecFormat={codecFormat?.ToString() ?? "Unknown"}");
+    }
+
+    private static bool IsDolbyVisionFormat(AndroidX.Media3.Common.Format format)
+    {
+        if (string.Equals(
+                format.SampleMimeType,
+                "video/dolby-vision",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        var codecs = format.Codecs;
+        return codecs?.Contains("dvhe", StringComparison.OrdinalIgnoreCase) == true ||
+               codecs?.Contains("dvh1", StringComparison.OrdinalIgnoreCase) == true;
     }
 
     /// <summary>
