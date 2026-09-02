@@ -26,6 +26,13 @@ Detailed historical engineering notes are archived in [`docs/history/legacy-chan
 
 ### Fixed
 
+- **Android 15+/16 edge-to-edge: duvar kağıdı sistem çubukları arkasından sızıyordu (Redmi tablet, Android 16 / API 36)**:
+  1. **Semptom**: Android 16 (HyperOS 3.0) çalıştıran Redmi tablet cihazda hem portrait (profil seçim ekranı) hem landscape (ana ekran + NavigationRail) modunda üst durum çubuğu ve alt gesture bar'ın arkasında cihaz masaüstü duvar kağıdı (mavi gökyüzü) görünüyordu.
+  2. **Kök neden**: Android 15+ (API 35/36) zorunlu edge-to-edge politikası `setStatusBarColor()` ve `setNavigationBarColor()` çağrılarını yok sayarak sistem çubuklarını %100 şeffaf yapar. `ApplySystemChrome` yalnızca `android:content` ViewGroup'a arka plan rengi atıyordu; ancak `DecorView`'ın kendisi ve `Window` arka plan drawable'ı boyanmadığı için Avalonia'nın `Translucent` SurfaceView'ı altında kalan sistem çubuğu alanları doğrudan pencere arkasındaki masaüstünü gösteriyordu.
+  3. **Düzeltme**: `AndroidPlayerWindowService.ApplySystemChrome` metodunda `content.SetBackgroundColor` yanına `window.DecorView.SetBackgroundColor(backdropColor)` ve `window.SetBackgroundDrawable(new ColorDrawable(backdropColor))` eklendi. Böylece tüm pencere hiyerarşisi (DecorView → Content → Avalonia Surface) boydan boya Noctra temasıyla eşleşen opak arka planla kaplanır.
+  4. **Bilinçli olarak değiştirilmedi**: Avalonia SurfaceView `Translucent` formatı korundu (video oynatıcı katmanı için gerekli). API 30-34 aralığında `setStatusBarColor`/`setNavigationBarColor` çağrıları olduğu gibi bırakıldı; yalnızca DecorView/Window seviyesinde arka plan eklendi.
+  5. **Doğrulama**: `dotnet build` (0 hata, 0 uyarı) ve `dotnet test` (2457/2457 test başarılı) ile doğrulandı. Cihaz üzerinde doğrulama bekliyor.
+
 - **HDR tanı loglarında format-bazlı ekran uyumluluğu**: `ToneMappingRequired` alanı ekranın herhangi bir HDR türünü desteklemesine göre değil, Dolby Vision/HLG/HDR10 (HDR10+ dahil) içeriğin karşılık gelen native display capability'sine göre hesaplanıyor. Log yalnızca doğrulanabilir `NativeHdrDisplaySupported` durumunu bildiriyor; Dolby Vision codec işaretleri mime dışında `dvhe`/`dvh1` değerleriyle de tanınıyor. Codec hata mesajlarının beş yerelleştirmesinde doğrulanamayan “donanım/hardware” iddiası kaldırıldı.
 
 - **Nadir PiP serbest yeniden-boyutlandırmada videonun eski child ölçüsünde kalması**:

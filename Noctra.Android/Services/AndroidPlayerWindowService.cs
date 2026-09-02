@@ -170,6 +170,8 @@ public sealed class AndroidPlayerWindowService : IPlayerWindowService
         var content = window.DecorView?
             .FindViewById(global::Android.Resource.Id.Content) as ViewGroup;
         content?.SetBackgroundColor(backdropColor);
+        window.DecorView?.SetBackgroundColor(backdropColor);
+        window.SetBackgroundDrawable(new global::Android.Graphics.Drawables.ColorDrawable(backdropColor));
 
         // API 35+ forces transparent edge-to-edge system bars. On API 30-34,
         // explicitly match the selected Noctra shell backdrop.
