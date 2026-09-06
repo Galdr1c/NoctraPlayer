@@ -7,7 +7,7 @@
     <code>.NET 8 / .NET 10</code> | <code>Avalonia UI</code> | <code>LibVLC / ExoPlayer</code> | <code>SQLite</code> | <code>MSIX / AAB</code>
   </p>
   <p>
-    <img src="https://img.shields.io/badge/version-1.2.0-7b5fff?style=flat-square" alt="Version 1.2.0" />
+    <img src="https://img.shields.io/badge/version-1.2.1-7b5fff?style=flat-square" alt="Version 1.2.1" />
     <img src="https://img.shields.io/badge/platform-Windows%20%7C%20Android-0078d4?style=flat-square" alt="Windows & Android" />
     <img src="https://img.shields.io/badge/runtime-.NET%208%20%7C%2010-512bd4?style=flat-square" alt=".NET 8 / 10" />
     <img src="https://img.shields.io/badge/UI-Avalonia-ff3d8b?style=flat-square" alt="Avalonia" />

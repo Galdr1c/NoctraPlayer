@@ -1,0 +1,11 @@
+______________________________________________________________________________________________________________________________________________________________
+Noctra 1.0.1 — What's new
+
+Improved
+- Search accuracy: Finding channels and movies is now much more reliable with enhanced international and accented character matching (such as ö, ü, é, ç, ñ), whether typed with or without accents.
+
+______________________________________________________________________________________________________________________________________________________________
+Noctra 1.0.0 — What's new
+
+New
+- Initial release with full IPTV support, channel browsing, favorites, and playback.

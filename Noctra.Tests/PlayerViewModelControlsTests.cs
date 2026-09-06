@@ -766,6 +766,31 @@ namespace Noctra.Tests
         }
 
         [Fact]
+        public void InfoPanel_OpenAndCloseCommands_ToggleIsInfoPanelOpen()
+        {
+            var ctx = new PlayerTestContext();
+            Assert.False(ctx.VM.IsInfoPanelOpen);
+
+            ctx.VM.OpenInfoPanelCommand.Execute(null);
+            Assert.True(ctx.VM.IsInfoPanelOpen);
+
+            ctx.VM.ClosePanelsCommand.Execute(null);
+            Assert.False(ctx.VM.IsInfoPanelOpen);
+        }
+
+        [Fact]
+        public void VideoOverlayView_InfoPanelCloseButton_BoundToClosePanelsCommand()
+        {
+            var solutionDir = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
+            var axamlPath = Path.Combine(solutionDir, "Noctra.Avalonia", "Views", "VideoOverlayView.axaml");
+            Assert.True(File.Exists(axamlPath), $"Expected to find {axamlPath}");
+
+            var axamlContent = File.ReadAllText(axamlPath);
+            Assert.DoesNotContain("Command=\"{Binding OpenInfoPanelCommand}\" Classes=\"panelCloseBtn\"", axamlContent);
+            Assert.Contains("<Button Grid.Column=\"1\" Command=\"{Binding ClosePanelsCommand}\" Classes=\"panelCloseBtn\"", axamlContent);
+        }
+
+        [Fact]
         public void VolumeChanged_FromService_UpdatesVmVolume()
         {
             var ctx = new PlayerTestContext();

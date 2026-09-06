@@ -10,7 +10,7 @@
        see the version note in Noctra.Android.csproj. -->
   <PropertyGroup>
     <AvaloniaVersion>12.1.0</AvaloniaVersion>
-    <NoctraVersionPrefix Condition="'$(NoctraVersionPrefix)' == ''">1.2.0</NoctraVersionPrefix>
+    <NoctraVersionPrefix Condition="'$(NoctraVersionPrefix)' == ''">1.2.1</NoctraVersionPrefix>
     <NoctraPackageVersion Condition="'$(NoctraPackageVersion)' == ''">$(NoctraVersionPrefix).0</NoctraPackageVersion>
     <NoctraAuthors Condition="'$(NoctraAuthors)' == ''">Kynora Studio</NoctraAuthors>
     <NoctraCompany Condition="'$(NoctraCompany)' == ''">Kynora Studio</NoctraCompany>

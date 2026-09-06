@@ -1,0 +1,35 @@
+______________________________________________________________________________________________________________________________________________________________
+Noctra 1.2.1 — What's new
+
+Improved
+- Search accuracy: Finding channels and movies is now much more reliable with enhanced international and accented character matching (such as ö, ü, é, ç, ñ), whether typed with or without accents.
+
+Fixed
+- Resolved an issue where the close button on the video overlay's Info panel was unresponsive.
+
+______________________________________________________________________________________________________________________________________________________________
+Noctra 1.2.0 — What's new
+
+New
+- Update center: Check for and install new versions right from Settings.
+- Rate Noctra: After you've actually used the app, we'll ask if you'd like to leave a Store rating.
+- Welcome screen: A short, clear notice about what Noctra does (and doesn't) include, shown on first launch.
+- Better PIN protection: Lockout after failed attempts, weak-PIN warning, PIN reset, and screen-reader support.
+- Local playlists: Add a profile from a playlist file on your PC — with validation and progress feedback.
+- Easier sign-in: Show/hide password toggle and automatic MAC formatting for Stalker accounts.
+- Upgraded Download Center: Sort downloads (newest, A–Z, size), see how much space your downloads use, and retry or delete failed ones.
+- Right-click menus on cards: Add to Favorites or My List, remove from history, and more — right on the card.
+- New pickers for categories and sorting: Cleaner selection screens instead of dropdowns.
+- Clear search button in the header, plus faster and smarter search results.
+
+Improved
+- Program Guide: Program titles now appear in your preferred language, channel mapping is much more accurate (no more wrong-guide mix-ups), a single "Now" line shows your position, and large guide updates no longer stall.
+- Performance: Smoother scrolling with big download queues and long episode lists; faster startup, channel loading, and image loading.
+- Friendlier messages: Errors are now written in plain language — no technical jargon.
+- Better-looking app: Unified buttons, input fields, and cards; theme-aware logos; refreshed Premium badges.
+- Smarter Premium: Promo codes give clearer feedback, expired Premium refreshes automatically.
+- Playback: Improved resume, clearer playback info, and more reliable controls after the window loses and regains focus.
+- Downloads reliability: Paused, failed, and resumed downloads behave more consistently.
+
+Removed
+- Child Profile mode: We couldn't guarantee reliable content filtering, so it's gone. Existing child profiles are deleted on first launch after this update (you'll see a one-time notice).

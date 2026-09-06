@@ -6,10 +6,14 @@ using Noctra.Services.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
+using System.Globalization;
+using System.Linq.Expressions;
 using System.Net;
 using System.Net.Http.Headers;
+using System.Text;
 using Noctra.Core.Services;
 using Noctra.Diagnostics;
+using Noctra.Search;
 using System.Diagnostics;
 
 namespace Noctra.Services;
@@ -2318,6 +2322,9 @@ WHERE PlaylistId = {playlistId}
         };
     }
 
+    private static readonly char[] SearchTokenSeparators = [' ', '\t', '\r', '\n', '-', '_', '.', ',', ':', ';', '/', '\\', '|', '(', ')', '[', ']', '{', '}', '!', '?', '"', '\'', '%'];
+    private static readonly CultureInfo TurkishCulture = CultureInfo.GetCultureInfo("tr-TR");
+
     private IQueryable<Channel> BuildFilteredChannelQuery(AppDbContext context, int playlistId, string? searchText, string? group, ChannelType? type, bool onlyFavorites, List<string>? hiddenGroups = null)
     {
         var query = context.Channels
@@ -2326,9 +2333,8 @@ WHERE PlaylistId = {playlistId}
 
         if (!string.IsNullOrWhiteSpace(searchText))
         {
-            var search = searchText.ToLower();
-            query = query.Where(c => c.Name.ToLower().Contains(search) ||
-                                     (c.GroupTitle != null && c.GroupTitle.ToLower().Contains(search)));
+            var searchPredicate = BuildSearchTextPredicate(searchText);
+            query = query.Where(searchPredicate);
         }
 
         if (!string.IsNullOrEmpty(group))
@@ -2355,6 +2361,198 @@ WHERE PlaylistId = {playlistId}
         }
 
         return query;
+    }
+
+    internal static Expression<Func<Channel, bool>> BuildSearchTextPredicate(string searchText)
+    {
+        var tokens = ExtractSearchTokens(searchText);
+        if (tokens.Count == 0)
+        {
+            return c => true;
+        }
+
+        var parameter = Expression.Parameter(typeof(Channel), "c");
+        var nameProp = Expression.Property(parameter, nameof(Channel.Name));
+        var groupProp = Expression.Property(parameter, nameof(Channel.GroupTitle));
+        var likeMethod = typeof(DbFunctionsExtensions).GetMethod(
+            nameof(DbFunctionsExtensions.Like),
+            new[] { typeof(DbFunctions), typeof(string), typeof(string) })!;
+        var efFunctions = Expression.Constant(EF.Functions);
+        var nullString = Expression.Constant(null, typeof(string));
+
+        Expression? andExpr = null;
+
+        foreach (var token in tokens)
+        {
+            var variants = GenerateSearchVariants(token);
+            if (variants.Count == 0) continue;
+
+            Expression? tokenOrExpr = null;
+            foreach (var variant in variants)
+            {
+                var pattern = Expression.Constant($"%{variant}%");
+
+                // EF.Functions.Like(c.Name, "%variant%")
+                var nameLike = Expression.Call(likeMethod, efFunctions, nameProp, pattern);
+
+                // c.GroupTitle != null && EF.Functions.Like(c.GroupTitle, "%variant%")
+                var groupNotNull = Expression.NotEqual(groupProp, nullString);
+                var groupLikeCall = Expression.Call(likeMethod, efFunctions, groupProp, pattern);
+                var groupMatch = Expression.AndAlso(groupNotNull, groupLikeCall);
+
+                var variantMatch = Expression.OrElse(nameLike, groupMatch);
+
+                tokenOrExpr = tokenOrExpr == null
+                    ? variantMatch
+                    : Expression.OrElse(tokenOrExpr, variantMatch);
+            }
+
+            if (tokenOrExpr != null)
+            {
+                andExpr = andExpr == null
+                    ? tokenOrExpr
+                    : Expression.AndAlso(andExpr, tokenOrExpr);
+            }
+        }
+
+        if (andExpr == null)
+        {
+            return c => true;
+        }
+
+        return Expression.Lambda<Func<Channel, bool>>(andExpr, parameter);
+    }
+
+    internal static List<string> ExtractSearchTokens(string searchText)
+    {
+        var raw = searchText.Split(SearchTokenSeparators, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (raw.Length == 0)
+        {
+            var trimmed = searchText.Trim();
+            return trimmed.Length > 0 ? [trimmed] : [];
+        }
+
+        var list = new List<string>(Math.Min(raw.Length, 4));
+        foreach (var token in raw)
+        {
+            if (token.Length > 0)
+            {
+                list.Add(token);
+                if (list.Count >= 4) break;
+            }
+        }
+        return list;
+    }
+
+    internal static HashSet<string> GenerateSearchVariants(string token)
+    {
+        var variants = new HashSet<string>(StringComparer.Ordinal);
+        if (string.IsNullOrWhiteSpace(token)) return variants;
+
+        token = token.Trim();
+        variants.Add(token);
+
+        // Invariant forms
+        variants.Add(token.ToLowerInvariant());
+        variants.Add(token.ToUpperInvariant());
+
+        // Turkish culture forms
+        var trLower = token.ToLower(TurkishCulture);
+        var trUpper = token.ToUpper(TurkishCulture);
+        variants.Add(trLower);
+        variants.Add(trUpper);
+        variants.Add(TurkishCulture.TextInfo.ToTitleCase(trLower));
+
+        // ASCII / Diacritics Normalized form (e.g. öldürecekler -> oldurecekler, şirinler -> sirinler)
+        var normalized = SearchDocumentCache.Normalize(token);
+        if (!string.IsNullOrWhiteSpace(normalized))
+        {
+            variants.Add(normalized);
+            variants.Add(normalized.ToLowerInvariant());
+            variants.Add(normalized.ToUpperInvariant());
+            variants.Add(TurkishCulture.TextInfo.ToTitleCase(normalized.ToLowerInvariant()));
+        }
+
+        // Reverse diacritic substitutions (e.g. if user typed ASCII "oldurecekler", generate "öldürecekler", "cafe" -> "café", etc.)
+        foreach (var substituted in GenerateLanguageSubstitutions(token))
+        {
+            variants.Add(substituted);
+            variants.Add(substituted.ToLowerInvariant());
+            variants.Add(substituted.ToUpperInvariant());
+            variants.Add(TurkishCulture.TextInfo.ToTitleCase(substituted.ToLowerInvariant()));
+        }
+
+        variants.RemoveWhere(string.IsNullOrWhiteSpace);
+        return variants;
+    }
+
+    private static IEnumerable<string> GenerateLanguageSubstitutions(string s)
+    {
+        // 1. Turkish: o->ö, u->ü and s->ş, c->ç, g->ğ
+        var trVowels = SubstituteChars(s, ('o', 'ö'), ('u', 'ü'));
+        var hasTrVowels = !string.Equals(trVowels, s, StringComparison.OrdinalIgnoreCase);
+        if (hasTrVowels) yield return trVowels;
+
+        var trConsonants = SubstituteChars(s, ('s', 'ş'), ('c', 'ç'), ('g', 'ğ'));
+        var hasTrConsonants = !string.Equals(trConsonants, s, StringComparison.OrdinalIgnoreCase);
+        if (hasTrConsonants) yield return trConsonants;
+
+        if (hasTrVowels && hasTrConsonants)
+        {
+            yield return SubstituteChars(trVowels, ('s', 'ş'), ('c', 'ç'), ('g', 'ğ'));
+        }
+
+        // 2. German: a->ä, o->ö, u->ü
+        var deVowels = SubstituteChars(s, ('a', 'ä'), ('o', 'ö'), ('u', 'ü'));
+        if (!string.Equals(deVowels, s, StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(deVowels, trVowels, StringComparison.OrdinalIgnoreCase))
+        {
+            yield return deVowels;
+        }
+
+        // 3. French acute accent: e->é
+        var frAcute = SubstituteChars(s, ('e', 'é'));
+        if (!string.Equals(frAcute, s, StringComparison.OrdinalIgnoreCase))
+        {
+            yield return frAcute;
+        }
+
+        // 4. French diaeresis: i->ï
+        var frDiaeresis = SubstituteChars(s, ('i', 'ï'));
+        if (!string.Equals(frDiaeresis, s, StringComparison.OrdinalIgnoreCase))
+        {
+            yield return frDiaeresis;
+        }
+
+        // 5. Spanish: n->ñ
+        var esAccents = SubstituteChars(s, ('n', 'ñ'));
+        if (!string.Equals(esAccents, s, StringComparison.OrdinalIgnoreCase))
+        {
+            yield return esAccents;
+        }
+    }
+
+    private static string SubstituteChars(string s, params (char From, char To)[] mappings)
+    {
+        var sb = new StringBuilder(s.Length);
+        foreach (var ch in s)
+        {
+            var replaced = false;
+            foreach (var (from, to) in mappings)
+            {
+                if (char.ToLowerInvariant(ch) == from)
+                {
+                    sb.Append(char.IsUpper(ch) ? char.ToUpperInvariant(to) : to);
+                    replaced = true;
+                    break;
+                }
+            }
+            if (!replaced)
+            {
+                sb.Append(ch);
+            }
+        }
+        return sb.ToString();
     }
     public async Task UpdateProviderExpirationAsync(int providerId, DateTime expirationDate)
     {

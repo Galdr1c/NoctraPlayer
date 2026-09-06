@@ -185,7 +185,6 @@ _pkginfo.txt
 *.msix
 *.msixbundle
 *.msixupload
-windowsupdatenotes.txt
 
 # Visual Studio For Mac
 .DS_Store

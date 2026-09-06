@@ -16,8 +16,8 @@
       runtime reads them via PackageManager (AndroidAppVersionService).
       Do NOT replace these with $(NoctraVersionPrefix)/$(NoctraPackageVersion).
     -->
-    <ApplicationVersion>18</ApplicationVersion>
-    <ApplicationDisplayVersion>1.0.0</ApplicationDisplayVersion>
+    <ApplicationVersion>19</ApplicationVersion>
+    <ApplicationDisplayVersion>1.0.1</ApplicationDisplayVersion>
     <RuntimeIdentifiers Condition="'$(Configuration)' == 'Debug'">android-arm64;android-x64</RuntimeIdentifiers>
     <RuntimeIdentifier Condition="'$(Configuration)' == 'Release'">android-arm64</RuntimeIdentifier>
     <AndroidPackageFormat Condition="'$(Configuration)' == 'Debug'">apk</AndroidPackageFormat>

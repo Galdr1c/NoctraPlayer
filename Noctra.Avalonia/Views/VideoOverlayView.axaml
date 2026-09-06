@@ -845,7 +845,7 @@
                                 <TextBlock Text="{loc:Translate Player.Info.Title}" Classes="panelTitle"/>
                                 <Border Classes="panelTitleUnderline"/>
                             </StackPanel>
-                            <Button Grid.Column="1" Command="{Binding OpenInfoPanelCommand}" Classes="panelCloseBtn" VerticalAlignment="Top" Margin="16,-8,0,0">
+                            <Button Grid.Column="1" Command="{Binding ClosePanelsCommand}" Classes="panelCloseBtn" VerticalAlignment="Top" Margin="16,-8,0,0">
                                 <materialIcons:MaterialIcon Kind="Close" Width="20" Height="20" Foreground="{DynamicResource TextPrimaryBrush}"/>
                             </Button>
                         </Grid>

@@ -120,14 +120,25 @@ internal sealed class SearchDocumentCache
     internal static string Normalize(string? value)
     {
         if (string.IsNullOrWhiteSpace(value)) return string.Empty;
-        var builder = new StringBuilder(value.Length);
-        foreach (var character in value.Trim().ToLowerInvariant())
+        var formD = value.Trim().Normalize(NormalizationForm.FormD);
+        var builder = new StringBuilder(formD.Length);
+        foreach (var character in formD)
         {
-            builder.Append(character switch
+            var category = CharUnicodeInfo.GetUnicodeCategory(character);
+            if (category == UnicodeCategory.NonSpacingMark)
             {
-                '\u0131' => 'i', '\u015f' => 's', '\u011f' => 'g',
-                '\u00fc' => 'u', '\u00f6' => 'o', '\u00e7' => 'c', '\u0130' => 'i',
-                _ => char.IsLetterOrDigit(character) || char.IsWhiteSpace(character) ? character : ' '
+                continue;
+            }
+
+            var lower = char.ToLowerInvariant(character);
+            builder.Append(lower switch
+            {
+                '\u0131' => 'i',
+                '\u0130' => 'i',
+                '\u00df' => 's',
+                '\u00f8' => 'o',
+                '\u00e6' => 'a',
+                _ => char.IsLetterOrDigit(lower) || char.IsWhiteSpace(lower) ? lower : ' '
             });
         }
         return Regex.Replace(builder.ToString(), @"\s+", " ").Trim();
