@@ -21,7 +21,7 @@ public sealed class PlayBillingApiClientTests
                   "lineItems": [
                     {
                       "productId": "noctra_premium_monthly",
-                      "expiryTime": "2026-09-06T15:42:10Z",
+                      "expiryTime": "2099-09-06T15:42:10Z",
                       "autoRenewingPlan": { "autoRenewEnabled": true, "planId": "baseplan.monthly" },
                       "offerDetails": { "basePlanId": "baseplan.monthly", "offerId": "base_plan_offer" },
                       "offerPhase": { "basePrice": { "priceAmountMicros": "59990000", "priceCurrencyCode": "TRY" } }
@@ -36,7 +36,7 @@ public sealed class PlayBillingApiClientTests
 
         Assert.Equal("Subscription", result.EntitlementType);
         Assert.True(result.IsActive);
-        Assert.Equal(new DateTime(2026, 9, 6, 15, 42, 10, DateTimeKind.Utc), result.ExpiresAtUtc);
+        Assert.Equal(new DateTime(2099, 9, 6, 15, 42, 10, DateTimeKind.Utc), result.ExpiresAtUtc);
         // autoRenewing root'ta DEĞİL, lineItems[].autoRenewingPlan.autoRenewEnabled'da.
         Assert.True(result.AutoRenewEnabled);
         Assert.Equal("SUBSCRIPTION_STATE_ACTIVE", result.State);
