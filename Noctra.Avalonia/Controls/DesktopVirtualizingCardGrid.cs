@@ -12,6 +12,7 @@ using Avalonia.Layout;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Noctra.Core.Collections;
+using Noctra.UI.Layout;
 
 namespace Noctra.Avalonia.Controls;
 
@@ -21,7 +22,6 @@ namespace Noctra.Avalonia.Controls;
 /// </summary>
 public sealed class DesktopVirtualizingCardGrid : ListBox
 {
-    private const double CardGap = 16;
     private const double FallbackAvailableWidth = 1180;
     private const double MinimumStableWidth = 240;
 
@@ -184,7 +184,7 @@ public sealed class DesktopVirtualizingCardGrid : ListBox
             return;
         }
 
-        var metrics = CalculateMetrics(width, CardKind);
+        var metrics = AdaptiveCardGridMetrics.Calculate(width, ToAdaptiveKind(CardKind));
         if (metrics.Columns != _columns || Math.Abs(metrics.CardWidth - _cardWidth) > 8)
         {
             QueueFullRebuild();
@@ -253,7 +253,7 @@ public sealed class DesktopVirtualizingCardGrid : ListBox
             return false;
         }
 
-        var metrics = CalculateMetrics(width, CardKind);
+        var metrics = AdaptiveCardGridMetrics.Calculate(width, ToAdaptiveKind(CardKind));
         _columns = metrics.Columns;
         _cardWidth = metrics.CardWidth;
         var items = SourceItems?.Cast<object?>().Where(x => x is not null).Cast<object>()
@@ -276,23 +276,19 @@ public sealed class DesktopVirtualizingCardGrid : ListBox
         return true;
     }
 
+    private static AdaptiveCardGridKind ToAdaptiveKind(DesktopCardGridKind kind)
+        => kind switch
+        {
+            DesktopCardGridKind.Live => AdaptiveCardGridKind.Live,
+            DesktopCardGridKind.Series => AdaptiveCardGridKind.Series,
+            DesktopCardGridKind.ContinueWatching => AdaptiveCardGridKind.ContinueWatching,
+            _ => AdaptiveCardGridKind.Vod
+        };
+
     internal static GridMetrics CalculateMetrics(double availableWidth, DesktopCardGridKind kind)
     {
-        if (!double.IsFinite(availableWidth) || availableWidth < 2)
-        {
-            availableWidth = FallbackAvailableWidth;
-        }
-
-        var profile = kind == DesktopCardGridKind.Live
-            ? new GridProfile(300, 430, 5)
-            : new GridProfile(168, 220, 8);
-        var columns = Math.Max(1,
-            (int)Math.Floor((availableWidth + CardGap) / (profile.MinWidth + CardGap)));
-        columns = Math.Min(columns, profile.MaxColumns);
-        var cardWidth = Math.Floor((availableWidth - CardGap * (columns - 1)) / columns);
-        cardWidth = Math.Clamp(cardWidth, 2, profile.MaxWidth);
-        cardWidth = Math.Max(2, Math.Floor(cardWidth / 2) * 2);
-        return new GridMetrics(columns, cardWidth);
+        var metrics = AdaptiveCardGridMetrics.Calculate(availableWidth, ToAdaptiveKind(kind));
+        return new(metrics.Columns, metrics.CardWidth);
     }
 
     private bool TryDequeue(out PendingAppend append)
@@ -312,7 +308,6 @@ public sealed class DesktopVirtualizingCardGrid : ListBox
     }
 
     internal readonly record struct GridMetrics(int Columns, double CardWidth);
-    private readonly record struct GridProfile(double MinWidth, double MaxWidth, int MaxColumns);
     private sealed record PendingAppend(int StartingIndex, IReadOnlyList<object> Items);
 
     private sealed class RowControl : ContentControl

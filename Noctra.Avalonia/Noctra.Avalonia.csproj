@@ -82,6 +82,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Noctra.Core\Noctra.Core.csproj" />
+    <ProjectReference Include="..\Noctra.UI\Noctra.UI.csproj" />
   </ItemGroup>
 
   <ItemGroup>

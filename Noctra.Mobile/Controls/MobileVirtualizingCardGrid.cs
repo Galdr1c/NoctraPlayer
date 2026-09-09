@@ -16,6 +16,7 @@ using Avalonia.VisualTree;
 using Noctra.Core.Collections;
 using Noctra.Diagnostics;
 using Noctra.Mobile.Services;
+using Noctra.UI.Layout;
 
 namespace Noctra.Mobile.Controls;
 
@@ -36,7 +37,6 @@ public sealed record MobileCardGridRow(IReadOnlyList<object> Items);
 /// </summary>
 public sealed class MobileVirtualizingCardGrid : ListBox
 {
-    private const double CardGap = 16;
     private const double FallbackAvailableWidth = 720;
     private const double MinimumStableWidth = 120;
     private const int ResumeRecoveryAttempts = 3;
@@ -494,7 +494,7 @@ public sealed class MobileVirtualizingCardGrid : ListBox
             return;
         }
 
-        var metrics = CalculateMetrics(availableWidth, CardKind);
+        var metrics = AdaptiveCardGridMetrics.Calculate(availableWidth, ToAdaptiveKind(CardKind));
         if (Volatile.Read(ref _fullRebuildRequired) == 1 ||
             metrics.Columns != _columns ||
             Math.Abs(metrics.CardWidth - _cardWidth) > 8)
@@ -561,7 +561,7 @@ public sealed class MobileVirtualizingCardGrid : ListBox
             return false;
         }
 
-        var metrics = CalculateMetrics(availableWidth, CardKind);
+        var metrics = AdaptiveCardGridMetrics.Calculate(availableWidth, ToAdaptiveKind(CardKind));
         _columns = metrics.Columns;
         _cardWidth = metrics.CardWidth;
 
@@ -615,32 +615,16 @@ public sealed class MobileVirtualizingCardGrid : ListBox
         return true;
     }
 
-    private static GridMetrics CalculateMetrics(double availableWidth, MobileCardGridKind kind)
-    {
-        if (!double.IsFinite(availableWidth) || availableWidth < 2)
+    private static AdaptiveCardGridKind ToAdaptiveKind(MobileCardGridKind kind)
+        => kind switch
         {
-            availableWidth = 2;
-        }
-
-        var profile = kind switch
-        {
-            MobileCardGridKind.Live => new GridProfile(220, 410, 4),
-            MobileCardGridKind.ContinueWatching => new GridProfile(220, 410, 4),
-            _ => new GridProfile(150, 180, 6)
+            MobileCardGridKind.Live => AdaptiveCardGridKind.Live,
+            MobileCardGridKind.Vod => AdaptiveCardGridKind.Vod,
+            MobileCardGridKind.Series => AdaptiveCardGridKind.Series,
+            MobileCardGridKind.ContinueWatching => AdaptiveCardGridKind.ContinueWatching,
+            _ => AdaptiveCardGridKind.Vod
         };
-        var columns = Math.Max(
-            1,
-            (int)Math.Floor((availableWidth + CardGap) / (profile.MinWidth + CardGap)));
-        columns = Math.Min(columns, profile.MaxColumns);
 
-        var width = Math.Floor((availableWidth - CardGap * (columns - 1)) / columns);
-        width = Math.Clamp(width, 2, profile.MaxWidth);
-        var roundedWidth = Math.Floor(width / 2) * 2;
-        return new GridMetrics(columns, Math.Max(2, roundedWidth));
-    }
-
-    private readonly record struct GridProfile(double MinWidth, double MaxWidth, int MaxColumns);
-    private readonly record struct GridMetrics(int Columns, double CardWidth);
     private sealed record PendingAppend(int StartingIndex, IReadOnlyList<object> Items);
 
     private sealed class MobileCardGridRowControl : ContentControl

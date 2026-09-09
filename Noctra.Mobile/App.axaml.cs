@@ -111,6 +111,7 @@ public partial class App : Application
         {
             localizationService.SetLanguage((Services.GetService(typeof(ISettingsService)) as ISettingsService)?.Settings?.Language ?? "en");
             LocalizationSource.Instance.Initialize(localizationService);
+            Noctra.UI.Localization.LocalizationSource.Instance.Initialize(localizationService);
         }
 
         // ── Theme + Settings ─────────────────────────────────────────────────

@@ -35,6 +35,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Noctra.Core\Noctra.Core.csproj" />
+    <ProjectReference Include="..\Noctra.UI\Noctra.UI.csproj" />
     <ProjectReference Include="..\Noctra.Avalonia\Noctra.Avalonia.csproj" />
     <ProjectReference Include="..\tools\Noctra.Performance\Noctra.Performance.csproj" />
   </ItemGroup>

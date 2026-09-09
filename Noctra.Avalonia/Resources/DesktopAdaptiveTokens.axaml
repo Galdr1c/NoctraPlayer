@@ -1,0 +1,12 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <!-- Compatibility aliases used only by the expanded Windows host while
+       views migrate to AdaptiveLayoutMetrics and the canonical mobile tokens. -->
+  <Thickness x:Key="DesktopPagePadding">28,22,28,28</Thickness>
+  <x:Double x:Key="DesktopHeaderGap">18</x:Double>
+  <x:Double x:Key="DesktopContentMaxWidth">1680</x:Double>
+  <x:Double x:Key="DesktopSheetMaxWidth">720</x:Double>
+  <x:Double x:Key="DesktopCategoryMaxWidth">980</x:Double>
+  <x:Double x:Key="DesktopCardGap">16</x:Double>
+  <x:Double x:Key="DesktopControlHeight">44</x:Double>
+</ResourceDictionary>

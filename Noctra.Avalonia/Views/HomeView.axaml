@@ -1,81 +1,20 @@
-<UserControl x:CompileBindings="True" xmlns="https://github.com/avaloniaui"
+<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:Noctra.ViewModels"
-             xmlns:models="using:Noctra.Models"
              xmlns:controls="using:Noctra.Avalonia.Controls"
-             xmlns:views="using:Noctra.Avalonia.Views"
-             xmlns:loc="using:Noctra.Avalonia.Localization"
-             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
-             mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="600"
+             xmlns:shared="using:Noctra.UI.Views"
              x:Class="Noctra.Avalonia.Views.HomeView"
-             x:DataType="vm:MainViewModel">
-    <ScrollViewer x:Name="HomeScrollViewer" IsVisible="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.Home}}"
-                  VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
-                  ScrollChanged="HomeView_ScrollChanged"
-                  PointerWheelChanged="HomeView_PointerWheelChanged">
-          <StackPanel Margin="24">
-
-            <!-- Grid/Wrap: İzlemeye Devam Et -->
-            <StackPanel IsVisible="{Binding ContinueWatching.Count, Converter={StaticResource CountToVisibilityConverter}}" Margin="0,0,0,40">
-              <TextBlock Text="{loc:Translate Home.ContinueWatching}" FontSize="22" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,20"/>
-              
-              <ItemsControl ItemsSource="{Binding ContinueWatching}">
-                <ItemsControl.ItemsPanel>
-                  <ItemsPanelTemplate>
-                    <WrapPanel Orientation="Horizontal" />
-                  </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-                <ItemsControl.ItemTemplate>
-                  <DataTemplate x:DataType="models:Channel">
-                    <controls:ContinueWatchingCard Margin="0,0,20,20" />
-                  </DataTemplate>
-                </ItemsControl.ItemTemplate>
-              </ItemsControl>
-            </StackPanel>
-
-            <!-- Placeholder: Boş Durum -->
-            <StackPanel IsVisible="{Binding ContinueWatching.Count, Converter={StaticResource CountToVisibilityConverter}, ConverterParameter=invert}" 
-                        VerticalAlignment="Center" 
-                        HorizontalAlignment="Center" 
-                        Spacing="12"
-                        Margin="0,200,0,0">
-              <Image Source="{Binding ActualThemeVariant, RelativeSource={RelativeSource Self}, Converter={StaticResource LogoThemeConverter}, ConverterParameter=Full}"
-                     Width="100" Height="100"
-                     Opacity="0.6"
-                     Margin="0,0,0,10">
-                  <Image.Styles>
-                      <Style Selector="Image">
-                          <Style.Animations>
-                              <Animation Duration="0:0:2.5" IterationCount="Infinite" Easing="SineEaseInOut">
-                                  <KeyFrame Cue="0%"><Setter Property="Opacity" Value="0.4"/></KeyFrame>
-                                  <KeyFrame Cue="50%"><Setter Property="Opacity" Value="0.7"/></KeyFrame>
-                                  <KeyFrame Cue="100%"><Setter Property="Opacity" Value="0.4"/></KeyFrame>
-                              </Animation>
-                          </Style.Animations>
-                      </Style>
-                  </Image.Styles>
-              </Image>              <TextBlock Text="{loc:Translate Home.Welcome}" 
-                         FontSize="24" 
-                         FontWeight="Bold" 
-                         HorizontalAlignment="Center"
-                         Foreground="{DynamicResource TextPrimaryBrush}"/>
-              <TextBlock Text="{loc:Translate Home.EmptyState.Title}" 
-                         FontSize="16" 
-                         Opacity="0.7"
-                         HorizontalAlignment="Center"
-                         Foreground="{DynamicResource TextPrimaryBrush}"/>
-              <TextBlock Text="{loc:Translate Home.EmptyState.Description}" 
-                         FontSize="14" 
-                         Opacity="0.5"
-                         HorizontalAlignment="Center"
-                         TextWrapping="Wrap"
-                         TextAlignment="Center"
-                         MaxWidth="400"
-                         Foreground="{DynamicResource TextPrimaryBrush}"/>
-            </StackPanel>
-
-          </StackPanel>
-        </ScrollViewer>
+             x:DataType="vm:MainViewModel"
+             x:CompileBindings="False"
+             IsVisible="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.Home}}">
+  <shared:HomeContentView HasContent="{Binding ContinueWatching.Count, Converter={StaticResource CountToVisibilityConverter}}">
+    <shared:HomeContentView.ItemsHost>
+      <controls:DesktopVirtualizingCardGrid SourceItems="{Binding ContinueWatching}"
+                                            CardKind="ContinueWatching" />
+    </shared:HomeContentView.ItemsHost>
+    <shared:HomeContentView.EmptyArtwork>
+      <Image Source="{Binding ActualThemeVariant, RelativeSource={RelativeSource Self}, Converter={StaticResource LogoThemeConverter}, ConverterParameter=Full}"
+             Stretch="Uniform" />
+    </shared:HomeContentView.EmptyArtwork>
+  </shared:HomeContentView>
 </UserControl>

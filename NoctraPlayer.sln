@@ -15,6 +15,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Noctra.Mobile", "Noctra.Mob
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Noctra.Android", "Noctra.Android\Noctra.Android.csproj", "{1BA6CC21-A2EA-4392-993F-DE8F87E38804}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Noctra.UI", "Noctra.UI\Noctra.UI.csproj", "{A79B7481-5F1B-4FD0-A6FC-091A53296D02}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Noctra.Billing.Api", "Noctra.Billing.Api\Noctra.Billing.Api.csproj", "{5D6654A2-519E-42C6-B1D5-F6B93DF3BF20}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Noctra.Billing.Api.Tests", "Noctra.Billing.Api.Tests\Noctra.Billing.Api.Tests.csproj", "{F5BE3B0D-D4C5-4BAF-A535-0B07A572DCCD}"
@@ -101,6 +103,18 @@ Global
 		{1BA6CC21-A2EA-4392-993F-DE8F87E38804}.Release|x64.Build.0 = Release|Any CPU
 		{1BA6CC21-A2EA-4392-993F-DE8F87E38804}.Release|x86.ActiveCfg = Release|Any CPU
 		{1BA6CC21-A2EA-4392-993F-DE8F87E38804}.Release|x86.Build.0 = Release|Any CPU
+		{A79B7481-5F1B-4FD0-A6FC-091A53296D02}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A79B7481-5F1B-4FD0-A6FC-091A53296D02}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A79B7481-5F1B-4FD0-A6FC-091A53296D02}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{A79B7481-5F1B-4FD0-A6FC-091A53296D02}.Debug|x64.Build.0 = Debug|Any CPU
+		{A79B7481-5F1B-4FD0-A6FC-091A53296D02}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{A79B7481-5F1B-4FD0-A6FC-091A53296D02}.Debug|x86.Build.0 = Debug|Any CPU
+		{A79B7481-5F1B-4FD0-A6FC-091A53296D02}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A79B7481-5F1B-4FD0-A6FC-091A53296D02}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A79B7481-5F1B-4FD0-A6FC-091A53296D02}.Release|x64.ActiveCfg = Release|Any CPU
+		{A79B7481-5F1B-4FD0-A6FC-091A53296D02}.Release|x64.Build.0 = Release|Any CPU
+		{A79B7481-5F1B-4FD0-A6FC-091A53296D02}.Release|x86.ActiveCfg = Release|Any CPU
+		{A79B7481-5F1B-4FD0-A6FC-091A53296D02}.Release|x86.Build.0 = Release|Any CPU
 		{5D6654A2-519E-42C6-B1D5-F6B93DF3BF20}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{5D6654A2-519E-42C6-B1D5-F6B93DF3BF20}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5D6654A2-519E-42C6-B1D5-F6B93DF3BF20}.Debug|x64.ActiveCfg = Debug|Any CPU

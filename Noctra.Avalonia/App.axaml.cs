@@ -66,6 +66,7 @@ public partial class App : Application
             themeService.SetTheme(settings.Settings.IsDarkTheme);
             localizationService.SetLanguage(settings.Settings.Language ?? "en");
             LocalizationSource.Instance.Initialize(localizationService);
+            Noctra.UI.Localization.LocalizationSource.Instance.Initialize(localizationService);
             StartupLogger.Log("Theme and localization applied");
 
             settings.SettingsChanged += () =>
