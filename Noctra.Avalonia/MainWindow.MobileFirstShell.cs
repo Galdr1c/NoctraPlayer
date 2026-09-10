@@ -78,25 +78,25 @@ public partial class MainWindow
         var seriesIndex = rail.Children.IndexOf(NavSeriesBtn);
         rail.Children.Insert(seriesIndex >= 0 ? seriesIndex + 1 : rail.Children.Count, _desktopSearchNavButton);
 
-        var settingsSeparator = new Border
+        // Match the canonical mobile rail order: Favorites before My List.
+        var favoritesIndex = rail.Children.IndexOf(NavFavBtn);
+        var myListIndex = rail.Children.IndexOf(NavMyListBtn);
+        if (favoritesIndex > myListIndex && myListIndex >= 0)
         {
-            Height = 1,
-            Margin = new Thickness(8, 12),
-            Background = TryFindResource("BorderBrush", ActualThemeVariant, out var separatorBrush)
-                ? separatorBrush as Avalonia.Media.IBrush
-                : null
-        };
+            rail.Children.Remove(NavFavBtn);
+            myListIndex = rail.Children.IndexOf(NavMyListBtn);
+            rail.Children.Insert(myListIndex, NavFavBtn);
+        }
 
         _desktopSettingsNavButton = CreateRailButton(
             MaterialIconKind.CogOutline,
-            LocalizationSource.Instance["Shell.Settings.Tooltip"],
+            LocalizationSource.Instance["Settings.Title"],
             out _desktopSettingsNavText);
         _desktopSettingsNavButton.Click += DesktopSettingsNav_Click;
 
         var downloadsIndex = rail.Children.IndexOf(NavDownloadsBtn);
         var settingsIndex = downloadsIndex >= 0 ? downloadsIndex + 1 : rail.Children.Count;
-        rail.Children.Insert(settingsIndex, settingsSeparator);
-        rail.Children.Insert(settingsIndex + 1, _desktopSettingsNavButton);
+        rail.Children.Insert(settingsIndex, _desktopSettingsNavButton);
     }
 
     private static Button CreateRailButton(
