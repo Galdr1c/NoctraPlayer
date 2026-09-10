@@ -38,6 +38,7 @@ public partial class MainWindow
 
         CollapseLegacyDesktopHeader();
         AddMobileFirstRailActions();
+        EnableAdaptiveRailScrolling();
 
         _mainViewModel.PropertyChanged += MobileFirstShellViewModel_PropertyChanged;
         SideBar.PropertyChanged += MobileFirstShellSidebar_PropertyChanged;
@@ -106,6 +107,24 @@ public partial class MainWindow
         var downloadsIndex = rail.Children.IndexOf(NavDownloadsBtn);
         var settingsIndex = downloadsIndex >= 0 ? downloadsIndex + 1 : rail.Children.Count;
         rail.Children.Insert(settingsIndex, _desktopSettingsNavButton);
+    }
+
+    private void EnableAdaptiveRailScrolling()
+    {
+        // The original desktop rail was a bare StackPanel. With Search + Settings
+        // now matching the mobile destination set, compact-height windows could
+        // clip the bottom destinations. Keep the same visual tree and animations,
+        // but make the rail vertically scrollable when its content no longer fits.
+        if (SideBar.Child is not StackPanel rail)
+            return;
+
+        SideBar.Child = null;
+        SideBar.Child = new ScrollViewer
+        {
+            Content = rail,
+            VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto,
+            HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled
+        };
     }
 
     private static Button CreateRailButton(
