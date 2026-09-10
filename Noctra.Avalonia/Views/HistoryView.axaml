@@ -2,26 +2,47 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Noctra.ViewModels"
              xmlns:controls="using:Noctra.Avalonia.Controls"
-             xmlns:loc="using:Noctra.Avalonia.Localization"
+             xmlns:loc="using:Noctra.UI.Localization"
+             xmlns:shared="using:Noctra.UI.Views"
              xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="Noctra.Avalonia.Views.HistoryView"
              x:CompileBindings="False">
   <Grid IsVisible="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.History}}">
-    <Grid Margin="24,24,24,0" RowDefinitions="Auto,*" RowSpacing="{DynamicResource DesktopHeaderGap}">
-      <TextBlock Text="{loc:Translate History.Title}" Classes="DesktopPageTitle" />
-      <controls:DesktopSectionedCardFeed Grid.Row="1" ScrollChanged="HistoryScrollViewer_ScrollChanged">
-        <controls:DesktopSectionedCardFeed.Sections>
-          <controls:DesktopCardSection Header="{loc:Translate History.LiveTv}" CardKind="Live" PresentationMode="History" SourceItems="{Binding HistoryLiveChannels}" />
-          <controls:DesktopCardSection Header="{loc:Translate History.Series}" CardKind="Series" PresentationMode="History" SourceItems="{Binding HistorySeriesItems}" />
-          <controls:DesktopCardSection Header="{loc:Translate History.Movies}" CardKind="Vod" PresentationMode="History" SourceItems="{Binding HistoryVodChannels}" />
-        </controls:DesktopSectionedCardFeed.Sections>
-      </controls:DesktopSectionedCardFeed>
-      <StackPanel Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center"
-                  IsVisible="{Binding ShowHistoryEmptyState}">
-        <icons:MaterialIcon Kind="History" Width="64" Height="64" Foreground="{DynamicResource TextMutedBrush}" Opacity="0.5" />
-        <TextBlock Text="{loc:Translate History.Empty.Title}" FontSize="20" FontWeight="Bold" Margin="0,16,0,4" TextAlignment="Center" />
-        <TextBlock Text="{loc:Translate History.Empty.Description}" Foreground="{DynamicResource TextMutedBrush}" TextAlignment="Center" />
-      </StackPanel>
-    </Grid>
+    <shared:AdaptiveLibraryView
+        Title="{loc:Translate History.Title}"
+        IsEmpty="{Binding ShowHistoryEmptyState}"
+        EmptyIconKind="History"
+        EmptyTitle="{loc:Translate History.Empty.Title}"
+        EmptyDescription="{loc:Translate History.Empty.Description}">
+      <shared:AdaptiveLibraryView.HeaderActionHost>
+        <Button Command="{Binding ClearHistoryCommand}"
+                IsVisible="{Binding ShowHistoryEmptyState, Converter={StaticResource InverseBoolConverter}}"
+                MinHeight="48"
+                Padding="12,6"
+                Background="Transparent"
+                BorderBrush="{DynamicResource ErrorBrush}"
+                BorderThickness="1"
+                CornerRadius="8"
+                VerticalAlignment="Center">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <icons:MaterialIcon Kind="TrashCanOutline" Width="14" Height="14"
+                                Foreground="{DynamicResource ErrorBrush}" />
+            <TextBlock Text="{loc:Translate Settings.Privacy.Clear.Title}"
+                       Foreground="{DynamicResource ErrorBrush}"
+                       FontSize="{DynamicResource FCaption}"
+                       FontWeight="Medium" />
+          </StackPanel>
+        </Button>
+      </shared:AdaptiveLibraryView.HeaderActionHost>
+      <shared:AdaptiveLibraryView.ItemsHost>
+        <controls:DesktopSectionedCardFeed ScrollChanged="HistoryScrollViewer_ScrollChanged">
+          <controls:DesktopSectionedCardFeed.Sections>
+            <controls:DesktopCardSection Header="{loc:Translate History.LiveTv}" CardKind="Live" PresentationMode="History" SourceItems="{Binding HistoryLiveChannels}" />
+            <controls:DesktopCardSection Header="{loc:Translate History.Series}" CardKind="Series" PresentationMode="History" SourceItems="{Binding HistorySeriesItems}" />
+            <controls:DesktopCardSection Header="{loc:Translate History.Movies}" CardKind="Vod" PresentationMode="History" SourceItems="{Binding HistoryVodChannels}" />
+          </controls:DesktopSectionedCardFeed.Sections>
+        </controls:DesktopSectionedCardFeed>
+      </shared:AdaptiveLibraryView.ItemsHost>
+    </shared:AdaptiveLibraryView>
   </Grid>
 </UserControl>
