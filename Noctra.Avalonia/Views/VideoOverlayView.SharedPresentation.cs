@@ -31,12 +31,19 @@ public partial class VideoOverlayView
         if (overlayContent is null || overlayContent.Children.Count < 3)
             return;
 
-        // VideoOverlayView's first three visual children are the legacy top gradient,
-        // desktop-only top bar, and legacy transport/timeline surface. Keep the rest
-        // (EPG, platform panels, toasts and native-window behavior) untouched.
+        // The first three children are the legacy top gradient, desktop top bar,
+        // and desktop transport/timeline. Keep EPG/native-window behavior intact.
         overlayContent.Children[0].IsVisible = false;
         overlayContent.Children[1].IsVisible = false;
         overlayContent.Children[2].IsVisible = false;
+
+        // Common panel states now render through the shared mobile-first sheet.
+        // Suppress only their legacy desktop visuals; episodes/subtitle appearance
+        // deliberately remain desktop-specific until their dependencies are shared.
+        SuppressLegacyPanel("AudioSettingsPanel");
+        SuppressLegacyPanel("QualitySettingsPanel");
+        SuppressLegacyPanel("InfoPanel");
+        SuppressLegacyPanel("SleepTimerPanel");
 
         _sharedPlayerChrome = new PlayerChromeView
         {
@@ -50,5 +57,15 @@ public partial class VideoOverlayView
 
         overlayContent.Children.Add(_sharedPlayerChrome);
         overlayContent.Children.Add(_sharedPlayerSheets);
+    }
+
+    private void SuppressLegacyPanel(string name)
+    {
+        var panel = this.FindControl<Grid>(name);
+        if (panel is null)
+            return;
+
+        panel.Opacity = 0;
+        panel.IsHitTestVisible = false;
     }
 }
