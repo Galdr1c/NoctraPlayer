@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Material.Icons;
+using Noctra.UI.Layout;
 
 namespace Noctra.UI.Views;
 
@@ -39,6 +40,14 @@ public partial class AdaptiveCatalogView : UserControl
     public AdaptiveCatalogView()
     {
         InitializeComponent();
+        ApplyAdaptiveLayout(Bounds.Width);
+        SizeChanged += (_, args) => ApplyAdaptiveLayout(args.NewSize.Width);
+    }
+
+    private void ApplyAdaptiveLayout(double width)
+    {
+        var metrics = AdaptiveLayoutMetrics.ForWidth(width);
+        LayoutRoot.Margin = new Thickness(metrics.PagePadding);
     }
 
     public event EventHandler<RoutedEventArgs>? SortRequested;

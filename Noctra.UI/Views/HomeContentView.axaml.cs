@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
+using Noctra.UI.Layout;
 
 namespace Noctra.UI.Views;
 
@@ -17,6 +18,14 @@ public partial class HomeContentView : UserControl
     public HomeContentView()
     {
         InitializeComponent();
+        ApplyAdaptiveLayout(Bounds.Width);
+        SizeChanged += (_, args) => ApplyAdaptiveLayout(args.NewSize.Width);
+    }
+
+    private void ApplyAdaptiveLayout(double width)
+    {
+        var metrics = AdaptiveLayoutMetrics.ForWidth(width);
+        LayoutRoot.Margin = new Thickness(metrics.PagePadding);
     }
 
     public bool HasContent

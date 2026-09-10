@@ -5,7 +5,8 @@
              x:Class="Noctra.UI.Views.AdaptiveCatalogView"
              x:Name="Root"
              x:CompileBindings="False">
-  <Grid Margin="{DynamicResource PagePaddingLarge}"
+  <Grid x:Name="LayoutRoot"
+        Margin="{DynamicResource PagePaddingLarge}"
         RowDefinitions="Auto,Auto,*"
         RowSpacing="20">
     <Grid Grid.Row="0" ColumnDefinitions="*,Auto">

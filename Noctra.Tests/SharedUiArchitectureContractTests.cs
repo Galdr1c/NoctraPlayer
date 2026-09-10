@@ -260,6 +260,19 @@ public sealed class SharedUiArchitectureContractTests
         }
     }
 
+    [Fact]
+    public void SharedPages_ApplyAdaptiveMetricsFromTheirActualWidth()
+    {
+        var root = FindSolutionRoot();
+        foreach (var view in new[] { "HomeContentView.axaml.cs", "AdaptiveCatalogView.axaml.cs" })
+        {
+            var source = File.ReadAllText(Path.Combine(root, "Noctra.UI", "Views", view));
+            Assert.Contains("SizeChanged +=", source, StringComparison.Ordinal);
+            Assert.Contains("AdaptiveLayoutMetrics.ForWidth", source, StringComparison.Ordinal);
+            Assert.Contains("new Thickness(metrics.PagePadding)", source, StringComparison.Ordinal);
+        }
+    }
+
     private static object? ReadProperty(object instance, string name)
     {
         var property = instance.GetType().GetProperty(name);

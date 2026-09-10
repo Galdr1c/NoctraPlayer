@@ -4,7 +4,8 @@
              x:Class="Noctra.UI.Views.HomeContentView"
              x:Name="Root"
              x:CompileBindings="False">
-  <Grid RowDefinitions="Auto,*"
+  <Grid x:Name="LayoutRoot"
+        RowDefinitions="Auto,*"
         Margin="{DynamicResource PagePaddingLarge}">
     <TextBlock Grid.Row="0"
                Text="{loc:Translate Home.ContinueWatching}"

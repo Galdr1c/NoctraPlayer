@@ -548,7 +548,7 @@ public class MobileReleaseGuardTests
             var view = ReadProjectFile("Noctra.Mobile", "Views", viewName);
 
             Assert.DoesNotContain("ItemsSource=\"{Binding SortOptions}\"", view);
-            Assert.Contains("Click=\"OpenSortSelectionSheet_Click\"", view);
+            Assert.Contains("SortRequested=\"OpenSortSelectionSheet_Click\"", view);
             Assert.Contains("<views:MobileSelectionSheet", view);
             Assert.DoesNotContain("<ComboBox", view);
         }
