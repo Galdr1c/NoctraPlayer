@@ -50,10 +50,11 @@ public sealed class SharedUiArchitectureTests
         Assert.Contains("<sharedPlayer:PlayerMoreSheet", sheets, StringComparison.Ordinal);
         Assert.Contains("<sharedPlayer:PlayerTrackSheet", sheets, StringComparison.Ordinal);
         Assert.Contains("<sharedPlayer:PlayerQualitySheet", sheets, StringComparison.Ordinal);
+        Assert.Contains("<sharedPlayer:PlayerSubtitleAppearanceSheet", sheets, StringComparison.Ordinal);
         Assert.Contains("<sharedPlayer:PlayerInfoSheet", sheets, StringComparison.Ordinal);
         Assert.Contains("<sharedPlayer:PlayerSleepSheet", sheets, StringComparison.Ordinal);
         Assert.Contains("<player:MobilePlayerEpisodesSheet", sheets, StringComparison.Ordinal);
-        Assert.Contains("<player:MobilePlayerSubtitleAppearanceSheet", sheets, StringComparison.Ordinal);
+        Assert.DoesNotContain("<player:MobilePlayerSubtitleAppearanceSheet", sheets, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -104,18 +105,37 @@ public sealed class SharedUiArchitectureTests
     }
 
     [Fact]
-    public void SharedSheetOverlay_OnlyOwnsPanelsThatAreActuallyShared()
+    public void SharedSheetOverlay_OwnsEveryPlatformIndependentPlayerPanel()
     {
+        var sheetXaml = LoadProjectFile(
+            "Noctra.UI", "Views", "Player", "PlayerSheetOverlay.axaml");
         var sheetCode = LoadProjectFile(
             "Noctra.UI", "Views", "Player", "PlayerSheetOverlay.axaml.cs");
 
-        Assert.Contains("IsActionsPanelOpen", sheetCode, StringComparison.Ordinal);
-        Assert.Contains("IsAudioSettingsOpen", sheetCode, StringComparison.Ordinal);
-        Assert.Contains("IsQualitySettingsOpen", sheetCode, StringComparison.Ordinal);
-        Assert.Contains("IsInfoPanelOpen", sheetCode, StringComparison.Ordinal);
-        Assert.Contains("IsSleepTimerPanelOpen", sheetCode, StringComparison.Ordinal);
+        Assert.Contains("PlayerMoreSheet", sheetXaml, StringComparison.Ordinal);
+        Assert.Contains("PlayerTrackSheet", sheetXaml, StringComparison.Ordinal);
+        Assert.Contains("PlayerQualitySheet", sheetXaml, StringComparison.Ordinal);
+        Assert.Contains("PlayerSubtitleAppearanceSheet", sheetXaml, StringComparison.Ordinal);
+        Assert.Contains("PlayerInfoSheet", sheetXaml, StringComparison.Ordinal);
+        Assert.Contains("PlayerSleepSheet", sheetXaml, StringComparison.Ordinal);
+        Assert.Contains("IsSubtitleAppearanceSettingsOpen", sheetCode, StringComparison.Ordinal);
         Assert.DoesNotContain("IsEpisodesPanelOpen", sheetCode, StringComparison.Ordinal);
-        Assert.DoesNotContain("IsSubtitleAppearanceSettingsOpen", sheetCode, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void SearchChrome_IsSharedWhileResultsVirtualizationStaysPlatformSpecific()
+    {
+        var shared = LoadProjectFile("Noctra.UI", "Views", "AdaptiveSearchView.axaml");
+        var mobile = LoadProjectFile("Noctra.Mobile", "Views", "MobileSearchView.axaml");
+        var desktop = LoadProjectFile("Noctra.Avalonia", "Views", "SearchView.axaml");
+
+        Assert.Contains("SearchQuery", shared, StringComparison.Ordinal);
+        Assert.Contains("ShowSearchIdleState", shared, StringComparison.Ordinal);
+        Assert.Contains("ShowSearchEmptyState", shared, StringComparison.Ordinal);
+        Assert.Contains("<shared:AdaptiveSearchView", mobile, StringComparison.Ordinal);
+        Assert.Contains("<shared:AdaptiveSearchView", desktop, StringComparison.Ordinal);
+        Assert.Contains("MobileSectionedCardFeed", mobile, StringComparison.Ordinal);
+        Assert.Contains("DesktopSectionedCardFeed", desktop, StringComparison.Ordinal);
     }
 
     private static string LoadProjectFile(params string[] parts)
