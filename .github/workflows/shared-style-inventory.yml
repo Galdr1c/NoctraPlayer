@@ -1,0 +1,45 @@
+name: Shared Style Inventory
+
+on:
+  push:
+    branches:
+      - refactor/shared-control-themes
+
+jobs:
+  inventory:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inventory theme keys and usages
+        shell: pwsh
+        run: |
+          $files = @(
+            'Noctra.Mobile/Resources/Styles.axaml',
+            'Noctra.Avalonia/Resources/Styles.axaml',
+            'Noctra.Avalonia/Resources/DesktopModernStyles.axaml',
+            'Noctra.UI/Resources/CommonStyles.axaml',
+            'Noctra.UI/Resources/SettingsStyles.axaml'
+          )
+          foreach ($file in $files) {
+            Write-Host "===== $file ====="
+            if (-not (Test-Path $file)) { Write-Host 'MISSING'; continue }
+            $text = [IO.File]::ReadAllText($file)
+            $keys = [regex]::Matches($text, 'x:Key="([^"]+)"') | ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique
+            Write-Host '--- x:Key inventory ---'
+            $keys | ForEach-Object { Write-Host $_ }
+            $classes = [regex]::Matches($text, 'Selector="[^"]*\.([A-Za-z0-9_-]+)') | ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique
+            Write-Host '--- selector classes ---'
+            $classes | ForEach-Object { Write-Host $_ }
+          }
+
+          Write-Host '===== RESOURCE USAGE NAMES ====='
+          $all = Get-ChildItem Noctra.Mobile,Noctra.Avalonia,Noctra.UI -Recurse -File -Include *.axaml,*.cs
+          $usage = foreach ($f in $all) {
+            $text = [IO.File]::ReadAllText($f.FullName)
+            foreach ($m in [regex]::Matches($text, '\{(?:Static|Dynamic)Resource\s+([^}\s]+)')) {
+              [pscustomobject]@{ Name = $m.Groups[1].Value; File = $f.FullName }
+            }
+          }
+          $usage | Group-Object Name | Sort-Object Name | ForEach-Object {
+            Write-Host ("{0} :: {1}" -f $_.Name, ($_.Group.File | Sort-Object -Unique | ForEach-Object { $_.Replace((Get-Location).Path + [IO.Path]::DirectorySeparatorChar,'') } -join ', '))
+          }
