@@ -47,8 +47,8 @@ public sealed class DesktopMobileFirstShellTests
 
         Assert.Contains("EnableAdaptiveRailScrolling();", adapter, StringComparison.Ordinal);
         Assert.Contains("SideBar.Child = new ScrollViewer", adapter, StringComparison.Ordinal);
-        Assert.Contains("VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto", adapter, StringComparison.Ordinal);
-        Assert.Contains("HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled", adapter, StringComparison.Ordinal);
+        Assert.Contains("VerticalScrollBarVisibility = global::Avalonia.Controls.Primitives.ScrollBarVisibility.Auto", adapter, StringComparison.Ordinal);
+        Assert.Contains("HorizontalScrollBarVisibility = global::Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled", adapter, StringComparison.Ordinal);
     }
 
     [Fact]
