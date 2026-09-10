@@ -62,7 +62,7 @@ jobs:
       - name: Run focused shared UI tests
         shell: pwsh
         run: |
-          dotnet test Noctra.Tests/Noctra.Tests.csproj -c Debug --no-restore --filter "FullyQualifiedName~SharedThemeCanonicalizationTests|FullyQualifiedName~SharedUiArchitectureContractTests|FullyQualifiedName~SharedMobileSearchInputContractTests|FullyQualifiedName~DesktopMobileFirstShellTests|FullyQualifiedName~SharedUiHardeningTests|FullyQualifiedName~MobileTextBoxes_UseAccessibleTouchTargetsAndNoctraSelectionColors"
+          dotnet test Noctra.Tests/Noctra.Tests.csproj -c Debug --filter "FullyQualifiedName~SharedThemeCanonicalizationTests|FullyQualifiedName~SharedUiArchitectureContractTests|FullyQualifiedName~SharedMobileSearchInputContractTests|FullyQualifiedName~DesktopMobileFirstShellTests|FullyQualifiedName~SharedUiHardeningTests|FullyQualifiedName~MobileTextBoxes_UseAccessibleTouchTargetsAndNoctraSelectionColors"
 
       - name: Commit validated cleanup
         shell: pwsh
