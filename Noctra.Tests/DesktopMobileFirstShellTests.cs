@@ -77,6 +77,7 @@ public sealed class DesktopMobileFirstShellTests
         var adapter = Source("Noctra.Avalonia", "MainWindow.MobileFirstShell.cs");
         var sharedSettings = Source("Noctra.UI", "Views", "AdaptiveSettingsOverviewView.axaml");
         var sharedSettingsCode = Source("Noctra.UI", "Views", "AdaptiveSettingsOverviewView.axaml.cs");
+        var commonSections = Source("Noctra.UI", "Views", "SettingsCommonSectionsView.axaml");
 
         var handlerStart = adapter.IndexOf("private async void DesktopSettingsNav_Click", StringComparison.Ordinal);
         var handlerEnd = adapter.IndexOf("private void DesktopPrimaryNavigation_Click", handlerStart, StringComparison.Ordinal);
@@ -89,12 +90,13 @@ public sealed class DesktopMobileFirstShellTests
         Assert.Contains("MainContentArea.Children.Add(_desktopSettingsPageHost)", adapter, StringComparison.Ordinal);
         Assert.Contains("ScopedServiceLease<SettingsViewModel>.Create", adapter, StringComparison.Ordinal);
         Assert.Contains("lease.DisposeAsync()", adapter, StringComparison.Ordinal);
-        Assert.Contains("SettingsSectionCard", sharedSettings, StringComparison.Ordinal);
-        Assert.Contains("Settings.Profile.ActiveProfile", sharedSettings, StringComparison.Ordinal);
-        Assert.Contains("Settings.Account.Title", sharedSettings, StringComparison.Ordinal);
-        Assert.Contains("GlobalSettings.Appearance.Title", sharedSettings, StringComparison.Ordinal);
-        Assert.Contains("Settings.Playback.AutoPlayNext", sharedSettings, StringComparison.Ordinal);
-        Assert.Contains("_viewModel.EnableAutoSave()", sharedSettingsCode, StringComparison.Ordinal);
+        Assert.Contains("SettingsCommonSectionsView", sharedSettings, StringComparison.Ordinal);
+        Assert.Contains("SettingsSectionCard", commonSections, StringComparison.Ordinal);
+        Assert.Contains("Settings.Profile.ActiveProfile", commonSections, StringComparison.Ordinal);
+        Assert.Contains("Settings.Account.Title", commonSections, StringComparison.Ordinal);
+        Assert.Contains("GlobalSettings.Appearance.Title", commonSections, StringComparison.Ordinal);
+        Assert.Contains("Settings.Playback.AutoPlayNext", commonSections, StringComparison.Ordinal);
+        Assert.Contains("viewModel.EnableAutoSave()", sharedSettingsCode, StringComparison.Ordinal);
     }
 
     [Fact]
