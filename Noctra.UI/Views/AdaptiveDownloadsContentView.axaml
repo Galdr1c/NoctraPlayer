@@ -1,0 +1,163 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:Noctra.ViewModels;assembly=Noctra.Core"
+             xmlns:loc="using:Noctra.UI.Localization"
+             xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             xmlns:avaloniaConverters="clr-namespace:Avalonia.Data.Converters;assembly=Avalonia.Base"
+             x:Class="Noctra.UI.Views.AdaptiveDownloadsContentView"
+             x:Name="Root"
+             x:DataType="vm:MainViewModel"
+             x:CompileBindings="False">
+  <UserControl.Styles>
+    <Style Selector="Button.downloadDangerAction">
+      <Setter Property="MinHeight" Value="44" />
+      <Setter Property="Padding" Value="12,0" />
+      <Setter Property="Background" Value="{DynamicResource DangerSubtleBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource ErrorBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource ErrorBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="6" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Button.downloadDangerAction:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource InteractiveHoverBrush}" />
+    </Style>
+    <Style Selector="Button.downloadDangerAction:pressed /template/ ContentPresenter">
+      <Setter Property="Opacity" Value="0.78" />
+    </Style>
+  </UserControl.Styles>
+
+  <StackPanel x:Name="LayoutRoot" Margin="24" Spacing="20">
+    <StackPanel Spacing="4">
+      <TextBlock Text="{loc:Translate Downloads.Title}"
+                 FontSize="{DynamicResource FDisplaySmall}"
+                 FontWeight="Bold"
+                 Foreground="{DynamicResource TextPrimaryBrush}" />
+      <TextBlock Text="{Binding TotalDownloadsInfoText}"
+                 Foreground="{DynamicResource TextMutedBrush}"
+                 FontSize="{DynamicResource FCaption}"
+                 TextWrapping="Wrap"
+                 IsVisible="{Binding HasDownloadedItems}" />
+    </StackPanel>
+
+    <Border Background="{DynamicResource Surface0Brush}"
+            CornerRadius="8"
+            Padding="20"
+            BorderBrush="{DynamicResource BorderBrush}"
+            BorderThickness="1"
+            ClipToBounds="True"
+            IsVisible="{Binding StorageUsageDetailText, Converter={x:Static avaloniaConverters:StringConverters.IsNotNullOrEmpty}}">
+      <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto">
+        <icons:MaterialIcon Kind="Database"
+                            Foreground="{DynamicResource AccentBrush}"
+                            Width="48" Height="48" />
+
+        <StackPanel Grid.Column="1" Margin="16,0,0,0" VerticalAlignment="Center" Spacing="12">
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+            <TextBlock Text="{loc:Translate Downloads.Storage.Title}"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
+                       FontWeight="SemiBold"
+                       FontSize="{DynamicResource FTitleL}" />
+            <TextBlock Grid.Column="1"
+                       Text="{Binding StorageUsageDetailText}"
+                       Foreground="{DynamicResource TextMutedBrush}"
+                       FontSize="{DynamicResource FCaption}"
+                       VerticalAlignment="Center" />
+          </Grid>
+
+          <Border Height="8" Background="{DynamicResource Bg1Brush}" CornerRadius="2" ClipToBounds="True">
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="{Binding StorageOtherPercent, Converter={StaticResource DoubleToStarGridLengthConverter}}" />
+                <ColumnDefinition Width="{Binding StorageNoctraPercent, Converter={StaticResource DoubleToStarGridLengthConverter}}" />
+                <ColumnDefinition Width="{Binding StoragePendingPercent, Converter={StaticResource DoubleToStarGridLengthConverter}}" />
+                <ColumnDefinition Width="{Binding StorageFreePercent, Converter={StaticResource DoubleToStarGridLengthConverter}}" />
+              </Grid.ColumnDefinitions>
+              <Rectangle Grid.Column="0" Fill="{DynamicResource AccentLightBrush}" />
+              <Rectangle Grid.Column="1" Fill="{DynamicResource AccentBrush}" />
+              <Rectangle Grid.Column="2" Fill="{DynamicResource AccentBrush}" Opacity="0.5" />
+              <Rectangle Grid.Column="3" Fill="Transparent" />
+            </Grid>
+          </Border>
+
+          <WrapPanel HorizontalAlignment="Left">
+            <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,12,0">
+              <Border Width="10" Height="10" CornerRadius="2" Background="{DynamicResource AccentLightBrush}" />
+              <TextBlock Text="{loc:Translate Downloads.Storage.Other}" Foreground="{DynamicResource TextMutedBrush}" FontSize="{DynamicResource FOverline}" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,12,0">
+              <Border Width="10" Height="10" CornerRadius="2" Background="{DynamicResource AccentBrush}" />
+              <TextBlock Text="{loc:Translate Downloads.Storage.Noctra}" Foreground="{DynamicResource TextMutedBrush}" FontSize="{DynamicResource FOverline}" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,12,0">
+              <Border Width="10" Height="10" CornerRadius="2" Background="{DynamicResource AccentBrush}" Opacity="0.5" />
+              <TextBlock Text="{loc:Translate Downloads.Storage.Pending}" Foreground="{DynamicResource TextMutedBrush}" FontSize="{DynamicResource FOverline}" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <Border Width="10" Height="10" CornerRadius="2" BorderThickness="1" BorderBrush="{DynamicResource TextMutedBrush}" Opacity="0.3" />
+              <TextBlock Text="{loc:Translate Downloads.Storage.Free}" Foreground="{DynamicResource TextMutedBrush}" FontSize="{DynamicResource FOverline}" />
+            </StackPanel>
+          </WrapPanel>
+
+          <TextBlock Text="{Binding StorageFunFactText}"
+                     FontSize="{DynamicResource FOverline}"
+                     FontWeight="SemiBold"
+                     Foreground="{DynamicResource AccentBrush}"
+                     IsVisible="{Binding StorageFunFactText, Converter={x:Static avaloniaConverters:StringConverters.IsNotNullOrEmpty}}" />
+        </StackPanel>
+
+        <StackPanel Grid.Column="2" Spacing="8" Margin="16,0,0,0" VerticalAlignment="Center">
+          <Button Classes="downloadDangerAction"
+                  Command="{Binding DeleteAllDownloadsCommand}"
+                  IsVisible="{Binding HasDownloadedItems}"
+                  AutomationProperties.Name="{loc:Translate Downloads.Action.DeleteAll}">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <icons:MaterialIcon Kind="TrashCanOutline" Width="16" Height="16" />
+              <TextBlock Text="{loc:Translate Downloads.Action.DeleteAll}" />
+            </StackPanel>
+          </Button>
+          <ContentControl Content="{Binding PlatformStorageActions, ElementName=Root}"
+                          HorizontalContentAlignment="Stretch" />
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <Border Background="{DynamicResource DangerSubtleBrush}"
+            CornerRadius="6"
+            Padding="10,6"
+            IsVisible="{Binding ShowStorageWarning}">
+      <StackPanel Orientation="Horizontal" Spacing="8">
+        <icons:MaterialIcon Kind="AlertCircleOutline" Width="14" Height="14" Foreground="{DynamicResource ErrorBrush}" />
+        <TextBlock Text="{loc:Translate Downloads.Storage.Warning}"
+                   Foreground="{DynamicResource ErrorBrush}"
+                   FontSize="{DynamicResource FCaption}"
+                   FontWeight="SemiBold"
+                   TextWrapping="Wrap" />
+      </StackPanel>
+    </Border>
+
+    <StackPanel HorizontalAlignment="Center"
+                Margin="0,36"
+                Spacing="8"
+                IsVisible="{Binding ShowDownloadsEmptyState}">
+      <icons:MaterialIcon Kind="DownloadOffOutline" Width="64" Height="64"
+                          Foreground="{DynamicResource TextMutedBrush}" Opacity="0.5"
+                          HorizontalAlignment="Center" />
+      <TextBlock Text="{loc:Translate Downloads.Empty.Title}"
+                 FontSize="{DynamicResource FTitleL}"
+                 FontWeight="Bold"
+                 Foreground="{DynamicResource TextPrimaryBrush}"
+                 TextAlignment="Center" />
+      <TextBlock Text="{loc:Translate Downloads.Empty.Description}"
+                 FontSize="{DynamicResource FBody}"
+                 Foreground="{DynamicResource TextMutedBrush}"
+                 TextAlignment="Center"
+                 TextWrapping="Wrap"
+                 MaxWidth="420" />
+    </StackPanel>
+
+    <ContentControl Content="{Binding ContentHost, ElementName=Root}"
+                    HorizontalContentAlignment="Stretch"
+                    IsVisible="{Binding HasAnyDownloadState}" />
+  </StackPanel>
+</UserControl>
