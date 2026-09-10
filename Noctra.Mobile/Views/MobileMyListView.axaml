@@ -16,7 +16,8 @@
       EmptyTitle="{loc:Translate MyList.Empty.Title}"
       EmptyDescription="{loc:Translate MyList.Empty.Description}">
     <shared:AdaptiveLibraryView.ItemsHost>
-      <controls:MobileSectionedCardFeed x:Name="PrimaryScrollContent"
+      <controls:MobileSectionedCardFeed Grid.Row="0"
+                                        x:Name="PrimaryScrollContent"
                                         ItemContainerTheme="{StaticResource TransparentListBoxItemTheme}">
         <controls:MobileSectionedCardFeed.Sections>
           <controls:MobileCardSection Header="{loc:Translate History.LiveTv}" CardKind="Live" PresentationMode="MyList" SourceItems="{Binding MyListLiveChannels}" />
