@@ -49,13 +49,14 @@ public partial class MainWindow
     private void CollapseLegacyDesktopHeader()
     {
         // Keep the named HeaderBar alive for the existing review/PiP lifecycle checks,
-        // but remove it completely from layout and pointer interaction. The old
-        // expanding HeaderSearchBox and settings gear therefore cannot be used.
+        // but remove it completely from layout, keyboard focus and pointer interaction.
+        // The old expanding HeaderSearchBox and settings gear therefore cannot be used.
         HeaderBar.Height = 0;
         HeaderBar.MinHeight = 0;
         HeaderBar.Padding = new Thickness(0);
         HeaderBar.Margin = new Thickness(0);
         HeaderBar.Opacity = 0;
+        HeaderBar.IsEnabled = false;
         HeaderBar.IsHitTestVisible = false;
         HeaderBar.ClipToBounds = true;
 
