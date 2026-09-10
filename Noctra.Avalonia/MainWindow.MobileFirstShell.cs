@@ -48,9 +48,9 @@ public partial class MainWindow
 
     private void CollapseLegacyDesktopHeader()
     {
-        // Keep the named HeaderBar alive for the existing review/PiP lifecycle checks,
-        // but remove it completely from layout, keyboard focus and pointer interaction.
-        // The old expanding HeaderSearchBox and settings gear therefore cannot be used.
+        // Mobile is the shell source of truth: its header is hidden and navigation
+        // owns Search/Settings. Keep the legacy named HeaderBar only as a temporary
+        // lifecycle anchor until the final duplicate-XAML cleanup phase.
         HeaderBar.Height = 0;
         HeaderBar.MinHeight = 0;
         HeaderBar.Padding = new Thickness(0);
