@@ -31,7 +31,8 @@
       </Button>
     </shared:AdaptiveLibraryView.HeaderActionHost>
     <shared:AdaptiveLibraryView.ItemsHost>
-      <controls:MobileSectionedCardFeed x:Name="PrimaryScrollContent"
+      <controls:MobileSectionedCardFeed Grid.Row="0"
+                                        x:Name="PrimaryScrollContent"
                                         ScrollChanged="HistoryScrollViewer_ScrollChanged"
                                         ItemContainerTheme="{StaticResource TransparentListBoxItemTheme}">
         <controls:MobileSectionedCardFeed.Sections>
