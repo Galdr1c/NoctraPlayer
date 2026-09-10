@@ -1,0 +1,35 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:player="using:Noctra.UI.Views.Player"
+             x:Class="Noctra.UI.Views.Player.PlayerChromeView"
+             x:Name="Root"
+             x:CompileBindings="False"
+             Background="Transparent">
+  <Grid Background="Transparent">
+    <Border Height="130" VerticalAlignment="Top" IsHitTestVisible="False">
+      <Border.Background>
+        <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+          <GradientStop Color="#D9000000" Offset="0" />
+          <GradientStop Color="#00000000" Offset="1" />
+        </LinearGradientBrush>
+      </Border.Background>
+    </Border>
+
+    <player:PlayerTopOverlay x:Name="TopOverlay"
+                             VerticalAlignment="Top"
+                             IsVisible="{Binding IsTopOverlayVisible}"
+                             ShowLockAction="{Binding #Root.ShowLockAction}"
+                             ShowPiPAction="{Binding #Root.ShowPiPAction}" />
+
+    <Border Height="240" VerticalAlignment="Bottom" IsHitTestVisible="False">
+      <Border.Background>
+        <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+          <GradientStop Color="#00000000" Offset="0" />
+          <GradientStop Color="#E6000000" Offset="1" />
+        </LinearGradientBrush>
+      </Border.Background>
+    </Border>
+
+    <player:PlayerTransportBar x:Name="TransportBar" VerticalAlignment="Bottom" />
+  </Grid>
+</UserControl>
