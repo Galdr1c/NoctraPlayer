@@ -40,6 +40,9 @@ jobs:
               [pscustomobject]@{ Name = $m.Groups[1].Value; File = $f.FullName }
             }
           }
+          $root = (Get-Location).Path + [IO.Path]::DirectorySeparatorChar
           $usage | Group-Object Name | Sort-Object Name | ForEach-Object {
-            Write-Host ("{0} :: {1}" -f $_.Name, ($_.Group.File | Sort-Object -Unique | ForEach-Object { $_.Replace((Get-Location).Path + [IO.Path]::DirectorySeparatorChar,'') } -join ', '))
+            $filesForName = @($_.Group.File | Sort-Object -Unique | ForEach-Object { $_.Replace($root, '') })
+            $joined = [string]::Join(', ', $filesForName)
+            Write-Host ("{0} :: {1}" -f $_.Name, $joined)
           }
