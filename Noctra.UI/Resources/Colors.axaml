@@ -5,4 +5,13 @@
 
   <Color x:Key="NoctraRed">#E50914</Color>
   <SolidColorBrush x:Key="NoctraRedBrush" Color="{StaticResource NoctraRed}" />
+
+  <!-- Shared player fallbacks. Platform theme dictionaries can override these values. -->
+  <SolidColorBrush x:Key="PlayerOverlaySheetTextBrush" Color="#FFFFFFFF" />
+  <SolidColorBrush x:Key="PlayerOverlaySheetSecondaryTextBrush" Color="#CCFFFFFF" />
+  <SolidColorBrush x:Key="PlayerOverlaySheetMutedTextBrush" Color="#99FFFFFF" />
+  <SolidColorBrush x:Key="PlayerOverlaySheetBorderBrush" Color="#40FFFFFF" />
+  <SolidColorBrush x:Key="PlayerOverlaySheetHoverBrush" Color="#20FFFFFF" />
+  <SolidColorBrush x:Key="PlayerOverlaySheetPressedBrush" Color="#30FFFFFF" />
+  <SolidColorBrush x:Key="PlayerOverlaySheetSurface1Brush" Color="#1AFFFFFF" />
 </ResourceDictionary>
