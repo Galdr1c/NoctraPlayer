@@ -27,6 +27,9 @@ public sealed class SharedUiArchitectureTests
         Assert.Contains("overlayContent.Children[0].IsVisible = false", adapter, StringComparison.Ordinal);
         Assert.Contains("overlayContent.Children[1].IsVisible = false", adapter, StringComparison.Ordinal);
         Assert.Contains("overlayContent.Children[2].IsVisible = false", adapter, StringComparison.Ordinal);
+        Assert.Contains("SuppressLegacyPanel(\"EpisodesPanel\")", adapter, StringComparison.Ordinal);
+        Assert.Contains("EpisodeThumbnailTemplate", adapter, StringComparison.Ordinal);
+        Assert.Contains("DesktopRemoteImage", adapter, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -52,8 +55,10 @@ public sealed class SharedUiArchitectureTests
         Assert.Contains("<sharedPlayer:PlayerQualitySheet", sheets, StringComparison.Ordinal);
         Assert.Contains("<sharedPlayer:PlayerSubtitleAppearanceSheet", sheets, StringComparison.Ordinal);
         Assert.Contains("<sharedPlayer:PlayerInfoSheet", sheets, StringComparison.Ordinal);
+        Assert.Contains("<sharedPlayer:PlayerEpisodesSheet", sheets, StringComparison.Ordinal);
         Assert.Contains("<sharedPlayer:PlayerSleepSheet", sheets, StringComparison.Ordinal);
-        Assert.Contains("<player:MobilePlayerEpisodesSheet", sheets, StringComparison.Ordinal);
+        Assert.Contains("<controls:RemoteImage", sheets, StringComparison.Ordinal);
+        Assert.DoesNotContain("MobilePlayerEpisodesSheet", sheets, StringComparison.Ordinal);
         Assert.DoesNotContain("<player:MobilePlayerSubtitleAppearanceSheet", sheets, StringComparison.Ordinal);
     }
 
@@ -111,15 +116,25 @@ public sealed class SharedUiArchitectureTests
             "Noctra.UI", "Views", "Player", "PlayerSheetOverlay.axaml");
         var sheetCode = LoadProjectFile(
             "Noctra.UI", "Views", "Player", "PlayerSheetOverlay.axaml.cs");
+        var episodesXaml = LoadProjectFile(
+            "Noctra.UI", "Views", "Player", "PlayerEpisodesSheet.axaml");
+        var episodesCode = LoadProjectFile(
+            "Noctra.UI", "Views", "Player", "PlayerEpisodesSheet.axaml.cs");
 
         Assert.Contains("PlayerMoreSheet", sheetXaml, StringComparison.Ordinal);
         Assert.Contains("PlayerTrackSheet", sheetXaml, StringComparison.Ordinal);
         Assert.Contains("PlayerQualitySheet", sheetXaml, StringComparison.Ordinal);
         Assert.Contains("PlayerSubtitleAppearanceSheet", sheetXaml, StringComparison.Ordinal);
         Assert.Contains("PlayerInfoSheet", sheetXaml, StringComparison.Ordinal);
+        Assert.Contains("PlayerEpisodesSheet", sheetXaml, StringComparison.Ordinal);
         Assert.Contains("PlayerSleepSheet", sheetXaml, StringComparison.Ordinal);
         Assert.Contains("IsSubtitleAppearanceSettingsOpen", sheetCode, StringComparison.Ordinal);
-        Assert.DoesNotContain("IsEpisodesPanelOpen", sheetCode, StringComparison.Ordinal);
+        Assert.Contains("IsEpisodesPanelOpen", sheetCode, StringComparison.Ordinal);
+        Assert.Contains("EpisodeThumbnailTemplate", sheetCode, StringComparison.Ordinal);
+        Assert.Contains("EpisodeThumbnailTemplate", episodesXaml, StringComparison.Ordinal);
+        Assert.Contains("IDataTemplate", episodesCode, StringComparison.Ordinal);
+        Assert.DoesNotContain("Noctra.Mobile.Controls", episodesXaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("Noctra.Avalonia.Controls", episodesXaml, StringComparison.Ordinal);
     }
 
     [Fact]
