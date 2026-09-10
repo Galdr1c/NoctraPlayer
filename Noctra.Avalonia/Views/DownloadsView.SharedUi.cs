@@ -28,7 +28,7 @@ public partial class DownloadsView
         {
             Content = LocalizationSource.Instance["Downloads.Action.OpenFolder"],
             MinHeight = 44,
-            HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Center
+            HorizontalContentAlignment = global::Avalonia.Layout.HorizontalAlignment.Center
         };
         openFolderButton.Classes.Add("SettingsActionButton");
         openFolderButton.Bind(Button.CommandProperty, new Binding("OpenDownloadsFolderCommand"));
