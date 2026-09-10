@@ -10,7 +10,8 @@
   <shared:AdaptiveSearchView>
     <shared:AdaptiveSearchView.ResultsHost>
       <!-- Virtualization and image decoding stay mobile-specific; search UX is shared. -->
-      <controls:MobileSectionedCardFeed x:Name="PrimaryScrollContent"
+      <controls:MobileSectionedCardFeed Grid.Row="0"
+                                        x:Name="PrimaryScrollContent"
                                         ItemContainerTheme="{StaticResource TransparentListBoxItemTheme}">
         <controls:MobileSectionedCardFeed.Sections>
           <controls:MobileCardSection Header="{loc:Translate History.LiveTv}"
