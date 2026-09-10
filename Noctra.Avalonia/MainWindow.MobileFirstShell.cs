@@ -49,13 +49,22 @@ public partial class MainWindow
     private void CollapseLegacyDesktopHeader()
     {
         // Mobile is the shell source of truth: its header is hidden and navigation
-        // owns Search/Settings. Keep the legacy named HeaderBar only as a temporary
-        // lifecycle anchor until the final duplicate-XAML cleanup phase.
+        // owns Search/Settings. Keep the named HeaderBar itself only as a temporary
+        // lifecycle anchor for existing review logic, but detach the entire legacy
+        // visual subtree so the old search box/settings action cannot receive focus,
+        // pointer input or keyboard input through an invisible surface.
+        HeaderSearchBox.IsEnabled = false;
+        HeaderSearchBox.IsVisible = false;
+        HeaderSearchBox.Focusable = false;
+        ClearSearchButton.IsEnabled = false;
+
+        HeaderBar.Child = null;
         HeaderBar.Height = 0;
         HeaderBar.MinHeight = 0;
         HeaderBar.Padding = new Thickness(0);
         HeaderBar.Margin = new Thickness(0);
         HeaderBar.Opacity = 0;
+        HeaderBar.Focusable = false;
         HeaderBar.IsEnabled = false;
         HeaderBar.IsHitTestVisible = false;
         HeaderBar.ClipToBounds = true;
