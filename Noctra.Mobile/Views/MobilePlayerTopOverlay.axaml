@@ -1,11 +1,84 @@
 ﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="clr-namespace:Noctra.ViewModels;assembly=Noctra.Core"
-             xmlns:player="using:Noctra.UI.Views.Player"
+             xmlns:loc="using:Noctra.Mobile.Localization"
+             xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             xmlns:controls="clr-namespace:Noctra.Mobile.Controls"
              x:Class="Noctra.Mobile.Views.MobilePlayerTopOverlay"
              x:DataType="vm:PlayerViewModel"
              x:CompileBindings="False">
-  <player:PlayerTopOverlay DataContext="{Binding}"
-                           ShowLockAction="True"
-                           ShowPiPAction="True" />
+  <UserControl.Styles>
+    <Style Selector="Button.topFlatIcon">
+      <Setter Property="FocusAdorner" Value="{x:Null}" />
+      <Setter Property="Width" Value="48" />
+      <Setter Property="Height" Value="48" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+    </Style>
+    <Style Selector="Button.topFlatIcon:pressed">
+      <Setter Property="Opacity" Value="0.55" />
+    </Style>
+    <Style Selector="Button.topFlatIcon:focus-visible /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource InteractiveHoverBrush}" />
+      <Setter Property="BoxShadow" Value="{DynamicResource FocusGlow}" />
+    </Style>
+  </UserControl.Styles>
+
+  <Grid ColumnDefinitions="Auto,1*,Auto" ColumnSpacing="8" Margin="10,12,12,0">
+    <Button Grid.Column="0"
+            Classes="topFlatIcon"
+            Command="{Binding ClosePlayerCommand}"
+            ToolTip.Tip="{loc:Translate Player.Overlay.Back}"
+            AutomationProperties.Name="{loc:Translate Player.Overlay.Back}">
+      <Grid Width="26" Height="26">
+        <icons:MaterialIcon Kind="ArrowLeft"
+                            Width="26" Height="26"
+                            Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                            IsVisible="{Binding !IsClosingPlayer}" />
+        <controls:PremiumSpinner Width="22" Height="22"
+                                 IsVisible="{Binding IsClosingPlayer}" />
+      </Grid>
+    </Button>
+
+    <StackPanel Grid.Column="2"
+                Orientation="Horizontal"
+                Spacing="8"
+                VerticalAlignment="Center">
+      <Border Background="#33E50914"
+              CornerRadius="8"
+              Width="48"
+              Height="48"
+              Padding="0"
+              IsVisible="{Binding HasNetworkError}">
+        <icons:MaterialIcon Kind="WifiOff"
+                            Width="20" Height="20"
+                            Foreground="{DynamicResource ErrorBrush}" />
+      </Border>
+      <Button Classes="topFlatIcon"
+              Command="{Binding EnterPiPCommand}"
+              ToolTip.Tip="{loc:Translate Player.Overlay.PiP.Tooltip}"
+              AutomationProperties.Name="{loc:Translate Player.Overlay.PiP.Tooltip}">
+        <icons:MaterialIcon Kind="PictureInPictureBottomRight"
+                            Width="24" Height="24"
+                            Foreground="{DynamicResource PlayerOverlayTextBrush}" />
+      </Button>
+      <Button Classes="topFlatIcon"
+              Command="{Binding ToggleLockCommand}"
+              ToolTip.Tip="{Binding LockAccessibilityName}"
+              AutomationProperties.Name="{Binding LockAccessibilityName}">
+        <Grid Width="24" Height="24">
+          <icons:MaterialIcon Kind="Lock"
+                              Width="24" Height="24"
+                              Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                              IsVisible="{Binding IsLocked}" />
+          <icons:MaterialIcon Kind="LockOpenVariantOutline"
+                              Width="24" Height="24"
+                              Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                              IsVisible="{Binding IsLocked, Converter={StaticResource InverseBoolConverter}}" />
+        </Grid>
+      </Button>
+    </StackPanel>
+  </Grid>
 </UserControl>
