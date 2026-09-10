@@ -9,7 +9,12 @@ public sealed class DesktopMobileFirstShellTests
         var mobileShell = Source("Noctra.Mobile", "Views", "MainView.axaml");
 
         Assert.Contains("CollapseLegacyDesktopHeader", adapter, StringComparison.Ordinal);
+        Assert.Contains("HeaderSearchBox.IsEnabled = false", adapter, StringComparison.Ordinal);
+        Assert.Contains("HeaderSearchBox.IsVisible = false", adapter, StringComparison.Ordinal);
+        Assert.Contains("HeaderSearchBox.Focusable = false", adapter, StringComparison.Ordinal);
+        Assert.Contains("HeaderBar.Child = null", adapter, StringComparison.Ordinal);
         Assert.Contains("HeaderBar.Height = 0", adapter, StringComparison.Ordinal);
+        Assert.Contains("HeaderBar.Focusable = false", adapter, StringComparison.Ordinal);
         Assert.Contains("HeaderBar.IsEnabled = false", adapter, StringComparison.Ordinal);
         Assert.Contains("HeaderBar.IsHitTestVisible = false", adapter, StringComparison.Ordinal);
         Assert.Contains("rootGrid.RowDefinitions[0].Height = new GridLength(0)", adapter, StringComparison.Ordinal);
