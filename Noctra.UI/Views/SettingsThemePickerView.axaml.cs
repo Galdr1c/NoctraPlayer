@@ -61,8 +61,15 @@ public partial class SettingsThemePickerView : UserControl
     private void ApplyAdaptiveLayout(double width)
     {
         var stacked = double.IsFinite(width) && width > 0 && width < 340;
+
+        Grid.SetColumn(DarkThemeButton, 0);
+        Grid.SetRow(DarkThemeButton, 0);
+        Grid.SetColumnSpan(DarkThemeButton, stacked ? 2 : 1);
+
         Grid.SetColumn(LightThemeButton, stacked ? 0 : 1);
         Grid.SetRow(LightThemeButton, stacked ? 1 : 0);
+        Grid.SetColumnSpan(LightThemeButton, stacked ? 2 : 1);
+
         ThemeLayoutRoot.ColumnSpacing = stacked ? 0 : 12;
         ThemeLayoutRoot.RowSpacing = stacked ? 12 : 0;
     }

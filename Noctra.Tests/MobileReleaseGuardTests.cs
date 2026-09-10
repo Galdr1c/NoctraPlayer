@@ -406,8 +406,8 @@ public class MobileReleaseGuardTests
     {
         var app = ReadProjectFile("Noctra.Mobile", "App.axaml");
         var styles = ReadProjectFile("Noctra.Mobile", "Resources", "Styles.axaml");
-        var darkTheme = ReadProjectFile("Noctra.Mobile", "Resources", "Themes", "DarkTheme.axaml");
-        var lightTheme = ReadProjectFile("Noctra.Mobile", "Resources", "Themes", "LightTheme.axaml");
+        var darkTheme = ReadProjectFile("Noctra.UI", "Resources", "Themes", "DarkTheme.axaml");
+        var lightTheme = ReadProjectFile("Noctra.UI", "Resources", "Themes", "LightTheme.axaml");
 
         Assert.Contains("<Style Selector=\"TextBox\">", app);
         Assert.Contains("<Setter Property=\"MinHeight\" Value=\"48\"", app);

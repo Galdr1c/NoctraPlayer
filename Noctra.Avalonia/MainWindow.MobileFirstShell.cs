@@ -216,6 +216,21 @@ public partial class MainWindow
         if (_desktopSettingsNavText is not null)
             _desktopSettingsNavText.IsVisible = expanded;
 
+        SetRailTooltipAvailability(_desktopSearchNavButton, expanded);
+        SetRailTooltipAvailability(_desktopSettingsNavButton, expanded);
+    }
+
+    private static void SetRailTooltipAvailability(Button? button, bool expanded)
+    {
+        if (button is null)
+            return;
+
+        // Keep the localized Tip binding alive, but only let Avalonia's tooltip
+        // service open it while the rail is collapsed. Expanded rail items already
+        // expose the same localized label inline.
+        button.SetValue(ToolTip.ServiceEnabledProperty, !expanded);
+        if (expanded)
+            button.SetValue(ToolTip.IsOpenProperty, false);
     }
 
     private void MobileFirstShell_Closed(object? sender, EventArgs e)

@@ -25,8 +25,8 @@ public sealed class SharedMobileSearchInputContractTests
     {
         var mobileApp = Source("Noctra.Mobile", "App.axaml");
         var sharedSearch = Source("Noctra.UI", "Views", "AdaptiveSearchView.axaml");
-        var darkTheme = Source("Noctra.Mobile", "Resources", "Themes", "DarkTheme.axaml");
-        var lightTheme = Source("Noctra.Mobile", "Resources", "Themes", "LightTheme.axaml");
+        var darkTheme = Source("Noctra.UI", "Resources", "Themes", "DarkTheme.axaml");
+        var lightTheme = Source("Noctra.UI", "Resources", "Themes", "LightTheme.axaml");
 
         Assert.Contains("<Style Selector=\"TextBox\">", mobileApp, StringComparison.Ordinal);
         Assert.Contains("<Setter Property=\"MinHeight\" Value=\"48\"", mobileApp, StringComparison.Ordinal);
