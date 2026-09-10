@@ -1,0 +1,197 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:models="using:Noctra.Models"
+             xmlns:vm="clr-namespace:Noctra.ViewModels;assembly=Noctra.Core"
+             xmlns:loc="using:Noctra.UI.Localization"
+             xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             x:Class="Noctra.UI.Views.Player.PlayerEpisodesSheet"
+             x:Name="Root"
+             x:DataType="vm:PlayerViewModel"
+             x:CompileBindings="False">
+  <UserControl.Styles>
+    <Style Selector="Button#SheetCloseButton">
+      <Setter Property="Width" Value="36" />
+      <Setter Property="Height" Value="36" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="CornerRadius" Value="6" />
+    </Style>
+    <Style Selector="Button#SheetCloseButton:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource PlayerOverlaySheetHoverBrush}" />
+    </Style>
+    <Style Selector="ListBox#SeasonListBox > ListBoxItem">
+      <Setter Property="Padding" Value="14,7" />
+      <Setter Property="Margin" Value="0,0,8,0" />
+      <Setter Property="MinHeight" Value="36" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="CornerRadius" Value="4,4,0,0" />
+    </Style>
+    <Style Selector="ListBox#SeasonListBox > ListBoxItem:selected /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource TextSelectionBrush}" />
+    </Style>
+    <Style Selector="ListBox#SeasonListBox > ListBoxItem TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource PlayerOverlaySheetMutedTextBrush}" />
+      <Setter Property="FontSize" Value="13" />
+    </Style>
+    <Style Selector="ListBox#SeasonListBox > ListBoxItem:selected TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource PlayerOverlaySheetBrush}" />
+      <Setter Property="FontWeight" Value="Bold" />
+    </Style>
+    <Style Selector="Button.episodeCard">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="CornerRadius" Value="6" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    </Style>
+    <Style Selector="Button.episodeCard:pointerover Border#EpBgLayer">
+      <Setter Property="Background" Value="{DynamicResource PlayerOverlaySheetHoverBrush}" />
+    </Style>
+    <Style Selector="Button.episodeCard:pressed Border#EpBgLayer">
+      <Setter Property="Background" Value="{DynamicResource InteractivePressedBrush}" />
+    </Style>
+  </UserControl.Styles>
+
+  <StackPanel Spacing="10">
+    <Grid ColumnDefinitions="*,Auto">
+      <StackPanel Spacing="3" VerticalAlignment="Center">
+        <TextBlock Text="{loc:Translate Player.Overlay.Episodes.Tooltip}"
+                   FontSize="11" FontWeight="Bold"
+                   Foreground="{DynamicResource PlayerOverlaySheetSecondaryTextBrush}"
+                   LetterSpacing="1" />
+        <Border Height="2" Width="32" CornerRadius="1"
+                Background="{DynamicResource AccentBrush}" Opacity="0.85"
+                HorizontalAlignment="Left" />
+        <TextBlock Text="{Binding EpisodesPanelTitle}"
+                   FontSize="16" FontWeight="SemiBold"
+                   Foreground="{DynamicResource PlayerOverlaySheetTextBrush}"
+                   TextWrapping="Wrap" MaxLines="1" TextTrimming="CharacterEllipsis" />
+      </StackPanel>
+      <Button Grid.Column="1" x:Name="SheetCloseButton"
+              Command="{Binding BackFromPlayerPanelCommand}"
+              VerticalAlignment="Center">
+        <icons:MaterialIcon Kind="Close" Width="18" Height="18"
+                            Foreground="{DynamicResource PlayerOverlaySheetMutedTextBrush}" />
+      </Button>
+    </Grid>
+
+    <ListBox x:Name="SeasonListBox"
+             ItemsSource="{Binding EpisodeSeasons}"
+             SelectedItem="{Binding SelectedEpisodeSeason}"
+             Background="Transparent" BorderThickness="0" Padding="2,2"
+             ScrollViewer.HorizontalScrollBarVisibility="Auto"
+             ScrollViewer.VerticalScrollBarVisibility="Disabled"
+             ScrollViewer.IsScrollInertiaEnabled="True"
+             ScrollViewer.IsScrollChainingEnabled="False">
+      <ListBox.ItemsPanel>
+        <ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+      </ListBox.ItemsPanel>
+      <ListBox.ItemTemplate>
+        <DataTemplate x:DataType="models:Season">
+          <TextBlock Text="{Binding SeasonNumber, Converter={StaticResource StringFormatConverter}, ConverterParameter='Series.Seasons.Format'}"
+                     FontWeight="Medium" />
+        </DataTemplate>
+      </ListBox.ItemTemplate>
+    </ListBox>
+
+    <ScrollViewer MaxHeight="340"
+                  HorizontalScrollBarVisibility="Disabled"
+                  VerticalScrollBarVisibility="Auto"
+                  ScrollViewer.IsScrollInertiaEnabled="True"
+                  ScrollViewer.IsScrollChainingEnabled="False">
+      <ItemsControl ItemsSource="{Binding SelectedEpisodeSeasonEpisodes}"
+                    Tag="{Binding EpisodeThumbnailTemplate, ElementName=Root}"
+                    Margin="0,2,0,0">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="models:Episode">
+            <Border BorderBrush="{DynamicResource PlayerOverlaySheetBorderBrush}"
+                    BorderThickness="0.5" CornerRadius="6" Padding="4" Margin="0,0,0,8">
+              <Button Classes="episodeCard"
+                      Command="{Binding $parent[UserControl].DataContext.PlayEpisodeFromOverlayCommand}"
+                      CommandParameter="{Binding}">
+                <Panel>
+                  <Border x:Name="EpBgLayer" CornerRadius="6" IsHitTestVisible="False" />
+                  <Grid ColumnDefinitions="80,*" ColumnSpacing="10">
+                    <Border Height="56" CornerRadius="5" ClipToBounds="True"
+                            VerticalAlignment="Center" Background="{DynamicResource PlaceHolderBrush}">
+                      <Grid>
+                        <!-- Platform image loading stays platform-owned. -->
+                        <ContentControl Content="{Binding}"
+                                        ContentTemplate="{Binding $parent[ItemsControl].Tag}"
+                                        HorizontalContentAlignment="Stretch"
+                                        VerticalContentAlignment="Stretch" />
+                        <Border VerticalAlignment="Bottom" HorizontalAlignment="Left"
+                                Background="{DynamicResource OverlayDimBrush}"
+                                CornerRadius="0,3,0,0" Padding="5,2,7,2">
+                          <TextBlock Text="{Binding EpisodeNumber}"
+                                     Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                                     FontSize="{DynamicResource FOverline}" FontWeight="Bold" />
+                        </Border>
+                        <ProgressBar VerticalAlignment="Bottom" Height="4"
+                                     Minimum="0" Maximum="100" Value="{Binding WatchedPercentage}"
+                                     Foreground="{DynamicResource AccentBrush}"
+                                     Background="{DynamicResource ThemePreviewDarkText}"
+                                     BorderThickness="0" CornerRadius="2"
+                                     IsVisible="{Binding WatchedPercentage, Converter={StaticResource CountToVisibilityConverter}}" />
+                      </Grid>
+                    </Border>
+
+                    <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                      <StackPanel Orientation="Horizontal" Spacing="5">
+                        <StackPanel.IsVisible>
+                          <MultiBinding Converter="{StaticResource EqualityToBoolMultiConverter}">
+                            <Binding Path="." Converter="{StaticResource EpisodeIdentityConverter}" />
+                            <Binding Path="$parent[UserControl].DataContext.CurrentEpisode" Converter="{StaticResource EpisodeIdentityConverter}" />
+                          </MultiBinding>
+                        </StackPanel.IsVisible>
+                        <Border Background="{DynamicResource AccentBrush}" CornerRadius="3" Padding="6,2">
+                          <StackPanel Orientation="Horizontal" Spacing="4">
+                            <Ellipse Width="6" Height="6" Fill="White" VerticalAlignment="Center" />
+                            <TextBlock Text="{loc:Translate Player.Info.NowPlaying}"
+                                       FontSize="8.5" FontWeight="Black" Foreground="White"
+                                       VerticalAlignment="Center" LetterSpacing="0.8" />
+                          </StackPanel>
+                        </Border>
+                      </StackPanel>
+
+                      <StackPanel Orientation="Horizontal" Spacing="6">
+                        <TextBlock Text="{Binding DisplayTitle}"
+                                   Foreground="{DynamicResource PlayerOverlaySheetTextBrush}"
+                                   FontSize="13" FontWeight="SemiBold"
+                                   TextWrapping="Wrap" MaxLines="1" TextTrimming="CharacterEllipsis"
+                                   VerticalAlignment="Center" />
+                        <Border Background="{DynamicResource AccentBrush}" CornerRadius="8" Padding="5,1"
+                                VerticalAlignment="Center" IsVisible="{Binding IsCompleted}">
+                          <StackPanel Orientation="Horizontal" Spacing="3">
+                            <icons:MaterialIcon Kind="CheckCircle" Width="11" Height="11"
+                                                Foreground="{DynamicResource PlayerOverlaySheetBrush}"
+                                                VerticalAlignment="Center" />
+                            <TextBlock Text="{loc:Translate Player.Overlay.Watched}"
+                                       Foreground="{DynamicResource PlayerOverlaySheetBrush}"
+                                       FontSize="9" FontWeight="Bold" VerticalAlignment="Center" />
+                          </StackPanel>
+                        </Border>
+                      </StackPanel>
+
+                      <TextBlock Text="{Binding DisplaySubtitle}"
+                                 Foreground="{DynamicResource AccentBrush}"
+                                 FontSize="11" FontStyle="Italic" Opacity="0.9"
+                                 TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" MaxLines="1"
+                                 IsVisible="{Binding DisplaySubtitle, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
+                      <TextBlock Text="{Binding EpisodeMetaText}"
+                                 Foreground="{DynamicResource PlayerOverlaySheetMutedTextBrush}"
+                                 FontSize="10"
+                                 IsVisible="{Binding EpisodeMetaText, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
+                    </StackPanel>
+                  </Grid>
+                </Panel>
+              </Button>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </ScrollViewer>
+  </StackPanel>
+</UserControl>
