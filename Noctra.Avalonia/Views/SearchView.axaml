@@ -7,7 +7,7 @@
              x:Class="Noctra.Avalonia.Views.SearchView"
              x:CompileBindings="False">
   <Grid IsVisible="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.Search}}">
-    <shared:AdaptiveSearchView>
+    <shared:AdaptiveSearchView x:Name="SharedSearchContent">
       <shared:AdaptiveSearchView.ResultsHost>
         <!-- Desktop keeps its virtualization/context-menu implementation while the visual UX is shared. -->
         <controls:DesktopSectionedCardFeed x:Name="SearchResultsFeed">
