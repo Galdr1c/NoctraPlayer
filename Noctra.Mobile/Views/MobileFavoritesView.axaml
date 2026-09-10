@@ -16,7 +16,8 @@
       EmptyTitle="{loc:Translate Favorites.Empty.Title}"
       EmptyDescription="{loc:Translate Favorites.Empty.Description}">
     <shared:AdaptiveLibraryView.ItemsHost>
-      <controls:MobileSectionedCardFeed x:Name="PrimaryScrollContent"
+      <controls:MobileSectionedCardFeed Grid.Row="0"
+                                        x:Name="PrimaryScrollContent"
                                         ItemContainerTheme="{StaticResource TransparentListBoxItemTheme}">
         <controls:MobileSectionedCardFeed.Sections>
           <controls:MobileCardSection Header="{loc:Translate History.LiveTv}" CardKind="Live" PresentationMode="Favorites" SourceItems="{Binding FavoriteLiveChannels}" />
