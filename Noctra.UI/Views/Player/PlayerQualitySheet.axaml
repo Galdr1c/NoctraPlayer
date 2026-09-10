@@ -8,12 +8,24 @@
              x:CompileBindings="False">
   <UserControl.Styles>
     <Style Selector="Button.selectionSheetOption">
-      <Setter Property="Background" Value="Transparent" /><Setter Property="BorderBrush" Value="{DynamicResource PlayerOverlaySheetBorderBrush}" />
-      <Setter Property="BorderThickness" Value="0,0,0,1.5" /><Setter Property="Padding" Value="8,4" /><Setter Property="MinHeight" Value="48" />
-      <Setter Property="CornerRadius" Value="6" /><Setter Property="HorizontalContentAlignment" Value="Stretch" /><Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="{DynamicResource PlayerOverlaySheetBorderBrush}" />
+      <Setter Property="BorderThickness" Value="0,0,0,1.5" />
+      <Setter Property="Padding" Value="8,4" />
+      <Setter Property="MinHeight" Value="48" />
+      <Setter Property="CornerRadius" Value="6" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
     </Style>
-    <Style Selector="Button.selectionSheetOption:pointerover /template/ ContentPresenter"><Setter Property="Background" Value="{DynamicResource PlayerOverlaySheetHoverBrush}" /></Style>
-    <Style Selector="Button.selectionSheetOption:pressed /template/ ContentPresenter"><Setter Property="Background" Value="{DynamicResource PlayerOverlaySheetPressedBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" /></Style>
+    <Style Selector="Button.selectionSheetOption:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource PlayerOverlaySheetPressedBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+    </Style>
+    <Style Selector="Button.selectionSheetOption:pressed /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource PlayerOverlaySheetPressedBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+    </Style>
   </UserControl.Styles>
   <StackPanel Spacing="12">
     <Grid ColumnDefinitions="*,Auto">
@@ -28,12 +40,12 @@
     </Grid>
     <TextBlock Text="{loc:Translate Player.Mobile.Speed}" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource PlayerOverlaySheetSecondaryTextBrush}" />
     <Grid ColumnDefinitions="*,*,*" RowDefinitions="Auto,Auto" ColumnSpacing="8" RowSpacing="8">
-      <Button Classes="selectionSheetOption" Command="{Binding SetPlaybackSpeedCommand}" CommandParameter="{x:Static vm:PlayerViewModel.PlaybackRateHalf}" Content="0.5x" HorizontalContentAlignment="Center" />
-      <Button Grid.Column="1" Classes="selectionSheetOption" Command="{Binding SetPlaybackSpeedCommand}" CommandParameter="{x:Static vm:PlayerViewModel.PlaybackRateThreeQuarters}" Content="0.75x" HorizontalContentAlignment="Center" />
-      <Button Grid.Column="2" Classes="selectionSheetOption" Command="{Binding SetPlaybackSpeedCommand}" CommandParameter="{x:Static vm:PlayerViewModel.PlaybackRateNormal}" Content="1.0x" HorizontalContentAlignment="Center" />
-      <Button Grid.Row="1" Classes="selectionSheetOption" Command="{Binding SetPlaybackSpeedCommand}" CommandParameter="{x:Static vm:PlayerViewModel.PlaybackRateOneAndQuarter}" Content="1.25x" HorizontalContentAlignment="Center" />
-      <Button Grid.Row="1" Grid.Column="1" Classes="selectionSheetOption" Command="{Binding SetPlaybackSpeedCommand}" CommandParameter="{x:Static vm:PlayerViewModel.PlaybackRateOneAndHalf}" Content="1.5x" HorizontalContentAlignment="Center" />
-      <Button Grid.Row="1" Grid.Column="2" Classes="selectionSheetOption" Command="{Binding SetPlaybackSpeedCommand}" CommandParameter="{x:Static vm:PlayerViewModel.PlaybackRateDouble}" Content="2.0x" HorizontalContentAlignment="Center" />
+      <Button Classes="selectionSheetOption" Command="{Binding SetPlaybackSpeedCommand}" CommandParameter="{x:Static vm:PlayerViewModel.PlaybackRateHalf}" Content="0.5x" HorizontalContentAlignment="Center"><Button.Background><MultiBinding Converter="{StaticResource EqualityToBrushMultiConverter}" ConverterParameter="AccentSubtleBrush"><Binding Source="0.5" /><Binding Path="CurrentPlaybackRateKey" /></MultiBinding></Button.Background></Button>
+      <Button Grid.Column="1" Classes="selectionSheetOption" Command="{Binding SetPlaybackSpeedCommand}" CommandParameter="{x:Static vm:PlayerViewModel.PlaybackRateThreeQuarters}" Content="0.75x" HorizontalContentAlignment="Center"><Button.Background><MultiBinding Converter="{StaticResource EqualityToBrushMultiConverter}" ConverterParameter="AccentSubtleBrush"><Binding Source="0.75" /><Binding Path="CurrentPlaybackRateKey" /></MultiBinding></Button.Background></Button>
+      <Button Grid.Column="2" Classes="selectionSheetOption" Command="{Binding SetPlaybackSpeedCommand}" CommandParameter="{x:Static vm:PlayerViewModel.PlaybackRateNormal}" Content="1.0x" HorizontalContentAlignment="Center"><Button.Background><MultiBinding Converter="{StaticResource EqualityToBrushMultiConverter}" ConverterParameter="AccentSubtleBrush"><Binding Source="1.0" /><Binding Path="CurrentPlaybackRateKey" /></MultiBinding></Button.Background></Button>
+      <Button Grid.Row="1" Classes="selectionSheetOption" Command="{Binding SetPlaybackSpeedCommand}" CommandParameter="{x:Static vm:PlayerViewModel.PlaybackRateOneAndQuarter}" Content="1.25x" HorizontalContentAlignment="Center"><Button.Background><MultiBinding Converter="{StaticResource EqualityToBrushMultiConverter}" ConverterParameter="AccentSubtleBrush"><Binding Source="1.25" /><Binding Path="CurrentPlaybackRateKey" /></MultiBinding></Button.Background></Button>
+      <Button Grid.Row="1" Grid.Column="1" Classes="selectionSheetOption" Command="{Binding SetPlaybackSpeedCommand}" CommandParameter="{x:Static vm:PlayerViewModel.PlaybackRateOneAndHalf}" Content="1.5x" HorizontalContentAlignment="Center"><Button.Background><MultiBinding Converter="{StaticResource EqualityToBrushMultiConverter}" ConverterParameter="AccentSubtleBrush"><Binding Source="1.5" /><Binding Path="CurrentPlaybackRateKey" /></MultiBinding></Button.Background></Button>
+      <Button Grid.Row="1" Grid.Column="2" Classes="selectionSheetOption" Command="{Binding SetPlaybackSpeedCommand}" CommandParameter="{x:Static vm:PlayerViewModel.PlaybackRateDouble}" Content="2.0x" HorizontalContentAlignment="Center"><Button.Background><MultiBinding Converter="{StaticResource EqualityToBrushMultiConverter}" ConverterParameter="AccentSubtleBrush"><Binding Source="2.0" /><Binding Path="CurrentPlaybackRateKey" /></MultiBinding></Button.Background></Button>
     </Grid>
   </StackPanel>
 </UserControl>

@@ -22,20 +22,20 @@
     </Style>
     <Style Selector="ListBox#SeasonListBox > ListBoxItem">
       <Setter Property="Padding" Value="14,7" />
-      <Setter Property="Margin" Value="0,0,8,0" />
+      <Setter Property="Margin" Value="0,0,8,8" />
       <Setter Property="MinHeight" Value="36" />
       <Setter Property="Background" Value="Transparent" />
       <Setter Property="CornerRadius" Value="4,4,0,0" />
     </Style>
     <Style Selector="ListBox#SeasonListBox > ListBoxItem:selected /template/ ContentPresenter">
-      <Setter Property="Background" Value="{DynamicResource TextSelectionBrush}" />
+      <Setter Property="Background" Value="{DynamicResource GlowBrush}" />
     </Style>
     <Style Selector="ListBox#SeasonListBox > ListBoxItem TextBlock">
       <Setter Property="Foreground" Value="{DynamicResource PlayerOverlaySheetMutedTextBrush}" />
       <Setter Property="FontSize" Value="13" />
     </Style>
     <Style Selector="ListBox#SeasonListBox > ListBoxItem:selected TextBlock">
-      <Setter Property="Foreground" Value="{DynamicResource PlayerOverlaySheetBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource PremiumBadgeTextBrush}" />
       <Setter Property="FontWeight" Value="Bold" />
     </Style>
     <Style Selector="Button.episodeCard">

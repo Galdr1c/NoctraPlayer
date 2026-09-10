@@ -61,7 +61,7 @@
                                    CommandParameter="{Binding}"
                                    AutomationProperties.Name="{Binding Name}">
     
-    <Border CornerRadius="6" ClipToBounds="True" Background="{DynamicResource Surface0Brush}" BoxShadow="0 2 8 0 #40000000">
+    <Border CornerRadius="0" ClipToBounds="True" Background="{DynamicResource Surface0Brush}" BoxShadow="0 2 8 0 #40000000">
       <Grid>
         <!-- Poster Area Placeholder -->
         <Border x:Name="PlaceholderBorder" Background="{DynamicResource SurfaceLightBrush}">

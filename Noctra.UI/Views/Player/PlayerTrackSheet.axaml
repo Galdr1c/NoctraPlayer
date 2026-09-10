@@ -16,10 +16,17 @@
       <Setter Property="MinHeight" Value="48" />
       <Setter Property="CornerRadius" Value="6" />
       <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
       <Setter Property="HorizontalAlignment" Value="Stretch" />
     </Style>
-    <Style Selector="Button.selectionSheetOption:pointerover /template/ ContentPresenter"><Setter Property="Background" Value="{DynamicResource PlayerOverlaySheetHoverBrush}" /></Style>
-    <Style Selector="Button.selectionSheetOption:pressed /template/ ContentPresenter"><Setter Property="Background" Value="{DynamicResource PlayerOverlaySheetPressedBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" /></Style>
+    <Style Selector="Button.selectionSheetOption:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource PlayerOverlaySheetPressedBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+    </Style>
+    <Style Selector="Button.selectionSheetOption:pressed /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource PlayerOverlaySheetPressedBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+    </Style>
   </UserControl.Styles>
   <StackPanel Spacing="12">
     <Grid ColumnDefinitions="*,Auto">

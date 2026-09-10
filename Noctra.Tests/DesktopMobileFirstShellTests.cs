@@ -97,7 +97,9 @@ public sealed class DesktopMobileFirstShellTests
         Assert.Contains("Settings.Section.Appearance", settingsWindow, StringComparison.Ordinal);
 
         Assert.Contains("new SettingsCommonSectionsView()", sharedAdapter, StringComparison.Ordinal);
-        Assert.Contains("Take(3)", sharedAdapter, StringComparison.Ordinal);
+        Assert.Contains("ProfileSummaryCard", sharedAdapter, StringComparison.Ordinal);
+        Assert.Contains("ProfileManagementCard", sharedAdapter, StringComparison.Ordinal);
+        Assert.Contains("ProfileAccountCard", sharedAdapter, StringComparison.Ordinal);
         Assert.Contains("BackToProfilesRequested", sharedAdapter, StringComparison.Ordinal);
     }
 

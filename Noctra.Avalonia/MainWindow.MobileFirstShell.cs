@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Data;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Threading;
@@ -76,10 +77,7 @@ public partial class MainWindow
         if (SideBar.Child is not StackPanel rail)
             return;
 
-        _desktopSearchNavButton = CreateRailButton(
-            MaterialIconKind.Magnify,
-            LocalizationSource.Instance["Shell.Search.Tooltip"],
-            out _desktopSearchNavText);
+        _desktopSearchNavButton = CreateRailButton(MaterialIconKind.Magnify, "Shell.Search.Tooltip", out _desktopSearchNavText);
         _desktopSearchNavButton.Click += DesktopSearchNav_Click;
 
         var seriesIndex = rail.Children.IndexOf(NavSeriesBtn);
@@ -95,10 +93,7 @@ public partial class MainWindow
             rail.Children.Insert(myListIndex, NavFavBtn);
         }
 
-        _desktopSettingsNavButton = CreateRailButton(
-            MaterialIconKind.CogOutline,
-            LocalizationSource.Instance["Settings.Title"],
-            out _desktopSettingsNavText);
+        _desktopSettingsNavButton = CreateRailButton(MaterialIconKind.CogOutline, "Settings.Title", out _desktopSettingsNavText);
         _desktopSettingsNavButton.Click += DesktopSettingsNav_Click;
 
         var downloadsIndex = rail.Children.IndexOf(NavDownloadsBtn);
@@ -122,7 +117,7 @@ public partial class MainWindow
 
     private static Button CreateRailButton(
         MaterialIconKind iconKind,
-        string label,
+        string localizationKey,
         out TextBlock labelText)
     {
         var activeIndicator = new Border();
@@ -131,10 +126,14 @@ public partial class MainWindow
         var icon = new MaterialIcon { Kind = iconKind };
         labelText = new TextBlock
         {
-            Text = label,
             VerticalAlignment = VerticalAlignment.Center,
             IsVisible = false
         };
+        labelText.Bind(TextBlock.TextProperty, new Binding($"[{localizationKey}]")
+        {
+            Source = LocalizationSource.Instance,
+            Mode = BindingMode.OneWay
+        });
 
         var itemContent = new StackPanel
         {
@@ -151,7 +150,11 @@ public partial class MainWindow
 
         var button = new Button { Content = content };
         button.Classes.Add("navItem");
-        button.SetValue(ToolTip.TipProperty, label);
+        button.Bind(ToolTip.TipProperty, new Binding($"[{localizationKey}]")
+        {
+            Source = LocalizationSource.Instance,
+            Mode = BindingMode.OneWay
+        });
         return button;
     }
 
@@ -213,14 +216,6 @@ public partial class MainWindow
         if (_desktopSettingsNavText is not null)
             _desktopSettingsNavText.IsVisible = expanded;
 
-        if (_desktopSearchNavButton is not null)
-            _desktopSearchNavButton.SetValue(
-                ToolTip.TipProperty,
-                expanded ? null : LocalizationSource.Instance["Shell.Search.Tooltip"]);
-        if (_desktopSettingsNavButton is not null)
-            _desktopSettingsNavButton.SetValue(
-                ToolTip.TipProperty,
-                expanded ? null : LocalizationSource.Instance["Shell.Settings.Tooltip"]);
     }
 
     private void MobileFirstShell_Closed(object? sender, EventArgs e)

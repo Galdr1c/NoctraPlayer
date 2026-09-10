@@ -2,7 +2,6 @@ using System;
 using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using Avalonia.VisualTree;
 using Noctra.UI.Views;
 
 namespace Noctra.Avalonia.Views;
@@ -27,11 +26,7 @@ public partial class SettingsWindow
         // The Profile tab is selected by default, so its three legacy SettingsCard
         // blocks are realized when the window opens. Replace only that exact group
         // with the same mobile-first shared control used by MobileSettingsView.
-        var profileCards = this.GetVisualDescendants()
-            .OfType<Border>()
-            .Where(border => border.Classes.Contains("SettingsCard"))
-            .Take(3)
-            .ToArray();
+        Border[] profileCards = [ProfileSummaryCard, ProfileManagementCard, ProfileAccountCard];
 
         if (profileCards.Length != 3 ||
             profileCards[0].Parent is not StackPanel parent ||
@@ -60,14 +55,20 @@ public partial class SettingsWindow
 
         // Keep language and every other Appearance control desktop-specific for now,
         // but use the exact same theme picker presentation as mobile.
-        if (DarkThemeButton.Parent is not StackPanel themeHost ||
-            !ReferenceEquals(LightThemeButton.Parent, themeHost))
+        if (!ReferenceEquals(DarkThemeButton.Parent, ThemeOptionsHost) ||
+            !ReferenceEquals(LightThemeButton.Parent, ThemeOptionsHost))
         {
             return;
         }
 
-        themeHost.Children.Clear();
-        themeHost.Children.Add(new SettingsThemePickerView { Width = 276 });
+        ThemeOptionsHost.Children.Remove(DarkThemeButton);
+        ThemeOptionsHost.Children.Remove(LightThemeButton);
+        ThemeOptionsHost.Children.Add(new SettingsThemePickerView
+        {
+            MinWidth = 340,
+            MaxWidth = 380,
+            HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Stretch
+        });
         _sharedThemePickerInstalled = true;
     }
 

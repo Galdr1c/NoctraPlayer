@@ -24,9 +24,9 @@ public sealed class SharedUiArchitectureTests
         Assert.Contains("new PlayerSheetOverlay", adapter, StringComparison.Ordinal);
         Assert.Contains("ShowLockAction = false", adapter, StringComparison.Ordinal);
         Assert.Contains("ShowPiPAction = true", adapter, StringComparison.Ordinal);
-        Assert.Contains("overlayContent.Children[0].IsVisible = false", adapter, StringComparison.Ordinal);
-        Assert.Contains("overlayContent.Children[1].IsVisible = false", adapter, StringComparison.Ordinal);
-        Assert.Contains("overlayContent.Children[2].IsVisible = false", adapter, StringComparison.Ordinal);
+        Assert.Contains("LegacyTopGradient.IsVisible = false", adapter, StringComparison.Ordinal);
+        Assert.Contains("LegacyTopBar.IsVisible = false", adapter, StringComparison.Ordinal);
+        Assert.Contains("LegacyTransportControls.IsVisible = false", adapter, StringComparison.Ordinal);
         Assert.Contains("SuppressLegacyPanel(\"EpisodesPanel\")", adapter, StringComparison.Ordinal);
         Assert.Contains("EpisodeThumbnailTemplate", adapter, StringComparison.Ordinal);
         Assert.Contains("DesktopRemoteImage", adapter, StringComparison.Ordinal);

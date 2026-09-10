@@ -8,12 +8,12 @@
              x:CompileBindings="False">
   <UserControl.Styles>
     <Style Selector="Button.settingsThemeCard">
-      <Setter Property="MinHeight" Value="92" />
-      <Setter Property="Padding" Value="0" />
-      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="MinHeight" Value="104" />
+      <Setter Property="Padding" Value="8" />
+      <Setter Property="Background" Value="{DynamicResource Surface1Brush}" />
       <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
       <Setter Property="BorderThickness" Value="1.5" />
-      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="CornerRadius" Value="10" />
       <Setter Property="HorizontalContentAlignment" Value="Stretch" />
       <Setter Property="VerticalContentAlignment" Value="Stretch" />
     </Style>
@@ -28,8 +28,13 @@
     </Style>
   </UserControl.Styles>
 
-  <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+  <Grid x:Name="ThemeLayoutRoot"
+        ColumnDefinitions="*,*"
+        RowDefinitions="Auto,Auto"
+        ColumnSpacing="12"
+        RowSpacing="12">
     <Button x:Name="DarkThemeButton"
+            MinWidth="160"
             Classes="settingsThemeCard"
             Click="DarkTheme_Click"
             AutomationProperties.Name="{loc:Translate Settings.Theme.Dark}">
@@ -60,6 +65,7 @@
 
     <Button x:Name="LightThemeButton"
             Grid.Column="1"
+            MinWidth="160"
             Classes="settingsThemeCard"
             Click="LightTheme_Click"
             AutomationProperties.Name="{loc:Translate Settings.Theme.Light}">

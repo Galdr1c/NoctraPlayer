@@ -206,7 +206,7 @@
             </Grid.Transitions>
 
             <!-- 1. Top Gradient -->
-            <Grid IsHitTestVisible="False" VerticalAlignment="Top">
+            <Grid x:Name="LegacyTopGradient" IsHitTestVisible="False" VerticalAlignment="Top">
                 <Border Height="140">
                     <Border.Background>
                         <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
@@ -218,7 +218,7 @@
             </Grid>
 
             <!-- 2. Top Bar -->
-            <Grid VerticalAlignment="Top" Margin="32,32,32,0">
+            <Grid x:Name="LegacyTopBar" VerticalAlignment="Top" Margin="32,32,32,0">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
@@ -244,7 +244,7 @@
             </Grid>
 
             <!-- 3. Bottom Control Bar -->
-            <Border VerticalAlignment="Bottom" Padding="32,80,32,32" CornerRadius="8">
+            <Border x:Name="LegacyTransportControls" VerticalAlignment="Bottom" Padding="32,80,32,32" CornerRadius="8">
                 <Border.Background>
                     <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
                         <GradientStop Color="#00000000" Offset="0.0"/>

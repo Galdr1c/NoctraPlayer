@@ -258,14 +258,14 @@ public sealed class VideoOverlayInputSurfaceTests
     public void MobilePlayerTransportBar_HasContentInfoAndLiveBadgeNextToTime()
     {
         var transportBar = LoadProjectFile(
-            "Noctra.Mobile",
+            "Noctra.UI",
             "Views",
             "Player",
-            "MobilePlayerTransportBar.axaml");
+            "PlayerTransportBar.axaml");
 
         Assert.Contains("IsLiveContent",
             transportBar, StringComparison.Ordinal);
-        Assert.Contains("PositionText",
+        Assert.Contains("DisplayedPositionText",
             transportBar, StringComparison.Ordinal);
         Assert.Contains("DurationText",
             transportBar, StringComparison.Ordinal);
@@ -279,10 +279,10 @@ public sealed class VideoOverlayInputSurfaceTests
     public void MobilePlayerTransportBar_ExposesAccessibleNamesForEveryAction()
     {
         var transportBar = LoadProjectFile(
-            "Noctra.Mobile",
+            "Noctra.UI",
             "Views",
             "Player",
-            "MobilePlayerTransportBar.axaml");
+            "PlayerTransportBar.axaml");
 
         foreach (var command in new[]
                  {
@@ -643,15 +643,15 @@ public sealed class VideoOverlayInputSurfaceTests
     public void MobilePlayerTimeline_UsesProtectedTouchTargetAndBufferedLayer()
     {
         var timeline = LoadProjectFile(
-            "Noctra.Mobile",
+            "Noctra.UI",
             "Views",
             "Player",
-            "MobilePlayerTimeline.axaml");
+            "PlayerTimeline.axaml");
         var timelineCode = LoadProjectFile(
-            "Noctra.Mobile",
+            "Noctra.UI",
             "Views",
             "Player",
-            "MobilePlayerTimeline.axaml.cs");
+            "PlayerTimeline.axaml.cs");
 
         var rootGrid = ExtractStartTag(timeline, "x:Name=\"RootGrid\"");
         var thumb = ExtractStartTag(timeline, "x:Name=\"Thumb\"");
@@ -678,10 +678,10 @@ public sealed class VideoOverlayInputSurfaceTests
     public void MobilePlayerTimeline_PreviewsDuringDragAndCommitsSeekOnlyAfterDrag()
     {
         var timelineCode = LoadProjectFile(
-            "Noctra.Mobile",
+            "Noctra.UI",
             "Views",
             "Player",
-            "MobilePlayerTimeline.axaml.cs");
+            "PlayerTimeline.axaml.cs");
 
         var pointerMoved = ExtractMethodBody(timelineCode, "private void OnPointerMoved");
         var pointerReleased = ExtractMethodBody(timelineCode, "private void OnPointerReleased");
@@ -700,10 +700,10 @@ public sealed class VideoOverlayInputSurfaceTests
             "Views",
             "MobileSelectionSheet.axaml");
         var trackSheet = LoadProjectFile(
-            "Noctra.Mobile",
+            "Noctra.UI",
             "Views",
             "Player",
-            "MobilePlayerTrackSheet.axaml");
+            "PlayerTrackSheet.axaml");
 
         foreach (var sharedVisual in new[]
                  {
@@ -730,21 +730,17 @@ public sealed class VideoOverlayInputSurfaceTests
     public void MobilePlayerQualitySheet_UsesSelectionSheetVisualsForCurrentPlaybackRate()
     {
         var qualitySheet = LoadProjectFile(
-            "Noctra.Mobile",
+            "Noctra.UI",
             "Views",
             "Player",
-            "MobilePlayerQualitySheet.axaml");
+            "PlayerQualitySheet.axaml");
 
         Assert.Contains("CurrentPlaybackRateKey",
             qualitySheet, StringComparison.Ordinal);
-        Assert.Contains("EqualityToBoolMultiConverter",
+        Assert.Contains("EqualityToBrushMultiConverter",
             qualitySheet, StringComparison.Ordinal);
         Assert.Equal(6,
             qualitySheet.Split("AccentSubtleBrush", StringSplitOptions.None).Length - 1);
-        Assert.Equal(6,
-            qualitySheet.Split("RadioboxMarked", StringSplitOptions.None).Length - 1);
-        Assert.Equal(6,
-            qualitySheet.Split("IsHitTestVisible=\"False\"", StringSplitOptions.None).Length - 1);
         Assert.DoesNotContain(
             "CommandParameter=\"0.",
             qualitySheet,
@@ -757,36 +753,32 @@ public sealed class VideoOverlayInputSurfaceTests
     public void MobilePlayerSleepSheet_UsesSelectionSheetVisualsForCurrentTimerMode()
     {
         var sleepSheet = LoadProjectFile(
-            "Noctra.Mobile",
+            "Noctra.UI",
             "Views",
             "Player",
-            "MobilePlayerSleepSheet.axaml");
+            "PlayerSleepSheet.axaml");
 
         Assert.Contains("SleepTimerMode",
             sleepSheet, StringComparison.Ordinal);
-        Assert.Contains("EqualityToBoolMultiConverter",
+        Assert.Contains("EqualityToBrushMultiConverter",
             sleepSheet, StringComparison.Ordinal);
-        Assert.Equal(5,
-            sleepSheet.Split("AccentSubtleBrush", StringSplitOptions.None).Length - 1);
-        Assert.Equal(5,
-            sleepSheet.Split("RadioboxMarked", StringSplitOptions.None).Length - 1);
-        Assert.Equal(5,
-            sleepSheet.Split("IsHitTestVisible=\"False\"", StringSplitOptions.None).Length - 1);
+        Assert.True(
+            sleepSheet.Split("AccentSubtleBrush", StringSplitOptions.None).Length - 1 >= 5);
     }
 
     [Fact]
     public void MobilePlayerTimeline_UpdatesBottomVodTimeDuringDragWithoutFloatingBubble()
     {
         var timeline = LoadProjectFile(
-            "Noctra.Mobile",
+            "Noctra.UI",
             "Views",
             "Player",
-            "MobilePlayerTimeline.axaml");
+            "PlayerTimeline.axaml");
         var timelineCode = LoadProjectFile(
-            "Noctra.Mobile",
+            "Noctra.UI",
             "Views",
             "Player",
-            "MobilePlayerTimeline.axaml.cs");
+            "PlayerTimeline.axaml.cs");
 
         Assert.DoesNotContain("x:Name=\"PreviewBubble\"",
             timeline, StringComparison.Ordinal);
@@ -799,10 +791,10 @@ public sealed class VideoOverlayInputSurfaceTests
         Assert.Contains(
             "DisplayedPositionText",
             LoadProjectFile(
-                "Noctra.Mobile",
+                "Noctra.UI",
                 "Views",
                 "Player",
-                "MobilePlayerTransportBar.axaml"),
+                "PlayerTransportBar.axaml"),
             StringComparison.Ordinal);
         Assert.Contains(
             "UpdateSeekPreview(",

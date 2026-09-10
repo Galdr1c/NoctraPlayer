@@ -33,14 +33,14 @@ public partial class VideoOverlayView
             return;
 
         var overlayContent = this.FindControl<Grid>("OverlayContent");
-        if (overlayContent is null || overlayContent.Children.Count < 3)
+        if (overlayContent is null)
             return;
 
-        // The first three children are the legacy top gradient, desktop top bar,
-        // and desktop transport/timeline. Keep EPG/native-window behavior intact.
-        overlayContent.Children[0].IsVisible = false;
-        overlayContent.Children[1].IsVisible = false;
-        overlayContent.Children[2].IsVisible = false;
+        // Keep EPG/native-window behavior intact while replacing only the three
+        // explicitly named legacy presentation layers.
+        LegacyTopGradient.IsVisible = false;
+        LegacyTopBar.IsVisible = false;
+        LegacyTransportControls.IsVisible = false;
 
         // Common panel states render through the shared mobile-first sheet.
         // Their host-specific native/input behavior remains in this desktop view.

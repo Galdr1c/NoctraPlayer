@@ -8,10 +8,10 @@ public sealed class MobilePlayerTransportResponsiveLayoutTests
     public void TimingLayout_DoesNotDependOnOrientationSpecificWidthThreshold()
     {
         var source = LoadProjectFile(
-            "Noctra.Mobile",
+            "Noctra.UI",
             "Views",
             "Player",
-            "MobilePlayerTransportBar.axaml.cs");
+            "PlayerTransportBar.axaml.cs");
 
         Assert.DoesNotContain("NarrowLayoutMaxWidth", source, StringComparison.Ordinal);
         Assert.DoesNotContain("IsNarrowLayout", source, StringComparison.Ordinal);
@@ -22,10 +22,10 @@ public sealed class MobilePlayerTransportResponsiveLayoutTests
     public void TransportXaml_UsesSharedVodTimingRowAcrossOrientations()
     {
         var path = FindProjectFile(
-            "Noctra.Mobile",
+            "Noctra.UI",
             "Views",
             "Player",
-            "MobilePlayerTransportBar.axaml");
+            "PlayerTransportBar.axaml");
         var document = XDocument.Load(path);
         var source = File.ReadAllText(path);
 

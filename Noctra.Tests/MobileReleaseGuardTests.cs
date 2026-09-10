@@ -371,7 +371,7 @@ public class MobileReleaseGuardTests
     {
         var app = ReadProjectFile("Noctra.Mobile", "App.axaml");
         var profile = ReadProjectFile("Noctra.Mobile", "Views", "ProfileSetupView.axaml");
-        var search = ReadProjectFile("Noctra.Mobile", "Views", "MobileSearchView.axaml");
+        var search = ReadProjectFile("Noctra.UI", "Views", "AdaptiveSearchView.axaml");
         var categories = ReadProjectFile("Noctra.Mobile", "Views", "MobileCategorySelectionView.axaml");
         var settings = ReadProjectFile("Noctra.Mobile", "Views", "MobileSettingsView.axaml");
 
@@ -421,14 +421,14 @@ public class MobileReleaseGuardTests
             Assert.Contains("<SolidColorBrush x:Key=\"TextSelectionBrush\" Color=\"#997C3AED\" />", theme);
         }
 
-        foreach (var viewName in new[]
+        foreach (var path in new[]
                  {
-                     "MobileSearchView.axaml",
-                     "MobileCategorySelectionView.axaml",
-                     "MobileSettingsView.axaml"
+                     new[] { "Noctra.UI", "Views", "AdaptiveSearchView.axaml" },
+                     new[] { "Noctra.Mobile", "Views", "MobileCategorySelectionView.axaml" },
+                     new[] { "Noctra.Mobile", "Views", "MobileSettingsView.axaml" }
                  })
         {
-            var view = ReadProjectFile("Noctra.Mobile", "Views", viewName);
+            var view = ReadProjectFile(path);
             var textBoxes = System.Text.RegularExpressions.Regex.Matches(
                 view,
                 "<TextBox\\b.*?/>",

@@ -70,6 +70,7 @@ internal sealed class DesktopCardRowPresenter : WrapPanel
             card.Height = kind switch
             {
                 DesktopCardGridKind.Vod or DesktopCardGridKind.Series => Math.Round(cardWidth * 1.5),
+                DesktopCardGridKind.ContinueWatching => Math.Round(cardWidth * 146d / 260d),
                 _ => 96
             };
             card.Margin = new Thickness(
@@ -124,6 +125,7 @@ internal sealed class DesktopCardRowPresenter : WrapPanel
         {
             DesktopCardGridKind.Live => new LiveTvCard(),
             DesktopCardGridKind.Vod => new VodCard(),
+            DesktopCardGridKind.ContinueWatching => new ContinueWatchingCard(),
             _ => new SeriesCard()
         };
 

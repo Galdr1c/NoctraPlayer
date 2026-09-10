@@ -206,7 +206,7 @@
                         <StackPanel HorizontalAlignment="Stretch" Margin="0,0,0,20">
                             
                             <!-- Current Profile Card -->
-                            <Border Classes="SettingsCard">
+                            <Border x:Name="ProfileSummaryCard" Classes="SettingsCard">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto"/>
@@ -235,7 +235,7 @@
                                 </Grid>
                             </Border>
 
-                            <Border Classes="SettingsCard">
+                            <Border x:Name="ProfileManagementCard" Classes="SettingsCard">
                                 <StackPanel>
                                     <TextBlock Text="{loc:Translate Settings.Profile.Management}" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,12"/>
                                     <TextBlock Text="{loc:Translate Settings.Profile.ManagementDetail}"
@@ -249,7 +249,7 @@
                             </Border>
 
                             <!-- Subscription Details -->
-                            <Border Classes="SettingsCard">
+                            <Border x:Name="ProfileAccountCard" Classes="SettingsCard">
                                 <StackPanel>
                                     <TextBlock Text="{loc:Translate Settings.Account.Title}" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,20"/>
                                     
@@ -977,7 +977,7 @@
                                         </StackPanel>
 
                                         <!-- Theme Options -->
-                                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                        <StackPanel x:Name="ThemeOptionsHost" Grid.Column="1" Orientation="Horizontal">
                                             <!-- Dark Theme Button -->
                                             <Border x:Name="DarkThemeButton" Width="130" Height="85" CornerRadius="4" BorderThickness="1.5" BorderBrush="Transparent" Cursor="Hand" PointerPressed="DarkTheme_PointerPressed" Margin="0,0,16,0">
                                                 <Grid>
@@ -1204,10 +1204,7 @@
                                         <!-- Update Available State -->
                                         <Button Command="{Binding CheckForUpdatesCommand}"
                                                 IsVisible="False"
-                                                Background="{DynamicResource AccentBrush}"
-                                                Foreground="White"
-                                                Padding="18,9"
-                                                CornerRadius="8"
+                                                Theme="{StaticResource SettingsActionButton}"
                                                 Cursor="Hand">
                                             <StackPanel Orientation="Horizontal" Spacing="8">
                                                 <materialIcons:MaterialIcon Kind="RocketLaunch" Width="18" Height="18"/>

@@ -8,24 +8,6 @@
              x:Name="Root"
              x:DataType="vm:MainViewModel"
              x:CompileBindings="False">
-  <UserControl.Styles>
-    <Style Selector="Button.downloadDangerAction">
-      <Setter Property="MinHeight" Value="44" />
-      <Setter Property="Padding" Value="12,0" />
-      <Setter Property="Background" Value="{DynamicResource DangerSubtleBrush}" />
-      <Setter Property="Foreground" Value="{DynamicResource ErrorBrush}" />
-      <Setter Property="BorderBrush" Value="{DynamicResource ErrorBrush}" />
-      <Setter Property="BorderThickness" Value="1" />
-      <Setter Property="CornerRadius" Value="6" />
-      <Setter Property="HorizontalContentAlignment" Value="Center" />
-    </Style>
-    <Style Selector="Button.downloadDangerAction:pointerover /template/ ContentPresenter">
-      <Setter Property="Background" Value="{DynamicResource InteractiveHoverBrush}" />
-    </Style>
-    <Style Selector="Button.downloadDangerAction:pressed /template/ ContentPresenter">
-      <Setter Property="Opacity" Value="0.78" />
-    </Style>
-  </UserControl.Styles>
 
   <StackPanel x:Name="LayoutRoot" Margin="24" Spacing="20">
     <StackPanel Spacing="4">
@@ -107,7 +89,7 @@
         </StackPanel>
 
         <StackPanel Grid.Column="2" Spacing="8" Margin="16,0,0,0" VerticalAlignment="Center">
-          <Button Classes="downloadDangerAction"
+          <Button Theme="{StaticResource ErrorButton}"
                   Command="{Binding DeleteAllDownloadsCommand}"
                   IsVisible="{Binding HasDownloadedItems}"
                   AutomationProperties.Name="{loc:Translate Downloads.Action.DeleteAll}">
