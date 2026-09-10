@@ -138,6 +138,31 @@ public sealed class SharedUiArchitectureTests
         Assert.Contains("DesktopSectionedCardFeed", desktop, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void LibraryScreens_ShareMobileFirstScaffoldAndKeepPlatformFeeds()
+    {
+        var shared = LoadProjectFile("Noctra.UI", "Views", "AdaptiveLibraryView.axaml");
+        Assert.Contains("HeaderActionHost", shared, StringComparison.Ordinal);
+        Assert.Contains("ItemsHost", shared, StringComparison.Ordinal);
+        Assert.Contains("EmptyIconKind", shared, StringComparison.Ordinal);
+
+        foreach (var view in new[] { "Favorites", "MyList", "History" })
+        {
+            var mobile = LoadProjectFile("Noctra.Mobile", "Views", $"Mobile{view}View.axaml");
+            var desktop = LoadProjectFile("Noctra.Avalonia", "Views", $"{view}View.axaml");
+
+            Assert.Contains("<shared:AdaptiveLibraryView", mobile, StringComparison.Ordinal);
+            Assert.Contains("<shared:AdaptiveLibraryView", desktop, StringComparison.Ordinal);
+            Assert.Contains("MobileSectionedCardFeed", mobile, StringComparison.Ordinal);
+            Assert.Contains("DesktopSectionedCardFeed", desktop, StringComparison.Ordinal);
+        }
+
+        var mobileHistory = LoadProjectFile("Noctra.Mobile", "Views", "MobileHistoryView.axaml");
+        var desktopHistory = LoadProjectFile("Noctra.Avalonia", "Views", "HistoryView.axaml");
+        Assert.Contains("ClearHistoryCommand", mobileHistory, StringComparison.Ordinal);
+        Assert.Contains("ClearHistoryCommand", desktopHistory, StringComparison.Ordinal);
+    }
+
     private static string LoadProjectFile(params string[] parts)
     {
         var root = FindRepositoryRoot();
