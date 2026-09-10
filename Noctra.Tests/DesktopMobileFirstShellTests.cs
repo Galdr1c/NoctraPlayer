@@ -76,6 +76,7 @@ public sealed class DesktopMobileFirstShellTests
     {
         var adapter = Source("Noctra.Avalonia", "MainWindow.MobileFirstShell.cs");
         var settingsWindow = Source("Noctra.Avalonia", "Views", "SettingsWindow.axaml");
+        var sharedAdapter = Source("Noctra.Avalonia", "Views", "SettingsWindow.SharedUi.cs");
 
         var handlerStart = adapter.IndexOf("private void DesktopSettingsNav_Click", StringComparison.Ordinal);
         var handlerEnd = adapter.IndexOf("private void MobileFirstShellViewModel_PropertyChanged", handlerStart, StringComparison.Ordinal);
@@ -94,6 +95,10 @@ public sealed class DesktopMobileFirstShellTests
         Assert.Contains("Settings.Nav.Notifications", settingsWindow, StringComparison.Ordinal);
         Assert.Contains("Settings.Nav.Privacy", settingsWindow, StringComparison.Ordinal);
         Assert.Contains("Settings.Section.Appearance", settingsWindow, StringComparison.Ordinal);
+
+        Assert.Contains("new SettingsCommonSectionsView()", sharedAdapter, StringComparison.Ordinal);
+        Assert.Contains("Take(3)", sharedAdapter, StringComparison.Ordinal);
+        Assert.Contains("BackToProfilesRequested", sharedAdapter, StringComparison.Ordinal);
     }
 
     [Fact]
