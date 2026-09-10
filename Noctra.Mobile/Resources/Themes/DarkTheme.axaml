@@ -1,9 +1,0 @@
-<ResourceDictionary xmlns="https://github.com/avaloniaui"
-                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-  <!-- Compatibility shim for source-contract tests and stale external resource URIs.
-       Runtime hosts load Noctra.UI/Resources/Themes/DarkTheme.axaml directly. -->
-  <ResourceDictionary.MergedDictionaries>
-    <ResourceInclude Source="avares://Noctra.UI/Resources/Themes/DarkTheme.axaml" />
-  </ResourceDictionary.MergedDictionaries>
-  <SolidColorBrush x:Key="TextSelectionBrush" Color="#997C3AED" />
-</ResourceDictionary>
