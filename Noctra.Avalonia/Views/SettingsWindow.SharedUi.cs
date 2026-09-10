@@ -10,11 +10,13 @@ namespace Noctra.Avalonia.Views;
 public partial class SettingsWindow
 {
     private bool _sharedProfileSettingsInstalled;
+    private bool _sharedThemePickerInstalled;
 
     protected override void OnOpened(EventArgs e)
     {
         base.OnOpened(e);
         InstallSharedProfileSettings();
+        InstallSharedThemePicker();
     }
 
     private void InstallSharedProfileSettings()
@@ -49,6 +51,24 @@ public partial class SettingsWindow
         sharedSections.BackToProfilesRequested += SharedSettingsBackToProfilesRequested;
         parent.Children.Insert(insertIndex, sharedSections);
         _sharedProfileSettingsInstalled = true;
+    }
+
+    private void InstallSharedThemePicker()
+    {
+        if (_sharedThemePickerInstalled)
+            return;
+
+        // Keep language and every other Appearance control desktop-specific for now,
+        // but use the exact same theme picker presentation as mobile.
+        if (DarkThemeButton.Parent is not StackPanel themeHost ||
+            !ReferenceEquals(LightThemeButton.Parent, themeHost))
+        {
+            return;
+        }
+
+        themeHost.Children.Clear();
+        themeHost.Children.Add(new SettingsThemePickerView { Width = 276 });
+        _sharedThemePickerInstalled = true;
     }
 
     private void SharedSettingsBackToProfilesRequested(object? sender, RoutedEventArgs e)
