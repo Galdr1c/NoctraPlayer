@@ -33,6 +33,7 @@
           <player:PlayerMoreSheet IsVisible="{Binding IsActionsPanelOpen}" />
           <player:PlayerTrackSheet IsVisible="{Binding IsAudioSettingsOpen}" Margin="14,0,14,14" />
           <player:PlayerQualitySheet IsVisible="{Binding IsQualitySettingsOpen}" Margin="14,0,14,14" />
+          <player:PlayerSubtitleAppearanceSheet IsVisible="{Binding IsSubtitleAppearanceSettingsOpen}" Margin="14,0,14,14" />
           <player:PlayerInfoSheet IsVisible="{Binding IsInfoPanelOpen}" Margin="14,0,14,14" />
           <player:PlayerSleepSheet IsVisible="{Binding IsSleepTimerPanelOpen}" Margin="14,0,14,14" />
         </StackPanel>
