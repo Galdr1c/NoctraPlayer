@@ -48,6 +48,8 @@ public sealed class SharedThemeCanonicalizationTests
                      Path.Combine("Noctra.Mobile", "Resources", "Tokens.axaml"),
                      Path.Combine("Noctra.Mobile", "Resources", "CommonStyles.axaml"),
                      Path.Combine("Noctra.Mobile", "Resources", "SettingsStyles.axaml"),
+                     Path.Combine("Noctra.Mobile", "Resources", "Themes", "DarkTheme.axaml"),
+                     Path.Combine("Noctra.Mobile", "Resources", "Themes", "LightTheme.axaml"),
                      Path.Combine("Noctra.Avalonia", "Resources", "Colors.axaml"),
                      Path.Combine("Noctra.Avalonia", "Resources", "Tokens.axaml"),
                      Path.Combine("Noctra.Avalonia", "Resources", "Themes", "DarkTheme.axaml"),
@@ -76,6 +78,16 @@ public sealed class SharedThemeCanonicalizationTests
         Assert.Contains("button.Bind(ToolTip.TipProperty", shell, StringComparison.Ordinal);
         Assert.Contains("ToolTip.ServiceEnabledProperty, !expanded", shell, StringComparison.Ordinal);
         Assert.Contains("ToolTip.IsOpenProperty, false", shell, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void DesktopResumeAction_UsesSharedPillRadiusToken()
+    {
+        var mainWindow = Read("Noctra.Avalonia", "MainWindow.axaml");
+
+        Assert.Contains("<Style Selector=\"Button.ResumePrimaryButton\">", mainWindow, StringComparison.Ordinal);
+        Assert.Contains("<Setter Property=\"CornerRadius\" Value=\"{DynamicResource RadiusPill}\" />", mainWindow, StringComparison.Ordinal);
+        Assert.DoesNotContain("<Setter Property=\"CornerRadius\" Value=\"81\" />", mainWindow, StringComparison.Ordinal);
     }
 
     private static string Read(params string[] path)
