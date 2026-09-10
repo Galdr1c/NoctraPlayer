@@ -9,8 +9,20 @@ public sealed class DesktopMobileFirstShellTests
 
         Assert.Contains("CollapseLegacyDesktopHeader", adapter, StringComparison.Ordinal);
         Assert.Contains("HeaderBar.Height = 0", adapter, StringComparison.Ordinal);
+        Assert.Contains("HeaderBar.IsEnabled = false", adapter, StringComparison.Ordinal);
         Assert.Contains("HeaderBar.IsHitTestVisible = false", adapter, StringComparison.Ordinal);
         Assert.Contains("rootGrid.RowDefinitions[0].Height = new GridLength(0)", adapter, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void DesktopRail_FollowsCanonicalMobileNavigationOrdering()
+    {
+        var adapter = Source("Noctra.Avalonia", "MainWindow.MobileFirstShell.cs");
+
+        Assert.Contains("rail.Children.IndexOf(NavSeriesBtn)", adapter, StringComparison.Ordinal);
+        Assert.Contains("Favorites before My List", adapter, StringComparison.Ordinal);
+        Assert.Contains("rail.Children.IndexOf(NavDownloadsBtn)", adapter, StringComparison.Ordinal);
+        Assert.Contains("rail.Children.Insert(settingsIndex, _desktopSettingsNavButton)", adapter, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -38,7 +50,7 @@ public sealed class DesktopMobileFirstShellTests
         var adapter = Source("Noctra.Avalonia", "MainWindow.MobileFirstShell.cs");
 
         Assert.Contains("MaterialIconKind.CogOutline", adapter, StringComparison.Ordinal);
-        Assert.Contains("Shell.Settings.Tooltip", adapter, StringComparison.Ordinal);
+        Assert.Contains("Settings.Title", adapter, StringComparison.Ordinal);
         Assert.Contains("SettingsButton_Click(sender, e)", adapter, StringComparison.Ordinal);
     }
 
