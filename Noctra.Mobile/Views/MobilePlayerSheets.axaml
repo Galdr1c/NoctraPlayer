@@ -45,11 +45,10 @@
           <sharedPlayer:PlayerMoreSheet IsVisible="{Binding IsActionsPanelOpen}" />
           <sharedPlayer:PlayerTrackSheet IsVisible="{Binding IsAudioSettingsOpen}" Margin="14,0,14,14" />
           <sharedPlayer:PlayerQualitySheet IsVisible="{Binding IsQualitySettingsOpen}" Margin="14,0,14,14" />
-
-          <!-- Still platform-bound until image/input dependencies are extracted. -->
-          <player:MobilePlayerSubtitleAppearanceSheet IsVisible="{Binding IsSubtitleAppearanceSettingsOpen}" Margin="14,0,14,14" />
-
+          <sharedPlayer:PlayerSubtitleAppearanceSheet IsVisible="{Binding IsSubtitleAppearanceSettingsOpen}" Margin="14,0,14,14" />
           <sharedPlayer:PlayerInfoSheet IsVisible="{Binding IsInfoPanelOpen}" Margin="14,0,14,14" />
+
+          <!-- Episodes remain platform-bound until image/virtualization dependencies are extracted. -->
           <player:MobilePlayerEpisodesSheet IsVisible="{Binding IsEpisodesPanelOpen}" Margin="14,0,14,14" />
           <sharedPlayer:PlayerSleepSheet IsVisible="{Binding IsSleepTimerPanelOpen}" Margin="14,0,14,14" />
 
