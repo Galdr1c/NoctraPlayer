@@ -33,6 +33,9 @@
   <Application.Styles>
     <materialIcons:MaterialIconStyles />
     <FluentTheme />
+    <StyleInclude Source="avares://Noctra.UI/Controls/PremiumSpinner.axaml" />
+    <StyleInclude Source="avares://Noctra.UI/Resources/CommonStyles.axaml" />
+    <StyleInclude Source="avares://Noctra.UI/Resources/SettingsStyles.axaml" />
     <StyleInclude Source="avares://Noctra/Resources/DesktopModernStyles.axaml" />
     <StyleInclude Source="avares://Noctra/Controls/PremiumSpinner.axaml" />
     

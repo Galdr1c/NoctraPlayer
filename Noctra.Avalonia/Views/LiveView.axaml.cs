@@ -161,9 +161,8 @@ public partial class LiveView : UserControl
     {
         if (_observedViewModel is null) return;
         var label = DesktopContentSortSelection.GetSelectedLabel(_observedViewModel);
-        SortSelectionIcon.Kind = DesktopContentSortSelection.GetIcon(_observedViewModel.SelectedSortOrder);
-        ToolTip.SetTip(SortSelectionButton, label);
-        AutomationProperties.SetName(SortSelectionButton, label);
+        CatalogContent.SortIconKind = DesktopContentSortSelection.GetIcon(_observedViewModel.SelectedSortOrder);
+        CatalogContent.SortLabel = label;
     }
 
     private void UpdateCategorySelection()
@@ -172,9 +171,7 @@ public partial class LiveView : UserControl
         var label = string.IsNullOrWhiteSpace(selected)
             ? LocalizationSource.Instance["Common.All"]
             : selected;
-        CategorySelectionValue.Text = label;
-        ToolTip.SetTip(CategorySelectionButton, label);
-        AutomationProperties.SetName(CategorySelectionButton, label);
+        CatalogContent.CategoryLabel = label;
     }
 
     private async void LiveView_ScrollChanged(object? sender, ScrollChangedEventArgs e)

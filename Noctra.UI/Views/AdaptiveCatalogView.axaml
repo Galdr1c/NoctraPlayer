@@ -1,0 +1,104 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             xmlns:sharedControls="using:Noctra.UI.Controls"
+             x:Class="Noctra.UI.Views.AdaptiveCatalogView"
+             x:Name="Root"
+             x:CompileBindings="False">
+  <Grid Margin="{DynamicResource PagePaddingLarge}"
+        RowDefinitions="Auto,Auto,*"
+        RowSpacing="20">
+    <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
+      <TextBlock Text="{Binding Title, ElementName=Root}"
+                 FontSize="{DynamicResource FHeadline}"
+                 FontWeight="Bold"
+                 LetterSpacing="1"
+                 Foreground="{DynamicResource TextPrimaryBrush}" />
+      <Button x:Name="SortSelectionButton"
+              Grid.Column="1"
+              Classes="SortIconButton"
+              IsVisible="{Binding ShowContentFilters, ElementName=Root}"
+              Click="SortSelectionButton_Click"
+              ToolTip.Tip="{Binding SortLabel, ElementName=Root}"
+              AutomationProperties.Name="{Binding SortLabel, ElementName=Root}"
+              AutomationProperties.HelpText="{Binding SortLabel, ElementName=Root}">
+        <icons:MaterialIcon x:Name="SortSelectionIcon"
+                            Kind="{Binding SortIconKind, ElementName=Root}"
+                            Width="24"
+                            Height="24"
+                            Foreground="{DynamicResource TextPrimaryBrush}" />
+      </Button>
+    </Grid>
+
+    <Button x:Name="CategorySelectionButton"
+            Grid.Row="1"
+            Classes="SettingsSelectionButton"
+            IsVisible="{Binding ShowGroupFilter, ElementName=Root}"
+            Click="CategorySelectionButton_Click"
+            ToolTip.Tip="{Binding CategoryLabel, ElementName=Root}"
+            AutomationProperties.Name="{Binding CategoryLabel, ElementName=Root}">
+      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+        <TextBlock Text="{Binding CategoryLabel, ElementName=Root}"
+                   Foreground="{DynamicResource TextPrimaryBrush}"
+                   FontWeight="SemiBold"
+                   TextTrimming="CharacterEllipsis"
+                   VerticalAlignment="Center" />
+        <icons:MaterialIcon Grid.Column="1"
+                            Kind="ChevronRight"
+                            Width="22"
+                            Height="22"
+                            Foreground="{DynamicResource TextMutedBrush}"
+                            VerticalAlignment="Center" />
+      </Grid>
+    </Button>
+
+    <ContentControl Grid.Row="2"
+                    x:Name="ItemsPresenter"
+                    Content="{Binding ItemsHost, ElementName=Root}"
+                    HorizontalContentAlignment="Stretch"
+                    VerticalContentAlignment="Stretch"
+                    IsVisible="{Binding !IsLoading, ElementName=Root}" />
+
+    <StackPanel Grid.Row="2"
+                Spacing="16"
+                Margin="0,80,0,0"
+                HorizontalAlignment="Center"
+                IsVisible="{Binding IsLoading, ElementName=Root}">
+      <sharedControls:PremiumSpinner Width="56" Height="56" HorizontalAlignment="Center" />
+      <TextBlock Text="{Binding LoadingText, ElementName=Root}"
+                 FontSize="{DynamicResource FBodyL}"
+                 FontWeight="SemiBold"
+                 Foreground="{DynamicResource TextMutedBrush}"
+                 TextAlignment="Center" />
+      <TextBlock Text="{Binding LoadingDetailText, ElementName=Root}"
+                 FontSize="{DynamicResource FCaption}"
+                 Foreground="{DynamicResource TextMutedBrush}"
+                 Opacity="0.6"
+                 TextAlignment="Center" />
+    </StackPanel>
+
+    <StackPanel Grid.Row="2"
+                Spacing="8"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                IsVisible="{Binding ShowEmptyState, ElementName=Root}">
+      <icons:MaterialIcon Kind="{Binding EmptyIconKind, ElementName=Root}"
+                          Width="64"
+                          Height="64"
+                          Foreground="{DynamicResource TextMutedBrush}"
+                          Opacity="0.5"
+                          HorizontalAlignment="Center" />
+      <TextBlock Text="{Binding EmptyTitle, ElementName=Root}"
+                 FontSize="{DynamicResource FHeadline}"
+                 FontWeight="SemiBold"
+                 TextAlignment="Center"
+                 Margin="0,6,0,0" />
+      <TextBlock Text="{Binding EmptyDescription, ElementName=Root}"
+                 FontSize="{DynamicResource FBody}"
+                 Foreground="{DynamicResource TextMutedBrush}"
+                 TextAlignment="Center"
+                 TextWrapping="Wrap"
+                 MaxWidth="420" />
+    </StackPanel>
+  </Grid>
+</UserControl>

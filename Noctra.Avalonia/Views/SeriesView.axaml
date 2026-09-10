@@ -1,56 +1,35 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:Noctra.ViewModels"
+             xmlns:loc="using:Noctra.UI.Localization"
              xmlns:controls="using:Noctra.Avalonia.Controls"
              xmlns:views="using:Noctra.Avalonia.Views"
-             xmlns:loc="using:Noctra.Avalonia.Localization"
-             xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
-             mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="760"
+             xmlns:shared="using:Noctra.UI.Views"
              x:Class="Noctra.Avalonia.Views.SeriesView"
              x:CompileBindings="False">
   <Grid IsVisible="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.Series}}">
-    <Grid Margin="24,24,24,0" RowDefinitions="Auto,*" RowSpacing="{DynamicResource DesktopHeaderGap}">
-      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
-        <TextBlock Text="{loc:Translate Series.Title}" Classes="DesktopPageTitle" VerticalAlignment="Center" />
-        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" IsVisible="{Binding ShowContentFilters}">
-          <Button x:Name="CategorySelectionButton" Classes="DesktopFilterButton"
-                  IsVisible="{Binding ShowGroupFilter}" Click="OpenCategorySelection_Click">
-            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-              <TextBlock x:Name="CategorySelectionValue" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-              <icons:MaterialIcon Grid.Column="1" Kind="ChevronDown" Width="20" Height="20" />
-            </Grid>
-          </Button>
-          <Button x:Name="SortSelectionButton" Classes="DesktopIconButton" Width="44" Height="44"
-                  Click="OpenSortSelectionSheet_Click">
-            <icons:MaterialIcon x:Name="SortSelectionIcon" Kind="Sort" Width="23" Height="23" />
-          </Button>
-        </StackPanel>
-      </Grid>
-      <Grid Grid.Row="1">
-        <controls:DesktopVirtualizingCardGrid CardKind="Series"
-            SourceItems="{Binding SeriesViewItems}" IsVisible="{Binding !IsContentLoading}"
-            ScrollChanged="SeriesView_ScrollChanged" />
-        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="18"
-                    IsVisible="{Binding IsContentLoading}">
-          <controls:PremiumSpinner Width="56" Height="56" HorizontalAlignment="Center" />
-          <TextBlock Text="{loc:Translate Series.Loading}" FontSize="15" FontWeight="SemiBold"
-                     Foreground="{DynamicResource TextMutedBrush}" TextAlignment="Center" />
-          <TextBlock Text="{loc:Translate Live.LoadingDetail}" FontSize="12" Opacity="0.65"
-                     Foreground="{DynamicResource TextMutedBrush}" TextAlignment="Center" />
-        </StackPanel>
-        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
-                    IsVisible="{Binding ShowEmptyChannels}">
-          <icons:MaterialIcon Kind="MovieOutline" Width="64" Height="64"
-                              Foreground="{DynamicResource TextMutedBrush}" Opacity="0.5" />
-          <TextBlock Text="{loc:Translate Series.Empty.Title}" FontSize="20" FontWeight="SemiBold"
-                     TextAlignment="Center" Margin="0,14,0,6" />
-          <TextBlock Text="{loc:Translate Series.Empty.Description}" FontSize="14"
-                     Foreground="{DynamicResource TextMutedBrush}" TextAlignment="Center" />
-        </StackPanel>
-      </Grid>
-    </Grid>
+    <shared:AdaptiveCatalogView x:Name="CatalogContent"
+                                Title="{loc:Translate Series.Title}"
+                                LoadingText="{loc:Translate Series.Loading}"
+                                LoadingDetailText="{loc:Translate Live.LoadingDetail}"
+                                EmptyTitle="{loc:Translate Series.Empty.Title}"
+                                EmptyDescription="{loc:Translate Series.Empty.Description}"
+                                EmptyIconKind="MovieOutline"
+                                CategoryLabel="{loc:Translate Common.All}"
+                                SortLabel="{loc:Translate Main.Sort.Title}"
+                                ShowContentFilters="{Binding ShowContentFilters}"
+                                ShowGroupFilter="{Binding ShowGroupFilter}"
+                                IsLoading="{Binding IsContentLoading}"
+                                ShowEmptyState="{Binding ShowEmptyChannels}"
+                                SortRequested="OpenSortSelectionSheet_Click"
+                                CategoryRequested="OpenCategorySelection_Click">
+      <shared:AdaptiveCatalogView.ItemsHost>
+        <controls:DesktopVirtualizingCardGrid x:Name="PrimaryScrollContent"
+                                              CardKind="Series"
+                                              SourceItems="{Binding SeriesViewItems}"
+                                              ScrollChanged="SeriesView_ScrollChanged" />
+      </shared:AdaptiveCatalogView.ItemsHost>
+    </shared:AdaptiveCatalogView>
     <views:DesktopSelectionSheet x:Name="SelectionSheetHost" ZIndex="40000" />
     <views:DesktopCategorySelectionView x:Name="CategorySelectionHost" ZIndex="41000" />
   </Grid>

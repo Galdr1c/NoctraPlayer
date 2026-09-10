@@ -304,14 +304,17 @@ public sealed class MobileRecentRegressionTests
         Assert.Contains("StyleKeyOverride => typeof(ListBox)", control, StringComparison.Ordinal);
         Assert.Contains("event EventHandler<ScrollChangedEventArgs>? ScrollChanged", control, StringComparison.Ordinal);
         Assert.Contains("ScrollViewer.ScrollChangedEvent", control, StringComparison.Ordinal);
+        var sharedCatalog = File.ReadAllText(
+            ProjectFile("Noctra.UI", "Views", "AdaptiveCatalogView.axaml"));
+        Assert.Contains("RowDefinitions=\"Auto,Auto,*\"", sharedCatalog, StringComparison.Ordinal);
+        Assert.Contains("<ContentControl Grid.Row=\"2\"", sharedCatalog, StringComparison.Ordinal);
 
         foreach (var viewName in new[] { "MobileLiveView.axaml", "MobileMoviesView.axaml", "MobileSeriesView.axaml" })
         {
             var view = File.ReadAllText(ProjectFile("Noctra.Mobile", "Views", viewName));
 
-            Assert.Contains("RowDefinitions=\"Auto,Auto,*\"", view, StringComparison.Ordinal);
             Assert.DoesNotContain("<ScrollViewer x:Name=", view, StringComparison.Ordinal);
-            Assert.Contains("<controls:MobileVirtualizingCardGrid Grid.Row=\"2\"", view, StringComparison.Ordinal);
+            Assert.Contains("<controls:MobileVirtualizingCardGrid", view, StringComparison.Ordinal);
             Assert.Contains("ScrollChanged=", view, StringComparison.Ordinal);
         }
     }

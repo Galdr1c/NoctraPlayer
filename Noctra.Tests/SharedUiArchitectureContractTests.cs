@@ -200,6 +200,66 @@ public sealed class SharedUiArchitectureContractTests
         Assert.Equal(0, CountOccurrences(mobile + desktop, "Home.Welcome"));
     }
 
+    [Fact]
+    public void BothHosts_LoadMobileFirstStylesAndSpinnerFromSharedAssembly()
+    {
+        var root = FindSolutionRoot();
+        foreach (var relativePath in new[]
+                 {
+                     Path.Combine("Resources", "CommonStyles.axaml"),
+                     Path.Combine("Resources", "SettingsStyles.axaml"),
+                     Path.Combine("Controls", "PremiumSpinner.axaml")
+                 })
+        {
+            Assert.True(
+                File.Exists(Path.Combine(root, "Noctra.UI", relativePath)),
+                $"Missing canonical shared UI resource: {relativePath}");
+        }
+
+        foreach (var appPath in new[]
+                 {
+                     Path.Combine(root, "Noctra.Mobile", "App.axaml"),
+                     Path.Combine(root, "Noctra.Avalonia", "App.axaml")
+                 })
+        {
+            var app = File.ReadAllText(appPath);
+            Assert.Contains("avares://Noctra.UI/Resources/CommonStyles.axaml", app, StringComparison.Ordinal);
+            Assert.Contains("avares://Noctra.UI/Resources/SettingsStyles.axaml", app, StringComparison.Ordinal);
+            Assert.Contains("avares://Noctra.UI/Controls/PremiumSpinner.axaml", app, StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
+    public void CatalogPages_ShareOneMobileFirstPresentationAndKeepOnlyHostOverlays()
+    {
+        var root = FindSolutionRoot();
+        var sharedPath = Path.Combine(root, "Noctra.UI", "Views", "AdaptiveCatalogView.axaml");
+        Assert.True(File.Exists(sharedPath), "Live, Movies and Series must share one catalog presentation.");
+
+        var shared = File.ReadAllText(sharedPath);
+        Assert.Contains("RowDefinitions=\"Auto,Auto,*\"", shared, StringComparison.Ordinal);
+        Assert.Contains("x:Name=\"SortSelectionButton\"", shared, StringComparison.Ordinal);
+        Assert.Contains("x:Name=\"CategorySelectionButton\"", shared, StringComparison.Ordinal);
+        Assert.Contains("<sharedControls:PremiumSpinner", shared, StringComparison.Ordinal);
+
+        foreach (var (project, view, grid) in new[]
+                 {
+                     ("Noctra.Mobile", "MobileLiveView.axaml", "MobileVirtualizingCardGrid"),
+                     ("Noctra.Mobile", "MobileMoviesView.axaml", "MobileVirtualizingCardGrid"),
+                     ("Noctra.Mobile", "MobileSeriesView.axaml", "MobileVirtualizingCardGrid"),
+                     ("Noctra.Avalonia", "LiveView.axaml", "DesktopVirtualizingCardGrid"),
+                     ("Noctra.Avalonia", "MoviesView.axaml", "DesktopVirtualizingCardGrid"),
+                     ("Noctra.Avalonia", "SeriesView.axaml", "DesktopVirtualizingCardGrid")
+                 })
+        {
+            var host = File.ReadAllText(Path.Combine(root, project, "Views", view));
+            Assert.Contains("<shared:AdaptiveCatalogView", host, StringComparison.Ordinal);
+            Assert.Contains($"<controls:{grid}", host, StringComparison.Ordinal);
+            Assert.DoesNotContain("RowDefinitions=\"Auto,Auto,*\"", host, StringComparison.Ordinal);
+            Assert.DoesNotContain("<controls:PremiumSpinner", host, StringComparison.Ordinal);
+        }
+    }
+
     private static object? ReadProperty(object instance, string name)
     {
         var property = instance.GetType().GetProperty(name);

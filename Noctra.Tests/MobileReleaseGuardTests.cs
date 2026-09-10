@@ -520,14 +520,16 @@ public class MobileReleaseGuardTests
     {
         var mainView = ReadProjectFile("Noctra.Mobile", "Views", "MainView.axaml");
         var mainViewCodeBehind = ReadProjectFile("Noctra.Mobile", "Views", "MainView.axaml.cs");
+        var sharedCatalog = ReadProjectFile("Noctra.UI", "Views", "AdaptiveCatalogView.axaml");
+
+        Assert.Contains("x:Name=\"CategorySelectionButton\"", sharedCatalog);
 
         foreach (var viewName in new[] { "MobileLiveView.axaml", "MobileMoviesView.axaml", "MobileSeriesView.axaml" })
         {
             var view = ReadProjectFile("Noctra.Mobile", "Views", viewName);
             Assert.DoesNotContain("x:Name=\"GroupFilterComboBox\"", view);
             Assert.DoesNotContain("<ComboBox", view);
-            Assert.Contains("x:Name=\"CategorySelectionButton\"", view);
-            Assert.Contains("Click=\"OpenCategorySelection_Click\"", view);
+            Assert.Contains("CategoryRequested=\"OpenCategorySelection_Click\"", view);
         }
 
         Assert.Contains("<views:MobileCategorySelectionView", mainView);
@@ -663,13 +665,15 @@ public class MobileReleaseGuardTests
     [Fact]
     public void MobileSortTriggers_ShowOnlyTheSelectedSortIcon()
     {
+        var sharedCatalog = ReadProjectFile("Noctra.UI", "Views", "AdaptiveCatalogView.axaml");
+        Assert.Contains("x:Name=\"SortSelectionIcon\"", sharedCatalog);
+        Assert.DoesNotContain("x:Name=\"SortSelectionValue\"", sharedCatalog);
+        Assert.DoesNotContain("Kind=\"ChevronDown\"", sharedCatalog);
+
         foreach (var viewName in new[] { "MobileLiveView.axaml", "MobileMoviesView.axaml", "MobileSeriesView.axaml" })
         {
             var view = ReadProjectFile("Noctra.Mobile", "Views", viewName);
-
-            Assert.Contains("x:Name=\"SortSelectionIcon\"", view);
-            Assert.DoesNotContain("x:Name=\"SortSelectionValue\"", view);
-            Assert.DoesNotContain("Kind=\"ChevronDown\"", view);
+            Assert.Contains("SortRequested=\"OpenSortSelectionSheet_Click\"", view);
         }
 
         var downloads = ReadProjectFile("Noctra.Mobile", "Views", "MobileDownloadsView.axaml");

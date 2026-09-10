@@ -4,13 +4,10 @@ namespace Noctra.Tests;
 
 public class ContentFilterLayoutTests
 {
-    [Theory]
-    [InlineData("LiveView.axaml")]
-    [InlineData("MoviesView.axaml")]
-    [InlineData("SeriesView.axaml")]
-    public void ContentFilterButtons_UseCategoryAndCompactSortPresentations(string viewFile)
+    [Fact]
+    public void ContentFilterButtons_UseTheSharedMobileFirstPresentation()
     {
-        var view = LoadProjectXaml("Noctra.Avalonia", "Views", viewFile);
+        var view = LoadProjectXaml("Noctra.UI", "Views", "AdaptiveCatalogView.axaml");
         XNamespace x = "http://schemas.microsoft.com/winfx/2006/xaml";
 
         var categoryButton = view.Descendants()
@@ -18,9 +15,8 @@ public class ContentFilterLayoutTests
         var sortButton = view.Descendants()
             .Single(e => (string?)e.Attribute(x + "Name") == "SortSelectionButton");
 
-        Assert.Contains("DesktopFilterButton", (string?)categoryButton.Attribute("Classes") ?? string.Empty);
-        Assert.Equal("44", (string?)sortButton.Attribute("Width"));
-        Assert.Equal("44", (string?)sortButton.Attribute("Height"));
+        Assert.Contains("SettingsSelectionButton", (string?)categoryButton.Attribute("Classes") ?? string.Empty);
+        Assert.Contains("SortIconButton", (string?)sortButton.Attribute("Classes") ?? string.Empty);
     }
 
     private static XDocument LoadProjectXaml(params string[] relativeParts)

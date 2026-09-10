@@ -92,9 +92,8 @@ public partial class MobileMoviesView : UserControl, IMobileNavigationStateParti
         if (_sortViewModel is not null)
         {
             var label = MobileContentSortSelection.GetSelectedLabel(_sortViewModel);
-            SortSelectionIcon.Kind = MobileContentSortSelection.GetIcon(_sortViewModel.SelectedSortOrder);
-            ToolTip.SetTip(SortSelectionButton, label);
-            Avalonia.Automation.AutomationProperties.SetName(SortSelectionButton, label);
+            CatalogContent.SortIconKind = MobileContentSortSelection.GetIcon(_sortViewModel.SelectedSortOrder);
+            CatalogContent.SortLabel = label;
         }
     }
 
@@ -111,9 +110,7 @@ public partial class MobileMoviesView : UserControl, IMobileNavigationStateParti
         var label = string.IsNullOrWhiteSpace(selectedGroup)
             ? LocalizationSource.Instance["Common.All"]
             : selectedGroup;
-        CategorySelectionValue.Text = label;
-        ToolTip.SetTip(CategorySelectionButton, label);
-        Avalonia.Automation.AutomationProperties.SetName(CategorySelectionButton, label);
+        CatalogContent.CategoryLabel = label;
     }
 
     private async void MoviesScrollViewer_ScrollChanged(object? sender, ScrollChangedEventArgs e)

@@ -1,101 +1,37 @@
-﻿<UserControl xmlns="https://github.com/avaloniaui"
+<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="clr-namespace:Noctra.ViewModels;assembly=Noctra.Core"
-             xmlns:models="using:Noctra.Models"
-             xmlns:loc="using:Noctra.Mobile.Localization"
+             xmlns:loc="using:Noctra.UI.Localization"
              xmlns:controls="using:Noctra.Mobile.Controls"
-             xmlns:converters="using:Noctra.Mobile.Converters"
              xmlns:views="using:Noctra.Mobile.Views"
-             xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             xmlns:shared="using:Noctra.UI.Views"
              x:Class="Noctra.Mobile.Views.MobileLiveView"
              x:DataType="vm:MainViewModel"
-             x:CompileBindings="True"
-             mc:Ignorable="d">
-  <UserControl.Resources>
-    <converters:StringNotEmptyToVisibilityConverter x:Key="StringNotEmptyToVisibilityConverter" />
-  </UserControl.Resources>
-
+             x:CompileBindings="False">
   <Grid>
-    <Grid Margin="24,24,24,0"
-          RowDefinitions="Auto,Auto,*"
-          RowSpacing="20">
-      <Grid Grid.Row="0"
-            ColumnDefinitions="*,Auto">
-        <!-- Desktop-inspired title styling: bold with subtle letter spacing -->
-        <TextBlock Text="{loc:Translate Live.Title}"
-                   FontSize="{DynamicResource FHeadline}"
-                   FontWeight="Bold"
-                   LetterSpacing="1"
-                   Foreground="{DynamicResource TextPrimaryBrush}" />
-        <Button x:Name="SortSelectionButton"
-                Grid.Column="1"
-                Classes="SortIconButton"
-                IsVisible="{Binding ShowContentFilters}"
-                Click="OpenSortSelectionSheet_Click"
-                AutomationProperties.Name="{loc:Translate Main.Sort.Title}"
-                AutomationProperties.HelpText="{loc:Translate Main.Sort.Title}">
-          <icons:MaterialIcon x:Name="SortSelectionIcon"
-                              Kind="Sort"
-                              Width="24"
-                              Height="24"
-                              Foreground="{DynamicResource TextPrimaryBrush}" />
-        </Button>
-      </Grid>
-      <Button x:Name="CategorySelectionButton"
-              Grid.Row="1"
-              Classes="SettingsSelectionButton"
-              IsVisible="{Binding ShowGroupFilter}"
-              Click="OpenCategorySelection_Click">
-        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-          <TextBlock x:Name="CategorySelectionValue"
-                     Foreground="{DynamicResource TextPrimaryBrush}"
-                     FontWeight="SemiBold"
-                     TextTrimming="CharacterEllipsis"
-                     VerticalAlignment="Center" />
-          <icons:MaterialIcon Grid.Column="1"
-                              Kind="ChevronRight"
-                              Width="22"
-                              Height="22"
-                              Foreground="{DynamicResource TextMutedBrush}"
-                              VerticalAlignment="Center" />
-        </Grid>
-      </Button>
-
-      <controls:MobileVirtualizingCardGrid Grid.Row="2"
-                                          x:Name="PrimaryScrollContent"
-                                           SourceItems="{Binding FilteredChannels}"
-                                           CardKind="Live"
-                                           ItemContainerTheme="{StaticResource TransparentListBoxItemTheme}"
-                                           IsVisible="{Binding !IsContentLoading}"
-                                           ScrollChanged="LiveScrollViewer_ScrollChanged" />
-
-      <!-- Loading state: mirror desktop with two lines of status text -->
-      <StackPanel Grid.Row="2"
-                  Spacing="16"
-                  Margin="0,80,0,0"
-                  HorizontalAlignment="Center"
-                  IsVisible="{Binding IsContentLoading}">
-        <controls:PremiumSpinner Width="56" Height="56" HorizontalAlignment="Center" />
-        <TextBlock Text="{loc:Translate Live.Loading}"
-                   FontSize="{DynamicResource FBodyL}"
-                   FontWeight="SemiBold"
-                   Foreground="{DynamicResource TextMutedBrush}"
-                   TextAlignment="Center" />
-        <TextBlock Text="{loc:Translate Live.LoadingDetail}"
-                   FontSize="{DynamicResource FCaption}"
-                   Foreground="{DynamicResource TextMutedBrush}"
-                   Opacity="0.6"
-                   TextAlignment="Center" />
-      </StackPanel>
-
-      <controls:MobileEmptyStateView Grid.Row="2"
-                  IsVisible="{Binding ShowEmptyChannels}"
-                  IconKind="Television"
-                  Title="{loc:Translate Live.Empty.Title}"
-                  Description="{loc:Translate Live.Empty.Description}" />
-    </Grid>
+    <shared:AdaptiveCatalogView x:Name="CatalogContent"
+                                Title="{loc:Translate Live.Title}"
+                                LoadingText="{loc:Translate Live.Loading}"
+                                LoadingDetailText="{loc:Translate Live.LoadingDetail}"
+                                EmptyTitle="{loc:Translate Live.Empty.Title}"
+                                EmptyDescription="{loc:Translate Live.Empty.Description}"
+                                EmptyIconKind="Television"
+                                CategoryLabel="{loc:Translate Common.All}"
+                                SortLabel="{loc:Translate Main.Sort.Title}"
+                                ShowContentFilters="{Binding ShowContentFilters}"
+                                ShowGroupFilter="{Binding ShowGroupFilter}"
+                                IsLoading="{Binding IsContentLoading}"
+                                ShowEmptyState="{Binding ShowEmptyChannels}"
+                                SortRequested="OpenSortSelectionSheet_Click"
+                                CategoryRequested="OpenCategorySelection_Click">
+      <shared:AdaptiveCatalogView.ItemsHost>
+        <controls:MobileVirtualizingCardGrid x:Name="PrimaryScrollContent"
+                                             SourceItems="{Binding FilteredChannels}"
+                                             CardKind="Live"
+                                             ItemContainerTheme="{StaticResource TransparentListBoxItemTheme}"
+                                             ScrollChanged="LiveScrollViewer_ScrollChanged" />
+      </shared:AdaptiveCatalogView.ItemsHost>
+    </shared:AdaptiveCatalogView>
     <views:MobileSelectionSheet x:Name="SelectionSheetHost"
                                 ZIndex="{x:Static controls:MobileZIndex.SelectionSheet}"
                                 IsVisible="False" />

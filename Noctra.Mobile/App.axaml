@@ -106,9 +106,10 @@
     <Application.Styles>
         <materialIcons:MaterialIconStyles />
         <FluentTheme />
+        <StyleInclude Source="avares://Noctra.UI/Controls/PremiumSpinner.axaml" />
         <StyleInclude Source="avares://Noctra.Mobile/Controls/PremiumSpinner.axaml" />
-        <StyleInclude Source="avares://Noctra.Mobile/Resources/CommonStyles.axaml" />
-        <StyleInclude Source="avares://Noctra.Mobile/Resources/SettingsStyles.axaml" />
+        <StyleInclude Source="avares://Noctra.UI/Resources/CommonStyles.axaml" />
+        <StyleInclude Source="avares://Noctra.UI/Resources/SettingsStyles.axaml" />
 
         <!-- ═══════════════════════════════════════════════════════
              NoctraTextBox — Unified Input System
