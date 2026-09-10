@@ -1,9 +1,10 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="clr-namespace:Noctra.ViewModels;assembly=Noctra.Core"
+             xmlns:models="using:Noctra.Models"
              xmlns:loc="using:Noctra.Mobile.Localization"
+             xmlns:controls="using:Noctra.Mobile.Controls"
              xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
-             xmlns:player="using:Noctra.Mobile.Views.Player"
              xmlns:sharedPlayer="using:Noctra.UI.Views.Player"
              x:Class="Noctra.Mobile.Views.MobilePlayerSheets"
              x:DataType="vm:PlayerViewModel"
@@ -48,8 +49,16 @@
           <sharedPlayer:PlayerSubtitleAppearanceSheet IsVisible="{Binding IsSubtitleAppearanceSettingsOpen}" Margin="14,0,14,14" />
           <sharedPlayer:PlayerInfoSheet IsVisible="{Binding IsInfoPanelOpen}" Margin="14,0,14,14" />
 
-          <!-- Episodes remain platform-bound until image/virtualization dependencies are extracted. -->
-          <player:MobilePlayerEpisodesSheet IsVisible="{Binding IsEpisodesPanelOpen}" Margin="14,0,14,14" />
+          <sharedPlayer:PlayerEpisodesSheet IsVisible="{Binding IsEpisodesPanelOpen}" Margin="14,0,14,14">
+            <sharedPlayer:PlayerEpisodesSheet.EpisodeThumbnailTemplate>
+              <DataTemplate x:DataType="models:Episode">
+                <controls:RemoteImage Url="{Binding CoverUrl}"
+                                      Stretch="UniformToFill"
+                                      DecodePixelWidth="240" />
+              </DataTemplate>
+            </sharedPlayer:PlayerEpisodesSheet.EpisodeThumbnailTemplate>
+          </sharedPlayer:PlayerEpisodesSheet>
+
           <sharedPlayer:PlayerSleepSheet IsVisible="{Binding IsSleepTimerPanelOpen}" Margin="14,0,14,14" />
 
           <Border Background="Transparent" CornerRadius="8" Padding="12,8" Margin="14,0,14,14" IsVisible="{Binding IsResumeDialogVisible}">
