@@ -1,0 +1,232 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:Noctra.ViewModels;assembly=Noctra.Core"
+             xmlns:loc="using:Noctra.UI.Localization"
+             xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             x:Class="Noctra.UI.Views.AdaptiveSettingsOverviewView"
+             x:Name="Root"
+             x:DataType="vm:SettingsViewModel"
+             x:CompileBindings="False">
+  <UserControl.Styles>
+    <Style Selector="Button.settingsThemeCard">
+      <Setter Property="MinHeight" Value="96" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+      <Setter Property="BorderThickness" Value="1.5" />
+      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+      <Setter Property="VerticalContentAlignment" Value="Stretch" />
+    </Style>
+    <Style Selector="Button.settingsThemeCard:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource InteractiveHoverBrush}" />
+    </Style>
+    <Style Selector="Button.settingsThemeCard:pressed /template/ ContentPresenter">
+      <Setter Property="Opacity" Value="0.82" />
+    </Style>
+    <Style Selector="Button.SettingsActionButton:pointerover /template/ ContentPresenter,
+                     Button.SettingsSelectionButton:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource InteractiveHoverBrush}" />
+    </Style>
+  </UserControl.Styles>
+
+  <Grid Background="{DynamicResource Bg0Brush}">
+    <ScrollViewer x:Name="SettingsScrollViewer"
+                  BringIntoViewOnFocusChange="True"
+                  VerticalScrollBarVisibility="Auto"
+                  HorizontalScrollBarVisibility="Disabled">
+      <StackPanel x:Name="LayoutRoot" Margin="24,18,24,28" Spacing="20" MaxWidth="880" HorizontalAlignment="Stretch">
+        <TextBlock Text="{loc:Translate Settings.Title}"
+                   FontSize="{DynamicResource FDisplaySmall}"
+                   FontWeight="Bold"
+                   Foreground="{DynamicResource TextPrimaryBrush}" />
+
+        <!-- Current profile: canonical layout follows the mobile Settings card. -->
+        <Border Classes="SettingsSectionCard">
+          <Grid ColumnDefinitions="Auto,*" ColumnSpacing="16">
+            <Border Width="64" Height="64" CornerRadius="8"
+                    Background="{DynamicResource AccentSubtleBrush}">
+              <icons:MaterialIcon Kind="AccountCircle"
+                                  Width="34" Height="34"
+                                  Foreground="{DynamicResource AccentBrush}"
+                                  HorizontalAlignment="Center"
+                                  VerticalAlignment="Center" />
+            </Border>
+            <StackPanel Grid.Column="1" Spacing="5" VerticalAlignment="Center">
+              <TextBlock Text="{loc:Translate Settings.Profile.ActiveProfile}"
+                         Foreground="{DynamicResource AccentBrush}"
+                         FontSize="{DynamicResource FTitleM}"
+                         FontWeight="SemiBold" />
+              <TextBlock Text="{Binding CurrentProfileName}"
+                         Foreground="{DynamicResource TextPrimaryBrush}"
+                         FontSize="{DynamicResource FBodyL}"
+                         FontWeight="Bold"
+                         TextTrimming="CharacterEllipsis" />
+            </StackPanel>
+          </Grid>
+        </Border>
+
+        <Border Classes="SettingsSectionCard">
+          <StackPanel Spacing="12">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <icons:MaterialIcon Kind="AccountSwitchOutline" Width="20" Height="20" Foreground="{DynamicResource AccentBrush}" />
+              <TextBlock Text="{loc:Translate Settings.Profile.Management}"
+                         Foreground="{DynamicResource TextPrimaryBrush}"
+                         FontSize="{DynamicResource FTitleL}"
+                         FontWeight="SemiBold" />
+            </StackPanel>
+            <TextBlock Text="{loc:Translate Settings.Profile.ManagementDetail}"
+                       Foreground="{DynamicResource TextMutedBrush}"
+                       FontSize="{DynamicResource FCaption}"
+                       TextWrapping="Wrap" />
+            <Button Classes="SettingsActionButton" Click="BackToProfiles_Click">
+              <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+                <icons:MaterialIcon Kind="AccountSwitchOutline" Width="20" Height="20" Foreground="{DynamicResource AccentBrush}" />
+                <TextBlock Grid.Column="1" Text="{loc:Translate Settings.Profile.BackToProfiles}"
+                           Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                <icons:MaterialIcon Grid.Column="2" Kind="ChevronRight" Width="20" Height="20" Foreground="{DynamicResource TextMutedBrush}" />
+              </Grid>
+            </Button>
+          </StackPanel>
+        </Border>
+
+        <!-- Provider/account data is presentation-only and therefore shared. -->
+        <Border Classes="SettingsSectionCard">
+          <StackPanel Spacing="12">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <icons:MaterialIcon Kind="AccountBoxOutline" Width="20" Height="20" Foreground="{DynamicResource AccentBrush}" />
+              <TextBlock Text="{loc:Translate Settings.Account.Title}"
+                         Foreground="{DynamicResource TextPrimaryBrush}"
+                         FontSize="{DynamicResource FTitleL}"
+                         FontWeight="SemiBold" />
+            </StackPanel>
+
+            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+              <TextBlock Text="{Binding ProviderUrlLabel}" Foreground="{DynamicResource TextMutedBrush}" FontSize="{DynamicResource FCaption}" />
+              <TextBlock Grid.Column="1" Text="{Binding ProviderUrl}" Foreground="{DynamicResource TextPrimaryBrush}"
+                         TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxLines="2" />
+            </Grid>
+            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10" IsVisible="{Binding ShowProviderIdentity}">
+              <TextBlock Text="{Binding ProviderIdentityLabel}" Foreground="{DynamicResource TextMutedBrush}" FontSize="{DynamicResource FCaption}" />
+              <TextBlock Grid.Column="1" Text="{Binding ProviderUsername}" Foreground="{DynamicResource TextPrimaryBrush}" TextWrapping="Wrap" />
+            </Grid>
+            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10" IsVisible="{Binding ShowProviderPassword}">
+              <TextBlock Text="{loc:Translate Settings.Account.Password}" Foreground="{DynamicResource TextMutedBrush}" FontSize="{DynamicResource FCaption}" />
+              <TextBlock Grid.Column="1" Text="{Binding ProviderPassword}" Foreground="{DynamicResource TextPrimaryBrush}" TextWrapping="Wrap" />
+            </Grid>
+            <StackPanel Spacing="3" IsVisible="{Binding ShowProviderExpiration}">
+              <TextBlock Text="{loc:Translate Settings.Account.Expiry}" Foreground="{DynamicResource TextMutedBrush}" FontSize="{DynamicResource FCaption}" />
+              <TextBlock Text="{Binding ExpirationDate}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" />
+              <TextBlock Text="{Binding ExpirationStatus}" Foreground="{DynamicResource AccentBrush}" FontSize="{DynamicResource FCaption}" />
+            </StackPanel>
+          </StackPanel>
+        </Border>
+
+        <!-- Theme: visual language copied from the newest mobile implementation. -->
+        <Border Classes="SettingsSectionCard">
+          <StackPanel Spacing="14">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <icons:MaterialIcon Kind="BrushVariant" Width="20" Height="20" Foreground="{DynamicResource AccentBrush}" />
+              <TextBlock Text="{loc:Translate GlobalSettings.Appearance.Title}"
+                         Foreground="{DynamicResource TextPrimaryBrush}"
+                         FontSize="{DynamicResource FTitleL}"
+                         FontWeight="SemiBold" />
+            </StackPanel>
+            <TextBlock Text="{loc:Translate GlobalSettings.Theme.Description}"
+                       Foreground="{DynamicResource TextMutedBrush}"
+                       FontSize="{DynamicResource FCaption}"
+                       TextWrapping="Wrap" />
+
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+              <Button x:Name="DarkThemeButton" Classes="settingsThemeCard" Click="DarkTheme_Click">
+                <Grid>
+                  <Border Background="{DynamicResource ThemePreviewDarkBg}" CornerRadius="7">
+                    <Border Background="{DynamicResource ThemePreviewDarkInnerBg}" Height="50" Margin="12"
+                            CornerRadius="5" VerticalAlignment="Top">
+                      <StackPanel Margin="10,8" Spacing="5">
+                        <Rectangle Fill="{DynamicResource ThemePreviewDarkLabelBrush}" Height="7" Margin="0,0,30,0" />
+                        <Rectangle Fill="{DynamicResource ThemePreviewDarkText}" Height="3" Margin="0,0,12,0" />
+                        <Rectangle Fill="{DynamicResource ThemePreviewDarkText}" Height="3" Margin="0,0,34,0" />
+                      </StackPanel>
+                    </Border>
+                  </Border>
+                  <Border x:Name="DarkCheckmark" Width="22" Height="22" Background="{DynamicResource AccentBrush}"
+                          CornerRadius="5" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="6">
+                    <icons:MaterialIcon Kind="Check" Width="13" Height="13" Foreground="White"
+                                        HorizontalAlignment="Center" VerticalAlignment="Center" />
+                  </Border>
+                  <TextBlock Text="{loc:Translate Settings.Theme.Dark}" FontSize="{DynamicResource FCaption}"
+                             Foreground="{DynamicResource ThemePreviewDarkLabelBrush}" FontWeight="SemiBold"
+                             HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,7" />
+                </Grid>
+              </Button>
+
+              <Button x:Name="LightThemeButton" Grid.Column="1" Classes="settingsThemeCard" Click="LightTheme_Click">
+                <Grid>
+                  <Border Background="{DynamicResource ThemePreviewLightBg}" CornerRadius="7">
+                    <Border Background="{DynamicResource ThemePreviewLightInnerBg}" Height="50" Margin="12"
+                            CornerRadius="5" VerticalAlignment="Top">
+                      <StackPanel Margin="10,8" Spacing="5">
+                        <Rectangle Fill="{DynamicResource ThemePreviewDarkBg}" Height="7" Margin="0,0,30,0" />
+                        <Rectangle Fill="{DynamicResource ThemePreviewLightText}" Height="3" Margin="0,0,12,0" />
+                        <Rectangle Fill="{DynamicResource ThemePreviewLightText}" Height="3" Margin="0,0,34,0" />
+                      </StackPanel>
+                    </Border>
+                  </Border>
+                  <Border x:Name="LightCheckmark" Width="22" Height="22" Background="{DynamicResource AccentBrush}"
+                          CornerRadius="5" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="6">
+                    <icons:MaterialIcon Kind="Check" Width="13" Height="13" Foreground="White"
+                                        HorizontalAlignment="Center" VerticalAlignment="Center" />
+                  </Border>
+                  <TextBlock Text="{loc:Translate Settings.Theme.Light}" FontSize="{DynamicResource FCaption}"
+                             Foreground="{DynamicResource ThemePreviewLightLabelBrush}" FontWeight="SemiBold"
+                             HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,7" />
+                </Grid>
+              </Button>
+            </Grid>
+          </StackPanel>
+        </Border>
+
+        <!-- A first truly shared behavioral setting. -->
+        <Border Classes="SettingsSectionCard">
+          <StackPanel Spacing="12">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <icons:MaterialIcon Kind="PlayBoxOutline" Width="20" Height="20" Foreground="{DynamicResource AccentBrush}" />
+              <TextBlock Text="{loc:Translate Settings.Nav.Playback}"
+                         Foreground="{DynamicResource TextPrimaryBrush}"
+                         FontSize="{DynamicResource FTitleL}"
+                         FontWeight="SemiBold" />
+            </StackPanel>
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+              <StackPanel Spacing="3" VerticalAlignment="Center">
+                <TextBlock Text="{loc:Translate Settings.Playback.AutoPlayNext}"
+                           Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="Medium" />
+                <TextBlock Text="{loc:Translate Settings.Playback.AutoPlayDescription}"
+                           Foreground="{DynamicResource TextMutedBrush}" FontSize="{DynamicResource FCaption}"
+                           TextWrapping="Wrap" />
+              </StackPanel>
+              <ToggleSwitch Grid.Column="1" IsChecked="{Binding AutoPlayNext, Mode=TwoWay}" VerticalAlignment="Center" />
+            </Grid>
+          </StackPanel>
+        </Border>
+
+        <ContentControl Content="{Binding PlatformContent, ElementName=Root}"
+                        HorizontalContentAlignment="Stretch"
+                        IsVisible="{Binding HasPlatformContent, ElementName=Root}" />
+
+        <Button Classes="SettingsActionButton"
+                Click="AdvancedSettings_Click"
+                IsVisible="{Binding ShowAdvancedSettingsAction, ElementName=Root}">
+          <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+            <icons:MaterialIcon Kind="TuneVariant" Width="20" Height="20" Foreground="{DynamicResource AccentBrush}" />
+            <StackPanel Grid.Column="1" Spacing="2">
+              <TextBlock Text="{loc:Translate Settings.Title}" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold" />
+              <TextBlock Text="{loc:Translate Mobile.Nav.More}" Foreground="{DynamicResource TextMutedBrush}" FontSize="{DynamicResource FCaption}" />
+            </StackPanel>
+            <icons:MaterialIcon Grid.Column="2" Kind="ChevronRight" Width="20" Height="20" Foreground="{DynamicResource TextMutedBrush}" />
+          </Grid>
+        </Button>
+      </StackPanel>
+    </ScrollViewer>
+  </Grid>
+</UserControl>
