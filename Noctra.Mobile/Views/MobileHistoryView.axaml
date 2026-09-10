@@ -1,59 +1,46 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="clr-namespace:Noctra.ViewModels;assembly=Noctra.Core"
-             xmlns:loc="using:Noctra.Mobile.Localization"
+             xmlns:loc="using:Noctra.UI.Localization"
              xmlns:controls="using:Noctra.Mobile.Controls"
+             xmlns:shared="using:Noctra.UI.Views"
              xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="Noctra.Mobile.Views.MobileHistoryView"
              x:DataType="vm:MainViewModel"
-             x:CompileBindings="False"
-             mc:Ignorable="d">
-
-  <Grid RowDefinitions="Auto,*">
-    <Grid Grid.Row="0" Margin="24,24,24,12" ColumnDefinitions="*,Auto">
-      <TextBlock Text="{loc:Translate History.Title}"
-                 FontSize="{DynamicResource FDisplaySmall}" FontWeight="Bold"
-                 Foreground="{DynamicResource TextPrimaryBrush}"
-                 VerticalAlignment="Center" />
-      <Button Grid.Column="1"
-              Command="{Binding ClearHistoryCommand}"
+             x:CompileBindings="False">
+  <shared:AdaptiveLibraryView
+      Title="{loc:Translate History.Title}"
+      IsEmpty="{Binding ShowHistoryEmptyState}"
+      EmptyIconKind="History"
+      EmptyTitle="{loc:Translate History.Empty.Title}"
+      EmptyDescription="{loc:Translate History.Empty.Description}">
+    <shared:AdaptiveLibraryView.HeaderActionHost>
+      <Button Command="{Binding ClearHistoryCommand}"
               IsVisible="{Binding ShowHistoryEmptyState, Converter={StaticResource InverseBoolConverter}}"
               Theme="{StaticResource DangerButtonStyle}"
+              MinHeight="48"
               VerticalAlignment="Center">
         <StackPanel Orientation="Horizontal" Spacing="6">
           <icons:MaterialIcon Kind="TrashCanOutline" Width="14" Height="14"
                               Foreground="{DynamicResource ErrorBrush}" />
           <TextBlock Text="{loc:Translate Settings.Privacy.Clear.Title}"
                      Foreground="{DynamicResource ErrorBrush}"
-                     FontSize="{DynamicResource FCaption}" FontWeight="Medium" />
+                     FontSize="{DynamicResource FCaption}"
+                     FontWeight="Medium" />
         </StackPanel>
       </Button>
-    </Grid>
-
-    <controls:MobileSectionedCardFeed Grid.Row="1"
-                                      x:Name="PrimaryScrollContent"
-        Margin="20,0,20,0"
-        ScrollChanged="HistoryScrollViewer_ScrollChanged"
-        ItemContainerTheme="{StaticResource TransparentListBoxItemTheme}">
-      <controls:MobileSectionedCardFeed.Sections>
-        <controls:MobileCardSection Header="{loc:Translate History.LiveTv}"
-            CardKind="Live" PresentationMode="History"
-            SourceItems="{Binding HistoryLiveChannels}" />
-        <controls:MobileCardSection Header="{loc:Translate History.Series}"
-            CardKind="Series" PresentationMode="History"
-            SourceItems="{Binding HistorySeriesItems}" />
-        <controls:MobileCardSection Header="{loc:Translate History.Movies}"
-            CardKind="Vod" PresentationMode="History"
-            SourceItems="{Binding HistoryVodChannels}" />
-      </controls:MobileSectionedCardFeed.Sections>
-    </controls:MobileSectionedCardFeed>
-
-    <controls:MobileEmptyStateView Grid.Row="1" Margin="20"
-        IsVisible="{Binding ShowHistoryEmptyState}"
-        IconKind="History"
-        Title="{loc:Translate History.Empty.Title}"
-        Description="{loc:Translate History.Empty.Description}" />
-  </Grid>
+    </shared:AdaptiveLibraryView.HeaderActionHost>
+    <shared:AdaptiveLibraryView.ItemsHost>
+      <controls:MobileSectionedCardFeed Grid.Row="0"
+                                        x:Name="PrimaryScrollContent"
+                                        ScrollChanged="HistoryScrollViewer_ScrollChanged"
+                                        ItemContainerTheme="{StaticResource TransparentListBoxItemTheme}">
+        <controls:MobileSectionedCardFeed.Sections>
+          <controls:MobileCardSection Header="{loc:Translate History.LiveTv}" CardKind="Live" PresentationMode="History" SourceItems="{Binding HistoryLiveChannels}" />
+          <controls:MobileCardSection Header="{loc:Translate History.Series}" CardKind="Series" PresentationMode="History" SourceItems="{Binding HistorySeriesItems}" />
+          <controls:MobileCardSection Header="{loc:Translate History.Movies}" CardKind="Vod" PresentationMode="History" SourceItems="{Binding HistoryVodChannels}" />
+        </controls:MobileSectionedCardFeed.Sections>
+      </controls:MobileSectionedCardFeed>
+    </shared:AdaptiveLibraryView.ItemsHost>
+  </shared:AdaptiveLibraryView>
 </UserControl>

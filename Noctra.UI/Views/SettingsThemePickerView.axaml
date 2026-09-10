@@ -1,0 +1,91 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:Noctra.ViewModels;assembly=Noctra.Core"
+             xmlns:loc="using:Noctra.UI.Localization"
+             xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             x:Class="Noctra.UI.Views.SettingsThemePickerView"
+             x:DataType="vm:SettingsViewModel"
+             x:CompileBindings="False">
+  <UserControl.Styles>
+    <Style Selector="Button.settingsThemeCard">
+      <Setter Property="MinHeight" Value="92" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+      <Setter Property="BorderThickness" Value="1.5" />
+      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+      <Setter Property="VerticalContentAlignment" Value="Stretch" />
+    </Style>
+    <Style Selector="Button.settingsThemeCard:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource InteractiveHoverBrush}" />
+    </Style>
+    <Style Selector="Button.settingsThemeCard:pressed /template/ ContentPresenter">
+      <Setter Property="Opacity" Value="0.82" />
+    </Style>
+    <Style Selector="Button.settingsThemeCard:focus-visible /template/ ContentPresenter">
+      <Setter Property="BoxShadow" Value="{DynamicResource FocusGlow}" />
+    </Style>
+  </UserControl.Styles>
+
+  <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+    <Button x:Name="DarkThemeButton"
+            Classes="settingsThemeCard"
+            Click="DarkTheme_Click"
+            AutomationProperties.Name="{loc:Translate Settings.Theme.Dark}">
+      <Grid>
+        <Border Background="{DynamicResource ThemePreviewDarkBg}" CornerRadius="7">
+          <Border Background="{DynamicResource ThemePreviewDarkInnerBg}"
+                  Height="50" Margin="12" CornerRadius="5" VerticalAlignment="Top">
+            <StackPanel Margin="10,8" Spacing="5">
+              <Rectangle Fill="{DynamicResource ThemePreviewDarkLabelBrush}" Height="7" Margin="0,0,30,0" />
+              <Rectangle Fill="{DynamicResource ThemePreviewDarkText}" Height="3" Margin="0,0,12,0" />
+              <Rectangle Fill="{DynamicResource ThemePreviewDarkText}" Height="3" Margin="0,0,34,0" />
+            </StackPanel>
+          </Border>
+        </Border>
+        <Border x:Name="DarkCheckmark"
+                Width="22" Height="22" Background="{DynamicResource AccentBrush}"
+                CornerRadius="5" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="6">
+          <icons:MaterialIcon Kind="Check" Width="13" Height="13" Foreground="White"
+                              HorizontalAlignment="Center" VerticalAlignment="Center" />
+        </Border>
+        <TextBlock Text="{loc:Translate Settings.Theme.Dark}"
+                   FontSize="{DynamicResource FCaption}"
+                   Foreground="{DynamicResource ThemePreviewDarkLabelBrush}"
+                   FontWeight="SemiBold"
+                   HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,7" />
+      </Grid>
+    </Button>
+
+    <Button x:Name="LightThemeButton"
+            Grid.Column="1"
+            Classes="settingsThemeCard"
+            Click="LightTheme_Click"
+            AutomationProperties.Name="{loc:Translate Settings.Theme.Light}">
+      <Grid>
+        <Border Background="{DynamicResource ThemePreviewLightBg}" CornerRadius="7">
+          <Border Background="{DynamicResource ThemePreviewLightInnerBg}"
+                  Height="50" Margin="12" CornerRadius="5" VerticalAlignment="Top">
+            <StackPanel Margin="10,8" Spacing="5">
+              <Rectangle Fill="{DynamicResource ThemePreviewDarkBg}" Height="7" Margin="0,0,30,0" />
+              <Rectangle Fill="{DynamicResource ThemePreviewLightText}" Height="3" Margin="0,0,12,0" />
+              <Rectangle Fill="{DynamicResource ThemePreviewLightText}" Height="3" Margin="0,0,34,0" />
+            </StackPanel>
+          </Border>
+        </Border>
+        <Border x:Name="LightCheckmark"
+                Width="22" Height="22" Background="{DynamicResource AccentBrush}"
+                CornerRadius="5" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="6">
+          <icons:MaterialIcon Kind="Check" Width="13" Height="13" Foreground="White"
+                              HorizontalAlignment="Center" VerticalAlignment="Center" />
+        </Border>
+        <TextBlock Text="{loc:Translate Settings.Theme.Light}"
+                   FontSize="{DynamicResource FCaption}"
+                   Foreground="{DynamicResource ThemePreviewLightLabelBrush}"
+                   FontWeight="SemiBold"
+                   HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,7" />
+      </Grid>
+    </Button>
+  </Grid>
+</UserControl>

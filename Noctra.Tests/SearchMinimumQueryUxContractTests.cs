@@ -5,28 +5,31 @@ namespace Noctra.Tests;
 public sealed class SearchMinimumQueryUxContractTests
 {
     [Fact]
-    public void MobileSearch_ExposesLocalizedMinimumLengthHintAndCommandGuard()
+    public void SharedSearch_ExposesLocalizedMinimumLengthHintAndCommandGuard()
     {
         var source = File.ReadAllText(FindProjectFile(
-            "Noctra.Mobile",
+            "Noctra.UI",
             "Views",
-            "MobileSearchView.axaml"));
+            "AdaptiveSearchView.axaml"));
 
         Assert.Contains("ShowSearchMinimumLengthHint", source, StringComparison.Ordinal);
         Assert.Contains("Search.MinimumLengthHint", source, StringComparison.Ordinal);
         Assert.Contains("IsEnabled=\"{Binding CanCommitSearch}\"", source, StringComparison.Ordinal);
+        Assert.Contains("Search.Placeholder", source, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void DesktopSearch_ExposesLocalizedMinimumLengthHint()
+    public void MobileAndDesktopSearch_HostTheSameSharedSurface()
     {
-        var source = File.ReadAllText(FindProjectFile(
-            "Noctra.Avalonia",
-            "Views",
-            "SearchView.axaml"));
+        var mobile = File.ReadAllText(FindProjectFile(
+            "Noctra.Mobile", "Views", "MobileSearchView.axaml"));
+        var desktop = File.ReadAllText(FindProjectFile(
+            "Noctra.Avalonia", "Views", "SearchView.axaml"));
 
-        Assert.Contains("ShowSearchMinimumLengthHint", source, StringComparison.Ordinal);
-        Assert.Contains("Search.MinimumLengthHint", source, StringComparison.Ordinal);
+        Assert.Contains("<shared:AdaptiveSearchView", mobile, StringComparison.Ordinal);
+        Assert.Contains("<shared:AdaptiveSearchView", desktop, StringComparison.Ordinal);
+        Assert.Contains("MobileSectionedCardFeed", mobile, StringComparison.Ordinal);
+        Assert.Contains("DesktopSectionedCardFeed", desktop, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -50,9 +53,7 @@ public sealed class SearchMinimumQueryUxContractTests
     {
         var path = Path.Combine(new[] { FindRepositoryRoot() }.Concat(pathParts).ToArray());
         if (File.Exists(path))
-        {
             return path;
-        }
 
         throw new FileNotFoundException($"Could not find project file: {Path.Combine(pathParts)}");
     }
@@ -63,9 +64,7 @@ public sealed class SearchMinimumQueryUxContractTests
         while (directory is not null)
         {
             if (File.Exists(Path.Combine(directory.FullName, "NoctraPlayer.sln")))
-            {
                 return directory.FullName;
-            }
 
             directory = directory.Parent;
         }

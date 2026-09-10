@@ -1,55 +1,30 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="clr-namespace:Noctra.ViewModels;assembly=Noctra.Core"
-             xmlns:loc="using:Noctra.Mobile.Localization"
+             xmlns:loc="using:Noctra.UI.Localization"
              xmlns:controls="using:Noctra.Mobile.Controls"
+             xmlns:shared="using:Noctra.UI.Views"
              x:Class="Noctra.Mobile.Views.MobileMyListView"
              x:DataType="vm:MainViewModel"
-             x:CompileBindings="False"
-             mc:Ignorable="d">
-
-  <Grid RowDefinitions="Auto,*">
-    <Grid Grid.Row="0" Margin="24,24,24,0" ColumnDefinitions="*,Auto">
-      <TextBlock Text="{loc:Translate MyList.Title}"
-                 FontSize="{DynamicResource FDisplaySmall}" FontWeight="Bold"
-                 Foreground="{DynamicResource TextPrimaryBrush}"
-                 VerticalAlignment="Center" />
-      <Border Grid.Column="1"
-              Background="{DynamicResource Surface1Brush}"
-              CornerRadius="4" Padding="12,6"
-              VerticalAlignment="Center"
-              IsVisible="{Binding MyList.Count, Converter={StaticResource CountToVisibilityConverter}}">
-        <TextBlock Foreground="{DynamicResource TextMutedBrush}"
-                   FontSize="{DynamicResource FCaption}" FontWeight="Medium">
-          <Run Text="{Binding MyList.Count}" />
-          <Run Text=" contents" />
-        </TextBlock>
-      </Border>
-    </Grid>
-
-    <controls:MobileSectionedCardFeed Grid.Row="1"
-                                      x:Name="PrimaryScrollContent"
-        Margin="20,0,20,0"
-        ItemContainerTheme="{StaticResource TransparentListBoxItemTheme}">
-      <controls:MobileSectionedCardFeed.Sections>
-        <controls:MobileCardSection Header="{loc:Translate History.LiveTv}"
-            CardKind="Live" PresentationMode="MyList"
-            SourceItems="{Binding MyListLiveChannels}" />
-        <controls:MobileCardSection Header="{loc:Translate History.Series}"
-            CardKind="Series" PresentationMode="MyList"
-            SourceItems="{Binding MyListSeriesItems}" />
-        <controls:MobileCardSection Header="{loc:Translate History.Movies}"
-            CardKind="Vod" PresentationMode="MyList"
-            SourceItems="{Binding MyListVodChannels}" />
-      </controls:MobileSectionedCardFeed.Sections>
-    </controls:MobileSectionedCardFeed>
-
-    <controls:MobileEmptyStateView Grid.Row="1" Margin="20"
-        IsVisible="{Binding ShowMyListEmptyState}"
-        IconKind="BookmarkOutline"
-        Title="{loc:Translate MyList.Empty.Title}"
-        Description="{loc:Translate MyList.Empty.Description}" />
-  </Grid>
+             x:CompileBindings="False">
+  <shared:AdaptiveLibraryView
+      Title="{loc:Translate MyList.Title}"
+      CountText="{Binding MyList.Count}"
+      ShowCountBadge="{Binding MyList.Count, Converter={StaticResource CountToVisibilityConverter}}"
+      IsEmpty="{Binding ShowMyListEmptyState}"
+      EmptyIconKind="BookmarkOutline"
+      EmptyTitle="{loc:Translate MyList.Empty.Title}"
+      EmptyDescription="{loc:Translate MyList.Empty.Description}">
+    <shared:AdaptiveLibraryView.ItemsHost>
+      <controls:MobileSectionedCardFeed Grid.Row="0"
+                                        x:Name="PrimaryScrollContent"
+                                        ItemContainerTheme="{StaticResource TransparentListBoxItemTheme}">
+        <controls:MobileSectionedCardFeed.Sections>
+          <controls:MobileCardSection Header="{loc:Translate History.LiveTv}" CardKind="Live" PresentationMode="MyList" SourceItems="{Binding MyListLiveChannels}" />
+          <controls:MobileCardSection Header="{loc:Translate History.Series}" CardKind="Series" PresentationMode="MyList" SourceItems="{Binding MyListSeriesItems}" />
+          <controls:MobileCardSection Header="{loc:Translate History.Movies}" CardKind="Vod" PresentationMode="MyList" SourceItems="{Binding MyListVodChannels}" />
+        </controls:MobileSectionedCardFeed.Sections>
+      </controls:MobileSectionedCardFeed>
+    </shared:AdaptiveLibraryView.ItemsHost>
+  </shared:AdaptiveLibraryView>
 </UserControl>

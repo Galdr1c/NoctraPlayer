@@ -2,26 +2,28 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Noctra.ViewModels"
              xmlns:controls="using:Noctra.Avalonia.Controls"
-             xmlns:loc="using:Noctra.Avalonia.Localization"
-             xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             xmlns:loc="using:Noctra.UI.Localization"
+             xmlns:shared="using:Noctra.UI.Views"
              x:Class="Noctra.Avalonia.Views.FavoritesView"
              x:CompileBindings="False">
   <Grid IsVisible="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.Favorites}}">
-    <Grid Margin="24,24,24,0" RowDefinitions="Auto,*" RowSpacing="{DynamicResource DesktopHeaderGap}">
-      <TextBlock Text="{loc:Translate Favorites.Title}" Classes="DesktopPageTitle" />
-      <controls:DesktopSectionedCardFeed Grid.Row="1" ScrollChanged="FavoritesView_ScrollChanged">
-        <controls:DesktopSectionedCardFeed.Sections>
-          <controls:DesktopCardSection Header="{loc:Translate History.LiveTv}" CardKind="Live" PresentationMode="Favorites" SourceItems="{Binding FavoriteLiveChannels}" />
-          <controls:DesktopCardSection Header="{loc:Translate History.Series}" CardKind="Series" PresentationMode="Favorites" SourceItems="{Binding FavoriteSeriesItems}" />
-          <controls:DesktopCardSection Header="{loc:Translate History.Movies}" CardKind="Vod" PresentationMode="Favorites" SourceItems="{Binding FavoriteVodChannels}" />
-        </controls:DesktopSectionedCardFeed.Sections>
-      </controls:DesktopSectionedCardFeed>
-      <StackPanel Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center"
-                  IsVisible="{Binding ShowFavoritesEmptyState}">
-        <icons:MaterialIcon Kind="HeartOutline" Width="64" Height="64" Foreground="{DynamicResource TextMutedBrush}" Opacity="0.5" />
-        <TextBlock Text="{loc:Translate Favorites.Empty.Title}" FontSize="20" FontWeight="Bold" Margin="0,16,0,4" TextAlignment="Center" />
-        <TextBlock Text="{loc:Translate Favorites.Empty.Description}" Foreground="{DynamicResource TextMutedBrush}" TextAlignment="Center" />
-      </StackPanel>
-    </Grid>
+    <shared:AdaptiveLibraryView
+        Title="{loc:Translate Favorites.Title}"
+        CountText="{Binding FavoriteChannels.Count}"
+        ShowCountBadge="{Binding FavoriteChannels.Count, Converter={StaticResource CountToVisibilityConverter}}"
+        IsEmpty="{Binding ShowFavoritesEmptyState}"
+        EmptyIconKind="HeartOutline"
+        EmptyTitle="{loc:Translate Favorites.Empty.Title}"
+        EmptyDescription="{loc:Translate Favorites.Empty.Description}">
+      <shared:AdaptiveLibraryView.ItemsHost>
+        <controls:DesktopSectionedCardFeed ScrollChanged="FavoritesView_ScrollChanged">
+          <controls:DesktopSectionedCardFeed.Sections>
+            <controls:DesktopCardSection Header="{loc:Translate History.LiveTv}" CardKind="Live" PresentationMode="Favorites" SourceItems="{Binding FavoriteLiveChannels}" />
+            <controls:DesktopCardSection Header="{loc:Translate History.Series}" CardKind="Series" PresentationMode="Favorites" SourceItems="{Binding FavoriteSeriesItems}" />
+            <controls:DesktopCardSection Header="{loc:Translate History.Movies}" CardKind="Vod" PresentationMode="Favorites" SourceItems="{Binding FavoriteVodChannels}" />
+          </controls:DesktopSectionedCardFeed.Sections>
+        </controls:DesktopSectionedCardFeed>
+      </shared:AdaptiveLibraryView.ItemsHost>
+    </shared:AdaptiveLibraryView>
   </Grid>
 </UserControl>

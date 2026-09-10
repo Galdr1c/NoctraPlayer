@@ -1,0 +1,69 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             x:Class="Noctra.UI.Views.AdaptiveLibraryView"
+             x:Name="Root"
+             x:CompileBindings="False">
+  <Grid RowDefinitions="Auto,*">
+    <Grid Grid.Row="0"
+          Margin="24,24,24,12"
+          ColumnDefinitions="*,Auto"
+          ColumnSpacing="10">
+      <TextBlock Text="{Binding Title, ElementName=Root}"
+                 FontSize="{DynamicResource FDisplaySmall}"
+                 FontWeight="Bold"
+                 Foreground="{DynamicResource TextPrimaryBrush}"
+                 VerticalAlignment="Center" />
+
+      <StackPanel Grid.Column="1"
+                  Orientation="Horizontal"
+                  Spacing="8"
+                  VerticalAlignment="Center">
+        <Border Background="{DynamicResource Surface1Brush}"
+                CornerRadius="4"
+                Padding="12,6"
+                VerticalAlignment="Center"
+                IsVisible="{Binding ShowCountBadge, ElementName=Root}">
+          <TextBlock Text="{Binding CountText, ElementName=Root}"
+                     Foreground="{DynamicResource TextMutedBrush}"
+                     FontSize="{DynamicResource FCaption}"
+                     FontWeight="Medium" />
+        </Border>
+        <ContentControl Content="{Binding HeaderActionHost, ElementName=Root}"
+                        HorizontalContentAlignment="Stretch"
+                        VerticalContentAlignment="Center" />
+      </StackPanel>
+    </Grid>
+
+    <ContentControl Grid.Row="1"
+                    Margin="20,0,20,0"
+                    Content="{Binding ItemsHost, ElementName=Root}"
+                    HorizontalContentAlignment="Stretch"
+                    VerticalContentAlignment="Stretch" />
+
+    <StackPanel Grid.Row="1"
+                Margin="20"
+                Spacing="14"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                IsVisible="{Binding IsEmpty, ElementName=Root}">
+      <icons:MaterialIcon Kind="{Binding EmptyIconKind, ElementName=Root}"
+                          Width="48" Height="48"
+                          Foreground="{DynamicResource TextMutedBrush}"
+                          HorizontalAlignment="Center" />
+      <TextBlock Text="{Binding EmptyTitle, ElementName=Root}"
+                 Foreground="{DynamicResource TextPrimaryBrush}"
+                 FontSize="{DynamicResource FBody}"
+                 FontWeight="SemiBold"
+                 TextAlignment="Center"
+                 HorizontalAlignment="Center" />
+      <TextBlock Text="{Binding EmptyDescription, ElementName=Root}"
+                 Foreground="{DynamicResource TextMutedBrush}"
+                 FontSize="{DynamicResource FCaption}"
+                 TextAlignment="Center"
+                 TextWrapping="Wrap"
+                 MaxWidth="420"
+                 HorizontalAlignment="Center" />
+    </StackPanel>
+  </Grid>
+</UserControl>

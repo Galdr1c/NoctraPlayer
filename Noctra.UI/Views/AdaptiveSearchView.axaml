@@ -1,0 +1,193 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:Noctra.ViewModels;assembly=Noctra.Core"
+             xmlns:loc="using:Noctra.UI.Localization"
+             xmlns:controls="using:Noctra.UI.Controls"
+             xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             x:Class="Noctra.UI.Views.AdaptiveSearchView"
+             x:Name="Root"
+             x:DataType="vm:MainViewModel"
+             x:CompileBindings="False">
+  <UserControl.Styles>
+    <Style Selector="Button.searchClear">
+      <Setter Property="FocusAdorner" Value="{x:Null}" />
+      <Setter Property="Width" Value="48" />
+      <Setter Property="Height" Value="48" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="CornerRadius" Value="8" />
+    </Style>
+    <Style Selector="Button.searchClear:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource InteractiveHoverBrush}" />
+    </Style>
+    <Style Selector="Button.searchClear:pressed /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource InteractivePressedBrush}" />
+    </Style>
+  </UserControl.Styles>
+
+  <Grid RowDefinitions="Auto,Auto,*">
+    <!-- Mobile is the visual source of truth. Wider hosts only provide more room. -->
+    <Border Grid.Row="0"
+            Padding="20,14,20,12"
+            Background="{DynamicResource Bg0Brush}">
+      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+        <Border Background="{DynamicResource Surface1Brush}"
+                BorderBrush="{DynamicResource BorderBrush}"
+                BorderThickness="1.5"
+                MinHeight="54"
+                CornerRadius="8">
+          <Grid ColumnDefinitions="Auto,*,Auto">
+            <icons:MaterialIcon Kind="Magnify"
+                                Width="28" Height="28"
+                                Foreground="{DynamicResource TextMutedBrush}"
+                                Margin="14,0,0,0"
+                                VerticalAlignment="Center" />
+            <TextBox Grid.Column="1"
+                     x:Name="SearchInput"
+                     Classes="search"
+                     Text="{Binding SearchQuery, Mode=TwoWay}"
+                     TextInputOptions.ReturnKeyType="Search"
+                     PlaceholderText="{loc:Translate Search.Placeholder}"
+                     VerticalContentAlignment="Center"
+                     KeyDown="SearchInput_KeyDown" />
+            <Button Grid.Column="2"
+                    Classes="searchClear"
+                    Click="ClearSearch_Click"
+                    IsVisible="{Binding SearchQuery, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"
+                    AutomationProperties.Name="{loc:Translate Mobile.Search.ClearA11yName}"
+                    AutomationProperties.HelpText="{loc:Translate Mobile.Search.ClearA11yHelp}">
+              <icons:MaterialIcon Kind="CloseCircleOutline"
+                                  Width="28" Height="28"
+                                  Foreground="{DynamicResource TextMutedBrush}" />
+            </Button>
+          </Grid>
+        </Border>
+
+        <Button Grid.Column="1"
+                Command="{Binding CommitSearchCommand}"
+                IsEnabled="{Binding CanCommitSearch}"
+                MinHeight="54"
+                Padding="18,0"
+                Background="{DynamicResource AccentBrush}"
+                Foreground="{DynamicResource PremiumBadgeTextBrush}"
+                BorderThickness="0"
+                FontWeight="Medium"
+                FontSize="{DynamicResource FBody}"
+                CornerRadius="8"
+                VerticalContentAlignment="Center"
+                Content="{loc:Translate Search.Button}" />
+      </Grid>
+    </Border>
+
+    <StackPanel Grid.Row="1" Margin="20,0,20,4" Spacing="4">
+      <Border Background="{DynamicResource Surface0Brush}"
+              CornerRadius="8"
+              Padding="14"
+              IsVisible="{Binding SearchSuggestion, Converter={StaticResource StringNotEmptyToVisibilityConverter}}">
+        <StackPanel Spacing="8">
+          <TextBlock Text="{loc:Translate Search.DidYouMean}"
+                     Foreground="{DynamicResource TextMutedBrush}"
+                     FontSize="{DynamicResource FCaption}" />
+          <Button Content="{Binding SearchSuggestion}"
+                  Command="{Binding ApplySearchSuggestionCommand}"
+                  MinHeight="42"
+                  Background="{DynamicResource Surface1Brush}"
+                  Foreground="{DynamicResource AccentBrush}"
+                  BorderThickness="0"
+                  CornerRadius="8"
+                  FontWeight="Medium"
+                  FontSize="{DynamicResource FBody}" />
+        </StackPanel>
+      </Border>
+
+      <Border Background="{DynamicResource Surface0Brush}"
+              BorderBrush="{DynamicResource BorderBrush}"
+              BorderThickness="0.5"
+              CornerRadius="8"
+              Padding="14,8"
+              IsVisible="{Binding ShowSearchMinimumLengthHint}">
+        <TextBlock Text="{loc:Translate Search.MinimumLengthHint}"
+                   Foreground="{DynamicResource TextMutedBrush}"
+                   FontSize="{DynamicResource FCaption}"
+                   HorizontalAlignment="Center"
+                   TextAlignment="Center" />
+      </Border>
+    </StackPanel>
+
+    <ContentControl Grid.Row="2"
+                    Margin="20,0,20,0"
+                    Content="{Binding ResultsHost, ElementName=Root}"
+                    HorizontalContentAlignment="Stretch"
+                    VerticalContentAlignment="Stretch"
+                    IsHitTestVisible="{Binding IsSearching, Converter={StaticResource InverseBoolConverter}}"
+                    Opacity="{Binding IsSearching, Converter={StaticResource BoolToOpacityConverter}, ConverterParameter=0.4}" />
+
+    <Border Grid.Row="2"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center"
+            Background="{DynamicResource OverlayPanelBrush}"
+            BorderBrush="{DynamicResource BorderBrush}"
+            BorderThickness="0.5"
+            CornerRadius="8"
+            Padding="20,18"
+            IsVisible="{Binding IsSearching}"
+            ZIndex="20">
+      <StackPanel HorizontalAlignment="Center" Spacing="14">
+        <controls:PremiumSpinner Width="54" Height="54" HorizontalAlignment="Center" />
+        <TextBlock Text="{loc:Translate Search.Searching}"
+                   HorizontalAlignment="Center"
+                   FontWeight="SemiBold"
+                   Foreground="{DynamicResource PremiumBadgeTextBrush}"
+                   FontSize="{DynamicResource FCaption}" />
+      </StackPanel>
+    </Border>
+
+    <StackPanel Grid.Row="2"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Spacing="14"
+                IsVisible="{Binding ShowSearchIdleState}">
+      <icons:MaterialIcon Kind="Magnify"
+                          Width="48" Height="48"
+                          Foreground="{DynamicResource TextMutedBrush}" />
+      <TextBlock Text="{loc:Translate Search.Idle.Title}"
+                 HorizontalAlignment="Center"
+                 Foreground="{DynamicResource TextPrimaryBrush}"
+                 FontSize="{DynamicResource FBody}"
+                 FontWeight="SemiBold" />
+      <TextBlock Text="{loc:Translate Search.Idle.Description}"
+                 HorizontalAlignment="Center"
+                 Foreground="{DynamicResource TextMutedBrush}"
+                 FontSize="{DynamicResource FCaption}"
+                 TextAlignment="Center"
+                 TextWrapping="Wrap"
+                 MaxWidth="420" />
+    </StackPanel>
+
+    <StackPanel Grid.Row="2"
+                Margin="20"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Spacing="10"
+                IsVisible="{Binding ShowSearchEmptyState}">
+      <icons:MaterialIcon Kind="Magnify"
+                          Width="48" Height="48"
+                          Foreground="{DynamicResource TextMutedBrush}"
+                          HorizontalAlignment="Center" />
+      <TextBlock Text="{loc:Translate Search.Empty.Title}"
+                 Foreground="{DynamicResource TextPrimaryBrush}"
+                 FontSize="{DynamicResource FBody}"
+                 FontWeight="SemiBold"
+                 HorizontalAlignment="Center"
+                 TextAlignment="Center" />
+      <TextBlock Text="{loc:Translate Search.Empty.Description}"
+                 Foreground="{DynamicResource TextMutedBrush}"
+                 FontSize="{DynamicResource FCaption}"
+                 HorizontalAlignment="Center"
+                 TextAlignment="Center"
+                 TextWrapping="Wrap"
+                 MaxWidth="420" />
+    </StackPanel>
+  </Grid>
+</UserControl>

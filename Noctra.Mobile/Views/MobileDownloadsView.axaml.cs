@@ -16,6 +16,7 @@ public partial class MobileDownloadsView : UserControl, IMobileNavigationStatePa
     public MobileDownloadsView()
     {
         InitializeComponent();
+        InstallSharedDownloadsPresentation();
     }
 
     bool IMobileNavigationStateParticipant.TryCaptureNavigationState(out MobilePageScrollState state)

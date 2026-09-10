@@ -1,0 +1,47 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:player="using:Noctra.UI.Views.Player"
+             x:Class="Noctra.UI.Views.Player.PlayerSheetOverlay"
+             x:Name="Root"
+             x:CompileBindings="False"
+             IsVisible="False">
+  <Grid>
+    <Button Background="{DynamicResource OverlayDimBrush}"
+            BorderThickness="0"
+            Padding="0"
+            Command="{Binding ClosePanelsCommand}"
+            HorizontalAlignment="Stretch"
+            VerticalAlignment="Stretch"
+            HorizontalContentAlignment="Stretch"
+            VerticalContentAlignment="Stretch" />
+    <Border MaxWidth="520"
+            Background="{DynamicResource PlayerOverlaySheetBrush}"
+            BorderBrush="{DynamicResource PlayerOverlaySheetBorderBrush}"
+            BorderThickness="1,1,1,0"
+            CornerRadius="12,12,0,0"
+            Margin="16,0"
+            Padding="12,8,12,18"
+            VerticalAlignment="Bottom"
+            BoxShadow="{DynamicResource OverlaySheetShadow}"
+            MaxHeight="{DynamicResource SheetMaxHeight}">
+      <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+        <StackPanel>
+          <Border Height="24" Background="Transparent">
+            <Border Width="36" Height="4" CornerRadius="2"
+                    Background="{DynamicResource PlayerOverlaySheetBorderBrush}"
+                    HorizontalAlignment="Center" VerticalAlignment="Center" />
+          </Border>
+          <player:PlayerMoreSheet IsVisible="{Binding IsActionsPanelOpen}" />
+          <player:PlayerTrackSheet IsVisible="{Binding IsAudioSettingsOpen}" Margin="14,0,14,14" />
+          <player:PlayerQualitySheet IsVisible="{Binding IsQualitySettingsOpen}" Margin="14,0,14,14" />
+          <player:PlayerSubtitleAppearanceSheet IsVisible="{Binding IsSubtitleAppearanceSettingsOpen}" Margin="14,0,14,14" />
+          <player:PlayerInfoSheet IsVisible="{Binding IsInfoPanelOpen}" Margin="14,0,14,14" />
+          <player:PlayerEpisodesSheet IsVisible="{Binding IsEpisodesPanelOpen}"
+                                      EpisodeThumbnailTemplate="{Binding EpisodeThumbnailTemplate, ElementName=Root}"
+                                      Margin="14,0,14,14" />
+          <player:PlayerSleepSheet IsVisible="{Binding IsSleepTimerPanelOpen}" Margin="14,0,14,14" />
+        </StackPanel>
+      </ScrollViewer>
+    </Border>
+  </Grid>
+</UserControl>

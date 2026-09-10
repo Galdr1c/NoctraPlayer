@@ -1,0 +1,38 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:Noctra.ViewModels;assembly=Noctra.Core"
+             xmlns:loc="using:Noctra.UI.Localization"
+             xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             x:Class="Noctra.UI.Views.Player.PlayerSleepSheet"
+             x:DataType="vm:PlayerViewModel"
+             x:CompileBindings="False">
+  <UserControl.Styles>
+    <Style Selector="Button.selectionSheetOption">
+      <Setter Property="Background" Value="Transparent" /><Setter Property="BorderBrush" Value="{DynamicResource PlayerOverlaySheetBorderBrush}" />
+      <Setter Property="BorderThickness" Value="0,0,0,1.5" /><Setter Property="Padding" Value="8,4" /><Setter Property="MinHeight" Value="48" />
+      <Setter Property="CornerRadius" Value="6" /><Setter Property="HorizontalContentAlignment" Value="Stretch" /><Setter Property="HorizontalAlignment" Value="Stretch" />
+    </Style>
+    <Style Selector="Button.selectionSheetOption:pointerover /template/ ContentPresenter"><Setter Property="Background" Value="{DynamicResource PlayerOverlaySheetHoverBrush}" /></Style>
+    <Style Selector="Button.selectionSheetOption:pressed /template/ ContentPresenter"><Setter Property="Background" Value="{DynamicResource PlayerOverlaySheetPressedBrush}" /><Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" /></Style>
+  </UserControl.Styles>
+  <StackPanel Spacing="12">
+    <Grid ColumnDefinitions="*,Auto">
+      <TextBlock Text="{Binding SleepTimerLabel}" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource PlayerOverlaySheetTextBrush}" VerticalAlignment="Center" />
+      <Button Grid.Column="1" Command="{Binding BackFromPlayerPanelCommand}" Width="40" Height="40" Padding="0" Background="Transparent" BorderThickness="0"><icons:MaterialIcon Kind="Close" Width="22" Height="22" Foreground="{DynamicResource PlayerOverlaySheetMutedTextBrush}" /></Button>
+    </Grid>
+    <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="8" RowSpacing="8">
+      <Button Classes="selectionSheetOption" Command="{Binding SetSleepTimerCommand}" CommandParameter="{x:Static vm:PlayerViewModel+SleepTimerOption.Off}" Content="{loc:Translate Player.Mobile.Sleep.Off}" HorizontalContentAlignment="Center" />
+      <Button Grid.Column="1" Classes="selectionSheetOption" Command="{Binding SetSleepTimerCommand}" CommandParameter="{x:Static vm:PlayerViewModel+SleepTimerOption.Minutes15}" Content="{loc:Translate Player.Mobile.Sleep.15min}" HorizontalContentAlignment="Center" />
+      <Button Grid.Row="1" Classes="selectionSheetOption" Command="{Binding SetSleepTimerCommand}" CommandParameter="{x:Static vm:PlayerViewModel+SleepTimerOption.Minutes30}" Content="{loc:Translate Player.Mobile.Sleep.30min}" HorizontalContentAlignment="Center" />
+      <Button Grid.Row="1" Grid.Column="1" Classes="selectionSheetOption" Command="{Binding SetSleepTimerCommand}" CommandParameter="{x:Static vm:PlayerViewModel+SleepTimerOption.Minutes60}" Content="{loc:Translate Player.Mobile.Sleep.60min}" HorizontalContentAlignment="Center" />
+      <Button Grid.Row="2" Classes="selectionSheetOption" Command="{Binding SetSleepTimerCommand}" CommandParameter="{x:Static vm:PlayerViewModel+SleepTimerOption.EndOfEpisode}" Content="{loc:Translate Player.Mobile.Sleep.End}" HorizontalContentAlignment="Center" />
+      <Button Grid.Row="2" Grid.Column="1" Classes="selectionSheetOption" Command="{Binding CancelSleepTimerCommand}" IsVisible="{Binding IsSleepTimerActive}" Content="{loc:Translate Player.Mobile.Sleep.Cancel}" Background="{DynamicResource IconGradientBrush}" HorizontalContentAlignment="Center" />
+    </Grid>
+    <Border Background="{DynamicResource AccentSubtleBrush}" CornerRadius="8" Padding="10,8" IsVisible="{Binding IsSleepTimerActive}">
+      <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+        <icons:MaterialIcon Kind="TimerOutline" Width="18" Height="18" Foreground="{DynamicResource AccentBrush}" />
+        <TextBlock Text="{Binding SleepTimerCountdown}" Foreground="{DynamicResource PlayerOverlaySheetTextBrush}" FontWeight="SemiBold" />
+      </StackPanel>
+    </Border>
+  </StackPanel>
+</UserControl>

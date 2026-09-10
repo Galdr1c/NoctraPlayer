@@ -2,26 +2,28 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Noctra.ViewModels"
              xmlns:controls="using:Noctra.Avalonia.Controls"
-             xmlns:loc="using:Noctra.Avalonia.Localization"
-             xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             xmlns:loc="using:Noctra.UI.Localization"
+             xmlns:shared="using:Noctra.UI.Views"
              x:Class="Noctra.Avalonia.Views.MyListView"
              x:CompileBindings="False">
   <Grid IsVisible="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.MyList}}">
-    <Grid Margin="24,24,24,0" RowDefinitions="Auto,*" RowSpacing="{DynamicResource DesktopHeaderGap}">
-      <TextBlock Text="{loc:Translate MyList.Title}" Classes="DesktopPageTitle" />
-      <controls:DesktopSectionedCardFeed Grid.Row="1" ScrollChanged="MyListView_ScrollChanged">
-        <controls:DesktopSectionedCardFeed.Sections>
-          <controls:DesktopCardSection Header="{loc:Translate History.LiveTv}" CardKind="Live" PresentationMode="MyList" SourceItems="{Binding MyListLiveChannels}" />
-          <controls:DesktopCardSection Header="{loc:Translate History.Series}" CardKind="Series" PresentationMode="MyList" SourceItems="{Binding MyListSeriesItems}" />
-          <controls:DesktopCardSection Header="{loc:Translate History.Movies}" CardKind="Vod" PresentationMode="MyList" SourceItems="{Binding MyListVodChannels}" />
-        </controls:DesktopSectionedCardFeed.Sections>
-      </controls:DesktopSectionedCardFeed>
-      <StackPanel Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center"
-                  IsVisible="{Binding ShowMyListEmptyState}">
-        <icons:MaterialIcon Kind="BookmarkOutline" Width="64" Height="64" Foreground="{DynamicResource TextMutedBrush}" Opacity="0.5" />
-        <TextBlock Text="{loc:Translate MyList.Empty.Title}" FontSize="20" FontWeight="Bold" Margin="0,16,0,4" TextAlignment="Center" />
-        <TextBlock Text="{loc:Translate MyList.Empty.Description}" Foreground="{DynamicResource TextMutedBrush}" TextAlignment="Center" />
-      </StackPanel>
-    </Grid>
+    <shared:AdaptiveLibraryView
+        Title="{loc:Translate MyList.Title}"
+        CountText="{Binding MyList.Count}"
+        ShowCountBadge="{Binding MyList.Count, Converter={StaticResource CountToVisibilityConverter}}"
+        IsEmpty="{Binding ShowMyListEmptyState}"
+        EmptyIconKind="BookmarkOutline"
+        EmptyTitle="{loc:Translate MyList.Empty.Title}"
+        EmptyDescription="{loc:Translate MyList.Empty.Description}">
+      <shared:AdaptiveLibraryView.ItemsHost>
+        <controls:DesktopSectionedCardFeed ScrollChanged="MyListView_ScrollChanged">
+          <controls:DesktopSectionedCardFeed.Sections>
+            <controls:DesktopCardSection Header="{loc:Translate History.LiveTv}" CardKind="Live" PresentationMode="MyList" SourceItems="{Binding MyListLiveChannels}" />
+            <controls:DesktopCardSection Header="{loc:Translate History.Series}" CardKind="Series" PresentationMode="MyList" SourceItems="{Binding MyListSeriesItems}" />
+            <controls:DesktopCardSection Header="{loc:Translate History.Movies}" CardKind="Vod" PresentationMode="MyList" SourceItems="{Binding MyListVodChannels}" />
+          </controls:DesktopSectionedCardFeed.Sections>
+        </controls:DesktopSectionedCardFeed>
+      </shared:AdaptiveLibraryView.ItemsHost>
+    </shared:AdaptiveLibraryView>
   </Grid>
 </UserControl>

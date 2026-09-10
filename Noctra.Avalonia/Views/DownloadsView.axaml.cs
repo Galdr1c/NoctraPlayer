@@ -17,6 +17,7 @@ public partial class DownloadsView : UserControl
     public DownloadsView()
     {
         InitializeComponent();
+        InstallSharedDownloadsPresentation();
     }
 
     private MainViewModel? ViewModel => DataContext as MainViewModel;
@@ -114,4 +115,3 @@ public partial class DownloadsView : UserControl
         base.OnDetachedFromVisualTree(e);
     }
 }
-

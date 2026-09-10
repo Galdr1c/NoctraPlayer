@@ -1,0 +1,106 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:Noctra.ViewModels;assembly=Noctra.Core"
+             xmlns:loc="using:Noctra.UI.Localization"
+             xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             xmlns:player="using:Noctra.UI.Views.Player"
+             x:Class="Noctra.UI.Views.Player.PlayerTransportBar"
+             x:DataType="vm:PlayerViewModel"
+             x:CompileBindings="False">
+  <UserControl.Styles>
+    <Style Selector="Button.playerTransport, Button.playerAction">
+      <Setter Property="FocusAdorner" Value="{x:Null}" />
+      <Setter Property="Width" Value="48" />
+      <Setter Property="Height" Value="48" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="CornerRadius" Value="8" />
+    </Style>
+    <Style Selector="Button.playerTransport:pointerover /template/ ContentPresenter, Button.playerAction:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource InteractiveHoverBrush}" />
+    </Style>
+    <Style Selector="Button.playerTransport:pressed, Button.playerAction:pressed">
+      <Setter Property="Opacity" Value="0.6" />
+    </Style>
+    <Style Selector="Button.playerTransport:focus-visible /template/ ContentPresenter, Button.playerAction:focus-visible /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource InteractiveHoverBrush}" />
+      <Setter Property="BoxShadow" Value="{DynamicResource FocusGlow}" />
+    </Style>
+  </UserControl.Styles>
+
+  <Grid RowDefinitions="Auto,Auto,Auto,Auto"
+        Margin="16,0,16,14"
+        IsVisible="{Binding IsBottomControlsVisible}">
+    <StackPanel Grid.Row="0" Spacing="2" Margin="12,4">
+      <TextBlock Text="{Binding CurrentChannel.Name}"
+                 Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                 FontSize="16" FontWeight="Bold"
+                 TextTrimming="CharacterEllipsis" MaxLines="1" />
+      <TextBlock Text="{Binding OverlaySecondaryText}"
+                 Foreground="{DynamicResource PlayerOverlaySecondaryTextBrush}"
+                 FontSize="12" TextTrimming="CharacterEllipsis" MaxLines="1" Opacity="0.85" />
+    </StackPanel>
+
+    <player:PlayerTimeline Grid.Row="1" />
+
+    <Grid Grid.Row="2" Margin="12,0" ColumnDefinitions="*,Auto" IsVisible="{Binding !IsLiveContent}">
+      <TextBlock Text="{Binding DisplayedPositionText}" FontSize="14" FontWeight="SemiBold"
+                 Foreground="{DynamicResource PlayerOverlayTextBrush}" VerticalAlignment="Center" />
+      <TextBlock Grid.Column="1" Text="{Binding DurationText}" FontSize="14"
+                 Foreground="{DynamicResource PlayerOverlaySecondaryTextBrush}"
+                 VerticalAlignment="Center" Opacity="0.70" />
+    </Grid>
+
+    <Grid Grid.Row="3" Height="56" ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto,Auto" ColumnSpacing="6">
+      <Button Classes="playerTransport" Command="{Binding SkipBackwardCommand}" CommandParameter="10"
+              IsVisible="{Binding !IsLiveContent}" AutomationProperties.Name="{loc:Translate Player.Overlay.Backward}">
+        <icons:MaterialIcon Kind="Rewind10" Width="24" Height="24" Foreground="{DynamicResource PlayerOverlayTextBrush}" />
+      </Button>
+      <Button Classes="playerTransport" Command="{Binding PlayPreviousLiveChannelCommand}"
+              IsVisible="{Binding IsLiveContent}" AutomationProperties.Name="{loc:Translate Player.Overlay.PreviousChannel}">
+        <icons:MaterialIcon Kind="SkipPrevious" Width="24" Height="24" Foreground="{DynamicResource PlayerOverlayTextBrush}" />
+      </Button>
+
+      <Button x:Name="PlayPauseButton" Grid.Column="1" Classes="playerTransport"
+              Command="{Binding PlayPauseCommand}" AutomationProperties.Name="{Binding PlayPauseAccessibilityName}">
+        <Panel Width="28" Height="28">
+          <icons:MaterialIcon Kind="Play" Width="28" Height="28" Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                              IsVisible="{Binding IsPlaying, Converter={StaticResource InverseBoolConverter}}" />
+          <icons:MaterialIcon Kind="Pause" Width="28" Height="28" Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                              IsVisible="{Binding IsPlaying}" />
+        </Panel>
+      </Button>
+
+      <Button Grid.Column="2" Classes="playerTransport" Command="{Binding SkipForwardCommand}" CommandParameter="10"
+              IsVisible="{Binding !IsLiveContent}" AutomationProperties.Name="{loc:Translate Player.Overlay.Forward}">
+        <icons:MaterialIcon Kind="FastForward10" Width="24" Height="24" Foreground="{DynamicResource PlayerOverlayTextBrush}" />
+      </Button>
+      <Button Grid.Column="2" Classes="playerTransport" Command="{Binding PlayNextLiveChannelCommand}"
+              IsVisible="{Binding IsLiveContent}" AutomationProperties.Name="{loc:Translate Player.Overlay.NextChannel}">
+        <icons:MaterialIcon Kind="SkipNext" Width="24" Height="24" Foreground="{DynamicResource PlayerOverlayTextBrush}" />
+      </Button>
+
+      <Button Grid.Column="3" Classes="playerTransport" Command="{Binding ToggleMuteCommand}"
+              AutomationProperties.Name="{Binding MuteAccessibilityName}">
+        <Panel Width="24" Height="24">
+          <icons:MaterialIcon Kind="VolumeOff" Width="24" Height="24" Foreground="{DynamicResource PlayerOverlayTextBrush}" IsVisible="{Binding IsMuted}" />
+          <icons:MaterialIcon Kind="VolumeHigh" Width="24" Height="24" Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                              IsVisible="{Binding IsMuted, Converter={StaticResource InverseBoolConverter}}" />
+        </Panel>
+      </Button>
+
+      <Button Grid.Column="5" Classes="playerAction" IsVisible="{Binding IsLiveContent}"
+              Command="{Binding ToggleEpgPanelCommand}" ToolTip.Tip="{loc:Translate Player.Epg.GuideTooltip}"
+              AutomationProperties.Name="{loc:Translate Player.Epg.GuideTooltip}">
+        <icons:MaterialIcon Kind="CalendarClock" Width="24" Height="24" Foreground="{DynamicResource PlayerOverlayTextBrush}" />
+      </Button>
+
+      <Button x:Name="TuneActionButton" Grid.Column="6" Classes="playerAction"
+              Command="{Binding OpenActionsPanelCommand}" ToolTip.Tip="{loc:Translate Mobile.Nav.More}"
+              AutomationProperties.Name="{loc:Translate Mobile.Nav.More}">
+        <icons:MaterialIcon Kind="Tune" Width="24" Height="24" Foreground="{DynamicResource PlayerOverlayTextBrush}" />
+      </Button>
+    </Grid>
+  </Grid>
+</UserControl>

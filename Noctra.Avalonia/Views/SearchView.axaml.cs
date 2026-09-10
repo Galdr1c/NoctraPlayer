@@ -23,6 +23,9 @@ public partial class SearchView : UserControl
     private MainViewModel? _subscribedViewModel;
     private bool _isAttachedToVisualTree;
 
+    public void FocusSearchInput()
+        => SharedSearchContent.FocusSearchInput();
+
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
         _isAttachedToVisualTree = true;
@@ -82,7 +85,6 @@ public partial class SearchView : UserControl
         }, DispatcherPriority.Loaded);
     }
 
-    
     private async void Context_AddToMyList_Click(object? sender, RoutedEventArgs e)
     {
         try
