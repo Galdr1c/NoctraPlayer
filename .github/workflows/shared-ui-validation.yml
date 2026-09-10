@@ -1,0 +1,28 @@
+name: Shared UI validation
+
+on:
+  push:
+    branches:
+      - refactor/shared-mobile-first-ui
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+      - name: Restore
+        run: dotnet restore NoctraPlayer.sln
+      - name: Build shared UI
+        run: dotnet build Noctra.UI/Noctra.UI.csproj -c Release --no-restore
+      - name: Build mobile UI
+        run: dotnet build Noctra.Mobile/Noctra.Mobile.csproj -c Release --no-restore
+      - name: Build desktop UI
+        run: dotnet build Noctra.Avalonia/Noctra.Avalonia.csproj -c Release --no-restore
+      - name: Test
+        run: dotnet test Noctra.Tests/Noctra.Tests.csproj -c Release --no-restore
