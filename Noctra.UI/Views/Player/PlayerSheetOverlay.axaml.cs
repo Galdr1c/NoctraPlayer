@@ -32,6 +32,7 @@ public partial class PlayerSheetOverlay : UserControl
         if (e.PropertyName is nameof(PlayerViewModel.IsActionsPanelOpen)
             or nameof(PlayerViewModel.IsAudioSettingsOpen)
             or nameof(PlayerViewModel.IsQualitySettingsOpen)
+            or nameof(PlayerViewModel.IsSubtitleAppearanceSettingsOpen)
             or nameof(PlayerViewModel.IsInfoPanelOpen)
             or nameof(PlayerViewModel.IsSleepTimerPanelOpen))
             UpdateVisibility();
@@ -43,6 +44,7 @@ public partial class PlayerSheetOverlay : UserControl
                     (_viewModel.IsActionsPanelOpen
                      || _viewModel.IsAudioSettingsOpen
                      || _viewModel.IsQualitySettingsOpen
+                     || _viewModel.IsSubtitleAppearanceSettingsOpen
                      || _viewModel.IsInfoPanelOpen
                      || _viewModel.IsSleepTimerPanelOpen);
     }
