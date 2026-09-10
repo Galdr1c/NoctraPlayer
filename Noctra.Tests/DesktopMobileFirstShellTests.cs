@@ -6,23 +6,33 @@ public sealed class DesktopMobileFirstShellTests
     public void DesktopShell_CollapsesLegacyHeaderWithoutRemovingLifecycleAnchor()
     {
         var adapter = Source("Noctra.Avalonia", "MainWindow.MobileFirstShell.cs");
+        var mobileShell = Source("Noctra.Mobile", "Views", "MainView.axaml");
 
         Assert.Contains("CollapseLegacyDesktopHeader", adapter, StringComparison.Ordinal);
         Assert.Contains("HeaderBar.Height = 0", adapter, StringComparison.Ordinal);
         Assert.Contains("HeaderBar.IsEnabled = false", adapter, StringComparison.Ordinal);
         Assert.Contains("HeaderBar.IsHitTestVisible = false", adapter, StringComparison.Ordinal);
         Assert.Contains("rootGrid.RowDefinitions[0].Height = new GridLength(0)", adapter, StringComparison.Ordinal);
+        Assert.Contains("x:Name=\"HeaderBar\"", mobileShell, StringComparison.Ordinal);
+        Assert.Contains("IsVisible=\"False\"", mobileShell, StringComparison.Ordinal);
     }
 
     [Fact]
     public void DesktopRail_FollowsCanonicalMobileNavigationOrdering()
     {
         var adapter = Source("Noctra.Avalonia", "MainWindow.MobileFirstShell.cs");
+        var mobileShell = Source("Noctra.Mobile", "Views", "MainView.axaml");
 
         Assert.Contains("rail.Children.IndexOf(NavSeriesBtn)", adapter, StringComparison.Ordinal);
         Assert.Contains("Favorites before My List", adapter, StringComparison.Ordinal);
         Assert.Contains("rail.Children.IndexOf(NavDownloadsBtn)", adapter, StringComparison.Ordinal);
         Assert.Contains("rail.Children.Insert(settingsIndex, _desktopSettingsNavButton)", adapter, StringComparison.Ordinal);
+
+        var searchIndex = mobileShell.IndexOf("Tag=\"Search\"", StringComparison.Ordinal);
+        var favoritesIndex = mobileShell.IndexOf("Tag=\"Favorites\"", StringComparison.Ordinal);
+        var myListIndex = mobileShell.IndexOf("Tag=\"MyList\"", StringComparison.Ordinal);
+        var settingsIndex = mobileShell.IndexOf("Tag=\"Settings\"", StringComparison.Ordinal);
+        Assert.True(searchIndex >= 0 && favoritesIndex > searchIndex && myListIndex > favoritesIndex && settingsIndex > myListIndex);
     }
 
     [Fact]
