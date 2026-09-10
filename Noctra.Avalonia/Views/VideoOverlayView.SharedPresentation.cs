@@ -1,7 +1,11 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Templates;
+using Avalonia.Media;
 using Avalonia.Threading;
+using Noctra.Models;
 using Noctra.UI.Views.Player;
+using DesktopRemoteImage = Noctra.Avalonia.Controls.RemoteImage;
 
 namespace Noctra.Avalonia.Views;
 
@@ -38,12 +42,12 @@ public partial class VideoOverlayView
         overlayContent.Children[1].IsVisible = false;
         overlayContent.Children[2].IsVisible = false;
 
-        // Common panel states now render through the shared mobile-first sheet.
-        // Suppress only their legacy desktop visuals; episodes/subtitle appearance
-        // deliberately remain desktop-specific until their dependencies are shared.
+        // Common panel states render through the shared mobile-first sheet.
+        // Their host-specific native/input behavior remains in this desktop view.
         SuppressLegacyPanel("AudioSettingsPanel");
         SuppressLegacyPanel("QualitySettingsPanel");
         SuppressLegacyPanel("InfoPanel");
+        SuppressLegacyPanel("EpisodesPanel");
         SuppressLegacyPanel("SleepTimerPanel");
 
         _sharedPlayerChrome = new PlayerChromeView
@@ -53,7 +57,18 @@ public partial class VideoOverlayView
         };
         _sharedPlayerChrome.SetValue(Panel.ZIndexProperty, 700);
 
-        _sharedPlayerSheets = new PlayerSheetOverlay();
+        _sharedPlayerSheets = new PlayerSheetOverlay
+        {
+            EpisodeThumbnailTemplate = new FuncDataTemplate<Episode>(
+                (episode, _) => episode is null
+                    ? null
+                    : new DesktopRemoteImage
+                    {
+                        Url = episode.CoverUrl,
+                        Stretch = Stretch.UniformToFill
+                    },
+                supportsRecycling: false)
+        };
         _sharedPlayerSheets.SetValue(Panel.ZIndexProperty, 1100);
 
         overlayContent.Children.Add(_sharedPlayerChrome);
