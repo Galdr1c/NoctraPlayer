@@ -23,22 +23,60 @@
                    FontWeight="Bold"
                    Foreground="{DynamicResource TextPrimaryBrush}" />
 
-        <!-- Canonical cross-platform settings content. Mobile owns the visual language. -->
         <views:SettingsCommonSectionsView x:Name="CommonSections" />
 
-        <!-- Platform-only settings stay outside the shared canonical sections. -->
+        <Border Classes="SettingsSectionCard">
+          <StackPanel Spacing="12">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <icons:MaterialIcon Kind="BrushVariant" Width="20" Height="20" Foreground="{DynamicResource AccentBrush}" />
+              <TextBlock Text="{loc:Translate GlobalSettings.Appearance.Title}"
+                         Foreground="{DynamicResource TextPrimaryBrush}"
+                         FontSize="{DynamicResource FTitleL}"
+                         FontWeight="SemiBold" />
+            </StackPanel>
+            <TextBlock Text="{loc:Translate GlobalSettings.Theme.Description}"
+                       Foreground="{DynamicResource TextMutedBrush}"
+                       FontSize="{DynamicResource FCaption}"
+                       TextWrapping="Wrap" />
+            <views:SettingsThemePickerView />
+          </StackPanel>
+        </Border>
+
+        <Border Classes="SettingsSectionCard">
+          <StackPanel Spacing="12">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <icons:MaterialIcon Kind="PlayBoxOutline" Width="20" Height="20" Foreground="{DynamicResource AccentBrush}" />
+              <TextBlock Text="{loc:Translate Settings.Nav.Playback}"
+                         Foreground="{DynamicResource TextPrimaryBrush}"
+                         FontSize="{DynamicResource FTitleL}"
+                         FontWeight="SemiBold" />
+            </StackPanel>
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+              <StackPanel Spacing="3" VerticalAlignment="Center">
+                <TextBlock Text="{loc:Translate Settings.Playback.AutoPlayNext}"
+                           Foreground="{DynamicResource TextPrimaryBrush}"
+                           FontWeight="Medium" />
+                <TextBlock Text="{loc:Translate Settings.Playback.AutoPlayDescription}"
+                           Foreground="{DynamicResource TextMutedBrush}"
+                           FontSize="{DynamicResource FCaption}"
+                           TextWrapping="Wrap" />
+              </StackPanel>
+              <ToggleSwitch Grid.Column="1"
+                            IsChecked="{Binding AutoPlayNext, Mode=TwoWay}"
+                            VerticalAlignment="Center" />
+            </Grid>
+          </StackPanel>
+        </Border>
+
         <ContentControl Content="{Binding PlatformContent, ElementName=Root}"
                         HorizontalContentAlignment="Stretch"
                         IsVisible="{Binding HasPlatformContent, ElementName=Root}" />
 
-        <!-- Temporary bridge until every legacy desktop settings section is migrated. -->
         <Button Classes="SettingsActionButton"
                 Click="AdvancedSettings_Click"
                 IsVisible="{Binding ShowAdvancedSettingsAction, ElementName=Root}">
           <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
-            <icons:MaterialIcon Kind="CogOutline"
-                                Width="20" Height="20"
-                                Foreground="{DynamicResource AccentBrush}" />
+            <icons:MaterialIcon Kind="CogOutline" Width="20" Height="20" Foreground="{DynamicResource AccentBrush}" />
             <StackPanel Grid.Column="1" Spacing="2">
               <TextBlock Text="{loc:Translate Settings.Title}"
                          Foreground="{DynamicResource TextPrimaryBrush}"
@@ -47,9 +85,7 @@
                          Foreground="{DynamicResource TextMutedBrush}"
                          FontSize="{DynamicResource FCaption}" />
             </StackPanel>
-            <icons:MaterialIcon Grid.Column="2" Kind="ChevronRight"
-                                Width="20" Height="20"
-                                Foreground="{DynamicResource TextMutedBrush}" />
+            <icons:MaterialIcon Grid.Column="2" Kind="ChevronRight" Width="20" Height="20" Foreground="{DynamicResource TextMutedBrush}" />
           </Grid>
         </Button>
       </StackPanel>
