@@ -14,10 +14,14 @@ public partial class PlayerChromeView : UserControl
     public static readonly StyledProperty<Thickness> SafeAreaProperty =
         AvaloniaProperty.Register<PlayerChromeView, Thickness>(nameof(SafeArea));
 
+    static PlayerChromeView()
+    {
+        SafeAreaProperty.Changed.AddClassHandler<PlayerChromeView>((view, _) => view.ApplySafeArea());
+    }
+
     public PlayerChromeView()
     {
         InitializeComponent();
-        SafeAreaProperty.Changed.AddClassHandler<PlayerChromeView>((view, _) => view.ApplySafeArea());
     }
 
     public bool ShowLockAction
