@@ -59,10 +59,11 @@ public sealed class DesktopMobileFirstShellTests
         var searchCode = Source("Noctra.Avalonia", "Views", "SearchView.axaml.cs");
 
         var handlerStart = adapter.IndexOf("private void DesktopSearchNav_Click", StringComparison.Ordinal);
-        var handlerEnd = adapter.IndexOf("private void DesktopSettingsNav_Click", handlerStart, StringComparison.Ordinal);
+        var handlerEnd = adapter.IndexOf("private async void DesktopSettingsNav_Click", handlerStart, StringComparison.Ordinal);
         Assert.True(handlerStart >= 0 && handlerEnd > handlerStart);
         var handler = adapter[handlerStart..handlerEnd];
 
+        Assert.Contains("HideDesktopSettingsPage()", handler, StringComparison.Ordinal);
         Assert.Contains("NavigateSearch_Click(sender, e)", handler, StringComparison.Ordinal);
         Assert.Contains("FocusSearchInput", handler, StringComparison.Ordinal);
         Assert.DoesNotContain("CommitSearchCommand", handler, StringComparison.Ordinal);
@@ -71,13 +72,43 @@ public sealed class DesktopMobileFirstShellTests
     }
 
     [Fact]
-    public void DesktopSettingsRail_ReusesExistingSettingsFlow()
+    public void DesktopSettingsRail_OpensSharedSettingsInsideMainShell()
+    {
+        var adapter = Source("Noctra.Avalonia", "MainWindow.MobileFirstShell.cs");
+        var sharedSettings = Source("Noctra.UI", "Views", "AdaptiveSettingsOverviewView.axaml");
+        var sharedSettingsCode = Source("Noctra.UI", "Views", "AdaptiveSettingsOverviewView.axaml.cs");
+
+        var handlerStart = adapter.IndexOf("private async void DesktopSettingsNav_Click", StringComparison.Ordinal);
+        var handlerEnd = adapter.IndexOf("private void DesktopPrimaryNavigation_Click", handlerStart, StringComparison.Ordinal);
+        Assert.True(handlerStart >= 0 && handlerEnd > handlerStart);
+        var handler = adapter[handlerStart..handlerEnd];
+
+        Assert.Contains("await ShowDesktopSettingsPageAsync()", handler, StringComparison.Ordinal);
+        Assert.DoesNotContain("SettingsButton_Click", handler, StringComparison.Ordinal);
+        Assert.Contains("new AdaptiveSettingsOverviewView", adapter, StringComparison.Ordinal);
+        Assert.Contains("MainContentArea.Children.Add(_desktopSettingsPageHost)", adapter, StringComparison.Ordinal);
+        Assert.Contains("ScopedServiceLease<SettingsViewModel>.Create", adapter, StringComparison.Ordinal);
+        Assert.Contains("lease.DisposeAsync()", adapter, StringComparison.Ordinal);
+        Assert.Contains("SettingsSectionCard", sharedSettings, StringComparison.Ordinal);
+        Assert.Contains("Settings.Profile.ActiveProfile", sharedSettings, StringComparison.Ordinal);
+        Assert.Contains("Settings.Account.Title", sharedSettings, StringComparison.Ordinal);
+        Assert.Contains("GlobalSettings.Appearance.Title", sharedSettings, StringComparison.Ordinal);
+        Assert.Contains("Settings.Playback.AutoPlayNext", sharedSettings, StringComparison.Ordinal);
+        Assert.Contains("_viewModel.EnableAutoSave()", sharedSettingsCode, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void DesktopSettings_UsesOldModalOnlyAsTemporaryAdvancedBridge()
     {
         var adapter = Source("Noctra.Avalonia", "MainWindow.MobileFirstShell.cs");
 
-        Assert.Contains("MaterialIconKind.CogOutline", adapter, StringComparison.Ordinal);
-        Assert.Contains("Settings.Title", adapter, StringComparison.Ordinal);
-        Assert.Contains("SettingsButton_Click(sender, e)", adapter, StringComparison.Ordinal);
+        var handlerStart = adapter.IndexOf("private void DesktopAdvancedSettingsRequested", StringComparison.Ordinal);
+        var handlerEnd = adapter.IndexOf("private void MobileFirstShellViewModel_PropertyChanged", handlerStart, StringComparison.Ordinal);
+        Assert.True(handlerStart >= 0 && handlerEnd > handlerStart);
+        var handler = adapter[handlerStart..handlerEnd];
+
+        Assert.Contains("SettingsButton_Click(sender, e)", handler, StringComparison.Ordinal);
+        Assert.Contains("Transitional bridge", handler, StringComparison.Ordinal);
     }
 
     private static string Source(params string[] path)
