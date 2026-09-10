@@ -59,47 +59,41 @@ public sealed class DesktopMobileFirstShellTests
         var searchCode = Source("Noctra.Avalonia", "Views", "SearchView.axaml.cs");
 
         var handlerStart = adapter.IndexOf("private void DesktopSearchNav_Click", StringComparison.Ordinal);
-        var handlerEnd = adapter.IndexOf("private async void DesktopSettingsNav_Click", handlerStart, StringComparison.Ordinal);
+        var handlerEnd = adapter.IndexOf("private void DesktopSettingsNav_Click", handlerStart, StringComparison.Ordinal);
         Assert.True(handlerStart >= 0 && handlerEnd > handlerStart);
         var handler = adapter[handlerStart..handlerEnd];
 
-        Assert.Contains("HideDesktopSettingsPage()", handler, StringComparison.Ordinal);
         Assert.Contains("NavigateSearch_Click(sender, e)", handler, StringComparison.Ordinal);
         Assert.Contains("FocusSearchInput", handler, StringComparison.Ordinal);
         Assert.DoesNotContain("CommitSearchCommand", handler, StringComparison.Ordinal);
+        Assert.DoesNotContain("HeaderSearchBox", handler, StringComparison.Ordinal);
         Assert.Contains("x:Name=\"SharedSearchContent\"", searchView, StringComparison.Ordinal);
         Assert.Contains("SharedSearchContent.FocusSearchInput()", searchCode, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void DesktopSettingsRail_OpensSharedSettingsInsideMainShell()
+    public void DesktopSettingsRail_OpensCompleteDedicatedSettingsSurface()
     {
         var adapter = Source("Noctra.Avalonia", "MainWindow.MobileFirstShell.cs");
-        var sharedSettings = Source("Noctra.UI", "Views", "AdaptiveSettingsOverviewView.axaml");
-        var sharedSettingsCode = Source("Noctra.UI", "Views", "AdaptiveSettingsOverviewView.axaml.cs");
-        var commonSections = Source("Noctra.UI", "Views", "SettingsCommonSectionsView.axaml");
-        var themePicker = Source("Noctra.UI", "Views", "SettingsThemePickerView.axaml");
+        var settingsWindow = Source("Noctra.Avalonia", "Views", "SettingsWindow.axaml");
 
-        var handlerStart = adapter.IndexOf("private async void DesktopSettingsNav_Click", StringComparison.Ordinal);
-        var handlerEnd = adapter.IndexOf("private void DesktopPrimaryNavigation_Click", handlerStart, StringComparison.Ordinal);
+        var handlerStart = adapter.IndexOf("private void DesktopSettingsNav_Click", StringComparison.Ordinal);
+        var handlerEnd = adapter.IndexOf("private void MobileFirstShellViewModel_PropertyChanged", handlerStart, StringComparison.Ordinal);
         Assert.True(handlerStart >= 0 && handlerEnd > handlerStart);
         var handler = adapter[handlerStart..handlerEnd];
 
-        Assert.Contains("await ShowDesktopSettingsPageAsync()", handler, StringComparison.Ordinal);
-        Assert.DoesNotContain("SettingsButton_Click", handler, StringComparison.Ordinal);
-        Assert.Contains("new AdaptiveSettingsOverviewView", adapter, StringComparison.Ordinal);
-        Assert.Contains("MainContentArea.Children.Add(_desktopSettingsPageHost)", adapter, StringComparison.Ordinal);
-        Assert.Contains("ScopedServiceLease<SettingsViewModel>.Create", adapter, StringComparison.Ordinal);
-        Assert.Contains("lease.DisposeAsync()", adapter, StringComparison.Ordinal);
-        Assert.Contains("SettingsCommonSectionsView", sharedSettings, StringComparison.Ordinal);
-        Assert.Contains("SettingsThemePickerView", sharedSettings, StringComparison.Ordinal);
-        Assert.Contains("Settings.Profile.ActiveProfile", commonSections, StringComparison.Ordinal);
-        Assert.Contains("Settings.Account.Title", commonSections, StringComparison.Ordinal);
-        Assert.Contains("AvatarPathConverter", commonSections, StringComparison.Ordinal);
-        Assert.Contains("Settings.Theme.Dark", themePicker, StringComparison.Ordinal);
-        Assert.Contains("Settings.Theme.Light", themePicker, StringComparison.Ordinal);
-        Assert.Contains("Settings.Playback.AutoPlayNext", sharedSettings, StringComparison.Ordinal);
-        Assert.Contains("viewModel.EnableAutoSave()", sharedSettingsCode, StringComparison.Ordinal);
+        Assert.Contains("SettingsButton_Click(sender, e)", handler, StringComparison.Ordinal);
+        Assert.Contains("CloseSidebar()", handler, StringComparison.Ordinal);
+        Assert.DoesNotContain("ShowDesktopSettingsPageAsync", adapter, StringComparison.Ordinal);
+        Assert.DoesNotContain("AdaptiveSettingsOverviewView", adapter, StringComparison.Ordinal);
+        Assert.DoesNotContain("AdvancedSettingsRequested", adapter, StringComparison.Ordinal);
+
+        Assert.Contains("Settings.Nav.Profile", settingsWindow, StringComparison.Ordinal);
+        Assert.Contains("Settings.Nav.Playback", settingsWindow, StringComparison.Ordinal);
+        Assert.Contains("Settings.Nav.Channels", settingsWindow, StringComparison.Ordinal);
+        Assert.Contains("Settings.Nav.Notifications", settingsWindow, StringComparison.Ordinal);
+        Assert.Contains("Settings.Nav.Privacy", settingsWindow, StringComparison.Ordinal);
+        Assert.Contains("Settings.Section.Appearance", settingsWindow, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -119,17 +113,14 @@ public sealed class DesktopMobileFirstShellTests
     }
 
     [Fact]
-    public void DesktopSettings_UsesOldModalOnlyAsTemporaryAdvancedBridge()
+    public void DesktopSettings_DoesNotExposePartialInShellMoreSettingsBridge()
     {
         var adapter = Source("Noctra.Avalonia", "MainWindow.MobileFirstShell.cs");
 
-        var handlerStart = adapter.IndexOf("private void DesktopAdvancedSettingsRequested", StringComparison.Ordinal);
-        var handlerEnd = adapter.IndexOf("private void MobileFirstShellViewModel_PropertyChanged", handlerStart, StringComparison.Ordinal);
-        Assert.True(handlerStart >= 0 && handlerEnd > handlerStart);
-        var handler = adapter[handlerStart..handlerEnd];
-
-        Assert.Contains("SettingsButton_Click(sender, e)", handler, StringComparison.Ordinal);
-        Assert.Contains("Transitional bridge", handler, StringComparison.Ordinal);
+        Assert.DoesNotContain("PlatformContent", adapter, StringComparison.Ordinal);
+        Assert.DoesNotContain("ShowAdvancedSettingsAction", adapter, StringComparison.Ordinal);
+        Assert.DoesNotContain("DesktopAdvancedSettingsRequested", adapter, StringComparison.Ordinal);
+        Assert.DoesNotContain("More settings", adapter, StringComparison.OrdinalIgnoreCase);
     }
 
     private static string Source(params string[] path)
