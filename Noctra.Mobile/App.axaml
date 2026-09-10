@@ -12,17 +12,17 @@
         <ResourceDictionary.ThemeDictionaries>
           <ResourceDictionary x:Key="Default">
             <ResourceDictionary.MergedDictionaries>
-              <ResourceInclude Source="avares://Noctra.Mobile/Resources/Themes/DarkTheme.axaml" />
+              <ResourceInclude Source="avares://Noctra.UI/Resources/Themes/DarkTheme.axaml" />
             </ResourceDictionary.MergedDictionaries>
           </ResourceDictionary>
           <ResourceDictionary x:Key="Dark">
             <ResourceDictionary.MergedDictionaries>
-              <ResourceInclude Source="avares://Noctra.Mobile/Resources/Themes/DarkTheme.axaml" />
+              <ResourceInclude Source="avares://Noctra.UI/Resources/Themes/DarkTheme.axaml" />
             </ResourceDictionary.MergedDictionaries>
           </ResourceDictionary>
           <ResourceDictionary x:Key="Light">
             <ResourceDictionary.MergedDictionaries>
-              <ResourceInclude Source="avares://Noctra.Mobile/Resources/Themes/LightTheme.axaml" />
+              <ResourceInclude Source="avares://Noctra.UI/Resources/Themes/LightTheme.axaml" />
             </ResourceDictionary.MergedDictionaries>
           </ResourceDictionary>
         </ResourceDictionary.ThemeDictionaries>
