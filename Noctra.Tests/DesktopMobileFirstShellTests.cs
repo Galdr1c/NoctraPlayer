@@ -78,6 +78,7 @@ public sealed class DesktopMobileFirstShellTests
         var sharedSettings = Source("Noctra.UI", "Views", "AdaptiveSettingsOverviewView.axaml");
         var sharedSettingsCode = Source("Noctra.UI", "Views", "AdaptiveSettingsOverviewView.axaml.cs");
         var commonSections = Source("Noctra.UI", "Views", "SettingsCommonSectionsView.axaml");
+        var themePicker = Source("Noctra.UI", "Views", "SettingsThemePickerView.axaml");
 
         var handlerStart = adapter.IndexOf("private async void DesktopSettingsNav_Click", StringComparison.Ordinal);
         var handlerEnd = adapter.IndexOf("private void DesktopPrimaryNavigation_Click", handlerStart, StringComparison.Ordinal);
@@ -91,12 +92,30 @@ public sealed class DesktopMobileFirstShellTests
         Assert.Contains("ScopedServiceLease<SettingsViewModel>.Create", adapter, StringComparison.Ordinal);
         Assert.Contains("lease.DisposeAsync()", adapter, StringComparison.Ordinal);
         Assert.Contains("SettingsCommonSectionsView", sharedSettings, StringComparison.Ordinal);
-        Assert.Contains("SettingsSectionCard", commonSections, StringComparison.Ordinal);
+        Assert.Contains("SettingsThemePickerView", sharedSettings, StringComparison.Ordinal);
         Assert.Contains("Settings.Profile.ActiveProfile", commonSections, StringComparison.Ordinal);
         Assert.Contains("Settings.Account.Title", commonSections, StringComparison.Ordinal);
-        Assert.Contains("GlobalSettings.Appearance.Title", commonSections, StringComparison.Ordinal);
-        Assert.Contains("Settings.Playback.AutoPlayNext", commonSections, StringComparison.Ordinal);
+        Assert.Contains("AvatarPathConverter", commonSections, StringComparison.Ordinal);
+        Assert.Contains("Settings.Theme.Dark", themePicker, StringComparison.Ordinal);
+        Assert.Contains("Settings.Theme.Light", themePicker, StringComparison.Ordinal);
+        Assert.Contains("Settings.Playback.AutoPlayNext", sharedSettings, StringComparison.Ordinal);
         Assert.Contains("viewModel.EnableAutoSave()", sharedSettingsCode, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void MobileSettings_ConsumesSharedExactOverlapWithoutRemovingPlatformSections()
+    {
+        var adapter = Source("Noctra.Mobile", "Views", "MobileSettingsView.SharedUi.cs");
+        var mobileSettings = Source("Noctra.Mobile", "Views", "MobileSettingsView.axaml");
+
+        Assert.Contains("new SharedSettingsCommonSectionsView()", adapter, StringComparison.Ordinal);
+        Assert.Contains("new SharedSettingsThemePickerView()", adapter, StringComparison.Ordinal);
+        Assert.Contains("Take(3)", adapter, StringComparison.Ordinal);
+        Assert.Contains("Appearance keeps", adapter, StringComparison.Ordinal);
+        Assert.Contains("Playback keeps", adapter, StringComparison.Ordinal);
+        Assert.Contains("Settings.Language.Title", mobileSettings, StringComparison.Ordinal);
+        Assert.Contains("Settings.Playback.UserAgent", mobileSettings, StringComparison.Ordinal);
+        Assert.Contains("Settings.Playback.Quality", mobileSettings, StringComparison.Ordinal);
     }
 
     [Fact]
