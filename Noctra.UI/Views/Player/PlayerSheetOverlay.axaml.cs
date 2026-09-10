@@ -1,16 +1,27 @@
 using System;
+using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Templates;
 using Noctra.ViewModels;
 
 namespace Noctra.UI.Views.Player;
 
 public partial class PlayerSheetOverlay : UserControl
 {
+    public static readonly StyledProperty<IDataTemplate?> EpisodeThumbnailTemplateProperty =
+        AvaloniaProperty.Register<PlayerSheetOverlay, IDataTemplate?>(nameof(EpisodeThumbnailTemplate));
+
     private PlayerViewModel? _viewModel;
 
     public PlayerSheetOverlay()
     {
         InitializeComponent();
+    }
+
+    public IDataTemplate? EpisodeThumbnailTemplate
+    {
+        get => GetValue(EpisodeThumbnailTemplateProperty);
+        set => SetValue(EpisodeThumbnailTemplateProperty, value);
     }
 
     protected override void OnDataContextChanged(EventArgs e)
@@ -34,6 +45,7 @@ public partial class PlayerSheetOverlay : UserControl
             or nameof(PlayerViewModel.IsQualitySettingsOpen)
             or nameof(PlayerViewModel.IsSubtitleAppearanceSettingsOpen)
             or nameof(PlayerViewModel.IsInfoPanelOpen)
+            or nameof(PlayerViewModel.IsEpisodesPanelOpen)
             or nameof(PlayerViewModel.IsSleepTimerPanelOpen))
             UpdateVisibility();
     }
@@ -46,6 +58,7 @@ public partial class PlayerSheetOverlay : UserControl
                      || _viewModel.IsQualitySettingsOpen
                      || _viewModel.IsSubtitleAppearanceSettingsOpen
                      || _viewModel.IsInfoPanelOpen
+                     || _viewModel.IsEpisodesPanelOpen
                      || _viewModel.IsSleepTimerPanelOpen);
     }
 }
