@@ -2,69 +2,40 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Noctra.ViewModels"
              xmlns:controls="using:Noctra.Avalonia.Controls"
-             xmlns:loc="using:Noctra.Avalonia.Localization"
-             xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             xmlns:loc="using:Noctra.UI.Localization"
+             xmlns:shared="using:Noctra.UI.Views"
              x:Class="Noctra.Avalonia.Views.SearchView"
              x:CompileBindings="False">
   <Grid IsVisible="{Binding ActiveView, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter={x:Static vm:AppView.Search}}">
-    <Grid Margin="24,24,24,0" RowDefinitions="Auto,Auto,*" RowSpacing="{DynamicResource DesktopHeaderGap}">
-      <TextBlock Text="{loc:Translate Search.Results}" Classes="DesktopPageTitle" />
-      <StackPanel Grid.Row="1" Spacing="8">
-        <Border Padding="14,10" Background="{DynamicResource Surface0Brush}"
-                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="10"
-                IsVisible="{Binding SearchSuggestion, Converter={StaticResource StringNotEmptyToVisibilityConverter}}">
-          <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-            <TextBlock Text="{loc:Translate Search.DidYouMean}" Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center" />
-            <Button Content="{Binding SearchSuggestion}" Margin="10,0,0,0" Padding="10,5"
-                    Command="{Binding ApplySearchSuggestionCommand}" Classes="DesktopFilterButton" />
-          </StackPanel>
-        </Border>
-        <Border Padding="14,8" Background="{DynamicResource Surface0Brush}"
-                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="10"
-                IsVisible="{Binding ShowSearchMinimumLengthHint}">
-          <TextBlock Text="{loc:Translate Search.MinimumLengthHint}"
-                     Foreground="{DynamicResource TextMutedBrush}"
-                     HorizontalAlignment="Center" />
-        </Border>
-      </StackPanel>
-      <controls:DesktopSectionedCardFeed Grid.Row="2"
-                                         x:Name="SearchResultsFeed"
-                                         IsHitTestVisible="{Binding IsSearching, Converter={StaticResource InverseBoolConverter}}"
-                                         Opacity="{Binding IsSearching, Converter={StaticResource BoolToOpacityConverter}, ConverterParameter=0.4}">
-        <controls:DesktopSectionedCardFeed.Sections>
-          <controls:DesktopCardSection Header="{loc:Translate History.LiveTv}" CardKind="Live" SourceItems="{Binding SearchLiveChannels}" />
-          <controls:DesktopCardSection Header="{loc:Translate History.Series}" CardKind="Series" SourceItems="{Binding SearchSeriesChannels}" />
-          <controls:DesktopCardSection Header="{loc:Translate History.Movies}" CardKind="Vod" SourceItems="{Binding SearchVodChannels}" />
-          <controls:DesktopCardSection GroupHeader="{loc:Translate Search.SimilarResults}" Header="{loc:Translate History.LiveTv}" CardKind="Live" SourceItems="{Binding SearchSimilarLiveChannels}" />
-          <controls:DesktopCardSection GroupHeader="{loc:Translate Search.SimilarResults}" Header="{loc:Translate History.Series}" CardKind="Series" SourceItems="{Binding SearchSimilarSeriesChannels}" />
-          <controls:DesktopCardSection GroupHeader="{loc:Translate Search.SimilarResults}" Header="{loc:Translate History.Movies}" CardKind="Vod" SourceItems="{Binding SearchSimilarVodChannels}" />
-        </controls:DesktopSectionedCardFeed.Sections>
-      </controls:DesktopSectionedCardFeed>
-      <Border Grid.Row="2"
-              HorizontalAlignment="Center"
-              VerticalAlignment="Center"
-              Padding="24,18"
-              Background="{DynamicResource OverlayPanelBrush}"
-              BorderBrush="{DynamicResource BorderBrush}"
-              BorderThickness="1"
-              CornerRadius="10"
-              ZIndex="10"
-              IsVisible="{Binding IsSearching}">
-        <StackPanel Spacing="12" HorizontalAlignment="Center">
-          <controls:PremiumSpinner Width="54" Height="54"
-                                 HorizontalAlignment="Center" />
-          <TextBlock Text="{loc:Translate Search.Searching}"
-                     HorizontalAlignment="Center"
-                     Foreground="{DynamicResource TextPrimaryBrush}"
-                     FontWeight="SemiBold" />
-        </StackPanel>
-      </Border>
-      <StackPanel Grid.Row="2" HorizontalAlignment="Center" VerticalAlignment="Center"
-                  IsVisible="{Binding ShowSearchEmptyState}">
-        <icons:MaterialIcon Kind="Magnify" Width="64" Height="64" Foreground="{DynamicResource TextMutedBrush}" Opacity="0.5" />
-        <TextBlock Text="{loc:Translate Search.Empty.Title}" FontSize="20" FontWeight="Bold" Margin="0,16,0,4" TextAlignment="Center" />
-        <TextBlock Text="{loc:Translate Search.Empty.Description}" Foreground="{DynamicResource TextMutedBrush}" TextAlignment="Center" />
-      </StackPanel>
-    </Grid>
+    <shared:AdaptiveSearchView>
+      <shared:AdaptiveSearchView.ResultsHost>
+        <!-- Desktop keeps its virtualization/context-menu implementation while the visual UX is shared. -->
+        <controls:DesktopSectionedCardFeed x:Name="SearchResultsFeed">
+          <controls:DesktopSectionedCardFeed.Sections>
+            <controls:DesktopCardSection Header="{loc:Translate History.LiveTv}"
+                                         CardKind="Live"
+                                         SourceItems="{Binding SearchLiveChannels}" />
+            <controls:DesktopCardSection Header="{loc:Translate History.Series}"
+                                         CardKind="Series"
+                                         SourceItems="{Binding SearchSeriesChannels}" />
+            <controls:DesktopCardSection Header="{loc:Translate History.Movies}"
+                                         CardKind="Vod"
+                                         SourceItems="{Binding SearchVodChannels}" />
+            <controls:DesktopCardSection GroupHeader="{loc:Translate Search.SimilarResults}"
+                                         Header="{loc:Translate History.LiveTv}"
+                                         CardKind="Live"
+                                         SourceItems="{Binding SearchSimilarLiveChannels}" />
+            <controls:DesktopCardSection GroupHeader="{loc:Translate Search.SimilarResults}"
+                                         Header="{loc:Translate History.Series}"
+                                         CardKind="Series"
+                                         SourceItems="{Binding SearchSimilarSeriesChannels}" />
+            <controls:DesktopCardSection GroupHeader="{loc:Translate Search.SimilarResults}"
+                                         Header="{loc:Translate History.Movies}"
+                                         CardKind="Vod"
+                                         SourceItems="{Binding SearchSimilarVodChannels}" />
+          </controls:DesktopSectionedCardFeed.Sections>
+        </controls:DesktopSectionedCardFeed>
+      </shared:AdaptiveSearchView.ResultsHost>
+    </shared:AdaptiveSearchView>
   </Grid>
 </UserControl>
