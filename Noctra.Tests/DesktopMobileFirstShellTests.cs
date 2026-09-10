@@ -41,6 +41,17 @@ public sealed class DesktopMobileFirstShellTests
     }
 
     [Fact]
+    public void DesktopRail_RemainsUsableAtCompactWindowHeights()
+    {
+        var adapter = Source("Noctra.Avalonia", "MainWindow.MobileFirstShell.cs");
+
+        Assert.Contains("EnableAdaptiveRailScrolling();", adapter, StringComparison.Ordinal);
+        Assert.Contains("SideBar.Child = new ScrollViewer", adapter, StringComparison.Ordinal);
+        Assert.Contains("VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto", adapter, StringComparison.Ordinal);
+        Assert.Contains("HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled", adapter, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void DesktopSearchRail_NavigatesToSearchPageInsteadOfSearchingInShell()
     {
         var adapter = Source("Noctra.Avalonia", "MainWindow.MobileFirstShell.cs");
