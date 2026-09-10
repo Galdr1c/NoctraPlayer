@@ -44,29 +44,24 @@ public sealed class SearchCollectionDiffContractTests
     }
 
     [Fact]
-    public void SearchFeeds_DimAndRejectInputWhileNewQueryIsLoading()
+    public void SharedSearchSurface_DimsAndRejectsInputWhileNewQueryIsLoading()
     {
+        var shared = Source("Noctra.UI", "Views", "AdaptiveSearchView.axaml");
         var mobile = Source("Noctra.Mobile", "Views", "MobileSearchView.axaml");
         var desktop = Source("Noctra.Avalonia", "Views", "SearchView.axaml");
 
         Assert.Contains(
             "IsHitTestVisible=\"{Binding IsSearching, Converter={StaticResource InverseBoolConverter}}\"",
-            mobile,
+            shared,
             StringComparison.Ordinal);
         Assert.Contains(
             "Opacity=\"{Binding IsSearching, Converter={StaticResource BoolToOpacityConverter}, ConverterParameter=0.4}\"",
-            mobile,
+            shared,
             StringComparison.Ordinal);
-        Assert.Contains(
-            "IsHitTestVisible=\"{Binding IsSearching, Converter={StaticResource InverseBoolConverter}}\"",
-            desktop,
-            StringComparison.Ordinal);
-        Assert.Contains(
-            "Opacity=\"{Binding IsSearching, Converter={StaticResource BoolToOpacityConverter}, ConverterParameter=0.4}\"",
-            desktop,
-            StringComparison.Ordinal);
-        Assert.Contains("IsVisible=\"{Binding IsSearching}\"", desktop, StringComparison.Ordinal);
-        Assert.Contains("Search.Searching", desktop, StringComparison.Ordinal);
+        Assert.Contains("IsVisible=\"{Binding IsSearching}\"", shared, StringComparison.Ordinal);
+        Assert.Contains("Search.Searching", shared, StringComparison.Ordinal);
+        Assert.Contains("<shared:AdaptiveSearchView", mobile, StringComparison.Ordinal);
+        Assert.Contains("<shared:AdaptiveSearchView", desktop, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -110,9 +105,7 @@ public sealed class SearchCollectionDiffContractTests
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
         while (directory != null && !File.Exists(Path.Combine(directory.FullName, "NoctraPlayer.sln")))
-        {
             directory = directory.Parent;
-        }
 
         Assert.NotNull(directory);
         return File.ReadAllText(Path.Combine([directory!.FullName, .. path]));
