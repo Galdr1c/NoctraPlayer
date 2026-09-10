@@ -154,10 +154,10 @@ public partial class MainWindow
             IsVisible = false,
             IsHitTestVisible = true,
             HorizontalAlignment = HorizontalAlignment.Stretch,
-            VerticalAlignment = VerticalAlignment.Stretch
+            VerticalAlignment = VerticalAlignment.Stretch,
+            ZIndex = 150
         };
         _desktopSettingsPageHost.Children.Add(_desktopSettingsPage);
-        Panel.SetZIndex(_desktopSettingsPageHost, 150);
         MainContentArea.Children.Add(_desktopSettingsPageHost);
     }
 
