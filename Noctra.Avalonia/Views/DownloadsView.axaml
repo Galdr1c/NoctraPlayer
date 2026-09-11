@@ -205,7 +205,7 @@
                       Theme="{StaticResource ErrorButton}"
                       IsVisible="{Binding HasDownloadedItems}"/>
               <Button Content="{loc:Translate Downloads.Action.OpenFolder}" Command="{Binding OpenDownloadsFolderCommand}"
-                      Theme="{StaticResource SettingsActionButton}" FontSize="12"
+                      Classes="SettingsActionButton" FontSize="12"
                       HorizontalAlignment="Stretch" VerticalContentAlignment="Center"/>
             </StackPanel>
           </Grid>
@@ -254,7 +254,7 @@
 
               <!-- Sort -->
               <Grid ColumnDefinitions="*,Auto">
-                <Button Grid.Column="1" x:Name="SortSelectionButton" Classes="DesktopIconButton" Width="44" Height="44"
+                <Button Grid.Column="1" x:Name="SortSelectionButton" Classes="SortIconButton"
                         Click="OpenDownloadSortSheet_Click"
                         AutomationProperties.Name="{loc:Translate Downloads.Sort.Title}"
                         AutomationProperties.HelpText="{loc:Translate Downloads.Sort.Title}">
@@ -457,7 +457,7 @@
                           <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                             <Button Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).TogglePauseDownloadCommand}"
                                     CommandParameter="{Binding}"
-                                    Theme="{StaticResource SettingsActionButton}" FontSize="12">
+                                    Classes="SettingsActionButton" FontSize="12">
                               <StackPanel Orientation="Horizontal" Spacing="6">
                                 <materialIcons:MaterialIcon Kind="{Binding IsPaused, Converter={StaticResource BoolToMaterialIconKindConverter}, ConverterParameter='Play|Pause'}" Width="16" Height="16"/>
                                 <TextBlock Text="{loc:Translate Downloads.Action.Resume}" IsVisible="{Binding IsPaused}"/>

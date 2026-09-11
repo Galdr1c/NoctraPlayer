@@ -206,6 +206,7 @@ public sealed class SharedUiArchitectureContractTests
         var root = FindSolutionRoot();
         foreach (var relativePath in new[]
                  {
+                     Path.Combine("Resources", "Styles.axaml"),
                      Path.Combine("Resources", "CommonStyles.axaml"),
                      Path.Combine("Resources", "SettingsStyles.axaml"),
                      Path.Combine("Controls", "PremiumSpinner.axaml")
@@ -223,6 +224,7 @@ public sealed class SharedUiArchitectureContractTests
                  })
         {
             var app = File.ReadAllText(appPath);
+            Assert.Contains("avares://Noctra.UI/Resources/Styles.axaml", app, StringComparison.Ordinal);
             Assert.Contains("avares://Noctra.UI/Resources/CommonStyles.axaml", app, StringComparison.Ordinal);
             Assert.Contains("avares://Noctra.UI/Resources/SettingsStyles.axaml", app, StringComparison.Ordinal);
             Assert.Contains("avares://Noctra.UI/Controls/PremiumSpinner.axaml", app, StringComparison.Ordinal);

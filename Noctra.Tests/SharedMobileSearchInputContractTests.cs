@@ -5,14 +5,14 @@ public sealed class SharedMobileSearchInputContractTests
     [Fact]
     public void SharedSearch_PreservesMobileSearchKeyboardHintContract()
     {
-        var mobileApp = Source("Noctra.Mobile", "App.axaml");
+        var sharedStyles = Source("Noctra.UI", "Resources", "CommonStyles.axaml");
         var sharedSearch = Source("Noctra.UI", "Views", "AdaptiveSearchView.axaml");
         var mobileSearch = Source("Noctra.Mobile", "Views", "MobileSearchView.axaml");
         var categorySearch = Source("Noctra.Mobile", "Views", "MobileCategorySelectionView.axaml");
 
-        Assert.Contains("<Style Selector=\"TextBox.search\">", mobileApp, StringComparison.Ordinal);
-        Assert.Contains("TextInputOptions.ContentType\" Value=\"Search\"", mobileApp, StringComparison.Ordinal);
-        Assert.Contains("TextInputOptions.ReturnKeyType\" Value=\"Search\"", mobileApp, StringComparison.Ordinal);
+        Assert.Contains("<Style Selector=\"TextBox.search\">", sharedStyles, StringComparison.Ordinal);
+        Assert.Contains("TextInputOptions.ContentType\" Value=\"Search\"", sharedStyles, StringComparison.Ordinal);
+        Assert.Contains("TextInputOptions.ReturnKeyType\" Value=\"Search\"", sharedStyles, StringComparison.Ordinal);
 
         Assert.Contains("Classes=\"search\"", sharedSearch, StringComparison.Ordinal);
         Assert.Contains("TextInputOptions.ReturnKeyType=\"Search\"", sharedSearch, StringComparison.Ordinal);
@@ -23,16 +23,16 @@ public sealed class SharedMobileSearchInputContractTests
     [Fact]
     public void SharedSearch_TextBoxInheritsAccessibleMobileTouchAndSelectionPolicy()
     {
-        var mobileApp = Source("Noctra.Mobile", "App.axaml");
+        var sharedStyles = Source("Noctra.UI", "Resources", "CommonStyles.axaml");
         var sharedSearch = Source("Noctra.UI", "Views", "AdaptiveSearchView.axaml");
         var darkTheme = Source("Noctra.UI", "Resources", "Themes", "DarkTheme.axaml");
         var lightTheme = Source("Noctra.UI", "Resources", "Themes", "LightTheme.axaml");
 
-        Assert.Contains("<Style Selector=\"TextBox\">", mobileApp, StringComparison.Ordinal);
-        Assert.Contains("<Setter Property=\"MinHeight\" Value=\"48\"", mobileApp, StringComparison.Ordinal);
-        Assert.Contains("<Setter Property=\"CaretBrush\" Value=\"{DynamicResource AccentBrush}\"", mobileApp, StringComparison.Ordinal);
-        Assert.Contains("<Setter Property=\"SelectionBrush\" Value=\"{DynamicResource TextSelectionBrush}\"", mobileApp, StringComparison.Ordinal);
-        Assert.Contains("<Setter Property=\"SelectionForegroundBrush\" Value=\"{DynamicResource TextPrimaryBrush}\"", mobileApp, StringComparison.Ordinal);
+        Assert.Contains("<Style Selector=\"TextBox\">", sharedStyles, StringComparison.Ordinal);
+        Assert.Contains("<Setter Property=\"MinHeight\" Value=\"48\"", sharedStyles, StringComparison.Ordinal);
+        Assert.Contains("<Setter Property=\"CaretBrush\" Value=\"{DynamicResource AccentBrush}\"", sharedStyles, StringComparison.Ordinal);
+        Assert.Contains("<Setter Property=\"SelectionBrush\" Value=\"{DynamicResource TextSelectionBrush}\"", sharedStyles, StringComparison.Ordinal);
+        Assert.Contains("<Setter Property=\"SelectionForegroundBrush\" Value=\"{DynamicResource TextPrimaryBrush}\"", sharedStyles, StringComparison.Ordinal);
 
         var textBoxStart = sharedSearch.IndexOf("<TextBox", StringComparison.Ordinal);
         var textBoxEnd = sharedSearch.IndexOf("/>", textBoxStart, StringComparison.Ordinal);

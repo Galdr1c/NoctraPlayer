@@ -27,64 +27,58 @@
     <!-- ==========================================
          UI SCALING & RATIOS
          ========================================== -->
-    <x:Double x:Key="RatioPortraitWidth">160</x:Double>
-    <x:Double x:Key="RatioPortraitHeight">240</x:Double>
-    <x:Double x:Key="RatioLandscapeWidth">280</x:Double>
-    <x:Double x:Key="RatioLandscapeHeight">158</x:Double>
-    <x:Double x:Key="RatioSquareSize">120</x:Double>
-    <x:String x:Key="DefaultRemoteImagePlaceholder">avares://Noctra/Assets/Square150x150Logo.png</x:String>
-
-    <!-- ==========================================
+<!-- ==========================================
          BUTTON STYLES
          ========================================== -->
 
     <!-- Primary Button (Gradient Background) -->
     <ControlTheme x:Key="PrimaryButtonStyle" TargetType="Button">
-        <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
-        <Setter Property="Foreground" Value="White"/>
-        <Setter Property="FontWeight" Value="SemiBold"/>
-        <Setter Property="Padding" Value="24,12"/>
-        <Setter Property="BorderThickness" Value="0"/>
-        <Setter Property="Cursor" Value="Hand"/>
-        <Setter Property="CornerRadius" Value="6"/>
-        <Setter Property="HorizontalAlignment" Value="Stretch" />
-        <Setter Property="HorizontalContentAlignment" Value="Center" />
-        <Setter Property="VerticalContentAlignment" Value="Center" />
-        <Setter Property="Template">
-            <ControlTemplate TargetType="Button">
-                <Border x:Name="PART_Border"
-                        Background="{TemplateBinding Background}"
-                        CornerRadius="{TemplateBinding CornerRadius}"
-                        Padding="{TemplateBinding Padding}">
-                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
-                                      Content="{TemplateBinding Content}"
-                                      ContentTemplate="{TemplateBinding ContentTemplate}"/>
-                </Border>
-            </ControlTemplate>
-        </Setter>
-
-        <Style Selector="^:pointerover /template/ Border#PART_Border">
-            <Setter Property="Opacity" Value="0.9"/>
-        </Style>
-        <Style Selector="^:pressed /template/ Border#PART_Border">
-            <Setter Property="Opacity" Value="0.8"/>
-            <Setter Property="RenderTransform" Value="scale(0.97)" />
-        </Style>
-        <Style Selector="^:disabled /template/ Border#PART_Border">
-            <Setter Property="Opacity" Value="0.5"/>
-        </Style>
-    </ControlTheme>
+    <Setter Property="Background" Value="{DynamicResource PrimaryGradientBrush}" />
+    <Setter Property="Foreground" Value="White" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Padding" Value="18,0" />
+    <Setter Property="MinHeight" Value="44" />
+    <Style Selector="^:pointerover">
+      <Setter Property="Opacity" Value="0.92" />
+    </Style>
+    <Style Selector="^:pressed">
+      <Setter Property="Opacity" Value="0.82" />
+    </Style>
+    <Style Selector="^:disabled">
+      <Setter Property="Opacity" Value="0.5" />
+    </Style>
+  </ControlTheme>
 
     <!-- Secondary Button (Border Only) -->
     <ControlTheme x:Key="SecondaryButton" TargetType="Button">
-        <Setter Property="Background" Value="Transparent"/>
-        <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
-        <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="Padding" Value="16,8"/>
-        <Setter Property="Cursor" Value="Hand"/>
-        <Setter Property="CornerRadius" Value="{DynamicResource RadiusSmall}"/>
-        <Setter Property="Template">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="Padding" Value="16,0" />
+    <Setter Property="MinHeight" Value="44" />
+    <Style Selector="^:pointerover">
+      <Setter Property="Background" Value="{DynamicResource InteractiveHoverBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+    </Style>
+    <Style Selector="^:pressed">
+      <Setter Property="Background" Value="{DynamicResource InteractivePressedBrush}" />
+    </Style>
+  </ControlTheme>
+
+    <!-- Danger Button (Red on hover) -->
+    <ControlTheme x:Key="DangerButtonStyle" TargetType="Button">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource ErrorBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource ErrorBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="Padding" Value="16,0" />
+    <Setter Property="MinHeight" Value="44" />
+    <Setter Property="Template">
             <ControlTemplate TargetType="Button">
                 <Border x:Name="PART_Border"
                         Background="{TemplateBinding Background}"
@@ -98,80 +92,22 @@
                 </Border>
             </ControlTemplate>
         </Setter>
-
-        <Style Selector="^:pointerover">
-            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
-        </Style>
-        <Style Selector="^:pointerover /template/ Border#PART_Border">
-            <Setter Property="Background" Value="{DynamicResource Surface1Brush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-        </Style>
-        <Style Selector="^:pressed /template/ Border#PART_Border">
-            <Setter Property="Background" Value="{DynamicResource InteractivePressedBrush}"/>
-        </Style>
-    </ControlTheme>
-
-    <!-- Danger Button (Red on hover) -->
-    <ControlTheme x:Key="DangerButtonStyle" TargetType="Button">
-        <Setter Property="Background" Value="Transparent"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
-        <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
-        <Setter Property="Padding" Value="25,0"/>
-        <Setter Property="Height" Value="52"/>
-        <Setter Property="Cursor" Value="Hand"/>
-        <Setter Property="FontSize" Value="13"/>
-        <Setter Property="FontWeight" Value="SemiBold"/>
-        <Setter Property="CornerRadius" Value="{DynamicResource RadiusPill}"/>
-        <Setter Property="Template">
-            <ControlTemplate TargetType="Button">
-                <Border x:Name="PART_Border"
-                        Background="{TemplateBinding Background}"
-                        BorderBrush="{TemplateBinding BorderBrush}"
-                        BorderThickness="{TemplateBinding BorderThickness}"
-                        CornerRadius="{TemplateBinding CornerRadius}">
-                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
-                                      Content="{TemplateBinding Content}"
-                                      ContentTemplate="{TemplateBinding ContentTemplate}"/>
-                </Border>
-            </ControlTemplate>
-        </Setter>
-
-        <Style Selector="^:pointerover">
-            <Setter Property="Foreground" Value="{DynamicResource ErrorBrush}"/>
-        </Style>
-        <Style Selector="^:pointerover /template/ Border#PART_Border">
-            <Setter Property="Background" Value="#1AE50914"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource ErrorBrush}"/>
-        </Style>
-    </ControlTheme>
-    <ControlTheme x:Key="UpgradeButton" TargetType="Button">
-        <Setter Property="CornerRadius" Value="8" />
-        <Setter Property="Padding" Value="14" />
-        <Setter Property="Margin" Value="0,0,0,16" />
-        <Setter Property="FontWeight" Value="SemiBold" />
-        <Setter Property="Background" Value="{DynamicResource PremiumBadgeBrush}" />
-        <Setter Property="Foreground" Value="{DynamicResource PremiumBadgeTextBrush}" />
-        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
-        <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="HorizontalAlignment" Value="Stretch" />
-        <Setter Property="HorizontalContentAlignment" Value="Center" />
-        <Setter Property="VerticalContentAlignment" Value="Center" />
-
-        <Style Selector="^:pointerover /template/ ContentPresenter">
-            <Setter Property="Opacity" Value="0.80" />
-            <Setter Property="Background" Value="{DynamicResource PremiumBadgeBrush}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
-            <Setter Property="BorderThickness" Value="1" />
-        </Style>
-
-        <Style Selector="^:pressed /template/ ContentPresenter">
-            <Setter Property="Opacity" Value="0.80" />
-            <Setter Property="Background" Value="{DynamicResource PremiumBadgeBrush}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
-            <Setter Property="BorderThickness" Value="1" />
-        </Style>
-    </ControlTheme>
+      <Style Selector="^:pointerover">
+          <Setter Property="Foreground" Value="#FFFFFF" />
+      </Style>
+      <Style Selector="^:pointerover /template/ Border#PART_Border">
+          <Setter Property="Background" Value="#1AFF3333" />
+          <Setter Property="BorderBrush" Value="#FFFF4444" />
+      </Style>
+      <Style Selector="^:pressed /template/ Border#PART_Border">
+          <Setter Property="Background" Value="#33FF3333" />
+          <Setter Property="RenderTransform" Value="scale(0.98)" />
+      </Style>
+      <Style Selector="^:disabled">
+          <Setter Property="Opacity" Value="0.5"/>
+      </Style>
+  </ControlTheme>
+    
     <!-- Text Button (Transparent, text only) -->
     <ControlTheme x:Key="TextButtonStyle" TargetType="Button">
         <Setter Property="Background" Value="Transparent"/>
@@ -194,76 +130,36 @@
     </ControlTheme>
 
     <!-- Filter Button Style (Matches ModernComboBox) -->
-    <ControlTheme x:Key="SettingsActionButton" TargetType="Button">
-        <Setter Property="MinHeight" Value="44" />
-        <Setter Property="Padding" Value="14,0" />
-        <Setter Property="Background" Value="{DynamicResource Surface1Brush}" />
-        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
-        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
-        <Setter Property="HorizontalAlignment" Value="Stretch" />
-        <Setter Property="HorizontalContentAlignment" Value="Center" />
-        <Setter Property="VerticalContentAlignment" Value="Center" />
-        <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="CornerRadius" Value="6" />
-
-        <Style Selector="^:pointerover">
-            <Setter Property="Background" Value="{DynamicResource InteractivePressedBrush}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
-        </Style>
-        <Style Selector="^:pressed">
-            <Setter Property="Background" Value="{DynamicResource InteractivePressedBrush}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
-            <Setter Property="RenderTransform" Value="scale(0.97)"/>
-        </Style>
-    </ControlTheme>
+    
 
     <!-- Plain Button (Transparent, opacity on hover) -->
     <ControlTheme x:Key="PlainButton" TargetType="Button">
-        <Setter Property="Background" Value="Transparent"/>
-        <Setter Property="BorderThickness" Value="0"/>
-        <Setter Property="Padding" Value="0"/>
-        <Setter Property="Cursor" Value="Hand"/>
-        <Setter Property="Template">
-            <ControlTemplate TargetType="Button">
-                <Border Background="{TemplateBinding Background}">
-                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
-                                      Content="{TemplateBinding Content}"
-                                      ContentTemplate="{TemplateBinding ContentTemplate}"/>
-                </Border>
-            </ControlTemplate>
-        </Setter>
-
-        <Style Selector="^:pointerover">
-            <Setter Property="Opacity" Value="0.8"/>
-        </Style>
-    </ControlTheme>
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+    <Style Selector="^:pointerover">
+      <Setter Property="Opacity" Value="0.85" />
+    </Style>
+    <Style Selector="^:pressed">
+      <Setter Property="Opacity" Value="0.7" />
+    </Style>
+  </ControlTheme>
 
     <!-- Icon Button (Small, bg on hover) -->
     <ControlTheme x:Key="IconButton" TargetType="Button">
-        <Setter Property="Background" Value="Transparent"/>
-        <Setter Property="BorderThickness" Value="0"/>
-        <Setter Property="Cursor" Value="Hand"/>
-        <Setter Property="Padding" Value="5"/>
-        <Setter Property="CornerRadius" Value="4"/>
-        <Setter Property="Template">
-            <ControlTemplate TargetType="Button">
-                <Border x:Name="PART_Border"
-                        Background="{TemplateBinding Background}"
-                        CornerRadius="{TemplateBinding CornerRadius}">
-                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
-                                      Content="{TemplateBinding Content}"
-                                      ContentTemplate="{TemplateBinding ContentTemplate}"/>
-                </Border>
-            </ControlTemplate>
-        </Setter>
-
-        <Style Selector="^:pointerover /template/ Border#PART_Border">
-            <Setter Property="Background" Value="#10000000"/>
-        </Style>
-        <Style Selector="^:pressed /template/ Border#PART_Border">
-            <Setter Property="Background" Value="#20000000"/>
-        </Style>
-    </ControlTheme>
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="{DynamicResource RadiusSmall}" />
+    <Setter Property="Padding" Value="8" />
+    <Setter Property="MinHeight" Value="40" />
+    <Setter Property="MinWidth" Value="40" />
+    <Style Selector="^:pointerover">
+      <Setter Property="Background" Value="{DynamicResource InteractiveHoverBrush}" />
+    </Style>
+    <Style Selector="^:pressed">
+      <Setter Property="Background" Value="{DynamicResource InteractivePressedBrush}" />
+    </Style>
+  </ControlTheme>
 
     <!-- Image Button (Scale on hover) -->
     <ControlTheme x:Key="ImageButtonStyle" TargetType="Button">
@@ -379,65 +275,62 @@
 
     <!-- Modern RadioButton (Square indicator, ToggleSwitch-harmonious) -->
     <ControlTheme x:Key="{x:Type RadioButton}" TargetType="RadioButton">
-        <Setter Property="Background" Value="Transparent"/>
-        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
-        <Setter Property="FontSize" Value="14"/>
-        <Setter Property="FontWeight" Value="SemiBold"/>
-        <Setter Property="Cursor" Value="Hand"/>
-        <Setter Property="Template">
-            <ControlTemplate TargetType="RadioButton">
-                <Grid Background="Transparent" ColumnDefinitions="Auto,*">
-                    <Border x:Name="IndicatorBox"
-                            Width="24" Height="24"
-                            Background="{DynamicResource Surface1Brush}"
-                            BorderBrush="{DynamicResource BorderBrush}"
-                            BorderThickness="1.5"
-                            CornerRadius="4"
-                            VerticalAlignment="Center">
-                        <Border.Transitions>
-                            <Transitions>
-                                <BrushTransition Property="Background" Duration="0:0:0.15" Easing="0.4,0,0.2,1"/>
-                                <BrushTransition Property="BorderBrush" Duration="0:0:0.15" Easing="0.4,0,0.2,1"/>
-                            </Transitions>
-                        </Border.Transitions>
-                        <materialIcons:MaterialIcon x:Name="CheckMark" Kind="Check"
-                                                    Width="14" Height="14"
-                                                    Foreground="White"
-                                                    HorizontalAlignment="Center" VerticalAlignment="Center"
-                                                    IsVisible="False"/>
-                    </Border>
-                    <ContentPresenter Grid.Column="1"
-                                      VerticalAlignment="Center"
-                                      Margin="12,0,0,0"
-                                      Content="{TemplateBinding Content}"
-                                      ContentTemplate="{TemplateBinding ContentTemplate}"/>
-                </Grid>
-            </ControlTemplate>
-        </Setter>
-
-        <!-- Checked state -->
-        <Style Selector="^:checked /template/ Border#IndicatorBox">
-            <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource AccentLightBrush}"/>
-            <Setter Property="BorderThickness" Value="1.5"/>
-        </Style>
-        <Style Selector="^:checked /template/ materialIcons|MaterialIcon#CheckMark">
-            <Setter Property="IsVisible" Value="True"/>
-        </Style>
-
-        <!-- Pointer over -->
-        <Style Selector="^:pointerover:not(:checked) /template/ Border#IndicatorBox">
-            <Setter Property="BorderBrush" Value="{DynamicResource TextDisabledBrush}"/>
-        </Style>
-        <Style Selector="^:pointerover:not(:checked)">
-            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
-        </Style>
-
-        <!-- Disabled state -->
-        <Style Selector="^:disabled">
-            <Setter Property="Opacity" Value="0.5"/>
-        </Style>
-    </ControlTheme>
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+    <Setter Property="FontSize" Value="14"/>
+    <Setter Property="FontWeight" Value="SemiBold"/>
+    <Setter Property="Cursor" Value="Hand"/>
+    <Setter Property="Template">
+      <ControlTemplate TargetType="RadioButton">
+        <Grid Background="Transparent" ColumnDefinitions="Auto,*">
+          <Border x:Name="IndicatorBox"
+                  Width="24" Height="24"
+                  Background="{DynamicResource Surface1Brush}"
+                  BorderBrush="{DynamicResource BorderBrush}"
+                  BorderThickness="1.5"
+                  CornerRadius="4"
+                  VerticalAlignment="Center">
+            <Border.Transitions>
+              <Transitions>
+                <BrushTransition Property="Background" Duration="0:0:0.15" Easing="0.4,0,0.2,1" />
+                <BrushTransition Property="BorderBrush" Duration="0:0:0.15" Easing="0.4,0,0.2,1" />
+              </Transitions>
+            </Border.Transitions>
+            <materialIcons:MaterialIcon x:Name="CheckMark" Kind="Check"
+                                        Width="14" Height="14"
+                                        Foreground="White"
+                                        HorizontalAlignment="Center" VerticalAlignment="Center"
+                                        IsVisible="False" />
+          </Border>
+          <ContentPresenter Grid.Column="1"
+                            VerticalAlignment="Center"
+                            Margin="12,0,0,0"
+                            Content="{TemplateBinding Content}"
+                            ContentTemplate="{TemplateBinding ContentTemplate}" />
+        </Grid>
+      </ControlTemplate>
+    </Setter>
+    <!-- Checked state -->
+    <Style Selector="^:checked /template/ Border#IndicatorBox">
+      <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentLightBrush}" />
+      <Setter Property="BorderThickness" Value="1.5" />
+    </Style>
+    <Style Selector="^:checked /template/ materialIcons|MaterialIcon#CheckMark">
+      <Setter Property="IsVisible" Value="True" />
+    </Style>
+    <!-- Pointer over -->
+    <Style Selector="^:pointerover:not(:checked) /template/ Border#IndicatorBox">
+      <Setter Property="BorderBrush" Value="{DynamicResource TextDisabledBrush}" />
+    </Style>
+    <Style Selector="^:pointerover:not(:checked)">
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    </Style>
+    <!-- Disabled state -->
+    <Style Selector="^:disabled">
+      <Setter Property="Opacity" Value="0.5" />
+    </Style>
+  </ControlTheme>
 
     <ControlTheme x:Key="ErrorButton" TargetType="Button">
         <Setter Property="MinHeight" Value="44" />
@@ -1142,7 +1035,6 @@
         <Setter Property="HorizontalAlignment" Value="Left"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
         <Setter Property="FontSize" Value="14"/>
-        <Setter Property="Cursor" Value="Hand"/>
         <Setter Property="Template">
             <ControlTemplate>
                 <Grid Background="Transparent" RowDefinitions="Auto,Auto">
@@ -1242,6 +1134,155 @@
         <Style Selector="^:disabled">
             <Setter Property="Opacity" Value="0.5"/>
         </Style>
+    </ControlTheme>
+
+
+  <!-- Mobile-first themes that previously existed only in Noctra.Mobile. -->
+  <ControlTheme x:Key="Searchicon" TargetType="Button">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="CornerRadius" Value="6" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="Margin" Value="0" />
+      <Setter Property="MinHeight" Value="48" />
+      <Setter Property="MinWidth" Value="48" />
+  
+      <Style Selector="^:pressed /template/ ContentPresenter">
+          <Setter Property="RenderTransform" Value="scale(0.90)" />
+          <Setter Property="Background" Value="Transparent" />
+      </Style>
+         
+    </ControlTheme>
+
+  <ControlTheme x:Key="RevealBtn" TargetType="Button">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Width" Value="48" />
+        <Setter Property="Height" Value="48" />
+        <Setter Property="Padding" Value="8" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="RenderTransformOrigin" Value="0.5,0.5" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="Transitions">
+          <Transitions>
+            <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.15" Easing="CubicEaseOut" />
+            <BrushTransition Property="Background" Duration="0:0:0.15" />
+          </Transitions>
+        </Setter>
+        <Style Selector="^:pointerover /template/ ContentPresenter">
+          <Setter Property="Background" Value="{DynamicResource InteractiveHoverBrush}" />
+        </Style>
+        <Style Selector="^:pressed /template/ ContentPresenter">
+          <Setter Property="RenderTransform" Value="scale(0.90)" />
+          <Setter Property="Background" Value="Transparent" />
+        </Style>
+      </ControlTheme>
+
+  <ControlTheme x:Key="{x:Type CheckBox}" TargetType="CheckBox">
+      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+      <Setter Property="FontSize" Value="14"/>
+      <Setter Property="HorizontalAlignment" Value="Left"/>
+      <Setter Property="VerticalAlignment" Value="Center"/>
+      <Setter Property="Template">
+        <ControlTemplate TargetType="CheckBox">
+          <Grid Background="Transparent" ColumnDefinitions="Auto,*">
+            <Border x:Name="IndicatorBox"
+                    Width="24" Height="24"
+                    Background="{DynamicResource Surface1Brush}"
+                    BorderBrush="{DynamicResource BorderBrush}"
+                    BorderThickness="1.5"
+                    CornerRadius="4"
+                    VerticalAlignment="Top"
+                    Margin="0,2,0,0">
+              <Border.Transitions>
+                <Transitions>
+                  <BrushTransition Property="Background" Duration="0:0:0.2" Easing="0.4,0,0.2,1"/>
+                  <BrushTransition Property="BorderBrush" Duration="0:0:0.2" Easing="0.4,0,0.2,1"/>
+                </Transitions>
+              </Border.Transitions>
+              <materialIcons:MaterialIcon x:Name="CheckMark" Kind="Check"
+                                          Width="14" Height="14"
+                                          Foreground="White"
+                                          HorizontalAlignment="Center" VerticalAlignment="Center"
+                                          IsVisible="False"/>
+            </Border>
+            <TextBlock Grid.Column="1"
+                       Text="{TemplateBinding Content}"
+                       VerticalAlignment="Center"
+                       Margin="12,0,0,0"
+                       TextWrapping="Wrap"
+                       Foreground="{DynamicResource TextPrimaryBrush}"/>
+          </Grid>
+        </ControlTemplate>
+      </Setter>
+      <!-- Checked state -->
+      <Style Selector="^:checked /template/ Border#IndicatorBox">
+        <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+      </Style>
+      <Style Selector="^:checked /template/ materialIcons|MaterialIcon#CheckMark">
+        <Setter Property="IsVisible" Value="True"/>
+      </Style>
+      <!-- Pointer over -->
+      <Style Selector="^:pointerover:not(:checked) /template/ Border#IndicatorBox">
+        <Setter Property="BorderBrush" Value="{DynamicResource TextDisabledBrush}"/>
+      </Style>
+      <Style Selector="^:pointerover:not(:checked)">
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+      </Style>
+      <!-- Disabled state -->
+      <Style Selector="^:disabled">
+        <Setter Property="Opacity" Value="0.5"/>
+      </Style>
+    </ControlTheme>
+
+  <ControlTheme x:Key="SegmentedRadioButtonTransparent" TargetType="RadioButton">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="MinHeight" Value="38" />
+      <Setter Property="FontSize" Value="{DynamicResource FBody}" />
+      <Setter Property="FontWeight" Value="Medium" />
+      <Setter Property="Cursor" Value="Hand" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+      <Setter Property="Padding" Value="0,8" />
+      <Setter Property="Transitions">
+        <Transitions>
+          <BrushTransition Property="Foreground"
+                           Duration="0:0:0.18"
+                           Easing="CubicEaseInOut" />
+        </Transitions>
+      </Setter>
+      <Setter Property="Template">
+        <ControlTemplate TargetType="RadioButton">
+          <Border x:Name="PART_Border"
+                  Background="Transparent"
+                  CornerRadius="{TemplateBinding CornerRadius}"
+                  Padding="{TemplateBinding Padding}">
+            <ContentPresenter x:Name="PART_ContentPresenter"
+                              HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                              Content="{TemplateBinding Content}"
+                              ContentTemplate="{TemplateBinding ContentTemplate}" />
+          </Border>
+        </ControlTemplate>
+      </Setter>
+      <!-- Checked: white text, bolder -->
+      <Style Selector="^:checked">
+        <Setter Property="Foreground" Value="White" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+      </Style>
+      <!-- Pointer over (unchecked) -->
+      <Style Selector="^:pointerover:not(:checked)">
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+      </Style>
+      <!-- Disabled -->
+      <Style Selector="^:disabled">
+        <Setter Property="Opacity" Value="0.5" />
+      </Style>
     </ControlTheme>
 
 </ResourceDictionary>

@@ -370,20 +370,21 @@ public class MobileReleaseGuardTests
     public void MobileTextBoxes_ExposePurposeSpecificKeyboardHints()
     {
         var app = ReadProjectFile("Noctra.Mobile", "App.axaml");
+        var commonStyles = ReadProjectFile("Noctra.UI", "Resources", "CommonStyles.axaml");
         var profile = ReadProjectFile("Noctra.Mobile", "Views", "ProfileSetupView.axaml");
         var search = ReadProjectFile("Noctra.UI", "Views", "AdaptiveSearchView.axaml");
         var categories = ReadProjectFile("Noctra.Mobile", "Views", "MobileCategorySelectionView.axaml");
         var settings = ReadProjectFile("Noctra.Mobile", "Views", "MobileSettingsView.axaml");
 
-        Assert.Contains("<Style Selector=\"TextBox.url\">", app);
-        Assert.Contains("TextInputOptions.ContentType\" Value=\"Url\"", app);
-        Assert.Contains("<Style Selector=\"TextBox.search\">", app);
-        Assert.Contains("TextInputOptions.ContentType\" Value=\"Search\"", app);
-        Assert.Contains("TextInputOptions.ReturnKeyType\" Value=\"Search\"", app);
-        Assert.Contains("<Style Selector=\"TextBox.password\">", app);
-        Assert.Contains("TextInputOptions.IsSensitive\" Value=\"True\"", app);
-        Assert.Contains("<Style Selector=\"TextBox.pin\">", app);
-        Assert.Contains("TextInputOptions.ContentType\" Value=\"Digits\"", app);
+        Assert.Contains("<Style Selector=\"TextBox.url\">", commonStyles);
+        Assert.Contains("TextInputOptions.ContentType\" Value=\"Url\"", commonStyles);
+        Assert.Contains("<Style Selector=\"TextBox.search\">", commonStyles);
+        Assert.Contains("TextInputOptions.ContentType\" Value=\"Search\"", commonStyles);
+        Assert.Contains("TextInputOptions.ReturnKeyType\" Value=\"Search\"", commonStyles);
+        Assert.Contains("<Style Selector=\"TextBox.password\">", commonStyles);
+        Assert.Contains("TextInputOptions.IsSensitive\" Value=\"True\"", commonStyles);
+        Assert.Contains("<Style Selector=\"TextBox.pin\">", commonStyles);
+        Assert.Contains("TextInputOptions.ContentType\" Value=\"Digits\"", commonStyles);
 
         Assert.Equal(4, CountOccurrences(profile, "TextInputOptions.ReturnKeyType=\"Next\""));
         Assert.Equal(2, CountOccurrences(profile, "TextInputOptions.ReturnKeyType=\"Done\""));
@@ -404,16 +405,17 @@ public class MobileReleaseGuardTests
     [Fact]
     public void MobileTextBoxes_UseAccessibleTouchTargetsAndNoctraSelectionColors()
     {
+        var commonStyles = ReadProjectFile("Noctra.UI", "Resources", "CommonStyles.axaml");
         var app = ReadProjectFile("Noctra.Mobile", "App.axaml");
-        var styles = ReadProjectFile("Noctra.Mobile", "Resources", "Styles.axaml");
+        var styles = ReadProjectFile("Noctra.UI", "Resources", "Styles.axaml");
         var darkTheme = ReadProjectFile("Noctra.UI", "Resources", "Themes", "DarkTheme.axaml");
         var lightTheme = ReadProjectFile("Noctra.UI", "Resources", "Themes", "LightTheme.axaml");
 
-        Assert.Contains("<Style Selector=\"TextBox\">", app);
-        Assert.Contains("<Setter Property=\"MinHeight\" Value=\"48\"", app);
-        Assert.Contains("<Setter Property=\"CaretBrush\" Value=\"{DynamicResource AccentBrush}\"", app);
-        Assert.Contains("<Setter Property=\"SelectionBrush\" Value=\"{DynamicResource TextSelectionBrush}\"", app);
-        Assert.Contains("<Setter Property=\"SelectionForegroundBrush\" Value=\"{DynamicResource TextPrimaryBrush}\"", app);
+        Assert.Contains("<Style Selector=\"TextBox\">", commonStyles);
+        Assert.Contains("<Setter Property=\"MinHeight\" Value=\"48\"", commonStyles);
+        Assert.Contains("<Setter Property=\"CaretBrush\" Value=\"{DynamicResource AccentBrush}\"", commonStyles);
+        Assert.Contains("<Setter Property=\"SelectionBrush\" Value=\"{DynamicResource TextSelectionBrush}\"", commonStyles);
+        Assert.Contains("<Setter Property=\"SelectionForegroundBrush\" Value=\"{DynamicResource TextPrimaryBrush}\"", commonStyles);
         Assert.DoesNotContain("<ControlTheme x:Key=\"NoctraTextBox\" TargetType=\"TextBox\">", styles);
 
         foreach (var theme in new[] { darkTheme, lightTheme })
