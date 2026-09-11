@@ -118,6 +118,12 @@ public sealed class SharedThemeCanonicalizationTests
         Assert.Contains("ListBox.NoctraSelectionList", commonStyles, StringComparison.Ordinal);
         Assert.DoesNotContain("DesktopModernStyles.axaml", desktopApp, StringComparison.Ordinal);
         Assert.Contains("avares://Noctra/Resources/DesktopStyleOverrides.axaml", desktopApp, StringComparison.Ordinal);
+        Assert.Contains("x:Key=\"TransparentListBoxItemTheme\"", sharedThemes, StringComparison.Ordinal);
+        Assert.DoesNotContain("x:Key=\"TransparentListBoxItemTheme\"", mobileApp, StringComparison.Ordinal);
+
+        var desktopMainWindow = Read("Noctra.Avalonia", "MainWindow.axaml");
+        Assert.DoesNotContain("<Style Selector=\"Button.UpgradeButton\">", desktopMainWindow, StringComparison.Ordinal);
+        Assert.Contains("Classes=\"UpgradeButton\"", desktopMainWindow, StringComparison.Ordinal);
     }
 
     private static string Read(params string[] path)

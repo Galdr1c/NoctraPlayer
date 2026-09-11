@@ -78,25 +78,7 @@
         <converters:LogoThemeConverter x:Key="LogoThemeConverter" />
         <converters:EnumEqualConverter x:Key="EnumEqualConverter" />
         <converters:EnumToStringConverter x:Key="EnumToStringConverter" />
-        <ControlTheme x:Key="TransparentListBoxItemTheme" TargetType="ListBoxItem">
-          <Setter Property="Background" Value="Transparent" />
-          <Setter Property="BorderBrush" Value="Transparent" />
-          <Setter Property="BorderThickness" Value="0" />
-          <Setter Property="Template">
-            <ControlTemplate TargetType="ListBoxItem">
-              <ContentPresenter Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="{TemplateBinding CornerRadius}"
-                                Content="{TemplateBinding Content}"
-                                ContentTemplate="{TemplateBinding ContentTemplate}"
-                                Padding="{TemplateBinding Padding}"
-                                HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" />
-            </ControlTemplate>
-          </Setter>
-        </ControlTheme>
-      </ResourceDictionary>
+</ResourceDictionary>
     </Application.Resources>
 
     <Application.DataTemplates>
