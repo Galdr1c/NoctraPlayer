@@ -81,4 +81,24 @@ if needle not in test:
 test = test.replace(needle, replacement, 1)
 write(test_path, test)
 
+# Mobile virtualization regression should verify that the canonical theme exists in
+# shared Styles, while the mobile surfaces continue to consume it by key.
+recent_path = 'Noctra.Tests/MobileRecentRegressionTests.cs'
+recent = read(recent_path)
+old = '''        var app = File.ReadAllText(ProjectFile("Noctra.Mobile", "App.axaml"));
+        var live = File.ReadAllText(ProjectFile("Noctra.Mobile", "Views", "MobileLiveView.axaml"));'''
+new = '''        var app = File.ReadAllText(ProjectFile("Noctra.Mobile", "App.axaml"));
+        var sharedStyles = File.ReadAllText(ProjectFile("Noctra.UI", "Resources", "Styles.axaml"));
+        var live = File.ReadAllText(ProjectFile("Noctra.Mobile", "Views", "MobileLiveView.axaml"));'''
+if old not in recent:
+    raise RuntimeError('MobileRecentRegression setup block not found')
+recent = recent.replace(old, new, 1)
+old_assert = '        Assert.Contains("x:Key=\\"TransparentListBoxItemTheme\\"", app, StringComparison.Ordinal);'
+new_assert = '''        Assert.Contains("x:Key=\\"TransparentListBoxItemTheme\\"", sharedStyles, StringComparison.Ordinal);
+        Assert.DoesNotContain("x:Key=\\"TransparentListBoxItemTheme\\"", app, StringComparison.Ordinal);'''
+if old_assert not in recent:
+    raise RuntimeError('MobileRecentRegression legacy App theme assertion not found')
+recent = recent.replace(old_assert, new_assert, 1)
+write(recent_path, recent)
+
 print('Final shared style cleanup applied.')
