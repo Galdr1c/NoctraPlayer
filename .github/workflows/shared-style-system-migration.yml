@@ -1,0 +1,55 @@
+name: Shared Style System Migration
+
+on:
+  push:
+    branches:
+      - refactor/shared-style-system
+
+permissions:
+  contents: write
+
+jobs:
+  migrate-validate-and-commit:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout shared style branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Apply shared style migration
+        run: python tools/shared-style-migration.py
+
+      - name: Build shared UI
+        run: dotnet build Noctra.UI/Noctra.UI.csproj -c Debug
+
+      - name: Build mobile UI
+        run: dotnet build Noctra.Mobile/Noctra.Mobile.csproj -c Debug
+
+      - name: Build desktop UI
+        run: dotnet build Noctra.Avalonia/Noctra.Avalonia.csproj -c Debug
+
+      - name: Run style and architecture regressions
+        shell: pwsh
+        run: |
+          dotnet test Noctra.Tests/Noctra.Tests.csproj -c Debug --filter "FullyQualifiedName~SharedThemeCanonicalizationTests|FullyQualifiedName~SharedUiArchitectureContractTests|FullyQualifiedName~SharedMobileSearchInputContractTests|FullyQualifiedName~DesktopMobileFirstShellTests|FullyQualifiedName~MobileTextBoxes_ExposePurposeSpecificKeyboardHints|FullyQualifiedName~MobileTextBoxes_UseAccessibleTouchTargetsAndNoctraSelectionColors|FullyQualifiedName~DesktopSettingsSelectionSheetTests"
+
+      - name: Commit validated migration
+        shell: pwsh
+        run: |
+          Remove-Item '.github/workflows/shared-style-system-migration.yml'
+          Remove-Item 'tools/shared-style-migration.py'
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git diff --cached --quiet
+          if ($LASTEXITCODE -eq 0) { throw 'Shared style migration produced no changes.' }
+          git commit -m 'refactor(ui): centralize shared style system [style-bot]'
+          git push origin HEAD:refactor/shared-style-system
