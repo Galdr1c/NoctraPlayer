@@ -27,6 +27,9 @@ jobs:
       - name: Apply shared style migration
         run: python tools/shared-style-migration.py
 
+      - name: Apply shared style follow-up
+        run: python tools/shared-style-followup.py
+
       - name: Build shared UI
         run: dotnet build Noctra.UI/Noctra.UI.csproj -c Debug
 
@@ -46,6 +49,7 @@ jobs:
         run: |
           Remove-Item '.github/workflows/shared-style-system-migration.yml'
           Remove-Item 'tools/shared-style-migration.py'
+          Remove-Item 'tools/shared-style-followup.py'
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add -A
