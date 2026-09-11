@@ -19,11 +19,13 @@
       <Setter Property="BorderThickness" Value="0" />
     </Style>
     <Style Selector="Button.topFlatIcon:pointerover /template/ ContentPresenter">
-      <Setter Property="Background" Value="{DynamicResource InteractiveHoverBrush}" />
+      <Setter Property="Background" Value="{DynamicResource PlayerIconHoverBrush}" />
     </Style>
-    <Style Selector="Button.topFlatIcon:pressed"><Setter Property="Opacity" Value="0.55" /></Style>
+    <Style Selector="Button.topFlatIcon:pressed">
+      <Setter Property="Opacity" Value="0.6" />
+    </Style>
     <Style Selector="Button.topFlatIcon:focus-visible /template/ ContentPresenter">
-      <Setter Property="Background" Value="{DynamicResource InteractiveHoverBrush}" />
+      <Setter Property="Background" Value="{DynamicResource PlayerIconHoverBrush}" />
       <Setter Property="BoxShadow" Value="{DynamicResource FocusGlow}" />
     </Style>
   </UserControl.Styles>

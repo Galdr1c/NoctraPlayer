@@ -18,13 +18,13 @@
       <Setter Property="CornerRadius" Value="8" />
     </Style>
     <Style Selector="Button.playerTransport:pointerover /template/ ContentPresenter, Button.playerAction:pointerover /template/ ContentPresenter">
-      <Setter Property="Background" Value="{DynamicResource InteractiveHoverBrush}" />
+      <Setter Property="Background" Value="{DynamicResource PlayerIconHoverBrush}" />
     </Style>
     <Style Selector="Button.playerTransport:pressed, Button.playerAction:pressed">
       <Setter Property="Opacity" Value="0.6" />
     </Style>
     <Style Selector="Button.playerTransport:focus-visible /template/ ContentPresenter, Button.playerAction:focus-visible /template/ ContentPresenter">
-      <Setter Property="Background" Value="{DynamicResource InteractiveHoverBrush}" />
+      <Setter Property="Background" Value="{DynamicResource PlayerIconHoverBrush}" />
       <Setter Property="BoxShadow" Value="{DynamicResource FocusGlow}" />
     </Style>
   </UserControl.Styles>

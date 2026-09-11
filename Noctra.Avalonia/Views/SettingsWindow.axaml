@@ -117,9 +117,12 @@
 
         <!-- Settings Card Style -->
         <Style Selector="Border.SettingsCard">
-            <Setter Property="Background" Value="{DynamicResource Surface0Brush}"/>
-            <Setter Property="CornerRadius" Value="8"/>
-            <Setter Property="Padding" Value="24"/>
+            <Setter Property="Background" Value="{DynamicResource Surface0Brush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="16" />
+            <Setter Property="BoxShadow" Value="{DynamicResource DefaultShadow}" />
             <Setter Property="Margin" Value="0,0,0,16"/>
         </Style>
 
@@ -1116,11 +1119,7 @@
                                 </Border>
 
                                 <!-- FREE CARD (Standard Refined) -->
-                                <Border Background="{DynamicResource Surface0Brush}" 
-                                        CornerRadius="8" 
-                                        Padding="24"
-                                        IsVisible="{Binding !IsPremium}"
-                                        Margin="0">
+                                <Border Classes="SettingsCard">
                                     <StackPanel>
                                         <Grid ColumnDefinitions="Auto,*,Auto">
                                             <!-- App Icon -->
@@ -1164,10 +1163,7 @@
                                 </Grid>
                             </Button>
                             <!-- UPDATE SECTION (Enhanced Modern Card) -->
-                            <Border Background="{DynamicResource Surface0Brush}" 
-                                    CornerRadius="8" 
-                                    Padding="20,16" 
-                                    Margin="0,0,0,16">
+                            <Border Classes="SettingsCard">
                                 <Grid ColumnDefinitions="Auto,*,Auto">
                                     <!-- Status Icon -->
                                     <Border Grid.Column="0" Width="42" Height="42" CornerRadius="8" Background="{DynamicResource Surface1Brush}" Margin="0,0,16,0">

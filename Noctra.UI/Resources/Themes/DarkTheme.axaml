@@ -55,6 +55,7 @@
   <SolidColorBrush x:Key="CardBackgroundBrush" Color="{StaticResource Surface0Color}" />
   <SolidColorBrush x:Key="InputBackgroundBrush" Color="{StaticResource Surface1Color}" />
   <SolidColorBrush x:Key="InputBorderBrush" Color="{StaticResource BorderColor}" />
+  <SolidColorBrush x:Key="PlayerIconHoverBrush" Color="#2A2A2A" />
   <SolidColorBrush x:Key="InteractiveHoverBrush" Color="#2A2A2A" />
   <SolidColorBrush x:Key="InteractivePressedBrush" Color="#333333" />
   <SolidColorBrush x:Key="ScrollBarThumbBrush" Color="#444444" Opacity="0.6" />
@@ -96,18 +97,24 @@
   </LinearGradientBrush>
   <SolidColorBrush x:Key="PremiumCardForegroundBrush" Color="White" />
 
-  <LinearGradientBrush x:Key="PremiumBadgeBrush" StartPoint="0%,0%" EndPoint="100%,100%">
-    <GradientStop Color="#F5D0FE" Offset="0.00" />
-    <GradientStop Color="#C084FC" Offset="0.16" />
-    <GradientStop Color="#9333EA" Offset="0.38" />
-    <GradientStop Color="#7C3AED" Offset="0.62" />
-    <GradientStop Color="#4C1D95" Offset="0.84" />
-    <GradientStop Color="#1E103F" Offset="1.00" />
+  <!-- Premium Badge - Base -->
+  <LinearGradientBrush x:Key="PremiumBadgeBrush"
+                      StartPoint="0%,0%"
+                      EndPoint="100%,100%">
+      <GradientStop Color="#F5D0FE" Offset="0.00" />
+      <GradientStop Color="#C084FC" Offset="0.16" />
+      <GradientStop Color="#9333EA" Offset="0.38" />
+      <GradientStop Color="#7C3AED" Offset="0.62" />
+      <GradientStop Color="#4C1D95" Offset="0.84" />
+      <GradientStop Color="#1E103F" Offset="1.00" />
   </LinearGradientBrush>
+
   <SolidColorBrush x:Key="PremiumBadgeTextBrush" Color="#FFFFFF" />
   <SolidColorBrush x:Key="PremiumBadgeMutedTextBrush" Color="#F3E8FF" />
   <SolidColorBrush x:Key="PremiumBadgeGlowBrush" Color="#A855F7" />
 
+
+  <!-- Overlay brushes for semi-transparent panels -->
   <SolidColorBrush x:Key="OverlayDarkBrush" Color="#CC090B10" />
   <SolidColorBrush x:Key="OverlayDimBrush" Color="#AA000000" />
   <SolidColorBrush x:Key="OverlayModalDimBrush" Color="#E6000000" />
@@ -118,12 +125,7 @@
   <SolidColorBrush x:Key="DangerSubtleBrush" Color="#1AE50914" />
   <SolidColorBrush x:Key="DangerBrush" Color="{StaticResource ErrorColor}" />
 
-  <!-- Shared semantic status surfaces used by both profile hosts. -->
-  <SolidColorBrush x:Key="SuccessSurfaceBrush" Color="#1A10B981" />
-  <SolidColorBrush x:Key="WarningSurfaceBrush" Color="#1AF59E0B" />
-  <SolidColorBrush x:Key="ErrorSurfaceBrush" Color="#1AE50914" />
-
-  <!-- Video chrome remains dark for readability in every app theme. -->
+  <!-- Player overlays intentionally stay dark in every app theme for video readability. -->
   <SolidColorBrush x:Key="PlayerSurfaceBrush" Color="#000000" />
   <SolidColorBrush x:Key="PlayerOverlayPanelBrush" Color="#E60A0A0A" />
   <SolidColorBrush x:Key="PlayerOverlayButtonBrush" Color="#99000000" />
@@ -133,7 +135,7 @@
   <SolidColorBrush x:Key="PlayerOverlaySecondaryTextBrush" Color="#CCFFFFFF" />
   <SolidColorBrush x:Key="PlayerOverlayBorderBrush" Color="#40FFFFFF" />
 
-  <!-- Mobile is the canonical player-sheet presentation. -->
+  <!-- Player sheet panels: dark theme keeps the same dark palette. -->
   <SolidColorBrush x:Key="PlayerOverlaySheetBrush" Color="#F20A0A0A" />
   <SolidColorBrush x:Key="PlayerOverlaySheetTextBrush" Color="#FFFFFFFF" />
   <SolidColorBrush x:Key="PlayerOverlaySheetSecondaryTextBrush" Color="#CCFFFFFF" />
@@ -142,7 +144,6 @@
   <SolidColorBrush x:Key="PlayerOverlaySheetHoverBrush" Color="#20FFFFFF" />
   <SolidColorBrush x:Key="PlayerOverlaySheetPressedBrush" Color="#30FFFFFF" />
   <SolidColorBrush x:Key="PlayerOverlaySheetSurface1Brush" Color="#1AFFFFFF" />
-
   <LinearGradientBrush x:Key="PlayerTopGradientBrush" StartPoint="0%,0%" EndPoint="0%,100%">
     <GradientStop Color="#CC000000" Offset="0" />
     <GradientStop Color="#00000000" Offset="1" />
@@ -151,7 +152,6 @@
     <GradientStop Color="#D9000000" Offset="0" />
     <GradientStop Color="#00000000" Offset="1" />
   </LinearGradientBrush>
-
   <SolidColorBrush x:Key="ThemePreviewDarkBg" Color="#141414" />
   <SolidColorBrush x:Key="ThemePreviewDarkInnerBg" Color="#1A1A1A" />
   <SolidColorBrush x:Key="ThemePreviewDarkText" Color="#404040" />

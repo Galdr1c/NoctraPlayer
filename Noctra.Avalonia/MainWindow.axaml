@@ -50,7 +50,7 @@
         <Setter Property="Background" Value="{DynamicResource PremiumBadgeBrush}" />
       </Style>
       <Style Selector="Button.ResumePrimaryButton">
-        <Setter Property="CornerRadius" Value="{DynamicResource RadiusPill}" />
+        <Setter Property="CornerRadius" Value="6" />
         <Setter Property="Padding" Value="14" />
         <Setter Property="MinHeight" Value="52" />
         <Setter Property="FontWeight" Value="SemiBold" />

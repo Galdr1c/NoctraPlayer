@@ -55,6 +55,7 @@
   <SolidColorBrush x:Key="CardBackgroundBrush" Color="{StaticResource Surface0Color}" />
   <SolidColorBrush x:Key="InputBackgroundBrush" Color="{StaticResource Surface1Color}" />
   <SolidColorBrush x:Key="InputBorderBrush" Color="{StaticResource BorderColor}" />
+  <SolidColorBrush x:Key="PlayerIconHoverBrush" Color="#2A2A2A" />
   <SolidColorBrush x:Key="InteractiveHoverBrush" Color="#ECECEC" />
   <SolidColorBrush x:Key="InteractivePressedBrush" Color="#E0E0E0" />
   <SolidColorBrush x:Key="ScrollBarThumbBrush" Color="#CCCCCC" Opacity="0.6" />
@@ -88,19 +89,24 @@
     <GradientStop Color="#EDE9FE" Offset="1.0" />
   </LinearGradientBrush>
   <SolidColorBrush x:Key="PremiumCardForegroundBrush" Color="{StaticResource Accent700Color}" />
-
-  <LinearGradientBrush x:Key="PremiumBadgeBrush" StartPoint="0%,0%" EndPoint="100%,100%">
-    <GradientStop Color="#F5D0FE" Offset="0.00" />
-    <GradientStop Color="#C084FC" Offset="0.16" />
-    <GradientStop Color="#9333EA" Offset="0.38" />
-    <GradientStop Color="#7C3AED" Offset="0.62" />
-    <GradientStop Color="#4C1D95" Offset="0.84" />
-    <GradientStop Color="#1E103F" Offset="1.00" />
+  
+    <!-- Premium Badge - Base -->
+  <LinearGradientBrush x:Key="PremiumBadgeBrush"
+                      StartPoint="0%,0%"
+                      EndPoint="100%,100%">
+      <GradientStop Color="#F5D0FE" Offset="0.00" />
+      <GradientStop Color="#C084FC" Offset="0.16" />
+      <GradientStop Color="#9333EA" Offset="0.38" />
+      <GradientStop Color="#7C3AED" Offset="0.62" />
+      <GradientStop Color="#4C1D95" Offset="0.84" />
+      <GradientStop Color="#1E103F" Offset="1.00" />
   </LinearGradientBrush>
+
   <SolidColorBrush x:Key="PremiumBadgeTextBrush" Color="#FFFFFF" />
   <SolidColorBrush x:Key="PremiumBadgeMutedTextBrush" Color="#F3E8FF" />
   <SolidColorBrush x:Key="PremiumBadgeGlowBrush" Color="#A855F7" />
 
+  <!-- Overlay brushes for semi-transparent panels -->
   <SolidColorBrush x:Key="OverlayBackgroundBrush" Color="#0A000000" />
   <SolidColorBrush x:Key="OverlayTextBrush" Color="#CC1A1535" />
   <SolidColorBrush x:Key="OverlayDarkBrush" Color="#CC090B10" />
@@ -113,12 +119,7 @@
   <SolidColorBrush x:Key="DangerSubtleBrush" Color="#1AEF4444" />
   <SolidColorBrush x:Key="DangerBrush" Color="{StaticResource ErrorColor}" />
 
-  <!-- Shared semantic status surfaces used by both profile hosts. -->
-  <SolidColorBrush x:Key="SuccessSurfaceBrush" Color="#1A10B981" />
-  <SolidColorBrush x:Key="WarningSurfaceBrush" Color="#1AF59E0B" />
-  <SolidColorBrush x:Key="ErrorSurfaceBrush" Color="#1AEF4444" />
-
-  <!-- Video chrome remains dark for readability in every app theme. -->
+  <!-- Player overlays intentionally stay dark in every app theme for video readability. -->
   <SolidColorBrush x:Key="PlayerSurfaceBrush" Color="#000000" />
   <SolidColorBrush x:Key="PlayerOverlayPanelBrush" Color="#E60A0A0A" />
   <SolidColorBrush x:Key="PlayerOverlayButtonBrush" Color="#99000000" />
@@ -130,7 +131,7 @@
   <SolidColorBrush x:Key="NextEpisodeHighlightColor" Color="#901E103F" />
   <SolidColorBrush x:Key="NextEpisodeCancel" Color="#DDE50914" />
 
-  <!-- Mobile is the canonical player-sheet presentation in light mode too. -->
+  <!-- Player sheet panels follow the app theme so they feel native in light mode. -->
   <SolidColorBrush x:Key="PlayerOverlaySheetBrush" Color="#F2FAFAFA" />
   <SolidColorBrush x:Key="PlayerOverlaySheetTextBrush" Color="#1A1535" />
   <SolidColorBrush x:Key="PlayerOverlaySheetSecondaryTextBrush" Color="#4A4565" />
@@ -148,7 +149,6 @@
     <GradientStop Color="#D9000000" Offset="0" />
     <GradientStop Color="#00000000" Offset="1" />
   </LinearGradientBrush>
-
   <SolidColorBrush x:Key="ThemePreviewDarkBg" Color="#141414" />
   <SolidColorBrush x:Key="ThemePreviewDarkInnerBg" Color="#1A1A1A" />
   <SolidColorBrush x:Key="ThemePreviewDarkText" Color="#404040" />

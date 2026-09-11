@@ -192,7 +192,6 @@
     </UserControl.Styles>
 
     <Grid Background="Transparent">
-        <ThemeVariantScope RequestedThemeVariant="Dark">
             <Grid>
 
         <!-- OVERLAY CONTENT -->
@@ -1256,6 +1255,5 @@
             </StackPanel>
         </Border>
             </Grid>
-        </ThemeVariantScope>
     </Grid>
 </UserControl>
