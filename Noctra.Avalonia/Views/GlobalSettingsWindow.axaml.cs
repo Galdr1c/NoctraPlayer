@@ -209,20 +209,15 @@ public partial class GlobalSettingsWindow : Window
 
     private void UpdateThemeSelection(bool isDark)
     {
-        if (isDark)
-        {
-            DarkThemeButton.BorderBrush = (IBrush?)Application.Current?.FindResource("AccentBrush");
-            LightThemeButton.BorderBrush = Brushes.Transparent;
-            DarkCheckmark.IsVisible = true;
-            LightCheckmark.IsVisible = false;
-        }
-        else
-        {
-            DarkThemeButton.BorderBrush = Brushes.Transparent;
-            LightThemeButton.BorderBrush = (IBrush?)Application.Current?.FindResource("AccentBrush");
-            DarkCheckmark.IsVisible = false;
-            LightCheckmark.IsVisible = true;
-        }
+        // Seçili kart aksan rengini, diğeri normal kenarlık rengini korur.
+        // Bu, SettingsWindow'da kullanılan paylaşılan tema seçicisiyle aynı görünümü verir.
+        var accent = (IBrush?)Application.Current?.FindResource("AccentBrush");
+        var normal = (IBrush?)Application.Current?.FindResource("BorderBrush");
+
+        DarkThemeButton.BorderBrush = isDark ? accent : normal;
+        LightThemeButton.BorderBrush = isDark ? normal : accent;
+        DarkCheckmark.IsVisible = isDark;
+        LightCheckmark.IsVisible = !isDark;
     }
 
     protected override void OnClosed(EventArgs e)

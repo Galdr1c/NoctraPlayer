@@ -420,6 +420,7 @@
                     <!-- Bitti -->
                     <Button Grid.Column="2"
                             Classes="DoneBtn"
+                            MinWidth="80"
                             Click="ToggleManage_Click"
                             HorizontalAlignment="Right"
                             VerticalAlignment="Center"

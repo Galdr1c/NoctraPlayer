@@ -182,104 +182,43 @@
                                 </StackPanel>
 
                                 <!-- Theme Options -->
-                                <StackPanel Grid.Column="1" 
-                                           Orientation="Horizontal">
+                                <StackPanel x:Name="ThemeOptionsHost" Grid.Column="1" Orientation="Horizontal" Spacing="12">
                                     
                                     <!-- Dark Theme Button -->
-                                    <Border x:Name="DarkThemeButton"
-                                            Width="130" Height="85"
-                                            CornerRadius="4"
-                                            BorderThickness="1.5"
-                                            BorderBrush="{DynamicResource AccentBrush}"
-                                            Cursor="Hand"
-                                            PointerPressed="DarkTheme_PointerPressed"
-                                            Margin="0,0,16,0">
+                                    <Border x:Name="DarkThemeButton" Width="164" Height="104" Padding="8" Background="{DynamicResource Surface1Brush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1.5" CornerRadius="10" Cursor="Hand" PointerPressed="DarkTheme_PointerPressed">
                                         <Grid>
-                                            <Border Background="{DynamicResource ThemePreviewDarkBg}" CornerRadius="4">
-                                                <Grid>
-                                                    <!-- Mini UI Preview -->
-                                                    <Border Background="{DynamicResource ThemePreviewDarkInnerBg}" 
-                                                           Width="95" Height="50"
-                                                           CornerRadius="4"
-                                                           Margin="12">
-                                                        <StackPanel Margin="8">
-                                                            <Rectangle Fill="White" Height="4" Width="40" HorizontalAlignment="Left" Margin="0,0,0,4"/>
-                                                            <Rectangle Fill="{DynamicResource ThemePreviewDarkText}" Height="3" Width="50" HorizontalAlignment="Left" Margin="0,0,0,3"/>
-                                                            <Rectangle Fill="{DynamicResource ThemePreviewDarkText}" Height="3" Width="45" HorizontalAlignment="Left"/>
-                                                        </StackPanel>
-                                                    </Border>
-                                                    
-                                                    <!-- Checkmark -->
-                                                    <Border x:Name="DarkCheckmark"
-                                                           Width="24" Height="24"
-                                                           Background="{DynamicResource AccentBrush}"
-                                                           CornerRadius="4"
-                                                           HorizontalAlignment="Right"
-                                                           VerticalAlignment="Top"
-                                                           Margin="8">
-                                                        <materialIcons:MaterialIcon Kind="Check"
-                                                                                   Foreground="White"
-                                                                                   Width="14" Height="14"
-                                                                                   HorizontalAlignment="Center"
-                                                                                   VerticalAlignment="Center"/>
-                                                    </Border>
-                                                </Grid>
+                                            <Border Background="{DynamicResource ThemePreviewDarkBg}" CornerRadius="7">
+                                                <Border Background="{DynamicResource ThemePreviewDarkInnerBg}" Height="50" Margin="12" CornerRadius="5" VerticalAlignment="Top">
+                                                    <StackPanel Margin="10,8" Spacing="5">
+                                                        <Rectangle Fill="{DynamicResource ThemePreviewDarkLabelBrush}" Height="7" Margin="0,0,30,0"/>
+                                                        <Rectangle Fill="{DynamicResource ThemePreviewDarkText}" Height="3" Margin="0,0,12,0"/>
+                                                        <Rectangle Fill="{DynamicResource ThemePreviewDarkText}" Height="3" Margin="0,0,34,0"/>
+                                                    </StackPanel>
+                                                </Border>
                                             </Border>
-                                            <TextBlock Text="{loc:Translate GlobalSettings.Theme.Dark}"
-                                                      FontSize="12"
-                                                      Foreground="{DynamicResource ThemePreviewDarkLabelBrush}"
-                                                      HorizontalAlignment="Center"
-                                                      VerticalAlignment="Bottom"
-                                                      Margin="0,0,0,8"/>
+                                            <Border x:Name="DarkCheckmark" Width="22" Height="22" Background="{DynamicResource AccentBrush}" CornerRadius="5" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="6">
+                                                <materialIcons:MaterialIcon Kind="Check" Width="13" Height="13" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Border>
+                                            <TextBlock Text="{loc:Translate GlobalSettings.Theme.Dark}" FontSize="{DynamicResource FCaption}" FontWeight="SemiBold" Foreground="{DynamicResource ThemePreviewDarkLabelBrush}" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,7"/>
                                         </Grid>
                                     </Border>
 
                                     <!-- Light Theme Button -->
-                                    <Border x:Name="LightThemeButton"
-                                            Width="130" Height="85"
-                                            CornerRadius="4"
-                                            BorderThickness="1.5"
-                                            BorderBrush="Transparent"
-                                            Cursor="Hand"
-                                            PointerPressed="LightTheme_PointerPressed">
+                                    <Border x:Name="LightThemeButton" Width="164" Height="104" Padding="8" Background="{DynamicResource Surface1Brush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1.5" CornerRadius="10" Cursor="Hand" PointerPressed="LightTheme_PointerPressed">
                                         <Grid>
-                                            <Border Background="{DynamicResource ThemePreviewLightBg}" CornerRadius="4">
-                                                <Grid>
-                                                    <!-- Mini UI Preview -->
-                                                    <Border Background="{DynamicResource ThemePreviewLightInnerBg}" 
-                                                           Width="95" Height="50"
-                                                           CornerRadius="4"
-                                                           Margin="12">
-                                                        <StackPanel Margin="8">
-                                                            <Rectangle Fill="{DynamicResource ThemePreviewDarkBg}" Height="4" Width="40" HorizontalAlignment="Left" Margin="0,0,0,4"/>
-                                                            <Rectangle Fill="{DynamicResource ThemePreviewLightText}" Height="3" Width="50" HorizontalAlignment="Left" Margin="0,0,0,3"/>
-                                                            <Rectangle Fill="{DynamicResource ThemePreviewLightText}" Height="3" Width="45" HorizontalAlignment="Left"/>
-                                                        </StackPanel>
-                                                    </Border>
-                                                    
-                                                    <!-- Checkmark (hidden by default) -->
-                                                    <Border x:Name="LightCheckmark"
-                                                           Width="24" Height="24"
-                                                           Background="{DynamicResource AccentBrush}"
-                                                           CornerRadius="4"
-                                                           HorizontalAlignment="Right"
-                                                           VerticalAlignment="Top"
-                                                           Margin="8"
-                                                           IsVisible="False">
-                                                        <materialIcons:MaterialIcon Kind="Check"
-                                                                                   Foreground="White"
-                                                                                   Width="14" Height="14"
-                                                                                   HorizontalAlignment="Center"
-                                                                                   VerticalAlignment="Center"/>
-                                                    </Border>
-                                                </Grid>
+                                            <Border Background="{DynamicResource ThemePreviewLightBg}" CornerRadius="7">
+                                                <Border Background="{DynamicResource ThemePreviewLightInnerBg}" Height="50" Margin="12" CornerRadius="5" VerticalAlignment="Top">
+                                                    <StackPanel Margin="10,8" Spacing="5">
+                                                        <Rectangle Fill="{DynamicResource ThemePreviewDarkBg}" Height="7" Margin="0,0,30,0"/>
+                                                        <Rectangle Fill="{DynamicResource ThemePreviewLightText}" Height="3" Margin="0,0,12,0"/>
+                                                        <Rectangle Fill="{DynamicResource ThemePreviewLightText}" Height="3" Margin="0,0,34,0"/>
+                                                    </StackPanel>
+                                                </Border>
                                             </Border>
-                                            <TextBlock Text="{loc:Translate GlobalSettings.Theme.Light}"
-                                                      FontSize="12"
-                                                      Foreground="{DynamicResource ThemePreviewLightLabelBrush}"
-                                                      HorizontalAlignment="Center"
-                                                      VerticalAlignment="Bottom"
-                                                      Margin="0,0,0,8"/>
+                                            <Border x:Name="LightCheckmark" Width="22" Height="22" Background="{DynamicResource AccentBrush}" CornerRadius="5" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="6" IsVisible="False">
+                                                <materialIcons:MaterialIcon Kind="Check" Width="13" Height="13" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Border>
+                                            <TextBlock Text="{loc:Translate GlobalSettings.Theme.Light}" FontSize="{DynamicResource FCaption}" FontWeight="SemiBold" Foreground="{DynamicResource ThemePreviewLightLabelBrush}" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,7"/>
                                         </Grid>
                                     </Border>
                                 </StackPanel>
