@@ -30,7 +30,7 @@
           HorizontalAlignment="Stretch">
       <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10" Margin="0,0,0,12">
         <Button x:Name="AllCategoriesButton"
-                Classes="DesktopFilterButton"
+                Classes="SettingsActionButton"
                 MinWidth="126"
                 HorizontalContentAlignment="Center"
                 Click="SelectCategory_Click">
@@ -53,6 +53,7 @@
                      TextChanged="CategorySearchTextBox_TextChanged" />
             <Button x:Name="ClearCategorySearchButton" Grid.Column="2"
                     Background="Transparent" Width="40" Height="40"
+                    Classes="RevealButton"
                     IsVisible="False" Click="ClearCategorySearch_Click">
               <icons:MaterialIcon Kind="CloseCircleOutline" Width="28" Height="28" />
             </Button>
@@ -97,6 +98,7 @@
               </Button>
               <Button Grid.Column="1" Theme="{StaticResource RevealBtn}"
                       Tag="{Binding}" Click="HideCategory_Click"
+                      Classes="RevealButton"
                       ToolTip.Tip="{loc:Translate Mobile.Categories.Hide}">
                 <icons:MaterialIcon Kind="EyeOffOutline" Width="20" Height="20" />
               </Button>
@@ -106,23 +108,23 @@
       </ListBox>
 
       <Border x:Name="UndoSnackbar" Grid.RowSpan="2" ZIndex="49000"
-              Classes="DesktopSnackbar" HorizontalAlignment="Center"
+              Classes="Snackbar" HorizontalAlignment="Center"
               VerticalAlignment="Bottom" Margin="20,0,20,24" IsVisible="False">
         <StackPanel Orientation="Horizontal" Spacing="12">
-          <TextBlock x:Name="UndoSnackbarText" FontWeight="SemiBold" VerticalAlignment="Center" />
-          <Button Click="UndoHide_Click" Classes="DesktopSnackbarAction">
+          <TextBlock x:Name="UndoSnackbarText" Foreground="{DynamicResource PremiumBadgeTextBrush}" FontWeight="SemiBold" VerticalAlignment="Center" />
+          <Button Click="UndoHide_Click" Classes="SnackbarAction">
             <TextBlock Text="{loc:Translate Common.Undo}" FontWeight="Bold" />
           </Button>
         </StackPanel>
       </Border>
 
       <Border x:Name="ErrorSnackbar" Grid.RowSpan="2" ZIndex="49001"
-              Classes="DesktopSnackbar" HorizontalAlignment="Center"
+              Classes="Snackbar"
               VerticalAlignment="Bottom" Margin="20,0,20,24" IsVisible="False">
         <StackPanel Orientation="Horizontal" Spacing="10">
           <icons:MaterialIcon Kind="AlertCircleOutline" Width="20" Height="20"
                               Foreground="{DynamicResource ErrorBrush}" />
-          <TextBlock x:Name="ErrorSnackbarText" FontWeight="SemiBold" VerticalAlignment="Center" />
+          <TextBlock x:Name="ErrorSnackbarText" Foreground="{DynamicResource PremiumBadgeTextBrush}" FontWeight="SemiBold" VerticalAlignment="Center" />
         </StackPanel>
       </Border>
     </Grid>

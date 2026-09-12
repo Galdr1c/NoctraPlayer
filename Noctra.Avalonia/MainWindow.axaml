@@ -1218,7 +1218,7 @@
                         </Border>
 
                         <StackPanel Spacing="10">
-                          <Button Classes="ResumePrimaryButton"
+                          <Button Classes="UpgradeButton"
                                   Command="{Binding ResumeFromPositionCommand}"
                                   Margin="0"
                                   Cursor="Hand">
@@ -1232,31 +1232,11 @@
                                          FontWeight="Bold"
                                          HorizontalAlignment="Center"
                                          VerticalAlignment="Center" />
-                              <Border Grid.Column="2"
-                                      Background="{DynamicResource PremiumBadgeBrush}"
-                                      CornerRadius="7"
-                                      Padding="7,4"
-                                      IsVisible="{Binding !IsPremiumResume}">
-                                <StackPanel Orientation="Horizontal" Spacing="4">
-                                  <materialIcons:MaterialIcon Kind="Crown"
-                                                              Width="13" Height="13"
-                                                              Foreground="{DynamicResource PremiumBadgeTextBrush}" />
-                                  <TextBlock Text="{loc:Translate Upsell.Badge}"
-                                             FontSize="9"
-                                             FontWeight="Bold"
-                                             Foreground="{DynamicResource PremiumBadgeTextBrush}" />
-                                </StackPanel>
-                              </Border>
                             </Grid>
                           </Button>
 
                           <Button Command="{Binding StartFromBeginningCommand}"
-                                  MinHeight="48"
-                                  HorizontalAlignment="Stretch"
-                                  HorizontalContentAlignment="Center"
-                                  VerticalContentAlignment="Center"
-                                  CornerRadius="6"
-                                  Cursor="Hand">
+                                  Classes="SettingsSelectionButton">
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
                               <materialIcons:MaterialIcon Kind="Replay" Width="17" Height="17" />
                               <TextBlock Text="{loc:Translate Player.Resume.StartOver}" />

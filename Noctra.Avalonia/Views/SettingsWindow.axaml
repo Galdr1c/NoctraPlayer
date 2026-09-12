@@ -1138,30 +1138,6 @@
                                     </StackPanel>
                                 </Border>
                             </Panel>
-                            <!-- Upgrade to Premium Banner (shown when not premium, placed after Account card) -->
-                            <Button Classes="UpgradeButton"
-                                    Command="{Binding ShowUpsellCommand}"
-                                    IsVisible="{Binding !IsPremium}">
-                                <Grid ColumnDefinitions="Auto,*,Auto"
-                                    ColumnSpacing="12">
-                                <materialIcons:MaterialIcon Kind="Crown"
-                                                            Width="32"
-                                                            Height="32"
-                                                            Foreground="{DynamicResource PremiumBadgeTextBrush}"
-                                                            VerticalAlignment="Center" />
-                                <StackPanel Grid.Column="1"
-                                            VerticalAlignment="Center"
-                                            Spacing="2">
-                                    <TextBlock Text="{loc:Translate GlobalSettings.About.Upgrade}"
-                                            Foreground="{DynamicResource PremiumBadgeTextBrush}"
-                                            FontWeight="SemiBold"
-                                            FontSize="{DynamicResource FBody}" />
-                                    <TextBlock Text="{loc:Translate Upsell.Headline}"
-                                            Foreground="{DynamicResource PremiumBadgeTextBrush}"
-                                            FontSize="{DynamicResource FCaption}" />
-                                </StackPanel>
-                                </Grid>
-                            </Button>
                             <!-- UPDATE SECTION (Enhanced Modern Card) -->
                             <Border Classes="SettingsCard">
                                 <Grid ColumnDefinitions="Auto,*,Auto">
@@ -1210,6 +1186,31 @@
                                     </Panel>
                                 </Grid>
                             </Border>
+
+                            <!-- Upgrade to Premium Banner (shown when not premium, placed after Account card) -->
+                            <Button Classes="UpgradeButton"
+                                    Command="{Binding ShowUpsellCommand}"
+                                    IsVisible="{Binding !IsPremium}">
+                                <Grid ColumnDefinitions="Auto,*,Auto"
+                                    ColumnSpacing="12">
+                                <materialIcons:MaterialIcon Kind="Crown"
+                                                            Width="32"
+                                                            Height="32"
+                                                            Foreground="{DynamicResource PremiumBadgeTextBrush}"
+                                                            VerticalAlignment="Center" />
+                                <StackPanel Grid.Column="1"
+                                            VerticalAlignment="Center"
+                                            Spacing="2">
+                                    <TextBlock Text="{loc:Translate GlobalSettings.About.Upgrade}"
+                                            Foreground="{DynamicResource PremiumBadgeTextBrush}"
+                                            FontWeight="SemiBold"
+                                            FontSize="{DynamicResource FBody}" />
+                                    <TextBlock Text="{loc:Translate Upsell.Headline}"
+                                            Foreground="{DynamicResource PremiumBadgeTextBrush}"
+                                            FontSize="{DynamicResource FCaption}" />
+                                </StackPanel>
+                                </Grid>
+                            </Button>
                         </StackPanel>
                     </ScrollViewer>
                 </TabItem>

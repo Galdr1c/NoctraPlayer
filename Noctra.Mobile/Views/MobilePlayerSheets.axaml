@@ -81,15 +81,9 @@
                   <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
                     <icons:MaterialIcon Kind="Play" Width="18" Height="18" VerticalAlignment="Center" />
                     <TextBlock Grid.Column="1" Text="{loc:Translate Player.Resume.Continue}" FontWeight="Bold" VerticalAlignment="Center" />
-                    <Border Grid.Column="2" IsVisible="{Binding !IsPremiumResume}" Background="{DynamicResource PremiumBadgeBrush}" CornerRadius="6" Padding="7,3" VerticalAlignment="Center">
-                      <StackPanel Orientation="Horizontal" Spacing="4">
-                        <icons:MaterialIcon Kind="Crown" Width="12" Height="12" Foreground="{DynamicResource PremiumBadgeTextBrush}" VerticalAlignment="Center" />
-                        <TextBlock Text="{loc:Translate Common.Premium}" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource PremiumBadgeTextBrush}" VerticalAlignment="Center" />
-                      </StackPanel>
-                    </Border>
                   </Grid>
                 </Button>
-                <Button Command="{Binding StartFromBeginningCommand}" MinHeight="48" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" CornerRadius="6">
+                <Button Command="{Binding StartFromBeginningCommand}" Classes="SettingsSelectionButton">
                   <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
                     <icons:MaterialIcon Kind="Replay" Width="17" Height="17" />
                     <TextBlock Text="{loc:Translate Player.Resume.StartOver}" />

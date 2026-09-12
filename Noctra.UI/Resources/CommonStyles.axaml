@@ -35,11 +35,13 @@
   </Style>
 
   <Style Selector="Border.AccentBadge">
-    <Setter Property="Background" Value="{DynamicResource AccentSubtleBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="4" />
     <Setter Property="Padding" Value="10,2" />
+  </Style>
+  <Style Selector="Border.AccentBadge TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
   </Style>
 
   <Style Selector="Border.AccentBubble">
@@ -52,6 +54,27 @@
   <Style Selector="Border.AccentBubble TextBlock">
       <Setter Property="Foreground" Value="White" />
   </Style>
+
+<Style Selector="Button.RevealButton">
+    <Setter Property="FocusAdorner" Value="{x:Null}" />
+    <Setter Property="Width" Value="48" />
+    <Setter Property="Height" Value="48" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="8" />
+  </Style>
+  <Style Selector="Button.RevealButton:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource InteractiveHoverBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
+    <Setter Property="Opacity" Value="0.90" />
+  </Style>
+  <Style Selector="Button.RevealButton:pressed /template/ ContentPresenter">
+    <Setter Property="RenderTransform" Value="scale(0.97)" />
+    <Setter Property="Background" Value="{DynamicResource InteractivePressedBrush}" />
+  </Style>
+
   <Style Selector="Border.BottomSheetPanel">
     <Setter Property="Background" Value="#E60A0A0A" />
     <Setter Property="BorderBrush" Value="#26FFFFFF" />
@@ -59,6 +82,27 @@
     <Setter Property="CornerRadius" Value="24" />
     <Setter Property="Padding" Value="16" />
     <Setter Property="BoxShadow" Value="0 -8 32 0 #80000000" />
+  </Style>
+
+  <Style Selector="Border.Snackbar">
+    <Setter Property="Padding" Value="8" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Background" Value="{DynamicResource CardHoverGradientBrush}" />
+    <Setter Property="VerticalAlignment" Value="Bottom" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="BoxShadow" Value="{DynamicResource DefaultShadow}" />
+  </Style>
+
+  <Style Selector="Button.SnackbarAction">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="8,5" />
+  </Style>
+  <Style Selector="Button.SnackbarAction:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
+    <Setter Property="Opacity" Value="0.90" />
   </Style>
 
   <Style Selector="StackPanel.NoctraSectionHeader">
@@ -329,26 +373,6 @@
     <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
   </Style>
 
-
-  <!-- Desktop-only selectors live in the shared assembly; they are not duplicated by platform. -->
-<Style Selector="Button.DesktopFilterButton">
-    <Setter Property="MinHeight" Value="{DynamicResource DesktopControlHeight}" />
-    <Setter Property="Padding" Value="14,0" />
-    <Setter Property="Background" Value="{DynamicResource Surface1Brush}" />
-    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
-    <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="4" />
-    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-    <Setter Property="MinWidth" Value="{DynamicResource BpCompact}" />
-  </Style>
-  <Style Selector="Button.DesktopFilterButton:pointerover /template/ ContentPresenter">
-    <Setter Property="Background" Value="{DynamicResource InteractiveHoverBrush}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
-  </Style>
-  <Style Selector="Button.DesktopFilterButton:pressed /template/ ContentPresenter">
-    <Setter Property="Background" Value="{DynamicResource InteractivePressedBrush}" />
-  </Style>
 <Style Selector="Border.DesktopSearchBox">
     <Setter Property="MinHeight" Value="{DynamicResource DesktopControlHeight}" />
     <Setter Property="Background" Value="{DynamicResource Surface1Brush}" />

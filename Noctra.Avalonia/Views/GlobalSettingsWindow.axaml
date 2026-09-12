@@ -47,6 +47,12 @@
         <Style Selector="Button.CloseButtonStyle:pointerover /template/ materialIcons|MaterialIcon#CloseIcon">
             <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
         </Style>
+        <Style Selector="Button.CloseButtonStyle:pressed /template/ Border#CloseBg">
+            <Setter Property="Background" Value="{DynamicResource Surface1Brush}"/>
+        </Style>
+        <Style Selector="Button.CloseButtonStyle:pressed /template/ materialIcons|MaterialIcon#CloseIcon">
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+        </Style>
 
         <!-- Clear Cache Button Style -->
         <Style Selector="Button.ClearCacheButtonStyle">

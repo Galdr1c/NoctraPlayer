@@ -43,7 +43,6 @@
   </Style>
   <Style Selector="Button.SettingsActionButton:pressed /template/ ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource InteractivePressedBrush}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
   </Style>
 
   <Style Selector="Button.SettingsSelectionButton">
@@ -98,12 +97,18 @@
   <Style Selector="Button.UpgradeButton">
     <Setter Property="CornerRadius" Value="8" />
     <Setter Property="Padding" Value="14" />
+    <Setter Property="Margin" Value="0,0,0,16"/>
     <Setter Property="FontWeight" Value="SemiBold" />
     <Setter Property="Background" Value="{DynamicResource PremiumBadgeBrush}" />
     <Setter Property="Foreground" Value="{DynamicResource PremiumBadgeTextBrush}" />
     <Setter Property="HorizontalAlignment" Value="Stretch" />
     <Setter Property="HorizontalContentAlignment" Value="Center" />
     <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button.UpgradeButton:pointerover /template/ ContentPresenter">
+    <Setter Property="Opacity" Value="0.95" />
+    <Setter Property="Background" Value="{DynamicResource PremiumBadgeBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource PremiumBadgeTextBrush}" />
   </Style>
   <Style Selector="Button.UpgradeButton:pressed /template/ ContentPresenter">
     <Setter Property="Opacity" Value="0.80" />

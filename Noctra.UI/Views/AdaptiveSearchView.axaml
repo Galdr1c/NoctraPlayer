@@ -8,23 +8,6 @@
              x:Name="Root"
              x:DataType="vm:MainViewModel"
              x:CompileBindings="False">
-  <UserControl.Styles>
-    <Style Selector="Button.searchClear">
-      <Setter Property="FocusAdorner" Value="{x:Null}" />
-      <Setter Property="Width" Value="48" />
-      <Setter Property="Height" Value="48" />
-      <Setter Property="Padding" Value="0" />
-      <Setter Property="Background" Value="Transparent" />
-      <Setter Property="BorderThickness" Value="0" />
-      <Setter Property="CornerRadius" Value="8" />
-    </Style>
-    <Style Selector="Button.searchClear:pointerover /template/ ContentPresenter">
-      <Setter Property="Background" Value="{DynamicResource InteractiveHoverBrush}" />
-    </Style>
-    <Style Selector="Button.searchClear:pressed /template/ ContentPresenter">
-      <Setter Property="Background" Value="{DynamicResource InteractivePressedBrush}" />
-    </Style>
-  </UserControl.Styles>
 
   <Grid RowDefinitions="Auto,Auto,*">
     <!-- Mobile is the visual source of truth. Wider hosts only provide more room. -->
@@ -52,7 +35,7 @@
                      VerticalContentAlignment="Center"
                      KeyDown="SearchInput_KeyDown" />
             <Button Grid.Column="2"
-                    Classes="searchClear"
+                    Classes="RevealButton"
                     Click="ClearSearch_Click"
                     IsVisible="{Binding SearchQuery, Converter={StaticResource StringNotEmptyToVisibilityConverter}}"
                     AutomationProperties.Name="{loc:Translate Mobile.Search.ClearA11yName}"
@@ -67,15 +50,7 @@
         <Button Grid.Column="1"
                 Command="{Binding CommitSearchCommand}"
                 IsEnabled="{Binding CanCommitSearch}"
-                MinHeight="54"
-                Padding="18,0"
-                Background="{DynamicResource AccentBrush}"
-                Foreground="{DynamicResource PremiumBadgeTextBrush}"
-                BorderThickness="0"
-                FontWeight="Medium"
-                FontSize="{DynamicResource FBody}"
-                CornerRadius="8"
-                VerticalContentAlignment="Center"
+                Theme="{StaticResource PrimaryButtonStyle}"
                 Content="{loc:Translate Search.Button}" />
       </Grid>
     </Border>
@@ -101,11 +76,7 @@
         </StackPanel>
       </Border>
 
-      <Border Background="{DynamicResource Surface0Brush}"
-              BorderBrush="{DynamicResource BorderBrush}"
-              BorderThickness="0.5"
-              CornerRadius="8"
-              Padding="14,8"
+      <Border Classes="Badge"
               IsVisible="{Binding ShowSearchMinimumLengthHint}">
         <TextBlock Text="{loc:Translate Search.MinimumLengthHint}"
                    Foreground="{DynamicResource TextMutedBrush}"

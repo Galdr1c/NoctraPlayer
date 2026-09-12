@@ -37,6 +37,8 @@
     <Setter Property="FontWeight" Value="SemiBold" />
     <Setter Property="Padding" Value="18,0" />
     <Setter Property="MinHeight" Value="44" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
     <Style Selector="^:pointerover">
       <Setter Property="Opacity" Value="0.92" />
     </Style>
@@ -57,6 +59,8 @@
     <Setter Property="CornerRadius" Value="6" />
     <Setter Property="Padding" Value="16,0" />
     <Setter Property="MinHeight" Value="44" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
     <Style Selector="^:pointerover">
       <Setter Property="Background" Value="{DynamicResource InteractiveHoverBrush}" />
       <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
@@ -368,7 +372,7 @@
             <Setter Property="Opacity" Value="0.5"/>
         </Style>
     </ControlTheme>
-
+    
     <ControlTheme x:Key="TabRadioButtonStyle" TargetType="RadioButton">
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>

@@ -22,22 +22,6 @@
     <Style Selector="Button.CategorySelectionRow:pressed /template/ ContentPresenter">
       <Setter Property="Background" Value="Transparent" />
     </Style>
-    <Style Selector="Button.AllCategory">
-      <Setter Property="MinWidth" Value="104" />
-      <Setter Property="MinHeight" Value="50" />
-      <Setter Property="Background" Value="{DynamicResource Surface1Brush}" />
-      <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
-      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
-      <Setter Property="BorderThickness" Value="1" />
-      <Setter Property="CornerRadius" Value="6" />
-      <Setter Property="HorizontalAlignment" Value="Stretch" />
-      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-    </Style>
-    <Style Selector="Button.AllCategory:pressed /template/ ContentPresenter">
-      <Setter Property="Background" Value="{DynamicResource InteractivePressedBrush}" />
-      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
-      <Setter Property="BorderThickness" Value="1" />
-    </Style>
     <Style Selector="Button.CategoryHideButton">
       <Setter Property="Width" Value="28" />
       <Setter Property="Height" Value="28" />
@@ -116,7 +100,7 @@
               ColumnSpacing="8"
               Margin="0,0,0,8">
             <Button x:Name="AllCategoriesButton"
-                    Classes="AllCategory"
+                    Classes="SettingsActionButton"
                     Click="SelectCategory_Click">
               <Grid ColumnDefinitions="*,Auto"
                     ColumnSpacing="12">
@@ -200,29 +184,17 @@
         <Border x:Name="UndoSnackbar"
                 Grid.RowSpan="2"
                 ZIndex="{x:Static controls:MobileZIndex.ShellCategoryUndoToast}"
-                HorizontalAlignment="Center"
-                VerticalAlignment="Bottom"
-                Margin="20,0,20,96"
-                Padding="8"
-                CornerRadius="8"
-                Background="{DynamicResource CardHoverGradientBrush}"
+                Classes="Snackbar"
                 IsVisible="False">
           <StackPanel Orientation="Horizontal" Spacing="10">
             <TextBlock x:Name="UndoSnackbarText"
-                       Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                       Foreground="{DynamicResource PremiumBadgeTextBrush}"
                        FontSize="{DynamicResource FBody}"
                        FontWeight="SemiBold"
                        TextWrapping="Wrap"
                        VerticalAlignment="Center" />        
             <Button Click="UndoHide_Click"
-                    Background="Transparent"
-                    BorderThickness="0"
-                    Padding="8"
-                    MinWidth="48" MinHeight="36"
-                    VerticalContentAlignment="Center"
-                    HorizontalAlignment="Center" 
-                    CornerRadius="6"
-                    Margin="0">
+                    Classes="SnackbarAction">
               <TextBlock Text="{loc:Translate Common.Undo}"
                          FontSize="{DynamicResource FBody}"
                          FontWeight="Bold"
@@ -235,12 +207,7 @@
         <Border x:Name="ErrorSnackbar"
                 Grid.RowSpan="2"
                 ZIndex="{x:Static controls:MobileZIndex.ShellCategoryErrorToast}"
-                HorizontalAlignment="Center"
-                VerticalAlignment="Bottom"
-                Margin="20,0,20,96"
-                Padding="12,10"
-                CornerRadius="8"
-                Background="{DynamicResource PlayerOverlayStrongBrush}"
+                Classes="Snackbar" 
                 IsVisible="False">
           <StackPanel Orientation="Horizontal" Spacing="10">
             <icons:MaterialIcon Kind="AlertCircleOutline"
@@ -248,7 +215,7 @@
                                 Foreground="{DynamicResource ErrorBrush}"
                                 VerticalAlignment="Center" />
             <TextBlock x:Name="ErrorSnackbarText"
-                       Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                       Foreground="{DynamicResource PremiumBadgeTextBrush}"
                        FontSize="{DynamicResource FBody}"
                        FontWeight="SemiBold"
                        TextWrapping="Wrap"

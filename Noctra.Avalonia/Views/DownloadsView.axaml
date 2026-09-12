@@ -63,14 +63,6 @@
       <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
     </Style>
 
-    <Style Selector="Border.Badge">
-      <Setter Property="Background" Value="{DynamicResource Surface1Brush}" />
-      <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
-      <Setter Property="BorderThickness" Value="1" />
-      <Setter Property="CornerRadius" Value="4" />
-      <Setter Property="Padding" Value="10,2" />
-    </Style>
-
     <Style Selector="Border.AccentBadge">
       <Setter Property="Background" Value="{DynamicResource AccentSubtleBrush}" />
       <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
@@ -364,7 +356,7 @@
               <StackPanel Orientation="Horizontal" Spacing="8">
                 <TextBlock Text="{loc:Translate Downloads.Tabs.Center}" VerticalAlignment="Center"/>
                 <Border IsVisible="{Binding ActiveDownloadCount, Converter={StaticResource CountToVisibilityConverter}}"
-                        Classes="AccentBadge">
+                        Classes="AccentBubble">
                   <TextBlock Text="{Binding ActiveDownloadCount}" Foreground="White" FontSize="10" FontWeight="Bold"/>
                 </Border>
               </StackPanel>
