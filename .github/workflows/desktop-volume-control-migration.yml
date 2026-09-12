@@ -30,6 +30,33 @@ jobs:
           Set-Content tools/apply-desktop-volume-control.py -Value $script -NoNewline
           python tools/apply-desktop-volume-control.py
 
+          $testPath = 'Noctra.Tests/DesktopVolumeControlTests.cs'
+          $test = Get-Content $testPath -Raw
+          $old = @'
+              private static string Read(params string[] parts)
+                  => File.ReadAllText(Path.Combine(parts));
+          '@
+          $new = @'
+              private static string Read(params string[] parts)
+              {
+                  var root = FindRepositoryRoot();
+                  return File.ReadAllText(Path.Combine(new[] { root }.Concat(parts).ToArray()));
+              }
+
+              private static string FindRepositoryRoot()
+              {
+                  var directory = new DirectoryInfo(AppContext.BaseDirectory);
+                  while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "NoctraPlayer.sln")))
+                      directory = directory.Parent;
+
+                  return directory?.FullName
+                      ?? throw new DirectoryNotFoundException("Could not locate the repository root.");
+              }
+          '@
+          if (-not $test.Contains($old.Trim())) { throw 'Desktop volume test helper was not found.' }
+          $test = $test.Replace($old.Trim(), $new.Trim())
+          Set-Content $testPath -Value $test -NoNewline
+
       - name: Build shared UI
         shell: pwsh
         run: dotnet build Noctra.UI/Noctra.UI.csproj -c Debug
