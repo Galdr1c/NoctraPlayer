@@ -93,6 +93,7 @@ public partial class MainWindow : Window
         _reviewPromptService = reviewPromptService;
         _windowResizeService = new WindowResizeService(this);
         DataContext = _mainViewModel;
+        InitializeSeriesDetailDownloadToast();
 
         PlayerOverlayLayer.DataContext = _playerViewModel;
         OverlayControl.DataContext = _playerViewModel;
@@ -310,6 +311,7 @@ public partial class MainWindow : Window
 
     private void OnClosed(object? sender, EventArgs e)
     {
+        StopSeriesDetailDownloadToast();
         _mainViewModel.CancelProfileBackgroundLoading();
         _reviewPromptCts.Cancel();
         _reviewPromptCts.Dispose();
@@ -579,6 +581,7 @@ public partial class MainWindow : Window
 
     private void MainViewModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
+        UpdateSeriesDetailDownloadToast(e.PropertyName);
         if (e.PropertyName == nameof(MainViewModel.ActiveDownloadCount))
         {
             UpdateDownloadBadgeVisibility();

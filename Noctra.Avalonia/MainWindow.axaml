@@ -977,6 +977,34 @@
               </Grid>
             </ScrollViewer>
           </Grid>
+
+        <!-- Series Detail download feedback stays above its scroll content,
+             matching mobile without intercepting episode or season actions. -->
+        <Border x:Name="SeriesDetailDownloadToast"
+                Classes="Snackbar"
+                ZIndex="999"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Bottom"
+                Margin="24,0,24,32"
+                Padding="16,11"
+                MaxWidth="620"
+                Background="{DynamicResource PlayerOverlayStrongBrush}"
+                IsHitTestVisible="False"
+                IsVisible="{Binding #RootWindow.IsSeriesDetailDownloadToastVisible}">
+          <StackPanel Orientation="Horizontal" Spacing="9">
+            <materialIcons:MaterialIcon Kind="DownloadOutline"
+                                        Width="20" Height="20"
+                                        Foreground="{DynamicResource AccentBrush}"
+                                        VerticalAlignment="Center" />
+            <TextBlock Text="{Binding #RootWindow.SeriesDetailDownloadToastText}"
+                       Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                       FontSize="{DynamicResource FBody}"
+                       FontWeight="SemiBold"
+                       TextWrapping="Wrap"
+                       MaxWidth="540"
+                       VerticalAlignment="Center" />
+          </StackPanel>
+        </Border>
         </Grid>
 
 

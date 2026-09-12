@@ -26,6 +26,13 @@ Detailed historical engineering notes are archived in [`docs/history/legacy-chan
 
 ### Fixed
 
+- **Windows Series Detail indirme bildirimleri görünmüyordu**:
+  1. **Semptom**: Masaüstünde dizi ayrıntısındaki bölüm veya sezon indirme düğmesine basıldığında indirme kuyruğa alınsa bile mobildeki kısa durum bildirimi görünmüyordu.
+  2. **Kök neden**: Her iki komut `MainViewModel.DownloadStatusMessage` ve `IsDownloadInProgress` değerlerini üretiyordu; mobil `MobileSeriesDetailView` bu değişimleri dinleyip `StatusToast` açarken masaüstündeki `SeriesDetailOverlay` içinde karşılık gelen görsel katman ve dinleyici yoktu. Player overlay'indeki ayrı `PlayerViewModel` toast'u bu komutların mesajını alamaz.
+  3. **Düzeltme**: `MainWindow.axaml` içindeki Series Detail overlay'ine tıklamaları engellemeyen, kaydırma içeriğinin üstünde duran snackbar eklendi. `MainWindow.SeriesDetailDownloadToast.cs`, yalnız ilgili indirme mesajlarını UI thread'inde 2,6 saniye gösterir, yeni mesajda süreyi yeniler ve detail kapanınca bildirimi temizler.
+  4. **Bilinçli olarak değiştirilmedi**: `MainViewModel` indirme/kuyruk mantığı, mobil toast, player toast'u ve diğer masaüstü ekranlarının bildirim davranışı değiştirilmedi; bu düzeltme yalnız Series Detail'e ait görsel eksikliği giderir.
+  5. **Doğrulama**: `DesktopSeriesDetailDownloadToastTests` RED→GREEN (2/2) ve Windows Release derlemesi başarılı. Açık Debug Noctra işlemi DLL'leri kilitlediğinden testler ayrı Debug çıktı dizininde de doğrulandı (2/2). Tam Debug test paketi 2.499 başarılı / 5 bu değişikliğin dokunmadığı alanlarda test başarısızlığı verdi. Tam Release çözüm derlemesi 0 hata ile tamamlandı; Android Avalonia linker'ından bu düzeltmeden bağımsız bir IL2037 uyarısı kaldı. Kullanıcı arayüzünde manuel tıklama smoke testi ayrıca yapılmadı.
+
 - **Masaüstü video overlay: "Hakkında" (Info) panelindeki kapat butonu paneli kapatmıyordu**:
   1. **Semptom**: Masaüstünde (Windows / Avalonia) video oynatılırken üst kontrollerden "Hakkında" (Info) paneli açıldığında, panelin sağ üstündeki kapatma (X) butonuna tıklandığında panel kapanmıyordu.
   2. **Kök neden**: `VideoOverlayView.axaml` içerisindeki `InfoPanel` kapatma butonunun komut bağı hatalı şekilde `Command="{Binding OpenInfoPanelCommand}"` olarak yazılmıştı. Diğer tüm yan paneller (Uyku Zamanlayıcısı, Ayarlar, Parçalar, Bölümler) `ClosePanelsCommand`'a bağlıyken, Hakkında paneli kapat butonuna basıldığında paneli kapatmak yerine tekrar açma komutunu tetikliyordu.
