@@ -11,6 +11,9 @@ public partial class PlayerChromeView : UserControl
     public static readonly StyledProperty<bool> ShowPiPActionProperty =
         AvaloniaProperty.Register<PlayerChromeView, bool>(nameof(ShowPiPAction), true);
 
+    public static readonly StyledProperty<bool> ShowPointerVolumeControlProperty =
+        AvaloniaProperty.Register<PlayerChromeView, bool>(nameof(ShowPointerVolumeControl));
+
     public static readonly StyledProperty<Thickness> SafeAreaProperty =
         AvaloniaProperty.Register<PlayerChromeView, Thickness>(nameof(SafeArea));
 
@@ -34,6 +37,12 @@ public partial class PlayerChromeView : UserControl
     {
         get => GetValue(ShowPiPActionProperty);
         set => SetValue(ShowPiPActionProperty, value);
+    }
+
+    public bool ShowPointerVolumeControl
+    {
+        get => GetValue(ShowPointerVolumeControlProperty);
+        set => SetValue(ShowPointerVolumeControlProperty, value);
     }
 
     public Thickness SafeArea

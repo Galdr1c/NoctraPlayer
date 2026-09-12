@@ -5,6 +5,7 @@
              xmlns:icons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              xmlns:player="using:Noctra.UI.Views.Player"
              x:Class="Noctra.UI.Views.Player.PlayerTransportBar"
+             x:Name="Root"
              x:DataType="vm:PlayerViewModel"
              x:CompileBindings="False">
   <UserControl.Styles>
@@ -81,14 +82,59 @@
         <icons:MaterialIcon Kind="SkipNext" Width="24" Height="24" Foreground="{DynamicResource PlayerOverlayTextBrush}" />
       </Button>
 
-      <Button Grid.Column="3" Classes="playerTransport" Command="{Binding ToggleMuteCommand}"
-              AutomationProperties.Name="{Binding MuteAccessibilityName}">
-        <Panel Width="24" Height="24">
-          <icons:MaterialIcon Kind="VolumeOff" Width="24" Height="24" Foreground="{DynamicResource PlayerOverlayTextBrush}" IsVisible="{Binding IsMuted}" />
-          <icons:MaterialIcon Kind="VolumeHigh" Width="24" Height="24" Foreground="{DynamicResource PlayerOverlayTextBrush}"
-                              IsVisible="{Binding IsMuted, Converter={StaticResource InverseBoolConverter}}" />
-        </Panel>
-      </Button>
+      <!-- Mobile keeps the single mute action. Desktop opts into the pointer-volume
+           reveal through ShowPointerVolumeControl on PlayerChromeView. -->
+      <Grid x:Name="VolumeCluster"
+            Grid.Column="3"
+            ColumnDefinitions="Auto,Auto"
+            PointerEntered="VolumeCluster_PointerEntered"
+            PointerExited="VolumeCluster_PointerExited"
+            GotFocus="VolumeCluster_GotFocus"
+            LostFocus="VolumeCluster_LostFocus"
+            PointerWheelChanged="VolumeCluster_PointerWheelChanged">
+        <Button x:Name="MuteButton"
+                Grid.Column="0"
+                Classes="playerTransport"
+                Command="{Binding ToggleMuteCommand}"
+                AutomationProperties.Name="{Binding MuteAccessibilityName}">
+          <Panel Width="24" Height="24">
+            <icons:MaterialIcon Kind="VolumeOff" Width="24" Height="24"
+                                Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                                IsVisible="{Binding IsMuted}" />
+            <icons:MaterialIcon Kind="VolumeHigh" Width="24" Height="24"
+                                Foreground="{DynamicResource PlayerOverlayTextBrush}"
+                                IsVisible="{Binding IsMuted, Converter={StaticResource InverseBoolConverter}}" />
+          </Panel>
+        </Button>
+
+        <Border x:Name="PointerVolumeReveal"
+                Grid.Column="1"
+                Width="0"
+                Height="40"
+                Opacity="0"
+                IsHitTestVisible="False"
+                ClipToBounds="True"
+                VerticalAlignment="Center"
+                Margin="2,0,0,0"
+                Padding="10,0"
+                CornerRadius="20"
+                Background="{DynamicResource PlayerIconHoverBrush}">
+          <Border.Transitions>
+            <Transitions>
+              <DoubleTransition Property="Width" Duration="0:0:0.18" Easing="CubicEaseOut" />
+              <DoubleTransition Property="Opacity" Duration="0:0:0.14" Easing="CubicEaseOut" />
+            </Transitions>
+          </Border.Transitions>
+          <Slider x:Name="PointerVolumeSlider"
+                  Width="112"
+                  Minimum="0"
+                  Maximum="100"
+                  SmallChange="1"
+                  LargeChange="5"
+                  Value="{Binding Volume, Mode=TwoWay}"
+                  VerticalAlignment="Center" />
+        </Border>
+      </Grid>
 
       <Button Grid.Column="5" Classes="playerAction" IsVisible="{Binding IsLiveContent}"
               Command="{Binding ToggleEpgPanelCommand}" ToolTip.Tip="{loc:Translate Player.Epg.GuideTooltip}"

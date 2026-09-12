@@ -30,6 +30,8 @@
       </Border.Background>
     </Border>
 
-    <player:PlayerTransportBar x:Name="TransportBar" VerticalAlignment="Bottom" />
+    <player:PlayerTransportBar x:Name="TransportBar"
+                               VerticalAlignment="Bottom"
+                               ShowPointerVolumeControl="{Binding #Root.ShowPointerVolumeControl}" />
   </Grid>
 </UserControl>
