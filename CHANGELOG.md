@@ -9,6 +9,10 @@ Detailed historical engineering notes are archived in [`docs/history/legacy-chan
 
 ## [Unreleased]
 
+### Changed
+
+- **Masaüstü ses slider'ı timeline görünümüne uyarlandı**: Ses ikonunun üzerinde açılan kontrol varsayılan Fluent slider ve kapsül arka planı nedeniyle player timeline'ından farklı görünüyordu. `PlayerTransportBar.axaml` içinde yalnız ses kontrolüne uygulanan bir Slider teması eklendi: 4 px yarı saydam çizgi, ses seviyesi boyunca kesintisiz mor dolgu ve 8 px mor tutamak. Dolgu segmentinin varsayılan hizalama nedeniyle sıfır genişliğe düşmesi ve tutamak önünde kırpılması da giderildi; 40 px etkileşim yüksekliği korundu. Hover açılma/kapanma, 0–100 iki yönlü ses bağı, tekerlek/klavye adımları ve mobil swipe davranışı değiştirilmedi. Doğrulama: gerçek Avalonia render'ında %0/%25/%65/%100 seviyeleri incelendi; `DesktopVolumeControlTests` 3/3 geçti, masaüstü ve mobil derlemeleri 0 hata/0 uyarı verdi.
+
 ### Added
 
 - **3 katmanlı HDR ve Codec Playback Yetenek Mimarisi (Decoder + Display HDR + Teşhis)**:
