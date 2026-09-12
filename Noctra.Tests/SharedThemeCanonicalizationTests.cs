@@ -19,7 +19,7 @@ public sealed class SharedThemeCanonicalizationTests
     }
 
     [Fact]
-    public void SharedThemes_PreserveMobilePlayerSheetPaletteAndCrossPlatformSemanticSurfaces()
+    public void SharedThemes_PreserveMobilePlayerSheetPaletteAndCurrentSemanticBrushes()
     {
         var dark = Read("Noctra.UI", "Resources", "Themes", "DarkTheme.axaml");
         var light = Read("Noctra.UI", "Resources", "Themes", "LightTheme.axaml");
@@ -33,9 +33,9 @@ public sealed class SharedThemeCanonicalizationTests
 
         foreach (var theme in new[] { dark, light })
         {
-            Assert.Contains("x:Key=\"SuccessSurfaceBrush\"", theme, StringComparison.Ordinal);
-            Assert.Contains("x:Key=\"WarningSurfaceBrush\"", theme, StringComparison.Ordinal);
-            Assert.Contains("x:Key=\"ErrorSurfaceBrush\"", theme, StringComparison.Ordinal);
+            Assert.Contains("x:Key=\"PlayerIconHoverBrush\"", theme, StringComparison.Ordinal);
+            Assert.Contains("x:Key=\"DangerBrush\"", theme, StringComparison.Ordinal);
+            Assert.Contains("x:Key=\"InteractivePressedBrush\"", theme, StringComparison.Ordinal);
         }
     }
 
@@ -81,13 +81,49 @@ public sealed class SharedThemeCanonicalizationTests
     }
 
     [Fact]
-    public void DesktopResumeAction_UsesSharedPillRadiusToken()
+    public void DesktopResumeAction_PreservesCurrentMobileFirstRadius()
     {
         var mainWindow = Read("Noctra.Avalonia", "MainWindow.axaml");
 
         Assert.Contains("<Style Selector=\"Button.ResumePrimaryButton\">", mainWindow, StringComparison.Ordinal);
-        Assert.Contains("<Setter Property=\"CornerRadius\" Value=\"{DynamicResource RadiusPill}\" />", mainWindow, StringComparison.Ordinal);
+        Assert.Contains("<Setter Property=\"CornerRadius\" Value=\"6\" />", mainWindow, StringComparison.Ordinal);
         Assert.DoesNotContain("<Setter Property=\"CornerRadius\" Value=\"81\" />", mainWindow, StringComparison.Ordinal);
+    }
+
+
+    [Fact]
+    public void BothHosts_LoadOneMobileFirstSharedStyleSystem()
+    {
+        var sharedThemes = Read("Noctra.UI", "Resources", "Styles.axaml");
+        var commonStyles = Read("Noctra.UI", "Resources", "CommonStyles.axaml");
+        var mobileApp = Read("Noctra.Mobile", "App.axaml");
+        var desktopApp = Read("Noctra.Avalonia", "App.axaml");
+
+        foreach (var app in new[] { mobileApp, desktopApp })
+            Assert.Contains("avares://Noctra.UI/Resources/Styles.axaml", app, StringComparison.Ordinal);
+
+        Assert.Contains("x:Key=\"PrimaryButtonStyle\"", sharedThemes, StringComparison.Ordinal);
+        Assert.Contains("PrimaryGradientBrush", sharedThemes, StringComparison.Ordinal);
+        Assert.Contains("x:Key=\"SecondaryButton\"", sharedThemes, StringComparison.Ordinal);
+        Assert.Contains("x:Key=\"RevealBtn\"", sharedThemes, StringComparison.Ordinal);
+        Assert.Contains("x:Key=\"{x:Type CheckBox}\"", sharedThemes, StringComparison.Ordinal);
+        Assert.Contains("x:Key=\"{x:Type RadioButton}\"", sharedThemes, StringComparison.Ordinal);
+        Assert.Contains("x:Key=\"{x:Type ToggleSwitch}\"", sharedThemes, StringComparison.Ordinal);
+        Assert.DoesNotContain("x:Key=\"UpgradeButton\"", sharedThemes, StringComparison.Ordinal);
+        Assert.DoesNotContain("x:Key=\"SettingsActionButton\"", sharedThemes, StringComparison.Ordinal);
+
+        Assert.Contains("<Style Selector=\"TextBox\">", commonStyles, StringComparison.Ordinal);
+        Assert.Contains("FontSize\" Value=\"{DynamicResource FBodyL}\"", commonStyles, StringComparison.Ordinal);
+        Assert.Contains("Button.NoctraSheetOption", commonStyles, StringComparison.Ordinal);
+        Assert.Contains("ListBox.NoctraSelectionList", commonStyles, StringComparison.Ordinal);
+        Assert.DoesNotContain("DesktopModernStyles.axaml", desktopApp, StringComparison.Ordinal);
+        Assert.Contains("avares://Noctra/Resources/DesktopStyleOverrides.axaml", desktopApp, StringComparison.Ordinal);
+        Assert.Contains("x:Key=\"TransparentListBoxItemTheme\"", sharedThemes, StringComparison.Ordinal);
+        Assert.DoesNotContain("x:Key=\"TransparentListBoxItemTheme\"", mobileApp, StringComparison.Ordinal);
+
+        var desktopMainWindow = Read("Noctra.Avalonia", "MainWindow.axaml");
+        Assert.DoesNotContain("<Style Selector=\"Button.UpgradeButton\">", desktopMainWindow, StringComparison.Ordinal);
+        Assert.Contains("Classes=\"UpgradeButton\"", desktopMainWindow, StringComparison.Ordinal);
     }
 
     private static string Read(params string[] path)

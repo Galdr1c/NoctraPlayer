@@ -102,16 +102,17 @@ public sealed class DesktopSettingsSelectionSheetTests
     }
 
     [Fact]
-    public void Application_IncludesDesktopModernStyles()
+    public void Application_UsesSharedStylesWithOnlyDesktopSpecificOverrides()
     {
         var document = LoadProjectXaml("Noctra.Avalonia", "App.axaml");
+        var includes = document.Descendants()
+            .Where(element => element.Name.LocalName == "StyleInclude")
+            .Select(element => (string?)element.Attribute("Source"))
+            .ToArray();
 
-        Assert.Contains(
-            document.Descendants(),
-            element =>
-                element.Name.LocalName == "StyleInclude" &&
-                (string?)element.Attribute("Source") ==
-                "avares://Noctra/Resources/DesktopModernStyles.axaml");
+        Assert.Contains("avares://Noctra.UI/Resources/CommonStyles.axaml", includes);
+        Assert.Contains("avares://Noctra/Resources/DesktopStyleOverrides.axaml", includes);
+        Assert.DoesNotContain("avares://Noctra/Resources/DesktopModernStyles.axaml", includes);
     }
 
     [Theory]

@@ -35,21 +35,7 @@
       <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
         <Setter Property="Background" Value="Transparent"/>
       </Style>
-      <Style Selector="Button.UpgradeButton">
-        <Setter Property="CornerRadius" Value="8" />
-        <Setter Property="Padding" Value="14" />
-        <Setter Property="FontWeight" Value="SemiBold" />
-        <Setter Property="Background" Value="{DynamicResource PremiumBadgeBrush}" />
-        <Setter Property="Foreground" Value="{DynamicResource PremiumBadgeTextBrush}" />
-        <Setter Property="HorizontalAlignment" Value="Stretch" />
-        <Setter Property="HorizontalContentAlignment" Value="Center" />
-        <Setter Property="VerticalContentAlignment" Value="Center" />
-      </Style>
-      <Style Selector="Button.UpgradeButton:pressed /template/ ContentPresenter">
-        <Setter Property="Opacity" Value="0.80" />
-        <Setter Property="Background" Value="{DynamicResource PremiumBadgeBrush}" />
-      </Style>
-      <Style Selector="Button.ResumePrimaryButton">
+<Style Selector="Button.ResumePrimaryButton">
         <Setter Property="CornerRadius" Value="6" />
         <Setter Property="Padding" Value="14" />
         <Setter Property="MinHeight" Value="52" />
@@ -1150,7 +1136,7 @@
                         <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
                           <Button Grid.Column="0"
                                   Command="{Binding PlayNextEpisodeCommand}"
-                                  Theme="{StaticResource UpgradeButton}"
+                                  Classes="UpgradeButton"
                                   Margin="0"
                                   Background="{DynamicResource NextEpisodeHighlightColor}"
                                   Foreground="{DynamicResource TextPrimaryBrush}"

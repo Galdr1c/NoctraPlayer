@@ -154,4 +154,260 @@
   <Style Selector="TabItem.downloadTab:selected /template/ Border#SelectionIndicator">
     <Setter Property="Width" Value="32" />
   </Style>
+
+
+  <!-- Unified application interaction styles. Mobile values are canonical. -->
+  <Style Selector="Button">
+    <Setter Property="Cursor" Value="Hand" />
+  </Style>
+  <Style Selector="Slider">
+    <Setter Property="Cursor" Value="Hand" />
+  </Style>
+  <Style Selector="ComboBox">
+    <Setter Property="Cursor" Value="Hand" />
+  </Style>
+  <Style Selector="ComboBox TextBlock">
+    <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+    <Setter Property="MaxLines" Value="1" />
+  </Style>
+  <Style Selector="ListBox">
+    <Setter Property="Cursor" Value="Hand" />
+  </Style>
+  <Style Selector="ToggleSwitch">
+    <Setter Property="Cursor" Value="Hand" />
+  </Style>
+  <Style Selector="CheckBox">
+    <Setter Property="Cursor" Value="Hand" />
+  </Style>
+  <Style Selector="RadioButton">
+    <Setter Property="Cursor" Value="Hand" />
+  </Style>
+  <Style Selector="ScrollBar">
+    <Setter Property="Cursor" Value="Hand" />
+  </Style>
+  <Style Selector="ScrollBar Thumb">
+    <Setter Property="Cursor" Value="Hand" />
+  </Style>
+  <Style Selector="ScrollBar RepeatButton">
+    <Setter Property="Cursor" Value="Hand" />
+  </Style>
+
+  <Style Selector="Control">
+    <Setter Property="ToolTip.ShowDelay" Value="400" />
+  </Style>
+  <Style Selector="ToolTip">
+    <Setter Property="Opacity" Value="0" />
+    <Setter Property="Transitions">
+      <Transitions>
+        <DoubleTransition Property="Opacity" Duration="0:0:0.15" Easing="CubicEaseOut" />
+      </Transitions>
+    </Setter>
+  </Style>
+  <Style Selector="ToolTip:open">
+    <Setter Property="Opacity" Value="1" />
+  </Style>
+
+  <!-- NoctraTextBox: one mobile-first input system for every host. -->
+  <Style Selector="TextBox">
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    <Setter Property="Background" Value="{DynamicResource Surface1Brush}" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Padding" Value="14,0" />
+    <Setter Property="MinHeight" Value="54" />
+    <Setter Property="FontSize" Value="{DynamicResource FBodyL}" />
+    <Setter Property="TextWrapping" Value="NoWrap" />
+    <Setter Property="AcceptsReturn" Value="False" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="CaretBrush" Value="{DynamicResource AccentBrush}" />
+    <Setter Property="SelectionBrush" Value="{DynamicResource TextSelectionBrush}" />
+    <Setter Property="SelectionForegroundBrush" Value="{DynamicResource TextPrimaryBrush}" />
+    <Setter Property="PlaceholderForeground" Value="{DynamicResource TextMutedBrush}" />
+  </Style>
+  <Style Selector="TextBox:focus /template/ Border#PART_BorderElement">
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+    <Setter Property="BorderThickness" Value="1.5" />
+  </Style>
+  <Style Selector="TextBox:not(:focus) /template/ Border#PART_BorderElement">
+    <Setter Property="BorderBrush" Value="{DynamicResource TextDisabledBrush}" />
+    <Setter Property="BorderThickness" Value="1.5" />
+  </Style>
+  <Style Selector="TextBox:disabled">
+    <Setter Property="Opacity" Value="0.5" />
+  </Style>
+  <Style Selector="TextBox.url">
+    <Setter Property="TextInputOptions.ContentType" Value="Url" />
+    <Setter Property="TextInputOptions.ShowSuggestions" Value="False" />
+  </Style>
+  <Style Selector="TextBox.search">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="0" />
+    <Setter Property="Padding" Value="10,0" />
+    <Setter Property="MinHeight" Value="48" />
+    <Setter Property="TextInputOptions.ContentType" Value="Search" />
+    <Setter Property="TextInputOptions.ReturnKeyType" Value="Search" />
+  </Style>
+  <Style Selector="TextBox.search /template/ Border#PART_BorderElement">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="0" />
+  </Style>
+  <Style Selector="TextBox.search:focus /template/ Border#PART_BorderElement">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <Style Selector="TextBox.search:not(:focus) /template/ Border#PART_BorderElement">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <Style Selector="TextBox.password">
+    <Setter Property="TextInputOptions.IsSensitive" Value="True" />
+    <Setter Property="TextInputOptions.ShowSuggestions" Value="False" />
+    <Setter Property="PasswordChar" Value="&#x2022;" />
+  </Style>
+  <Style Selector="TextBox.pin">
+    <Setter Property="TextInputOptions.ContentType" Value="Digits" />
+    <Setter Property="TextInputOptions.IsSensitive" Value="True" />
+    <Setter Property="TextInputOptions.ShowSuggestions" Value="False" />
+    <Setter Property="MaxLength" Value="4" />
+    <Setter Property="PasswordChar" Value="&#x2022;" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="LetterSpacing" Value="8" />
+  </Style>
+  <Style Selector="TextBox.error">
+    <Setter Property="BorderBrush" Value="{DynamicResource ErrorBrush}" />
+    <Setter Property="BorderThickness" Value="1.5" />
+  </Style>
+  <Style Selector="TextBox.error:focus /template/ Border#PART_BorderElement">
+    <Setter Property="BorderBrush" Value="{DynamicResource ErrorBrush}" />
+    <Setter Property="BorderThickness" Value="1.5" />
+  </Style>
+  <Style Selector="TextBox.error:not(:focus) /template/ Border#PART_BorderElement">
+    <Setter Property="BorderBrush" Value="{DynamicResource ErrorBrush}" />
+    <Setter Property="BorderThickness" Value="1.5" />
+  </Style>
+  <Style Selector="TextBox.readonly">
+    <Setter Property="IsReadOnly" Value="True" />
+    <Setter Property="Background" Value="{DynamicResource Surface0Brush}" />
+  </Style>
+
+  <!-- Shared list/sheet primitives replacing duplicate desktop class names. -->
+  <Style Selector="ListBox.NoctraSelectionList">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+  </Style>
+  <Style Selector="ListBox.NoctraSelectionList > ListBoxItem">
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Margin" Value="0,0,0,8" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="Focusable" Value="False" />
+  </Style>
+  <Style Selector="Button.NoctraSheetOption">
+    <Setter Property="MinHeight" Value="48" />
+    <Setter Property="Padding" Value="14,8" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+  </Style>
+  <Style Selector="Button.NoctraSheetOption:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+  </Style>
+  <Style Selector="Button.NoctraSheetOption:pressed /template/ ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+  </Style>
+
+
+  <!-- Desktop-only selectors live in the shared assembly; they are not duplicated by platform. -->
+<Style Selector="Button.DesktopFilterButton">
+    <Setter Property="MinHeight" Value="{DynamicResource DesktopControlHeight}" />
+    <Setter Property="Padding" Value="14,0" />
+    <Setter Property="Background" Value="{DynamicResource Surface1Brush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="4" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="MinWidth" Value="{DynamicResource BpCompact}" />
+  </Style>
+  <Style Selector="Button.DesktopFilterButton:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource InteractiveHoverBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+  </Style>
+  <Style Selector="Button.DesktopFilterButton:pressed /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource InteractivePressedBrush}" />
+  </Style>
+<Style Selector="Border.DesktopSearchBox">
+    <Setter Property="MinHeight" Value="{DynamicResource DesktopControlHeight}" />
+    <Setter Property="Background" Value="{DynamicResource Surface1Brush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="6" />
+  </Style>
+
+  <Style Selector="Border.DesktopSheetSurface">
+    <Setter Property="Background" Value="{DynamicResource Bg0Brush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+    <Setter Property="BorderThickness" Value="1,1,1,0" />
+    <Setter Property="CornerRadius" Value="8,8,0,0" />
+    <Setter Property="Width" Value="400" />
+    <Setter Property="Margin" Value="0" />
+    <Setter Property="Padding" Value="12,8" />
+    <Setter Property="BoxShadow" Value="{DynamicResource OverlaySheetShadow}" />
+  </Style>
+  <Style Selector="TextBlock.DesktopSheetTitle">
+    <Setter Property="FontSize" Value="20" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+    <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+  </Style>
+
+  <Style Selector="ListBox.DesktopVirtualFeed">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled" />
+    <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto" />
+  </Style>
+  <Style Selector="ListBox.DesktopVirtualFeed > ListBoxItem">
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Margin" Value="0" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="Focusable" Value="False" />
+  </Style>
+  <Style Selector="ListBox.DesktopVirtualFeed > ListBoxItem:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="ListBox.DesktopVirtualFeed > ListBoxItem:pressed /template/ ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="ListBox.DesktopVirtualFeed > ListBoxItem:selected /template/ ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+<Style Selector="Border.DesktopSnackbar">
+    <Setter Property="Padding" Value="12,8" />
+    <Setter Property="CornerRadius" Value="10" />
+    <Setter Property="Background" Value="{DynamicResource PlayerOverlayStrongBrush}" />
+    <Setter Property="BoxShadow" Value="{DynamicResource DefaultShadow}" />
+  </Style>
+  <Style Selector="Button.DesktopSnackbarAction">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="8,5" />
+  </Style>
 </Styles>

@@ -328,6 +328,7 @@ public sealed class MobileRecentRegressionTests
         var seriesDetail = File.ReadAllText(ProjectFile("Noctra.Mobile", "Views", "MobileSeriesDetailView.axaml"));
         var seriesDetailCode = File.ReadAllText(ProjectFile("Noctra.Mobile", "Views", "MobileSeriesDetailView.axaml.cs"));
         var app = File.ReadAllText(ProjectFile("Noctra.Mobile", "App.axaml"));
+        var sharedStyles = File.ReadAllText(ProjectFile("Noctra.UI", "Resources", "Styles.axaml"));
         var live = File.ReadAllText(ProjectFile("Noctra.Mobile", "Views", "MobileLiveView.axaml"));
         var movies = File.ReadAllText(ProjectFile("Noctra.Mobile", "Views", "MobileMoviesView.axaml"));
         var series = File.ReadAllText(ProjectFile("Noctra.Mobile", "Views", "MobileSeriesView.axaml"));
@@ -337,7 +338,8 @@ public sealed class MobileRecentRegressionTests
         Assert.Contains("ShouldTriggerSelection(Visual source, PointerEventArgs e)", cardGrid, StringComparison.Ordinal);
         Assert.Contains("ShouldTriggerSelection(Visual source, KeyEventArgs e)", cardGrid, StringComparison.Ordinal);
         Assert.Contains("=> false", cardGrid, StringComparison.Ordinal);
-        Assert.Contains("x:Key=\"TransparentListBoxItemTheme\"", app, StringComparison.Ordinal);
+        Assert.Contains("x:Key=\"TransparentListBoxItemTheme\"", sharedStyles, StringComparison.Ordinal);
+        Assert.DoesNotContain("x:Key=\"TransparentListBoxItemTheme\"", app, StringComparison.Ordinal);
         Assert.Contains("ItemContainerTheme=\"{StaticResource TransparentListBoxItemTheme}\"", live, StringComparison.Ordinal);
         Assert.Contains("ItemContainerTheme=\"{StaticResource TransparentListBoxItemTheme}\"", movies, StringComparison.Ordinal);
         Assert.Contains("ItemContainerTheme=\"{StaticResource TransparentListBoxItemTheme}\"", series, StringComparison.Ordinal);

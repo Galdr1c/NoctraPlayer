@@ -247,7 +247,7 @@
                                                Margin="0,0,0,14"/>
                                     <Button Content="{loc:Translate Settings.Profile.BackToProfiles}"
                                             Click="BackToProfiles_Click"
-                                            Theme="{StaticResource SettingsActionButton}"/>
+                                            Classes="SettingsActionButton"/>
                                 </StackPanel>
                             </Border>
 
@@ -350,7 +350,7 @@
                                     <TextBlock Text="{loc:Translate Settings.Playback.Quality}" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,20"/>
                                     <TextBlock Text="{loc:Translate Settings.Playback.QualityDescription}" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,12"/>
                                     <Button x:Name="DataUsageSelectionButton"
-                                            Classes="DesktopSettingsSelectionButton"
+                                            Classes="SettingsActionButton"
                                             Width="250"
                                             HorizontalAlignment="Left"
                                             Click="OpenDataUsageSelection_Click">
@@ -423,7 +423,7 @@
 
                                     <TextBlock Text="{loc:Translate Settings.Playback.PreferredSubtitle}" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,8"/>
                                     <Button x:Name="SubtitleLanguageSelectionButton"
-                                            Classes="DesktopSettingsSelectionButton"
+                                            Classes="SettingsActionButton"
                                             Width="250"
                                             HorizontalAlignment="Left"
                                             Margin="0,0,0,18"
@@ -438,7 +438,7 @@
 
                                     <TextBlock Text="{loc:Translate Settings.Playback.PreferredAudio}" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,8"/>
                                     <Button x:Name="AudioLanguageSelectionButton"
-                                            Classes="DesktopSettingsSelectionButton"
+                                            Classes="SettingsActionButton"
                                             Width="250"
                                             HorizontalAlignment="Left"
                                             Click="OpenAudioLanguageSelection_Click">
@@ -467,7 +467,7 @@
                                     </Grid>
                                     <TextBlock Text="{loc:Translate Settings.Download.Quality}" FontSize="14" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,8"/>
                                     <Button x:Name="DownloadQualitySelectionButton"
-                                            Classes="DesktopSettingsSelectionButton"
+                                            Classes="SettingsActionButton"
                                             Width="250"
                                             HorizontalAlignment="Left"
                                             Margin="0,0,0,18"
@@ -513,7 +513,7 @@
                                     <Button Content="{loc:Translate Settings.Channels.RefreshNow}"
                                             Command="{Binding RefreshChannelListNowCommand}"
                                             IsEnabled="{Binding !_mainViewModel.IsGlobalLoading}"
-                                            Theme="{StaticResource SettingsActionButton}"/>
+                                            Classes="SettingsActionButton"/>
 
                                     <Grid Margin="0,0,0,8">
                                         <Grid.ColumnDefinitions>
@@ -552,7 +552,7 @@
 
                                     <TextBlock Text="{loc:Translate Settings.Channels.Frequency}" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
                                     <Button x:Name="ChannelRefreshSelectionButton"
-                                            Classes="DesktopSettingsSelectionButton"
+                                            Classes="SettingsActionButton"
                                             Width="250"
                                             HorizontalAlignment="Left"
                                             Click="OpenChannelRefreshSelection_Click">
@@ -590,7 +590,7 @@
                                                             <Grid ColumnDefinitions="*,Auto">
                                                                 <TextBlock Text="{Binding}" VerticalAlignment="Center" FontSize="14" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="Medium" TextTrimming="CharacterEllipsis"/>
                                                                 <Button Grid.Column="1" 
-                                                                        Theme="{StaticResource SettingsActionButton}"
+                                                                        Classes="SettingsActionButton"
                                                                         Command="{Binding $parent[Window].DataContext.UnhideGroupCommand}"
                                                                         CommandParameter="{Binding}"
                                                                         Padding="20,4" CornerRadius="4" Cursor="Hand">
@@ -637,7 +637,7 @@
                                                             <Grid ColumnDefinitions="*,Auto">
                                                                 <TextBlock Text="{Binding}" VerticalAlignment="Center" FontSize="14" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="Medium" TextTrimming="CharacterEllipsis"/>
                                                                 <Button Grid.Column="1" 
-                                                                        Theme="{StaticResource SettingsActionButton}"
+                                                                        Classes="SettingsActionButton"
                                                                         Command="{Binding $parent[Window].DataContext.UnhideGroupCommand}"
                                                                         CommandParameter="{Binding}"
                                                                         Padding="20,4" CornerRadius="4" Cursor="Hand">
@@ -684,7 +684,7 @@
                                                             <Grid ColumnDefinitions="*,Auto">
                                                                 <TextBlock Text="{Binding}" VerticalAlignment="Center" FontSize="14" Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="Medium" TextTrimming="CharacterEllipsis"/>
                                                                 <Button Grid.Column="1" 
-                                                                        Theme="{StaticResource SettingsActionButton}"
+                                                                        Classes="SettingsActionButton"
                                                                         Command="{Binding $parent[Window].DataContext.UnhideGroupCommand}"
                                                                         CommandParameter="{Binding}"
                                                                         Padding="20,4" CornerRadius="4" Cursor="Hand">
@@ -767,11 +767,11 @@
                                     <Button Content="{loc:Translate Settings.Epg.RefreshNow}"
                                             Command="{Binding RefreshEpgNowCommand}"
                                             IsEnabled="{Binding !_mainViewModel.IsGlobalLoading}"
-                                            Theme="{StaticResource SettingsActionButton}"/>
+                                            Classes="SettingsActionButton"/>
 
                                     <TextBlock Text="{loc:Translate Settings.Channels.Frequency}" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
                                     <Button x:Name="EpgRefreshSelectionButton"
-                                            Classes="DesktopSettingsSelectionButton"
+                                            Classes="SettingsActionButton"
                                             Width="250"
                                             HorizontalAlignment="Left"
                                             Margin="0,0,0,20"
@@ -786,7 +786,7 @@
 
                                     <TextBlock Text="{loc:Translate Settings.Epg.Timezone}" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
                                     <Button x:Name="EpgTimezoneSelectionButton"
-                                            Classes="DesktopSettingsSelectionButton"
+                                            Classes="SettingsActionButton"
                                             Width="250"
                                             HorizontalAlignment="Left"
                                             Margin="0,0,0,20"
@@ -806,7 +806,7 @@
                                                        FontSize="12" Foreground="{DynamicResource TextMutedBrush}" Margin="0,2,0,0"/>
                                         </StackPanel>
                                         <Button Grid.Column="1" 
-                                                Theme="{StaticResource SettingsActionButton}"
+                                                Classes="SettingsActionButton"
                                                 Command="{Binding AddCustomEpgCommand}"
                                                 IsEnabled="{Binding !_mainViewModel.IsGlobalLoading}"
                                                 Cursor="Hand">
@@ -836,7 +836,7 @@
                                                              Height="45"
                                                              VerticalContentAlignment="Center"/>
                                                     <Button Grid.Column="1" 
-                                                            Theme="{StaticResource SettingsActionButton}"
+                                                            Classes="SettingsActionButton"
                                                             Command="{Binding $parent[Window].DataContext.RemoveCustomEpgCommand}"
                                                             CommandParameter="{Binding .}"
                                                             Margin="10,0,0,0"
@@ -853,7 +853,7 @@
                                      <!-- Tüm EPG Kaynaklarını Yenile -->
                                      <Button Command="{Binding RefreshEpgNowCommand}"
                                              IsEnabled="{Binding CanRefreshEpgNow}"
-                                             Theme="{StaticResource SettingsActionButton}"
+                                             Classes="SettingsActionButton"
                                              Cursor="Hand">
                                          <StackPanel Orientation="Horizontal" Spacing="10">
                                              <materialIcons:MaterialIcon Kind="Refresh" Width="18" Height="18" Foreground="{DynamicResource AccentBrush}"/>
@@ -928,7 +928,7 @@
 
                                     <TextBlock Text="{loc:Translate Settings.Privacy.Retention}" FontSize="15" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8"/>
                                     <Button x:Name="HistoryRetentionSelectionButton"
-                                            Classes="DesktopSettingsSelectionButton"
+                                            Classes="SettingsActionButton"
                                             Width="260"
                                             HorizontalAlignment="Left"
                                             Margin="0,0,0,20"
@@ -1040,7 +1040,7 @@
 
                                         <Button x:Name="AppLanguageSelectionButton"
                                                 Grid.Column="1"
-                                                Classes="DesktopSettingsSelectionButton"
+                                                Classes="SettingsActionButton"
                                                 Width="180"
                                                 Click="OpenAppLanguageSelection_Click">
                                             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
@@ -1139,7 +1139,7 @@
                                 </Border>
                             </Panel>
                             <!-- Upgrade to Premium Banner (shown when not premium, placed after Account card) -->
-                            <Button Theme="{StaticResource UpgradeButton}"
+                            <Button Classes="UpgradeButton"
                                     Command="{Binding ShowUpsellCommand}"
                                     IsVisible="{Binding !IsPremium}">
                                 <Grid ColumnDefinitions="Auto,*,Auto"
@@ -1190,7 +1190,7 @@
                                         <!-- Idle State -->
                                         <Button Command="{Binding CheckForUpdatesCommand}"
                                                 IsVisible="True"
-                                                Theme="{StaticResource SettingsActionButton}">
+                                                Classes="SettingsActionButton">
                                             <StackPanel Orientation="Horizontal" Spacing="8">
                                                 <materialIcons:MaterialIcon Kind="Refresh" Width="16" Height="16"/>
                                                 <TextBlock Text="{loc:Translate Settings.Update.CheckNow}" FontSize="13" FontWeight="SemiBold"/>
@@ -1200,7 +1200,7 @@
                                         <!-- Update Available State -->
                                         <Button Command="{Binding CheckForUpdatesCommand}"
                                                 IsVisible="False"
-                                                Theme="{StaticResource SettingsActionButton}"
+                                                Classes="SettingsActionButton"
                                                 Cursor="Hand">
                                             <StackPanel Orientation="Horizontal" Spacing="8">
                                                 <materialIcons:MaterialIcon Kind="RocketLaunch" Width="18" Height="18"/>
@@ -1221,7 +1221,7 @@
                     <!-- Left Actions -->
                     <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="12">
                         <Button Content="{loc:Translate Settings.Action.ResetDefaults}" Command="{Binding ResetToDefaultsCommand}" 
-                                Theme="{StaticResource SettingsActionButton}" HorizontalAlignment="Left" Padding="12,8"/>
+                                Classes="SettingsActionButton" HorizontalAlignment="Left" Padding="12,8"/>
                         
                         <Button Command="{Binding ReportBugCommand}" 
                                 Theme="{StaticResource ErrorButton}">
@@ -1302,7 +1302,7 @@
                         <Button Command="{Binding CancelRefreshOperationCommand}"
                                 HorizontalAlignment="Center"
                                 Padding="18,9"
-                                Theme="{StaticResource SettingsActionButton}"
+                                Classes="SettingsActionButton"
                                 Cursor="Hand">
                             <StackPanel Orientation="Horizontal" Spacing="8">
                                 <materialIcons:MaterialIcon Kind="CloseCircleOutline" Width="18" Height="18" Foreground="{DynamicResource TextMutedBrush}"/>

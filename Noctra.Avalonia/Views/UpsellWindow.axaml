@@ -187,7 +187,7 @@
                 </Grid>
 
                 <StackPanel Grid.Row="2" HorizontalAlignment="Stretch">
-                    <Button Click="Buy_Click" Theme="{StaticResource UpgradeButton}">
+                    <Button Click="Buy_Click" Classes="UpgradeButton">
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
                             <materialIcons:MaterialIcon Kind="Crown" Width="17" Height="17" Margin="0,0,7,0"/>
                             <TextBlock Text="{Binding [Upsell.Action.Buy], Source={x:Static loc:LocalizationSource.Instance}}"

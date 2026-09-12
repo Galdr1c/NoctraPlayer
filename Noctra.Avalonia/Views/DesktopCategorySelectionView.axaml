@@ -19,7 +19,7 @@
           <icons:MaterialIcon Kind="ArrowLeft" Width="24" Height="24" />
         </Button>
         <TextBlock x:Name="TitleTextBlock" Grid.Column="1"
-                   Classes="DesktopPageTitle" FontSize="22" VerticalAlignment="Center" />
+                   Classes="NoctraPageTitle" FontSize="22" VerticalAlignment="Center" />
       </Grid>
     </Border>
 
@@ -73,7 +73,7 @@
 
       <ListBox x:Name="CategoryListBox" Grid.Row="1"
                ItemsSource="{Binding Categories}"
-               Classes="DesktopCategoryList"
+               Classes="NoctraSelectionList"
                SelectionChanged="ClearTransientSelection"
                ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                ScrollViewer.VerticalScrollBarVisibility="Auto">
@@ -85,7 +85,7 @@
         <ListBox.ItemTemplate>
           <DataTemplate>
             <Grid ColumnDefinitions="*,Auto">
-              <Button Grid.Column="0" Classes="DesktopCategoryRow"
+              <Button Grid.Column="0" Classes="NoctraSheetOption"
                       Tag="{Binding}" Click="SelectCategory_Click">
                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
                   <TextBlock Text="{Binding Name}" FontSize="15" TextWrapping="Wrap" VerticalAlignment="Center" />
@@ -95,7 +95,7 @@
                                       IsVisible="{Binding IsSelected}" />
                 </Grid>
               </Button>
-              <Button Grid.Column="1" Classes="DesktopRevealButton"
+              <Button Grid.Column="1" Theme="{StaticResource RevealBtn}"
                       Tag="{Binding}" Click="HideCategory_Click"
                       ToolTip.Tip="{loc:Translate Mobile.Categories.Hide}">
                 <icons:MaterialIcon Kind="EyeOffOutline" Width="20" Height="20" />

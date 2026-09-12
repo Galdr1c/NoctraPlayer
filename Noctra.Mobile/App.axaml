@@ -29,7 +29,7 @@
         <ResourceDictionary.MergedDictionaries>
           <ResourceInclude Source="avares://Noctra.UI/Resources/Colors.axaml" />
           <ResourceInclude Source="avares://Noctra.UI/Resources/Tokens.axaml" />
-          <ResourceInclude Source="avares://Noctra.Mobile/Resources/Styles.axaml" />
+          <ResourceInclude Source="avares://Noctra.UI/Resources/Styles.axaml" />
         </ResourceDictionary.MergedDictionaries>
         <converters:AvatarPathConverter x:Key="AvatarPathConverter" />
         <converters:DoubleToFloatConverter x:Key="DoubleToFloatConverter" />
@@ -78,25 +78,7 @@
         <converters:LogoThemeConverter x:Key="LogoThemeConverter" />
         <converters:EnumEqualConverter x:Key="EnumEqualConverter" />
         <converters:EnumToStringConverter x:Key="EnumToStringConverter" />
-        <ControlTheme x:Key="TransparentListBoxItemTheme" TargetType="ListBoxItem">
-          <Setter Property="Background" Value="Transparent" />
-          <Setter Property="BorderBrush" Value="Transparent" />
-          <Setter Property="BorderThickness" Value="0" />
-          <Setter Property="Template">
-            <ControlTemplate TargetType="ListBoxItem">
-              <ContentPresenter Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="{TemplateBinding CornerRadius}"
-                                Content="{TemplateBinding Content}"
-                                ContentTemplate="{TemplateBinding ContentTemplate}"
-                                Padding="{TemplateBinding Padding}"
-                                HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" />
-            </ControlTemplate>
-          </Setter>
-        </ControlTheme>
-      </ResourceDictionary>
+</ResourceDictionary>
     </Application.Resources>
 
     <Application.DataTemplates>
@@ -110,104 +92,5 @@
         <StyleInclude Source="avares://Noctra.Mobile/Controls/PremiumSpinner.axaml" />
         <StyleInclude Source="avares://Noctra.UI/Resources/CommonStyles.axaml" />
         <StyleInclude Source="avares://Noctra.UI/Resources/SettingsStyles.axaml" />
-
-        <!-- ═══════════════════════════════════════════════════════
-             NoctraTextBox — Unified Input System
-             Base: 54dp height, 8dp radius, 1.5px border
-             Classes: .url .search .password .pin .error .readonly
-             ═══════════════════════════════════════════════════════ -->
-        <Style Selector="TextBox">
-            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
-            <Setter Property="Background" Value="{DynamicResource Surface1Brush}" />
-            <Setter Property="CornerRadius" Value="8" />
-            <Setter Property="Padding" Value="14,0" />
-            <Setter Property="MinHeight" Value="54" />
-            <Setter Property="FontSize" Value="{DynamicResource FBodyL}" />
-            <Setter Property="TextWrapping" Value="NoWrap" />
-            <Setter Property="AcceptsReturn" Value="False" />
-            <Setter Property="VerticalContentAlignment" Value="Center" />
-            <Setter Property="CaretBrush" Value="{DynamicResource AccentBrush}" />
-            <Setter Property="SelectionBrush" Value="{DynamicResource TextSelectionBrush}" />
-            <Setter Property="SelectionForegroundBrush" Value="{DynamicResource TextPrimaryBrush}" />
-            <Setter Property="PlaceholderForeground" Value="{DynamicResource TextMutedBrush}" />
-        </Style>
-        <Style Selector="TextBox:focus /template/ Border#PART_BorderElement">
-            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
-            <Setter Property="BorderThickness" Value="1.5" />
-        </Style>
-        <Style Selector="TextBox:not(:focus) /template/ Border#PART_BorderElement">
-            <Setter Property="BorderBrush" Value="{DynamicResource TextDisabledBrush}" />
-            <Setter Property="BorderThickness" Value="1.5" />
-        </Style>
-        <Style Selector="TextBox:disabled">
-            <Setter Property="Opacity" Value="0.5" />
-        </Style>
-        <!-- Class: .url -->
-        <Style Selector="TextBox.url">
-            <Setter Property="TextInputOptions.ContentType" Value="Url" />
-            <Setter Property="TextInputOptions.ShowSuggestions" Value="False" />
-        </Style>
-        <!-- Class: .search -->
-        <Style Selector="TextBox.search">
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="BorderBrush" Value="Transparent" />
-            <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="CornerRadius" Value="0" />
-            <Setter Property="Padding" Value="10,0" />
-            <Setter Property="MinHeight" Value="48" />
-            <Setter Property="TextInputOptions.ContentType" Value="Search" />
-            <Setter Property="TextInputOptions.ReturnKeyType" Value="Search" />
-        </Style>
-        
-        <Style Selector="TextBox.search /template/ Border#PART_BorderElement">
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="BorderBrush" Value="Transparent" />
-            <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="CornerRadius" Value="0" />
-        </Style>
-        <Style Selector="TextBox.search:focus /template/ Border#PART_BorderElement">
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="BorderBrush" Value="Transparent" />
-            <Setter Property="BorderThickness" Value="0" />
-        </Style>
-        <Style Selector="TextBox.search:not(:focus) /template/ Border#PART_BorderElement">
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="BorderBrush" Value="Transparent" />
-            <Setter Property="BorderThickness" Value="0" />
-        </Style>
-        <!-- Class: .password -->
-        <Style Selector="TextBox.password">
-            <Setter Property="TextInputOptions.IsSensitive" Value="True" />
-            <Setter Property="TextInputOptions.ShowSuggestions" Value="False" />
-            <Setter Property="PasswordChar" Value="&#x2022;" />
-        </Style>
-        <!-- Class: .pin -->
-        <Style Selector="TextBox.pin">
-            <Setter Property="TextInputOptions.ContentType" Value="Digits" />
-            <Setter Property="TextInputOptions.IsSensitive" Value="True" />
-            <Setter Property="TextInputOptions.ShowSuggestions" Value="False" />
-            <Setter Property="MaxLength" Value="4" />
-            <Setter Property="PasswordChar" Value="&#x2022;" />
-            <Setter Property="HorizontalContentAlignment" Value="Center" />
-            <Setter Property="LetterSpacing" Value="8" />
-        </Style>
-        <!-- Class: .error -->
-        <Style Selector="TextBox.error">
-            <Setter Property="BorderBrush" Value="{DynamicResource ErrorBrush}" />
-            <Setter Property="BorderThickness" Value="1.5" />
-        </Style>
-        <Style Selector="TextBox.error:focus /template/ Border#PART_BorderElement">
-            <Setter Property="BorderBrush" Value="{DynamicResource ErrorBrush}" />
-            <Setter Property="BorderThickness" Value="1.5" />
-        </Style>
-        <Style Selector="TextBox.error:not(:focus) /template/ Border#PART_BorderElement">
-            <Setter Property="BorderBrush" Value="{DynamicResource ErrorBrush}" />
-            <Setter Property="BorderThickness" Value="1.5" />
-        </Style>
-        <!-- Class: .readonly -->
-        <Style Selector="TextBox.readonly">
-            <Setter Property="IsReadOnly" Value="True" />
-            <Setter Property="Background" Value="{DynamicResource Surface0Brush}" />
-        </Style>
     </Application.Styles>
 </Application>

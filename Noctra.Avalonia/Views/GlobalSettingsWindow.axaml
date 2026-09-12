@@ -302,7 +302,7 @@
 
                                 <Button x:Name="GlobalLanguageSelectionButton"
                                         Grid.Column="1"
-                                        Classes="DesktopSettingsSelectionButton"
+                                        Classes="SettingsActionButton"
                                         Width="180"
                                         Click="OpenGlobalLanguageSelection_Click">
                                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
@@ -545,7 +545,7 @@
                         </Border>
                     </Panel>
                     <!-- Upgrade to Premium Banner (shown when not premium, placed after Account card) -->
-                    <Button Theme="{StaticResource UpgradeButton}"
+                    <Button Classes="UpgradeButton"
                             Command="{Binding ShowUpsellCommand}"
                             IsVisible="{Binding !IsPremium}">
                         <Grid ColumnDefinitions="Auto,*,Auto"
@@ -677,7 +677,7 @@
                                 <Button Grid.Column="2" 
                                         Command="{Binding CheckForUpdatesCommand}"
                                         IsVisible="{Binding ShowUpdateCheckButton}"
-                                        Theme="{StaticResource SettingsActionButton}"
+                                        Classes="SettingsActionButton"
                                         Cursor="Hand">
                                     <StackPanel Orientation="Horizontal" Spacing="8">
                                         <materialIcons:MaterialIcon Kind="Refresh" Width="16" Height="16"
