@@ -42,7 +42,8 @@ public partial class VideoOverlayView
         _sharedPlayerChrome = new PlayerChromeView
         {
             ShowLockAction = false,
-            ShowPiPAction = true
+            ShowPiPAction = true,
+            ShowPointerVolumeControl = true
         };
         _sharedPlayerChrome.SetValue(Panel.ZIndexProperty, 700);
 

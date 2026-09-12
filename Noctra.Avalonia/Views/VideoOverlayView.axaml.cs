@@ -385,11 +385,40 @@ public partial class VideoOverlayView : UserControl
         _playerViewModel.UserInteractionCommand.Execute(null);
     }
 
+    private const int PointerWheelVolumeStep = 5;
+
     private void OverlayRoot_PointerWheelChanged(object? sender, PointerWheelEventArgs e)
     {
-        // Oynatıcı üzerindeki tekerlek kaydırmasının paylaşılan kontrollere
-        // (ör. zaman çizelgesi) ulaşmasını engeller.
+        if (_playerViewModel == null)
+            return;
+
+        if (ShouldPreserveWheelForScrollableContent(e.Source as Visual))
+            return;
+
+        var direction = Math.Sign(e.Delta.Y);
+        if (direction == 0)
+        {
+            e.Handled = true;
+            return;
+        }
+
+        _playerViewModel.Volume = Math.Clamp(
+            _playerViewModel.Volume + (direction * PointerWheelVolumeStep),
+            0,
+            100);
+        _playerViewModel.UserInteractionCommand.Execute(null);
         e.Handled = true;
+    }
+
+    private static bool ShouldPreserveWheelForScrollableContent(Visual? source)
+    {
+        for (var current = source; current != null; current = current.GetVisualParent())
+        {
+            if (current is ScrollViewer or ListBox or ComboBox or Slider)
+                return true;
+        }
+
+        return false;
     }
 
     private void OverlayRoot_KeyDown(object? sender, KeyEventArgs e)
