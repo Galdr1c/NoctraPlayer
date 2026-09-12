@@ -24,7 +24,11 @@ jobs:
 
       - name: Apply desktop volume migration
         shell: pwsh
-        run: python tools/apply-desktop-volume-control.py
+        run: |
+          $script = Get-Content tools/apply-desktop-volume-control.py -Raw
+          $script = $script.Replace('GotFocusEventArgs e', 'RoutedEventArgs e')
+          Set-Content tools/apply-desktop-volume-control.py -Value $script -NoNewline
+          python tools/apply-desktop-volume-control.py
 
       - name: Build shared UI
         shell: pwsh
