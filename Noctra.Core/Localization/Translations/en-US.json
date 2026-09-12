@@ -986,7 +986,6 @@
   "Mobile.Page.More.Description": "Profiles, favorites, settings and premium features.",
   "Player.Overlay.Play": "Play",
   "Player.Overlay.Pause": "Pause",
-  "Downloads.Storage.DetailFormat": "Noctra: {0} used · Free: {1}",
   "Download.Error.UnsupportedStreaming": "This stream type does not yet support offline downloads.",
   "Upsell.Plan.Monthly.Title": "Monthly",
   "Upsell.Plan.Monthly.Subtitle": "Cancel anytime",

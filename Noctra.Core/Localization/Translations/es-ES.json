@@ -985,7 +985,6 @@
   "Mobile.Page.More.Description": "Perfiles, favoritos, ajustes y funciones Premium.",
   "Player.Overlay.Play": "Reproducir",
   "Player.Overlay.Pause": "Pausar",
-  "Downloads.Storage.DetailFormat": "Noctra: {0} usado · Libre: {1}",
   "Download.Error.UnsupportedStreaming": "Este tipo de transmisión aún no admite descargas sin conexión.",
   "Upsell.Plan.Monthly.Title": "Mensual",
   "Upsell.Plan.Monthly.Subtitle": "Cancela cuando quieras",

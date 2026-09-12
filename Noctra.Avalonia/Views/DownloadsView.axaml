@@ -138,7 +138,6 @@
             <StackPanel Grid.Column="1" Margin="16,0,0,0" VerticalAlignment="Center" Spacing="12">
               <Grid ColumnDefinitions="*,Auto">
                 <TextBlock Text="{loc:Translate Downloads.Storage.Title}" FontWeight="Bold" FontSize="14" Foreground="{DynamicResource TextPrimaryBrush}"/>
-                <TextBlock Grid.Column="1" Text="{Binding StorageUsageDetailText}" FontSize="12" Foreground="{DynamicResource TextMutedBrush}"/>
               </Grid>
 
               <!-- Progress Bar -->

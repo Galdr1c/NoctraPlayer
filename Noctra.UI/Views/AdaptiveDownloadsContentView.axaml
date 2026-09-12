@@ -27,8 +27,7 @@
             Padding="20"
             BorderBrush="{DynamicResource BorderBrush}"
             BorderThickness="1"
-            ClipToBounds="True"
-            IsVisible="{Binding StorageUsageDetailText, Converter={x:Static avaloniaConverters:StringConverters.IsNotNullOrEmpty}}">
+            ClipToBounds="True">
       <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto">
         <icons:MaterialIcon Kind="Database"
                             Foreground="{DynamicResource AccentBrush}"
@@ -40,11 +39,6 @@
                        Foreground="{DynamicResource TextPrimaryBrush}"
                        FontWeight="SemiBold"
                        FontSize="{DynamicResource FTitleL}" />
-            <TextBlock Grid.Column="1"
-                       Text="{Binding StorageUsageDetailText}"
-                       Foreground="{DynamicResource TextMutedBrush}"
-                       FontSize="{DynamicResource FCaption}"
-                       VerticalAlignment="Center" />
           </Grid>
 
           <Border Height="8" Background="{DynamicResource Bg1Brush}" CornerRadius="2" ClipToBounds="True">

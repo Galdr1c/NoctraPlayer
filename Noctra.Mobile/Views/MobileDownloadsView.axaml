@@ -50,8 +50,7 @@
               Padding="20"
               Margin="0,0,0,24"
               BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-              ClipToBounds="True"
-              IsVisible="{Binding StorageUsageDetailText, Converter={x:Static avaloniaConverters:StringConverters.IsNotNullOrEmpty}}">
+              ClipToBounds="True">
         <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="Auto,*,Auto">
           <!-- Icon -->
           <icons:MaterialIcon Kind="Database"
@@ -362,7 +361,7 @@
             <StackPanel Orientation="Horizontal"
                         Spacing="8">
               <TextBlock Text="{loc:Translate Downloads.Tabs.Center}" />
-              <Border Classes="AccentBadge"
+              <Border Classes="AccentBubble"
                       IsVisible="{Binding ActiveDownloadCount, Converter={StaticResource CountToVisibility}}">
                 <TextBlock Text="{Binding ActiveDownloadCount}"
                            Foreground="{DynamicResource TextPrimaryBrush}"

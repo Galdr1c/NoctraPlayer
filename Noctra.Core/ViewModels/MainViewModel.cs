@@ -6945,9 +6945,6 @@ public partial class MainViewModel : ObservableObject
     private double _storageFreePercent = 100;
 
     [ObservableProperty]
-    private string _storageUsageDetailText = "0 B / 0 B";
-
-    [ObservableProperty]
     private string _storageFunFactText = "";
 
     [ObservableProperty]
@@ -7786,10 +7783,6 @@ public partial class MainViewModel : ObservableObject
                 var pendingPercent = (pendingBytes / (double)totalSpace) * 100.0;
                 StoragePendingPercent = pendingPercent;
                 StorageFreePercent = Math.Max(0, 100.0 - (totalUsedPercent + pendingPercent));
-                
-                var detailFmt = _localizationService.GetString("Downloads.Storage.DetailFormat");
-                if (string.IsNullOrWhiteSpace(detailFmt)) detailFmt = "Noctra: {0} used · Free: {1}";
-                StorageUsageDetailText = string.Format(CultureInfo.CurrentCulture, detailFmt, FormatDownloadBytes(totalSizeBytes), FormatDownloadBytes(freeSpace));
 
                 var funFactFmt = _localizationService.GetString("Downloads.Storage.FunFact");
                 if (!string.IsNullOrWhiteSpace(funFactFmt))

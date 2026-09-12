@@ -985,7 +985,6 @@
   "Mobile.Page.More.Description": "Profils, favoris, paramètres et fonctionnalités Premium.",
   "Player.Overlay.Play": "Lecture",
   "Player.Overlay.Pause": "Pause",
-  "Downloads.Storage.DetailFormat": "Noctra : {0} utilisé · Libre : {1}",
   "Download.Error.UnsupportedStreaming": "Ce type de flux ne prend pas encore en charge le téléchargement hors ligne.",
   "Upsell.Plan.Monthly.Title": "Mensuel",
   "Upsell.Plan.Monthly.Subtitle": "Résiliable à tout moment",
