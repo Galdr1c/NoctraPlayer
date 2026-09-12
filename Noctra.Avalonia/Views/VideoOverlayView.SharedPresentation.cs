@@ -36,20 +36,9 @@ public partial class VideoOverlayView
         if (overlayContent is null)
             return;
 
-        // Keep EPG/native-window behavior intact while replacing only the three
-        // explicitly named legacy presentation layers.
-        LegacyTopGradient.IsVisible = false;
-        LegacyTopBar.IsVisible = false;
-        LegacyTransportControls.IsVisible = false;
-
-        // Common panel states render through the shared mobile-first sheet.
-        // Their host-specific native/input behavior remains in this desktop view.
-        SuppressLegacyPanel("AudioSettingsPanel");
-        SuppressLegacyPanel("QualitySettingsPanel");
-        SuppressLegacyPanel("InfoPanel");
-        SuppressLegacyPanel("EpisodesPanel");
-        SuppressLegacyPanel("SleepTimerPanel");
-
+        // Legacy desktop chrome and side panels are gone from the XAML: this view now
+        // hosts only the shared mobile-first chrome/sheets plus the desktop-specific
+        // EPG/native-window behavior that stays in this host.
         _sharedPlayerChrome = new PlayerChromeView
         {
             ShowLockAction = false,
@@ -73,15 +62,5 @@ public partial class VideoOverlayView
 
         overlayContent.Children.Add(_sharedPlayerChrome);
         overlayContent.Children.Add(_sharedPlayerSheets);
-    }
-
-    private void SuppressLegacyPanel(string name)
-    {
-        var panel = this.FindControl<Grid>(name);
-        if (panel is null)
-            return;
-
-        panel.Opacity = 0;
-        panel.IsHitTestVisible = false;
     }
 }

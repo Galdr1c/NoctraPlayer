@@ -779,15 +779,21 @@ namespace Noctra.Tests
         }
 
         [Fact]
-        public void VideoOverlayView_InfoPanelCloseButton_BoundToClosePanelsCommand()
+        public void VideoOverlayView_NoLongerHostsItsOwnSidePanels()
         {
             var solutionDir = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
             var axamlPath = Path.Combine(solutionDir, "Noctra.Avalonia", "Views", "VideoOverlayView.axaml");
             Assert.True(File.Exists(axamlPath), $"Expected to find {axamlPath}");
 
             var axamlContent = File.ReadAllText(axamlPath);
-            Assert.DoesNotContain("Command=\"{Binding OpenInfoPanelCommand}\" Classes=\"panelCloseBtn\"", axamlContent);
-            Assert.Contains("<Button Grid.Column=\"1\" Command=\"{Binding ClosePanelsCommand}\" Classes=\"panelCloseBtn\"", axamlContent);
+
+            // Yan panel içeriği paylaşılan PlayerSheetOverlay'e taşındı; masaüstü host
+            // kendi panel kopyasını (ve panel kapat butonlarını) barındırmaz.
+            foreach (var name in new[] { "InfoPanel", "SleepTimerPanel", "AudioSettingsPanel", "EpisodesPanel", "QualitySettingsPanel" })
+                Assert.DoesNotContain($"x:Name=\"{name}\"", axamlContent);
+            foreach (var state in new[] { "IsInfoPanelOpen}", "IsSleepTimerPanelOpen}", "IsAudioSettingsOpen}", "IsEpisodesPanelOpen}", "IsQualitySettingsOpen}" })
+                Assert.DoesNotContain(state, axamlContent);
+            Assert.DoesNotContain("Classes=\"sidePanel\"", axamlContent);
         }
 
         [Fact]

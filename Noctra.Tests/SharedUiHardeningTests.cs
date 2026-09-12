@@ -55,8 +55,12 @@ public sealed class SharedUiHardeningTests
         Assert.DoesNotContain("Take(3)", settingsAdapter, StringComparison.Ordinal);
         Assert.DoesNotContain("Children.Clear()", settingsAdapter, StringComparison.Ordinal);
 
+        // Masaüstü oynatıcı artık kendi legacy katmanlarını taşımaz; ortak sunum
+        // yalnızca adlandırılmış bir host (OverlayContent) üzerinden eklenir.
         foreach (var name in new[] { "LegacyTopGradient", "LegacyTopBar", "LegacyTransportControls" })
-            Assert.Contains($"x:Name=\"{name}\"", playerXaml, StringComparison.Ordinal);
+            Assert.DoesNotContain($"x:Name=\"{name}\"", playerXaml, StringComparison.Ordinal);
+        Assert.Contains("x:Name=\"OverlayContent\"", playerXaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("SuppressLegacyPanel", playerAdapter, StringComparison.Ordinal);
         Assert.DoesNotContain("Children[0]", playerAdapter, StringComparison.Ordinal);
         Assert.DoesNotContain("Children[1]", playerAdapter, StringComparison.Ordinal);
         Assert.DoesNotContain("Children[2]", playerAdapter, StringComparison.Ordinal);

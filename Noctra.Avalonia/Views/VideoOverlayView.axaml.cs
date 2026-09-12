@@ -4,9 +4,7 @@ using System.Globalization;
 using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Controls.Primitives;
 using Avalonia.Data;
-using Avalonia.Interactivity;
 using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Threading;
@@ -40,8 +38,6 @@ public partial class VideoOverlayView : UserControl
     private readonly DispatcherTimer _seekToastTimer;
     private readonly DispatcherTimer _downloadToastTimer;
     private PlayerViewModel? _playerViewModel;
-    private bool _isTimelinePointerDown;
-    private bool _isCommittingSeek;
     private bool _isLocalizationSubscribed;
     private DateTime _lastPointerInteractionUtc = DateTime.MinValue;
     private static readonly TimeSpan PointerInteractionThrottle = TimeSpan.FromMilliseconds(100);
@@ -119,26 +115,6 @@ public partial class VideoOverlayView : UserControl
             LocalizationSource.Instance.PropertyChanged += LocalizationSource_PropertyChanged;
             _isLocalizationSubscribed = true;
         }
-
-        // Subscribe to slider events explicitly to handle bubbled/tunnelled events correctly
-        var slider = this.FindControl<Slider>("TimelineSlider");
-        if (slider != null)
-        {
-            // Capture the start of interaction eagerly (Tunnel) or even if handled (Bubble)
-            slider.AddHandler(PointerPressedEvent, TimelineSlider_PointerPressed, RoutingStrategies.Bubble, handledEventsToo: true);
-            slider.AddHandler(PointerReleasedEvent, TimelineSlider_PointerReleased, RoutingStrategies.Bubble, handledEventsToo: true);
-            slider.AddHandler(PointerCaptureLostEvent, TimelineSlider_PointerCaptureLost, RoutingStrategies.Bubble, handledEventsToo: true);
-            
-            // Block scrolling from timeline to prevent unintended rapid seeking
-            slider.AddHandler(InputElement.PointerWheelChangedEvent, Slider_PointerWheelChanged_Tunnel, RoutingStrategies.Tunnel);
-        }
-
-        var volumeSlider = this.FindControl<Slider>("VolumeSlider");
-        if (volumeSlider != null)
-        {
-            // Block scrolling from volume slider to prevent volume toast spam
-            volumeSlider.AddHandler(InputElement.PointerWheelChangedEvent, Slider_PointerWheelChanged_Tunnel, RoutingStrategies.Tunnel);
-        }
     }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
@@ -157,58 +133,6 @@ public partial class VideoOverlayView : UserControl
         if (_playerViewModel?.IsEpgPanelOpen == true)
         {
             UpdateDesktopEpgDateLabel();
-        }
-    }
-
-    private void Slider_PointerWheelChanged_Tunnel(object? sender, PointerWheelEventArgs e)
-    {
-        e.Handled = true;
-    }
-
-    private void TimelineSlider_PointerPressed(object? sender, PointerPressedEventArgs e)
-    {
-        _playerViewModel?.LogDebug("UI Action: TimelineSlider PointerPressed");
-        _isTimelinePointerDown = true;
-        _playerViewModel?.StartSeekingCommand.Execute(null);
-    }
-
-    private void TimelineSlider_PointerReleased(object? sender, PointerReleasedEventArgs e)
-    {
-        CommitSeek(sender);
-    }
-
-    private void TimelineSlider_PointerCaptureLost(object? sender, PointerCaptureLostEventArgs e)
-    {
-        CommitSeek(sender);
-    }
-
-    private void CommitSeek(object? sender)
-    {
-        if (!_isTimelinePointerDown || _playerViewModel == null)
-        {
-            return;
-        }
-
-        if (_isCommittingSeek) return; // double-fire koruması
-
-        _playerViewModel?.LogDebug("UI Action: CommitSeek triggered");
-        _isTimelinePointerDown = false;
-        _isCommittingSeek = true;
-
-        try
-        {
-            // Robust check: ensure ViewModel is not null before accessing its commands
-            if (_playerViewModel == null || _playerViewModel.IsLiveContent || sender is not Slider slider)
-            {
-                return;
-            }
-
-            _playerViewModel.SeekCommand.Execute(slider.Value);
-            _playerViewModel.UserInteractionCommand.Execute(null);
-        }
-        finally
-        {
-            _isCommittingSeek = false;
         }
     }
 
@@ -439,57 +363,6 @@ public partial class VideoOverlayView : UserControl
         _playerViewModel?.UserInteractionCommand.Execute(null);
     }
 
-    private void TimelineSlider_PointerEntered(object? sender, PointerEventArgs e)
-    {
-        if (_playerViewModel == null || _playerViewModel.IsLiveContent || _playerViewModel.Duration <= 0)
-            return;
-
-        HoverTimePopup.IsOpen = true;
-    }
-
-    private void TimelineSlider_PointerExited(object? sender, PointerEventArgs e)
-    {
-        HoverTimePopup.IsOpen = false;
-    }
-
-    private void TimelineSlider_PointerMoved(object? sender, PointerEventArgs e)
-    {
-        if (_playerViewModel == null || _playerViewModel.IsLiveContent || _playerViewModel.Duration <= 0 || !HoverTimePopup.IsOpen)
-            return;
-
-        var slider = TimelineSlider;
-        var pointerPos = e.GetPosition(slider);
-        
-        // Accurate calculation using Track if possible
-        // Avalonia Slider uses a Track inside its template to map values.
-        // The Track might have margins (e.g. to fit the Thumb).
-        var track = slider.GetVisualDescendants().OfType<Track>().FirstOrDefault();
-        double hoverTimeSeconds;
-
-        if (track != null && track.Bounds.Width > 0)
-        {
-            var trackPos = e.GetPosition(track);
-            hoverTimeSeconds = track.ValueFromPoint(trackPos);
-        }
-        else
-        {
-            var width = slider.Bounds.Width;
-            if (width <= 0) return;
-            var percent = Math.Clamp(pointerPos.X / width, 0, 1);
-            hoverTimeSeconds = percent * _playerViewModel.Duration;
-        }
-        
-        // Format time (00:00 or 0:00:00)
-        var timeSpan = TimeSpan.FromSeconds(hoverTimeSeconds);
-        HoverTimeText.Text = timeSpan.TotalHours >= 1 
-            ? timeSpan.ToString(@"h\:mm\:ss") 
-            : timeSpan.ToString(@"m\:ss");
-
-        // Position popup centered above pointer
-        var center = slider.Bounds.Width / 2;
-        HoverTimePopup.HorizontalOffset = pointerPos.X - center;
-    }
-
     private void OverlayRoot_PointerPressed(object? sender, PointerPressedEventArgs e)
     {
         if (_playerViewModel == null)
@@ -514,9 +387,8 @@ public partial class VideoOverlayView : UserControl
 
     private void OverlayRoot_PointerWheelChanged(object? sender, PointerWheelEventArgs e)
     {
-        // Block mouse/trackpad scrolling from reaching the Volume slider natively.
-        // The default Slider control captures scroll events and changes volume rapidly,
-        // causing severe toast notification spam (e.g. 50 times a second).
+        // Oynatıcı üzerindeki tekerlek kaydırmasının paylaşılan kontrollere
+        // (ör. zaman çizelgesi) ulaşmasını engeller.
         e.Handled = true;
     }
 
@@ -661,51 +533,6 @@ public partial class VideoOverlayView : UserControl
         _downloadToastTimer.Start();
     }
 
-    private void AudioTrack_Click(object? sender, RoutedEventArgs e)
-    {
-        if (_playerViewModel == null || sender is not Button button)
-        {
-            return;
-        }
-
-        if (TryGetIntFromTag(button.Tag, out var id))
-        {
-            _playerViewModel.SetAudioTrackCommand.Execute(id);
-        }
-    }
-
-    private void SubtitleTrack_Click(object? sender, RoutedEventArgs e)
-    {
-        if (_playerViewModel == null || sender is not Button button)
-        {
-            return;
-        }
-
-        if (TryGetIntFromTag(button.Tag, out var id))
-        {
-            _playerViewModel.SetSubtitleTrackCommand.Execute(id);
-        }
-    }
-
-    private static bool TryGetIntFromTag(object? tag, out int value)
-    {
-        switch (tag)
-        {
-            case int intValue:
-                value = intValue;
-                return true;
-            case long longValue:
-                value = (int)longValue;
-                return true;
-            case string str when int.TryParse(str, out var parsed):
-                value = parsed;
-                return true;
-            default:
-                value = 0;
-                return false;
-        }
-    }
-
     private static string FormatSkipToast(double seconds)
     {
         var sign = seconds >= 0 ? "+" : "-";
@@ -726,34 +553,6 @@ public partial class VideoOverlayView : UserControl
         {
             topLevel.Cursor = cursor;
         }
-    }
-
-    private void PlayPreviousLiveChannel_Click(object? sender, RoutedEventArgs e)
-    {
-        if (_playerViewModel != null && _playerViewModel.IsLiveContent)
-        {
-            _playerViewModel.PlayPreviousLiveChannelCommand.Execute(null);
-            _playerViewModel.UserInteractionCommand.Execute(null);
-            e.Handled = true;
-        }
-    }
-
-    private void PlayNextLiveChannel_Click(object? sender, RoutedEventArgs e)
-    {
-        if (_playerViewModel != null && _playerViewModel.IsLiveContent)
-        {
-            _playerViewModel.PlayNextLiveChannelCommand.Execute(null);
-            _playerViewModel.UserInteractionCommand.Execute(null);
-            e.Handled = true;
-        }
-    }
-
-    private void EpisodeCardBtn_PointerPressed(object? sender, PointerPressedEventArgs e)
-    {
-        // Stop pointer pressed from bubbling up to the Expander,
-        // which prevents the Expander header from incorrectly toggling
-        // when an episode card is clicked.
-        e.Handled = true;
     }
 
     // ── EPG Panel ──────────────────────────────────────────────────────────

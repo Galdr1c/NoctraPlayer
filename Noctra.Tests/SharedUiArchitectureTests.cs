@@ -15,21 +15,31 @@ public sealed class SharedUiArchitectureTests
     }
 
     [Fact]
-    public void DesktopPlayer_HostsSharedMobileFirstPresentationWithoutLockAction()
+    public void DesktopPlayer_HostsSharedMobileFirstPresentationWithoutLegacyChrome()
     {
         var adapter = LoadProjectFile(
             "Noctra.Avalonia", "Views", "VideoOverlayView.SharedPresentation.cs");
+        var playerXaml = LoadProjectFile(
+            "Noctra.Avalonia", "Views", "VideoOverlayView.axaml");
 
         Assert.Contains("new PlayerChromeView", adapter, StringComparison.Ordinal);
         Assert.Contains("new PlayerSheetOverlay", adapter, StringComparison.Ordinal);
         Assert.Contains("ShowLockAction = false", adapter, StringComparison.Ordinal);
         Assert.Contains("ShowPiPAction = true", adapter, StringComparison.Ordinal);
-        Assert.Contains("LegacyTopGradient.IsVisible = false", adapter, StringComparison.Ordinal);
-        Assert.Contains("LegacyTopBar.IsVisible = false", adapter, StringComparison.Ordinal);
-        Assert.Contains("LegacyTransportControls.IsVisible = false", adapter, StringComparison.Ordinal);
-        Assert.Contains("SuppressLegacyPanel(\"EpisodesPanel\")", adapter, StringComparison.Ordinal);
         Assert.Contains("EpisodeThumbnailTemplate", adapter, StringComparison.Ordinal);
         Assert.Contains("DesktopRemoteImage", adapter, StringComparison.Ordinal);
+
+        // Legacy chrome/panels artık XAML'de yok; adapter bunları gizlemeye çalışmaz.
+        foreach (var name in new[] { "LegacyTopGradient", "LegacyTopBar", "LegacyTransportControls" })
+            Assert.DoesNotContain(name, playerXaml, StringComparison.Ordinal);
+        foreach (var name in new[] { "SleepTimerPanel", "InfoPanel", "AudioSettingsPanel", "EpisodesPanel", "QualitySettingsPanel" })
+            Assert.DoesNotContain($"x:Name=\"{name}\"", playerXaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("SuppressLegacyPanel", adapter, StringComparison.Ordinal);
+        Assert.DoesNotContain("IsVisible = false", adapter, StringComparison.Ordinal);
+
+        // Desktop'a özel EPG ve toast yüzeyi bu host'ta kalır.
+        Assert.Contains("x:Name=\"EpgPanel\"", playerXaml, StringComparison.Ordinal);
+        Assert.Contains("x:Name=\"SeekToast\"", playerXaml, StringComparison.Ordinal);
     }
 
     [Fact]
